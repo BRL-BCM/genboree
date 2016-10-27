@@ -1,0 +1,51 @@
+<%@ page import="org.genboree.samples.SampleRetriever,
+                 java.util.HashMap,
+                 java.util.Arrays,
+                 org.genboree.message.GenboreeMessage"%> <% displayNames = request.getParameterValues("displayOrder");
+            if (displayNames == null) {
+                  GenboreeMessage.setErrMsg(mys, "Please select some attributes for sample display. ");                
+                  viewDisplay="none";  
+                  selectDisplay="block"; 
+                noAttributeSelected = true; 
+            } 
+            else {
+                
+            int[] displayIndexes  = new int [displayNames.length];
+            HashMap order2Att = new HashMap (); 
+            displayOrder = new HashMap (); 
+            if (displayNames!= null) {
+                for (i=0; i<displayNames.length; i++) {
+                //selectAtt +=  "'" + displayNames[i] + "', "; 
+                String tempOrder =  request.getParameter(displayNames[i] + "_order"); 
+                if (tempOrder!= null) {
+                displayIndexes [i] = Integer.parseInt(tempOrder); 
+                order2Att.put(tempOrder, displayNames[i]); 
+                }
+                 }
+                //selectAtt = selectAtt.substring(0, selectAtt.length() -2);
+                Arrays.sort(displayIndexes);                
+                 orderedDisplayNames = new String [displayNames.length]; 
+                for (i=0; i<displayNames.length; i++) {             
+                    orderedDisplayNames[i]= (String)order2Att.get("" + displayIndexes [i]);         
+                    displayOrder.put(orderedDisplayNames[i], ""+i);
+                }
+            }
+        
+        HashMap displayOrder2Name = new HashMap ();  
+        
+        for (i=0; i<displayNames.length; i++) {
+          selectAtt +=  "'" + displayNames[i] + "', "; 
+         // displayOrder2Name.put("" + i,  displayOrder.get("" + i ));  
+        }
+        
+        int order =0;  
+        for (i=0; i<orderedDisplayNames.length; i++) {
+           order = i + 1;   
+          displayOrder2Name.put("" + order, orderedDisplayNames[i]); 
+            
+        }
+       selectAtt = selectAtt.substring(0, selectAtt.length() -2);
+      
+       samples =  SampleRetriever.retrieveAllSamples (con, false, selectAtt,  displayOrder2Name); 
+            }
+%>

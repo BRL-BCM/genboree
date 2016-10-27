@@ -1,0 +1,62 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%=
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  formTag
+%>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Delete Sample Sets" } ) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will delete Sample Sets from a database.
+      "
+    })
+%>
+
+<% # Input summary %>
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Sample Sets to delete:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbSampleSetListSummary, { :sampleSetList => @inputs } )
+    })
+%>
+
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit, :onClick => "getSampleSetNodeIds()"}, { :type => :cancel} ]
+    })
+%>
+
+</form>
+<script type="text/javascript">
+function getSampleSetNodeIds()
+{
+  var ii = 0 ;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+  var tree = Ext.ComponentMgr.get('wbInputsTree') ;
+  var root = tree.getRootNode() ;
+  var nodeIds = new Array() ;
+  var idCount = 0 ;
+  root.eachChild( function(currentNode)
+                  {
+                    nodeIds.push(currentNode.attributes.refsUri) ;
+                  }
+                ) ;
+  wbHash.get('context').set('wbNodeIds', nodeIds) ; //wbHash is a global defined in 'globals.js'
+}
+</script>

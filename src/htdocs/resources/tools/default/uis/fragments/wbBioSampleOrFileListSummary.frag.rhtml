@@ -1,0 +1,35 @@
+<%
+require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+%>
+
+<%
+  @bioSampleOrFileList = [ @bioSampleOrFileList ] unless(@bioSampleOrFileList.is_a?(Array) or @bioSampleOrFileList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@bioSampleOrFileList.nil? or @bioSampleOrFileList.empty?) ? "" : "rowspan='#{@bioSampleOrFileList.size}'") %> ><%= (@label || "Sample") %>:</th>
+<%  if(@bioSampleOrFileList.nil? or @bioSampleOrFileList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      sampleHelperObj = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new()
+      @bioSampleOrFileList.each_index { |ii|
+        item = @bioSampleOrFileList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        sampleOrFile = sampleHelperObj.extractName(item)
+        unless(sampleOrFile)
+          sampleOrFile = WorkbenchFormHelper.getNameFromURI(:file, item, true, true)
+        end
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== sampleOrFile %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

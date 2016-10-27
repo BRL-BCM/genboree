@@ -1,0 +1,281 @@
+<%# RENDER HTML %>
+<%
+
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\" return UploadDbFile.submitJob(this); \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :includeToolVersion => true }) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        The <b>exceRpt</b> small RNA-seq Pipeline is for the processing and analysis of RNA-seq data generated to profile small-exRNAs. The pipeline is highly modular, allowing the user to define the libraries containing small RNA sequences that are used during RNA-seq read-mapping, including an option to provide a library of spike-in sequences to allow absolute quantitiation of small-RNA molecules. It also performs automatic detection and removal of 3' adapter sequences. The output data includes abundance estimates for each of the requested libraries, a variety of quality control metrics such as read-length distribution, summaries of reads mapped to each library, and detailed mapping information for each read mapped to each library. 
+        <br><br>
+        Finally, after the pipeline finishes processing all submitted samples, a separate post-processing tool (processPipelineRuns) is run on all successful pipeline outputs. This tool generates useful summary plots and tables that can be used to compare and contrast different samples.  You can find your post-processing results in the processedResults folder within your output folder.
+		<br><br>
+		Please note that this version of exceRpt is stable but outdated. The new version of exceRpt (found in Transcriptome -> Analyze Small RNA-Seq Data -> exRNA Data Analysis) no longer uses sRNAbench and has a number of added benefits over this version. We recommend that you use the other version of exceRpt and report any errors that occur to the Genboree development team.
+        <br>&nbsp;<br>
+        The pipeline finds the 3' adapter sequence in the input FASTQ file and removes it, so it is NOT required to provide an adapter-clipped input file. However, if the 3' adapter sequence is already clipped, check the box <code>Clipped Input FASTQ File</code> in this Tool Settings Dialog box.
+        <br>&nbsp;<br>
+        <b>exceRpt</b> small RNA-seq Pipeline was developed by the <a href='http://www.gersteinlab.org/' target='_blank'>Gerstein Lab</a> at Yale University.
+        <br>&nbsp;<br>
+        Check this Wiki page for <a href='http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Version_Updates' target='_blank'>Version Updates</a>.
+        <br>&nbsp;<br>
+
+        <span style='font-size: 80%'><i>This tool has been deployed in the context of the <a href='http://exrna.org/' target='_blank'>Extracellular RNA Communication Consortium</a> (ERCC). Please contact <a href='mailto:sailakss@bcm.edu'>Sai Lakshmi Subramanian</a> at the Data Coordination Center (DCC) of the ERCC with questions or comments, or for help using it on your own data.</i></span>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files - Single-end small RNA-seq Reads:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Single-end small RNA-seq Read Files" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews  %>
+  <%=
+    userId = @context['userId']
+    dbu = BRL::Genboree::DBUtil.new("#{@genbConf.dbrcKey}", nil, nil)
+    hostAuthMap = Abstraction::User.getHostAuthMapForUserId(dbu, userId) 
+    
+    apiUriHelper = BRL::Genboree::REST::Helpers::ApiUriHelper.new()
+    if(apiUriHelper.extractType(@outputs[0]) != "db" )
+      @outputs.reverse!
+    end
+
+    uri = URI.parse(@outputs[0])
+    rcscUri = uri.path
+    useIndexOptions = {}
+    listOfIndexes = {}
+    useIndexOptions[:noOligo] = { :label => 'No custom oligo library', :selected => true }
+    useIndexOptions[:uploadNewLibrary] = { :label => 'Upload new custom oligo library' }
+    hiddenIndexList = true
+    hiddenNewIndex = true
+      
+    # Get list of indexes (if any) from user db 
+    apiCaller = ApiCaller.new(uri.host, "#{rcscUri}/files/spikeInLibraries", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    
+    if(apiCaller.succeeded?)
+      userData = JSON.parse(apiCaller.respBody)['data']
+      userData.each { |subdir|
+        userIndexName = subdir['name'] 
+        #indexDir = userIndexName.split("/")[2]
+        indexFile = userIndexName.split("/")[1]
+         
+        indexUri = @outputs[0].dup
+        indexUri = indexUri.chomp("?")
+     #   indexUri << "/file/spikeInLibraries/#{CGI.escape(indexDir)}/#{CGI.escape(indexFile)}"
+        indexUri << "/file/spikeInLibraries/#{CGI.escape(indexFile)}"
+        listOfIndexes[:"#{indexUri}"] = { :label => "#{indexFile}" }
+      }
+    end # if(apiCaller.succeeded?) for getting index list from user db
+
+    #$stderr.puts "apicall #{listOfIndexes.inspect} \n\n"
+
+    genomeVersion = @settings['genomeVersion'].decapitalize
+
+    # Add options to choose existing index to useIndexOptions
+    if(!listOfIndexes.empty?)   
+      useIndexOptions[:useExistingLibrary] = { :label => 'Use existing oligo library' }
+    end
+    
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "35", :value => "smallRNA-seq Pipeline-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'smallRNAseqPipeline\') used to organize smallRNA-seq Pipeline results.' },
+                { :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the target database."},
+                { :id => 'adapterSequenceOptions', :toggleText => "3\' Adapter Sequence Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'clippedInput', :label => 'Adapter Clipped Input FASTQ File', :type => :checkbox, :checked => false, :onClick => "hideAdSeq(this.checked)", :title => "Check this box if the 3' adapter sequence is clipped in your input FASTQ file. If you check this box, the pipeline will not identify or clip the  3' adapter sequence. Default: Assumes unclipped input, so pipeline will try to identify the adapter sequence."},
+                    { :id => 'adapterSequence', :label => '3\' Adapter Sequence', :type => :text, :size => "35", :maxlength => "50", :disabled => false, :title => "Enter the 3' adapter sequence, if known. If you leave this field blank, the pipeline will try to identify the adapter for clipping. NOTE: It is highly recommended to enter the 3' adapter sequence if it is known."},
+                  ]
+                },
+                { :id => 'spikeInOptions', :toggleText => "Oligo (Spike-in) Library Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'useLibrary', :label => 'Select Library', :title => 'Do you want to use a custom oligo (spike-in) library? Default: No custom library', :onChange => "showIndexOption(this.value)", :type => :select, :options => useIndexOptions },                   
+                    { :id => 'libraryList', :label => 'Existing Libraries', :title => 'Select a previously uploaded oligo (spike-in) library', :type => :select, :options => listOfIndexes, :hidden => hiddenIndexList },
+                    { :id => 'indexBaseName', :label => 'Oligo Bowtie2 Index Name', :type => :text, :size => '15', :maxlength => '30', :hidden => hiddenNewIndex, :title => "Provide a name for the Bowtie2 index of your custom spike-in library. This name should be less than 30 characters in length." },
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'subdirs', :type => :text , :value => "spikeInLibraries", :hidden => true },
+                    { :id => 'uploadFile', :label => 'Upload Custom Oligo FASTA File', :hidden => hiddenNewIndex, :type => :file },
+                    { :id => 'newSpikeInLibrary', :type => :hidden },
+                  ]
+                },
+                { :id => 'smallRNALibraryOptions', :toggleText => "small RNA Libraries", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'exogenousMapping', :label => 'Endogenous + Exogenous (miRNA)', :value => "miRNA", :checked => true, :type => :radio, :onClick => "enableAllOpts(this.checked)", :title => "Endogenous + Exogenous (miRNA) - Pipeline will map reads to exogenous miRNAs in miRBase (i.e. from plants and viruses). "},                   
+                    { :id => 'exogenousMapping', :label => 'Endogenous + Exogenous (miRNA + genome)', :value => "on",  :type => :radio, :onClick => "freezeOtherOpts(this.checked)", :title => "Endogenous + Exogenous (miRNA + genome) - Map to exogenous miRNAs in miRbase AND the genomes of all sequenced species in Ensembl/NCBI. If you select this option, then tRNA/piRNA/Gencode mapping will be done by default."},
+                    { :id => 'exogenousMapping', :label => 'Endogenous-only', :value => "off",  :type => :radio, :onClick => "enableAllOpts(this.checked)", :title => "Endogenous-only - Disable mapping to exogenous miRNAs."},                   
+                    { :id => 'tRNAmapping', :label => 'tRNAs', :type => :checkbox, :checked => true, :title => "Check this box if you want to map to tRNAs. Default: Pipeline will map reads to tRNAs. You can uncheck this box to disable mapping to the tRNA library."},
+                    { :id => 'piRNAmapping', :label => 'piRNAs', :type => :checkbox, :checked => true, :title => "Check this box if you want to map to piRNAs. Default: Pipeline will map reads to piRNAs. You can uncheck this box to disable mapping to piRNA library."},
+                    { :id => 'gencodemapping', :label => 'Gencode Annotations', :type => :checkbox, :checked => true, :title => "Check this box if you want to map to other RNA families and annotations from Gencode. Default: Pipeline will map reads to Gencode annotations. You can uncheck this box to disable mapping to Gencode annotations."},
+                  ]
+                },
+                { :id => 'mappingOptions', :toggleText => "Advanced Options - Mapping", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'mismatchMirna', :label => 'Number of Mismatches in miRNA Mapping', :type => :text, :size => "10", :maxlength => "20", :value => 1, :disabled => false, :title => "Enter the number of mismatches allowed in mapping to miRNAs. Note that bowtie1 is used as part of the sRNAbench tool to map to miRNAs. Default: 1."},
+                    { :id => 'mismatchOther', :label => 'Number of Mismatches in Mapping to Other Libraries', :type => :text, :size => "10", :maxlength => "2", :value => 2, :disabled => false, :title => "Enter the number of mismatches allowed in mapping to other smallRNA libraries. Note that bowtie1 is used as part of the sRNAbench tool to map to other libraries. Default: 2."},
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "smallRNA-seq Pipeline Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+  
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/smRNAPipeline/uis/UploadDbFile.js"]) %>
+
+  <script type="text/javascript">
+    
+    function hideAdSeq(checked)
+    {
+      var adapterSeq = document.getElementById('adapterSequence');
+    
+      if(checked)
+      {
+        adapterSeq.disabled = true ;
+      } 
+      else 
+      {
+        adapterSeq.disabled = false ;
+      }
+    }
+    
+    function freezeOtherOpts(checked)
+    {
+      var tRNAmapping = Ext.get('tRNAmapping');
+      var piRNAmapping = Ext.get('piRNAmapping');
+      var gencodemapping = Ext.get('gencodemapping');
+      var tRNAmappingLabel = Ext.get('tRNAmappingLabel');
+      var piRNAmappingLabel = Ext.get('piRNAmappingLabel');
+      var gencodemappingLabel = Ext.get('gencodemappingLabel');
+      tRNAmapping.setStyle('display', 'none') ;
+      piRNAmapping.setStyle('display', 'none') ;
+      gencodemapping.setStyle('display', 'none') ;
+      tRNAmappingLabel.setStyle('display', 'none') ;
+      piRNAmappingLabel.setStyle('display', 'none') ;
+      gencodemappingLabel.setStyle('display', 'none') ;      
+    }
+    
+    function enableAllOpts(checked)      
+    {
+      var tRNAmapping = Ext.get('tRNAmapping');
+      var piRNAmapping = Ext.get('piRNAmapping');
+      var gencodemapping = Ext.get('gencodemapping');
+      var tRNAmappingLabel = Ext.get('tRNAmappingLabel');
+      var piRNAmappingLabel = Ext.get('piRNAmappingLabel');
+      var gencodemappingLabel = Ext.get('gencodemappingLabel');
+      
+      tRNAmapping.setStyle('display', '') ;
+      piRNAmapping.setStyle('display', '') ;
+      gencodemapping.setStyle('display', '') ;
+      tRNAmappingLabel.setStyle('display', '') ;
+      piRNAmappingLabel.setStyle('display', '') ;
+      gencodemappingLabel.setStyle('display', '') ;            
+    }
+    
+    function showIndexOption(value)
+    {
+      var libraryList = Ext.get('libraryList');
+      var libraryListLabel = Ext.get('libraryListLabel')
+    
+      var indexBaseName = Ext.get('indexBaseName');
+      var indexBaseNameLabel = Ext.get('indexBaseNameLabel');
+    
+      var newOligoFile = Ext.get('uploadFile');
+      var newOligoFileLabel = Ext.get('uploadFileLabel');
+      
+      if(value == "useExistingLibrary")
+      {
+        libraryList.setStyle('display', '') ;
+        libraryListLabel.setStyle('display', '') ;
+  
+        indexBaseName.setStyle('display', 'none') ;
+        indexBaseNameLabel.setStyle('display', 'none') ;
+        
+        newOligoFile.setStyle('display', 'none') ;
+        newOligoFileLabel.setStyle('display', 'none') ;
+      }
+      else if(value == "uploadNewLibrary")
+      {
+        libraryList.setStyle('display', 'none') ;
+        libraryListLabel.setStyle('display', 'none') ;
+        
+        indexBaseName.setStyle('display', '') ;
+        indexBaseNameLabel.setStyle('display', '') ;
+        
+        newOligoFile.setStyle('display', '') ;
+        newOligoFileLabel.setStyle('display', '') ;
+      }
+      else if(value == "noOligo")
+      {
+        libraryList.setStyle('display', 'none') ;
+        libraryListLabel.setStyle('display', 'none') ;
+        
+        indexBaseName.setStyle('display', 'none') ;
+        indexBaseNameLabel.setStyle('display', 'none') ;
+        
+        newOligoFile.setStyle('display', 'none') ;
+        newOligoFileLabel.setStyle('display', 'none') ;
+      }
+    }
+    </script>
+
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <ul>
+            <li>We are investigating anomalies in pipeline execution for certain cases. </li>
+            <li>We have disabled this tool while we investigate, in case there is an 
+            effect on output correctness. </li>
+          </ul>
+          <span style='color: red;'>
+            We aim to have the smallRNA-seq Pipeline available again soon.
+            Sorry for the inconvenience.
+          </span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

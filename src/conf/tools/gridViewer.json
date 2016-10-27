@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "gridViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "View Track Grid",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,11 @@
+script argument         input field
+---------------         ------------
+-f                      template_lff
+-s                      secondTrack
+-l                      (server)
+-o                      (server)
+-n                      trackClass,trackType,trackSubtype
+-r                      radius
+-a                      only if anyOrAll = all
+-t                      attributes
+-p                      precip

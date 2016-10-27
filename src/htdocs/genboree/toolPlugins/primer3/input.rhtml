@@ -1,0 +1,527 @@
+<%
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+  require 'cgi'
+
+  $VERBOSE = nil
+  @req = Apache.request
+  @resp = $stdout
+
+  # Helper Methods
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # CGI variables
+  cgi = CGI.new
+  @prepped4output = false
+  genbConf = BRL::Genboree::GenboreeConfig.load()
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  userId = cgi['userId'].to_i.untaint
+  tracks = inner.getTracks(refSeqId, userId)
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  prepForHtml()
+
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # Are the .masked files available for this database?
+  hasMasked = BRL::Genboree::ToolPlugins::Util.databaseHasMaskedSeq?(refSeqId)
+%>
+
+<SCRIPT TYPE="text/javascript">
+function unique_expname(){
+   used = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>);
+   expname = $F('expname') ;
+   for( ii=0; ii<=<%= expnames.size %>; ii++ )
+   {
+     if( expname==used[ii] )
+     {
+       alert( expname + " is already used as an experiment name in this group.  Please select another." );
+       highlight( 'expname' );
+       return false;
+     }
+   }
+   return true;
+}
+</SCRIPT>
+
+<SCRIPT TYPE="text/javascript">
+  function showElem(elemID)
+  {
+    $(elemID).style.display = 'block' ;
+    return false ;
+  }
+  function hideElem(elemID)
+  {
+    $(elemID).style.display = 'none' ;
+    return false ;
+  }
+  function toggleAdvDisplay(labelElem, elemID)
+  {
+    var elem = $(elemID) ;
+    if(elem.style.display == 'none')
+    {
+      elem.style.display =  'block' ;
+      labelElem.innerHTML = 'Hide Advanced Options' ;
+    }
+    else
+    {
+      elem.style.display = 'none' ;
+      labelElem.innerHTML = 'Show Advanced Options' ;
+    }
+    return false ;
+  }
+</SCRIPT>
+<script type="text/javascript" src="/genboree/toolPlugins/primer3/primer3.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?jsVer=<%= genbConf.jsVer %>"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+
+
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2">
+<tr>
+  <td>
+    <CENTER><FONT SIZE="4"><B>Primer Design</B></FONT></CENTER>
+    <div style="width:500px;">
+    This plug-in designs PCR primers spanning genomic regions using <a target="new" href="http://frodo.wi.mit.edu/primer3/primer3_code.html">Primer3</a> developed by the Whitehead Institute for Biomedical Research.
+    <P>
+    <UL class="compact4_bigIndent">
+      <LI>&middot; Primers will be designed based on the <B>genomic</B> DNA corresponding to the annotations in a track.</LI>
+      <LI>&middot; The annotations are treated as templates for which primers are desired.</LI>
+      <LI>&middot; Primer3 may generate multiple primer-pairs for each template.</LI>
+    </UL>
+    </div>
+    <P>
+    <font color='red'>
+    NOTE: This is a new service. If you encounter any problems, please contact <A HREF="mailto:brl_admin@bcm.tmc.edu?subject=Primer3">brl_admin@bcm.tmc.edu</A>.
+    </font>
+    <P>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+    <input type="hidden" id="function" name="function" value="designPrimers">
+
+    <table BGCOLOR="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+    <TR>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="expnameLabel"><FONT SIZE="2"><B>Experiment Name:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+          </td>
+          <td align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('expname');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+             </A>
+            &nbsp;
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </TR>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="trackLabel"><FONT SIZE="2"><B>Template Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+          <%  unless(tracks.empty?) %>
+                <select id="template_lff" name='template_lff'>
+                  <option value="selectATrack">Select a Track
+<%
+                      sortedTrackNames.each { |trackName|
+%>
+                        <option value="<%= CGI.escape(trackName) %>" ><%=CGI.escapeHTML(trackName)%><br /></option>
+<%
+                      }
+%>
+                </select>
+          <%  else  %>
+                <font color="red"><b>The database is empty. No tracks present. Plug-in cannot be run.</b></font>
+          <%  end %>
+          </td>
+          <td align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('template_track');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+             </A>
+            &nbsp;
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="paddingLabel"><FONT SIZE="2"><B>Annotation Padding:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td WIDTH="30">Upstream</td>
+          <td WIDTH="30">
+            <input type="text" id="upstreamPadding" name="upstreamPadding" class="txt" value="0" size="5">
+          </td>
+          <td WIDTH="30">&nbsp;&nbsp;Downstream</td>
+          <td WIDTH="30">
+            <input type="text" id="downstreamPadding" name="downstreamPadding" class="txt" value="0" size="5">
+          </td>
+          <td align="right">
+            <table border="0" cellpadding="0" cellspacing="0">
+            <TR>
+              <td width="200" align="right">Design primers in<BR>padding regions only</td>
+              <td width="50"><input type="checkbox" id="designInPads" name="designInPads" value="true"></input></td>
+              <td align="right" nowrap>
+                <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('padding');" >
+                  <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+                </A>
+                &nbsp;
+              </td>
+            </TR>
+            </table>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="primerLabel"><FONT SIZE="2"><B>Primer Design Settings:</B></FONT></SPAN>
+      </TD>
+      <td BGCOLOR="white" >
+        <TABLE BGCOLOR="white" BORDER="0" CELLPADDING="0" CELLSPACING="0">
+        <TR>
+          <TD>&nbsp;</TD>
+          <TD WIDTH="80">Minimum</TD>
+          <TD WIDTH="80">Optimal</TD>
+          <TD WIDTH="80">Maximum</TD>
+          <TD ALIGN="center" WIDTH="80">Max. Difference</TD>
+          <TD WIDTH="18">&nbsp;</TD>
+        </TR>
+        <TR>
+          <TD WIDTH="200">Primer&nbsp;Size</TD>
+          <TD WIDTH="100">
+            <input type="text" id="primerSizeMin" name="primerSizeMin" class="txt" value="18" size="7">
+          </TD>
+          <TD WIDTH="100">
+            <input type="text" id="primerSizeOpt" name="primerSizeOpt" class="txt" value="20" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerSizeMax" name="primerSizeMax" class="txt" value="27" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('primerSize');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD>Primer&nbsp;Tm</TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerTmMin" name="primerTmMin" class="txt" value="57.0" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerTmOpt" name="primerTmOpt" class="txt" value="60.0" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerTmMax" name="primerTmMax" class="txt" value="63.0" size="7">
+          </TD>
+          <TD ALIGN="center" WIDTH="80">
+            <input type="text" id="primerTmDiff" name="primerTmDiff" class="txt" value="100.0" size="7">
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('primerTm');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD>Amplicon&nbsp;Tm</TD>
+          <TD WIDTH="80">
+            <input type="text" id="ampliconTmMin" name="ampliconTmMin" class="txt" value="" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="ampliconTmOpt" name="ampliconTmOpt" class="txt" value="" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="ampliconTmMax" name="ampliconTmMax" class="txt" value="" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('ampliconTm');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD>Primer&nbsp;GC%</TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerGcMin" name="primerGcMin" class="txt" value="20.0" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerGcOpt" name="primerGcOpt" class="txt" value="" size="7">
+          </TD>
+          <TD WIDTH="80">
+            <input type="text" id="primerGcMax" name="primerGcMax" class="txt" value="80.0" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('primerGc');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD WIDTH="240" colspan="3">Primer Self Complementarity&nbsp;</TD>
+          <TD WIDTH="80">
+            <input type="text" id="maxSelfComp" name="maxSelfComp" class="txt" value="8.00" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('maxSelfComp');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD WIDTH="240" colspan="3"><SPAN id="max3Comp_lbl" name="max3Comp_lbl">Primer 3' Complementarity&nbsp;</TD></SPAN>   <%# '%>
+          <TD WIDTH="80">
+             <input type="text" id="max3Comp" name="max3Comp" class="txt" value="3.00" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('max3Comp');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD WIDTH="240" colspan="3"><SPAN id="maxPoly_lbl" name="maxPoly_lbl">Primer Mono-Nucleotide Runs&nbsp;</SPAN></TD>   <%# '%>
+          <TD WIDTH="80">
+            <input type="text" id="maxPoly" name="maxPoly" class="txt" value="5" size="7">
+          </TD>
+          <TD WIDTH="80">
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('maxPoly');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        <TR>
+          <TD>Amplicon Size Range(s)&nbsp;</TD>
+          <TD WIDTH="240" colspan="3">
+            <input type="text" id="ampliconSizeRange" name="ampliconSizeRange" class="txt" value="50-1000" size="25">
+          </TD WIDTH="80">
+          <TD>
+            &nbsp;
+          </TD>
+          <td WIDTH="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('ampliconSizeRange');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </TR>
+        </TABLE>
+        <TABLE BGCOLOR="white" BORDER="0" CELLPADDING="0" CELLSPACING="0">
+        <TR>
+          <TD COLSPAN="5" WIDTH="100%">
+            <DIV id="showAdvLabel" name="showAdvLabel" style="cursor: hand; cursor: pointer ; color: blue ; text-decoration: underline; margin: 5px 0px 10px 0px; padding: 0px;" onclick="toggleAdvDisplay(this, 'advDiv');">
+              Show Advanced Options
+            </DIV>
+          </TD>
+        </TR>
+        </TABLE>
+        <DIV id="advDiv" name="advDiv" style="display: none;">
+          <TABLE WIDTH="100%" BGCOLOR="white" BORDER="0" CELLPADDING="0" CELLSPACING="0">
+          <TR>
+            <TD COLSPAN="3"><HR WIDTH="80%"></TD>
+          </TR>
+          <TR>
+            <TD WIDTH="240" nowrap><SPAN id="deadRegions_lbl" name="deadRegions_lbl">Design Primers No Closer Than</SPAN></TD>
+            <TD WIDTH="240">
+              <input type="text" id="leftDeadRegion" name="leftDeadRegion" class="txt" value="0" size="7"><nobr>bp to the 5' end of the template </nobr><%# ' %>
+            </TD>
+            <td WIDTH="36" align="right" nowrap>
+              <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('deadRegions');" >
+                <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+              </A>
+              &nbsp;
+            </td>
+          </TR>
+          <TR>
+          <TR>
+            <TD WIDTH="240">&nbsp;</TD>
+            <TD WIDTH="240" nowrap>
+              <input type="text" id="rightDeadRegion" name="rightDeadRegion" class="txt" value="0" size="7"><nobr>bp to the 3' end of the template </nobr><%# '%>
+            </TD>
+            <TD WIDTH="36">&nbsp;</TD>
+          </TR>
+          <TR>
+            <TD WIDTH="240"><SPAN id="gcClamp_lbl" name="gcClamp_lbl">Primer Minimum 3' GC-Clamp Size&nbsp</SPAN></TD> <%# ' %>
+            <TD WIDTH="240">
+              <input type="text" id="gcClamp" name="gcClamp" class="txt" value="0" size="7">
+            </TD>
+            <td WIDTH="36" align="right" nowrap>
+              <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('gcClamp');" >
+                <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+              </A>
+              &nbsp;
+            </td>
+          </TR>
+          <TR>
+            <TD WIDTH="240"><SPAN id="numNs_lbl" name="numNs_lbl">Primer Maximum Number of Ns</SPAN>&nbsp;</TD> <%# ' %>
+            <TD WIDTH="240">
+              <input type="text" id="numNs" name="numNs" class="txt" value="0" size="7">
+            </TD>
+            <td WIDTH="36" align="right" nowrap>
+              <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('numNs');" >
+                <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+              </A>
+              &nbsp;
+            </td>
+          </TR>
+          <TR>
+            <TD WIDTH="240"><SPAN id="numReturn_lbl" name="numReturn_lbl">Maximum # of Primers / Template</SPAN>&nbsp;</TD> <%# ' %>
+            <TD WIDTH="240">
+              <input type="text" id="numReturn" name="numReturn" class="txt" value="5" size="7">
+            </TD>
+            <td WIDTH="36" align="right" nowrap>
+              <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('numReturn');" >
+                <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+              </A>
+              &nbsp;
+            </td>
+          </TR>
+          <TR>
+            <TD WIDTH="240"><SPAN id="useMasked_lbl" name="useMasked_lbl">Use Repeatmasked Genome?</SPAN>&nbsp;</TD>
+            <TD WIDTH="240">
+              <input type="checkbox" id="useMasked" name="useMasked" class="txt" value="true" <%=hasMasked ? '' : 'disabled=disabled'%> >
+            </TD>
+            <td WIDTH="36" align="right" nowrap>
+              <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('useMasked');" >
+                <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+              </A>
+              &nbsp;
+            </td>
+          </TR>
+          </TABLE>
+        </DIV>
+      </td>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="primerTrack"><FONT SIZE="2"><B>Primer Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="1">
+        <tr>
+          <td nowrap align="right">&quot;Class&quot;</td>
+          <td WIDTH="50">
+            <input type="text" id="primerTrackClass" name="primerTrackClass" value="Primer Design" class="txt" size="12">
+          </td>
+          <td nowrap align="right">&quot;Type&quot;</td>
+          <td WIDTH="30">
+            <input type="text" id="trackTypeName" name="trackTypeName" class="txt" size="7">
+          </td>
+          <td nowrap align="right">&quot;Subtype&quot;</td>
+          <td WIDTH="30">
+            <input type="text" id="trackSubtypeName" name="trackSubtypeName" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('primerTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="ampTrack"><FONT SIZE="2"><B>Amplicon Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="1">
+        <tr>
+          <td nowrap align="right">&quot;Class&quot;</td>
+          <td WIDTH="50">
+            <input type="text" id="ampliconTrackClass" name="ampliconTrackClass" value="Primer Design" class="txt" size="12">
+          </td>
+          <td nowrap align="right">&quot;Type&quot;</td>
+          <td WIDTH="30">
+            <input type="text" id="ampTypeName" name="ampTypeName" class="txt" size="7">
+          </td>
+          <td nowrap align="right">&quot;Subtype&quot;</td>
+          <td WIDTH="30">
+            <input type="text" id="ampSubtypeName" name="ampSubtypeName" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return primer3_overlibHelp('ampTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16">
+            </A>
+            &nbsp;
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<P>
+<input type="submit" name="designPrimers" id="designPrimers" class="btn" value="Design">&nbsp;
+<!-- input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="primer3_reset();" -->&nbsp;
+<P>
+You will receive email notification when the primer design is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

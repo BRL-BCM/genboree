@@ -1,0 +1,275 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/db/dbrc'
+  require 'brl/genboree/abstract/resources/user'
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'uri'
+
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        The RNA-Seq data analysis pipeline uses several well established tools, including Bowtie2, Samtools, FastQC, and specific modules available in RSEQtools. FastQC performs a quality check on the sequence reads, Bowtie2 maps the reads to the reference genome, and Samtools is used to post-process the aligned reads. Downstream analysis utilizes specific modules in RSEQtools performing tasks such as gene-expression quantification, generating signal tracks of mapped reads for visualization, calculating mapping bias, and computing annotation coverage. RSEQtools uses the Mapped Read Format (MRF), a compact data summary format for both short and long read alignments that enables anonymization of confidential sequence information.
+        <br>&nbsp;<br>
+        RSEQtools was developed by the <a href='http://www.gersteinlab.org/' target='_blank'>Gerstein Lab</a> at Yale University.
+        <br>
+        In the batch processing mode, this tool accepts one or more single and/or paired end FASTQ files. The submission should be accompanied by a manifest file in JSON format.
+        The JSON file provides details of all input FASTQ files and links up the correct paired-end files for processing.
+        <br>&nbsp;<br>
+        <span style='font-size: 80%'><i>This tool is currently in BETA release, and is being deployed in the context of the exRNA Communication consortium. Please contact <a href='mailto:sailakss@bcm.edu'>sailakss@bcm.edu</a> with questions or comments, or for help using it on your own data.</i></span>
+        <center><span class='footnote'>[ RSEQtools is described in <a href='http://bioinformatics.oxfordjournals.org/content/27/2/281.full' target='_blank'>this journal article</a>. ]</span></center>
+
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    userId = @context['userId']
+    dbu = BRL::Genboree::DBUtil.new("#{@genbConf.dbrcKey}", nil, nil)
+    hostAuthMap = Abstraction::User.getHostAuthMapForUserId(dbu, userId) 
+    
+    apiUriHelper = BRL::Genboree::REST::Helpers::ApiUriHelper.new()
+    if(apiUriHelper.extractType(@outputs[0]) != "db" )
+      @outputs.reverse!
+    end
+    #$stderr.puts "RSEQTOOLS BATCH: #{@outputs}"
+    uri = URI.parse(@outputs[0])
+    rcscUri = uri.path
+    useIndexOptions = {}
+    listOfIndexes = {}
+
+    # Get list of entrypoints from user db
+    epArray = []
+    apiCaller = ApiCaller.new(uri.host, "#{uri.path}/eps?", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+   
+    if(apiCaller.succeeded?)
+      resp = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+      resp.each { |ep|
+        epArray << ep['name']
+      } 
+    end # if(apiCaller.succeeded?) for getting entrypoints
+
+    # Get list of indexes (if any) from user db 
+    apiCaller = ApiCaller.new(uri.host, "#{rcscUri}/files/indexFiles/bowtie", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    
+    if(apiCaller.succeeded?)
+      userData = JSON.parse(apiCaller.respBody)['data']
+      userData.each { |subdir|
+        userIndexName = subdir['name'] 
+        indexDir = userIndexName.split("/")[2]
+        indexFile = userIndexName.split("/")[3]
+         
+        indexUri = @outputs[0].dup
+        indexUri = indexUri.chomp("?")
+        indexUri << "/file/indexFiles/bowtie/#{CGI.escape(indexDir)}/#{CGI.escape(indexFile)}"
+        listOfIndexes[:"#{indexUri}"] = { :label => "#{indexDir}" }
+      }
+    else
+      #$stderr.puts "Bowtie indexes do not exist in user db"  
+    end # if(apiCaller.succeeded?) for getting index list from user db
+    #$stderr.puts "RSEQTOOLS BATCH: #{listOfIndexes.inspect}"
+    
+    # Get Genome Version of output database
+    genomeVersion = @settings['genomeVersion'].decapitalize
+    #$stderr.puts "RSEQTOOLS BATCH: GENOME version #{genomeVersion}"
+    
+    # Get list of indexes (if any) from repository db 
+    @roiRepositoryGroup = @genbConf.roiRepositoryGrp
+    @roiRepoDb = "#{@roiRepositoryGroup}#{genomeVersion}"
+    indexUri = URI.parse(@roiRepoDb)
+    rsrcPath = indexUri.path
+    @roiDirs = ['wholeGenome', 'eachChr']
+    @roiDirs.each { |dirName|
+      apiCaller = ApiCaller.new(indexUri.host, "#{rsrcPath}/files/indexFiles/bowtie/#{CGI.escape(dirName)}", hostAuthMap)
+      apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+      apiCaller.get()
+      if(apiCaller.succeeded?)
+        ## There are indexes available in common database 
+        repoData = JSON.parse(apiCaller.respBody)['data']
+        repoData.each { |subdir|
+          indexName = subdir['name'] 
+          indexDir = indexName.split("/")[2]
+          indexFile = indexName.split("/")[3]
+        
+          indexROIUri = @roiRepoDb.dup
+          indexROIUri = indexROIUri.chomp("?")
+          indexROIUri << "/file/indexFiles/bowtie/#{CGI.escape(dirName)}/#{CGI.escape(indexFile)}"          
+          if(dirName =~ /wholeGenome/) 
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}", :selected => true } 
+          else
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}" } 
+          end
+        }
+      else
+        #$stderr.puts "#{@roiRepoDb} does not seem to exist"  
+      end # if(apiCaller.succeeded?)
+    }
+    if(listOfIndexes.empty?)
+      useIndexOptions[:makeNewIndex] = { :label => 'Build a new index', :selected => true }
+      hiddenIndexList = true
+      hiddenNewIndex = false
+    else
+      useIndexOptions[:makeNewIndex] = { :label => 'Build a new index' }
+      useIndexOptions[:useExistingIndex] = { :label => 'Use existing index', :selected => true }
+      hiddenIndexList = false
+      hiddenNewIndex = true
+    end
+
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "35", :value => "RSEQtoolsBatch-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'RSEQtools\') used to organize RSEQtools results.' },
+                { :id => 'indexOptions', :toggleText => "Bowtie Index Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'useIndex', :label => 'Select Index', :title => 'Do you want to build a new Bowtie 2 index using reference sequences or use an existing index? Default: Uses whole genome index if available', :onChange => "showIndexOption(this.value)", :type => :select, :options => useIndexOptions },
+                    { :id => 'indexList', :label => 'Bowtie2 index', :title => 'Select the appropriate Bowtie 2 index to be used for mapping', :type => :select, :options => listOfIndexes, :hidden => hiddenIndexList },
+                    { :id => 'indexBaseName', :label => 'Bowtie2 Index Name', :type => :text, :value => genomeVersion, :size => '15', :maxlength => '30', :hidden => hiddenNewIndex, :title => "Provide a name for your custom Bowtie2 index. This name should be less than 30 characters in length. Default: GenomeVersion" },
+                    { :id => 'selectEps', :toggleText => "Select Entrypoints/Chromosomes", :type => :advancedSection, :startWithExpanded => false, :hidden => hiddenNewIndex, :title => "Select list of entrypoints/chromosomes for building Bowtie2 index. Default: all entrypoints" , :widgets =>
+                      [
+                        { :id => "epArray", :label => "", :labelWidth => '100px', :type => :tableWithCheckboxSection, :rows => epArray, :headerRow => ['Entrypoint', 'Select'] },
+                        { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'epArray'}
+                      ]
+                    },
+                  ]
+                },
+                { :id => 'trackOptions', :toggleText => "Track Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'doUploadResults', :label => 'Upload Signal Tracks to user db ?', :type => :checkbox, :title => 'Signal tracks are generated in WIG format from the MRF file. Check this to upload signal track as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC Genome Browser. ', :onClick => "displayTrackName(this.checked)" },
+                    { :id => 'trackClassName', :label => 'Track Class Name', :type => :text, :value => 'User Data', :disabled => true, :title => 'Provide a track class name for uploading signal track under this Class. [Default: User Data]'},
+                    { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => 'Read', :hideTrackName => true, :defaultSubtype => 'Density', :hidden => true, :title => 'For uploading signal track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+                    { :id => 'deleteDupTracks', :label => 'Delete Pre-existing Tracks', :type => :checkbox, :checked => false, :title => "Check this to delete existing tracks in the target database and replace them with newly created ones if the names match. Non matching tracks will not be changed in any way. This will avoid duplication of imported data. By default, data gets appended to the existing track. [Default: Unchecked]." },
+                   ]
+                 },
+                 { :id => 'coverageFactor', :label => 'Coverage Factor', :type => :text, :size => "10", :value => "1", :title => 'Minimum level of uniform coverage required across a transcript. [Default: 1]' }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "RSEQtools Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+function showIndexOption(value)
+{
+  var indexList = document.getElementById('indexList');
+  var indexListLabel = Ext.get('indexListLabel')
+
+  var indexBaseName = Ext.get('indexBaseName');
+  var indexBaseNameLabel = Ext.get('indexBaseNameLabel');
+
+  var selectEps = Ext.get('selectEps');
+  var selectEpsLabel = Ext.get('selectEpsLabel');
+
+  if(value == "useExistingIndex")
+  {
+    indexList.style.visibility = 'visible' ;
+    indexListLabel.setStyle('display', '') ;
+
+    indexBaseName.setStyle('display', 'none') ;
+    indexBaseNameLabel.setStyle('display', 'none') ;
+    selectEpsLabel.setStyle('display', 'none') ;
+  }
+  else if(value == "makeNewIndex")
+  {
+    indexList.style.visibility = 'hidden' ;
+    indexListLabel.setStyle('display', 'none') ;
+
+    indexBaseName.setStyle('display', '') ;
+    indexBaseNameLabel.setStyle('display', '') ;
+    selectEpsLabel.setStyle('display', '') ;
+  }
+}
+
+function displayTrackName(checked)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var wigTracklabel = Ext.get("trackNameLabel") ;
+
+  var lffTrackClassName = document.getElementById('trackClassName') ;
+  var lffTrackClassNameLabel = Ext.get("trackClassNameLabel") ;
+  if(checked)
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    lffType.style.visibility = '' ;
+    lffSubType.style.visibility = '' ;
+    lffTrackClassName.disabled = false ;
+    wigTracklabel.setStyle('display', '') ;
+  }
+  else
+  {
+    lffType.style.visibility = 'hidden' ;
+    lffType.disabled = true ;
+    lffSubType.style.visibility = 'hidden' ;
+    lffSubType.disabled = true ;
+    lffTrackClassName.disabled = true ;
+    wigTracklabel.setStyle('display', 'none') ;
+  }
+}
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

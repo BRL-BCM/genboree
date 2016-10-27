@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "targetInteractionFinder",
+    "releaseStatus": "release",
+    "version": "1.0"
+  },
+  "cluster": {
+    "mem": "6gb",
+    "vmem": "6gb"
+  },
+  "ui": {
+    "label": "Target Interaction Finder for miRNA-Protein Interactions",
+    "shortLabel": "targetInteractionFinder",
+    "groupAccessUri": null
+  }
+}

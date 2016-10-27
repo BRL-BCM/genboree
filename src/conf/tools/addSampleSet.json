@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addSampleSet",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Sample Set",
+    "shortLabel": "[NOT SET]"
+  }
+}

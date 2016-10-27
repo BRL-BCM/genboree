@@ -1,0 +1,677 @@
+<% #4-8-15 kpr wrap entire RHTML with error catch ability and can drive a default action to catch issue %>
+<% begin %>
+<%
+  # Default action (view the splash page)
+  if (!defined?(@action) or @action.nil? or @action.empty?)
+  	action = GenboreeRedmine.getRedmineStartPage(@server)
+  else
+  	action = @action
+  end
+  page = (defined?(@page)) ? @page : "0"
+
+  redmineUrl = @redmineUrl
+%>
+
+<%
+	#get JSON action settings so we know where to drive traffic (aka. rendr())
+	require 'json'
+	actions = @server.get_actions()
+
+%>
+
+<%
+	
+
+	#determine if we're at action path or default path
+	path = action
+
+	headerFooterConfigContentArr = ""
+ 
+ 	#first get the entire header / footer page content (request everything a single time)
+	#get headerFooterConfigContentArr but don't do check for existing, because we'll just get the DEFAULT_CONFIG as a backup
+	headerFooterConfigContentArr = GenboreeRedmine.getRedminePage(@server, "#{action}_CONFIG")
+			
+	#if headerFooterConfigContentArr.size == 0
+	# 4-8-15 kpr, we could get a mostly blank config page which would be invalid, so also check for size == 0, 1 (aka. < 2)
+	#  we don't require a minimal set of AVPs in config, so have to let most anything pass through for further customization
+	#  (i.e. what if someone doesn't want a header or footer, can't restrict this here)
+	if headerFooterConfigContentArr.size < 2
+		path = "DEFAULT"
+		begin
+			headerFooterConfigContentArr = GenboreeRedmine.getRedminePage(@server, "DEFAULT_CONFIG")
+		rescue Exception => err
+	  		$stderr.puts "ERROR getting page= DEFAULT_CONFIG :\t#{err}"
+		ensure
+	  		
+		end
+		
+	end
+
+	mainLinksArrHash = Hash.new()
+	footerMainArrHash = Hash.new()
+	googleAnalyticsHash = Hash.new()
+	genboreeAccountLinksHash = Hash.new()
+	dropDownLinksArrHash = Hash.new()
+	footerLinksArrHash = Hash.new()
+	alertsArrHash = Hash.new()
+	pageInfoArrHash = Hash.new()
+
+
+	mainLinksArrHash = GenboreeRedmine.getRedminePageSubset(headerFooterConfigContentArr, "HEADER_MAIN")
+	footerMainArrHash = GenboreeRedmine.getRedminePageSubset(headerFooterConfigContentArr, "FOOTER_MAIN")
+	googleAnalyticsHash = GenboreeRedmine.getRedminePageSubset(headerFooterConfigContentArr, "GOOGLE_ANALYTICS")
+	genboreeAccountLinksHash = GenboreeRedmine.getRedminePageSubset(headerFooterConfigContentArr, "GENBOREE_ACCOUNT")
+	dropDownLinksArrHash = GenboreeRedmine.getRedminePageCollectionViaPattern(headerFooterConfigContentArr, "HEADER_SUBGROUP_")
+	footerLinksArrHash = GenboreeRedmine.getRedminePageCollectionViaPattern(headerFooterConfigContentArr, "FOOTER_SUBGROUP_")
+	alertsArrHash = GenboreeRedmine.getRedminePageCollectionViaPattern(headerFooterConfigContentArr, "ALERT_")
+	pageInfoArrHash = GenboreeRedmine.getRedminePageSubset(headerFooterConfigContentArr, "CONFIG")
+%>
+
+<% #skip header if we have specific skip case %>
+<% 
+	skipHeaderFooter = 0 
+
+	if action == "4DN" or action == "demo"
+		skipHeaderFooter = 1
+	end
+
+%>
+
+<% if skipHeaderFooter == 0 %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title><%= pageInfoArrHash["page_title"] %></title>
+
+	<!-- Bootstrap -->
+	<link rel="stylesheet" type="text/css" href="<%= @context %>/css/gb.css">
+	<link rel="stylesheet" type="text/css" href="<%= @context %>/css/font-awesome.min.css">
+	<link rel="stylesheet" type="text/css" href="<%= @context %>/fonts/fontello/css/fontello.css">
+
+	<link href="<%= @context %>/css/vibrant-ink.css" type="text/css" rel="stylesheet" />
+
+
+	<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+	<!--[if lt IE 9]>
+	  <script src="<%= @context %>/js/html5shiv.min.js"></script>
+	  <script src="<%= @context %>/js/respond.min.js"></script>
+	<![endif]-->
+
+	<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+	<script src="<%= @context %>/js/jquery-1.11.1.min.js"></script>
+
+	<script type="text/javascript" src="<%= @context %>/js/prettify.js"></script>
+
+	<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', '<%= googleAnalyticsHash["tracking_code"] %>', 'auto');
+	  ga('send', 'pageview');
+
+	</script>
+
+</head>
+
+<body onload="prettyPrint()">
+	<!-- Navigation -->
+	<header id="nav">
+
+		<%# BEGIN ALERTS SECTION (at very top of page) %>
+		<% alertsArrHash.each_with_index{ |alertHash, alertCount|
+			class_type = alertHash["class_type"]
+			leading_bold_text = alertHash["leading_bold_text"]
+			text = alertHash["text"] %>
+		
+			<div role="alert" class="alert alert-<%=  class_type %> text-center" style="margin-bottom: 0;">
+	    		<button data-dismiss="alert" class="close" type="button">
+	    		<span aria-hidden="true">×</span>
+	    		<span class="sr-only">Close</span></button>
+		     	<strong><%= leading_bold_text %></strong> <%= text %>
+		    </div>
+		<% } %>
+		<%# END ALERTS SECTION %>
+
+
+		<nav class="navbar navbar-default container" role="navigation">
+			<div class="custom-nav">
+
+
+				<% #BEGIN right side branding section %>
+				<% #a class="navbar-brand navbar-right" href="#">Right?</a%>
+				<% if mainLinksArrHash["right_navbar_image_lg"] != nil %>
+					<a class="navbar-brand navbar-right visible-lg hidden-md hidden-sm hidden-xs" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>" title="<%= mainLinksArrHash["right_navbar_brand"] %>" rel="home">
+							<img src="<%= @redmineUrl %><%= mainLinksArrHash["right_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["right_navbar_brand"] %>" class="logo img-responsive">
+					</a>
+				<% else %>
+					<a class="navbar-brand navbar-right visible-lg hidden-md hidden-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>">
+						<%= mainLinksArrHash["right_navbar_brand"] %>
+					</a>
+				<% end %>
+
+				<% if mainLinksArrHash["right_navbar_image_md"] != nil %>
+					<a class="navbar-brand navbar-right hidden-lg visible-md hidden-sm hidden-xs" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>" title="<%= mainLinksArrHash["right_navbar_brand"] %>" rel="home">
+						<img src="<%= @redmineUrl %><%= mainLinksArrHash["right_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["right_navbar_brand"] %>" class="logo img-responsive">
+					</a>
+				<% else %>
+					<a class="navbar-brand navbar-right hidden-lg visible-md hidden-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>">
+						<%= mainLinksArrHash["right_navbar_brand"] %>
+					</a>
+				<% end %>
+				
+
+				<% if mainLinksArrHash["right_navbar_image_sm"] != nil %>
+					<a class="navbar-brand navbar-right hidden-lg hidden-md visible-sm hidden-xs navbar-toggle" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>" title="<%= mainLinksArrHash["right_navbar_brand"] %>" rel="home">
+						<img src="<%= @redmineUrl %><%= mainLinksArrHash["right_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["right_navbar_brand"] %>" class="logo img-responsive">
+					</a>
+				<% else %>
+					<a class="navbar-brand navbar-right hidden-lg hidden-md visible-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["right_navbar_brand_link"] %>">
+						<%= mainLinksArrHash["right_navbar_brand"] %>
+					</a>
+				<% end %>
+
+
+				<% #END right side branding section %>
+
+
+
+
+				<!-- Brand and toggle get grouped for better mobile display -->
+				
+				<div class="navbar-header">
+					<% if mainLinksArrHash["show_collapse_menu"] != "false" %>
+						<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+							<span class="sr-only">Toggle navigation</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+					<% end %>
+
+					<!--a class="navbar-brand" href="#">Genboree</a-->
+					<!-- <a class="navbar-brand" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>"><%= mainLinksArrHash["left_navbar_brand"] %></a> -->
+
+					<!-- <a class="navbar-brand visible-lg visible-md visible-sm" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>" title="<%= mainLinksArrHash["left_navbar_brand"] %>" rel="home">
+						<img src="<%= @redmineUrl %><%= mainLinksArrHash["left_navbar_image_sm_md_lg"] %>" alt="<%= mainLinksArrHash["left_navbar_brand"] %>" class="logo img-responsive">
+					</a> -->
+
+
+
+
+					<% #BEGIN left side branding section %>
+					<% if mainLinksArrHash["left_navbar_image_lg"] != nil %>
+						<a class="navbar-brand visible-lg hidden-md hidden-sm hidden-xs" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>" title="<%= mainLinksArrHash["left_navbar_brand"] %>" rel="home">
+								<img src="<%= @redmineUrl %><%= mainLinksArrHash["left_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["left_navbar_brand"] %>" class="logo img-responsive">
+						</a>
+					<% else %>
+						<a class="navbar-brand visible-lg hidden-md hidden-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>">
+							<%= mainLinksArrHash["left_navbar_brand"] %>
+						</a>
+					<% end %>
+
+					<% if mainLinksArrHash["left_navbar_image_md"] != nil %>
+						<a class="navbar-brand hidden-lg visible-md hidden-sm hidden-xs" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>" title="<%= mainLinksArrHash["left_navbar_brand"] %>" rel="home">
+							<img src="<%= @redmineUrl %><%= mainLinksArrHash["left_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["left_navbar_brand"] %>" class="logo img-responsive">
+						</a>
+					<% else %>
+						<a class="navbar-brand hidden-lg visible-md hidden-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>">
+							<%= mainLinksArrHash["left_navbar_brand"] %>
+						</a>
+					<% end %>
+					
+
+					<% if mainLinksArrHash["left_navbar_image_sm"] != nil %>
+						<a class="navbar-brand hidden-lg hidden-md visible-sm hidden-xs" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>" title="<%= mainLinksArrHash["left_navbar_brand"] %>" rel="home">
+							<img src="<%= @redmineUrl %><%= mainLinksArrHash["left_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["left_navbar_brand"] %>" class="logo img-responsive">
+						</a>
+					<% else %>
+						<a class="navbar-brand hidden-lg hidden-md visible-sm hidden-xs navbar-text-logo" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>">
+							<%= mainLinksArrHash["left_navbar_brand"] %>
+						</a>
+					<% end %>
+
+
+					<% if mainLinksArrHash["left_navbar_image_xs"] != nil %>
+						<a class="navbar-brand hidden-lg hidden-md hidden-sm visible-xs" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>" title="<%= mainLinksArrHash["left_navbar_brand"] %>" rel="home">
+							<img src="<%= @redmineUrl %><%= mainLinksArrHash["left_navbar_image_lg"] %>" alt="<%= mainLinksArrHash["left_navbar_brand"] %>" class="logo img-responsive">
+						</a>
+					<% else %>
+						<a class="navbar-brand hidden-lg hidden-md hidden-sm visible-xs navbar-text-logo" href="<%= mainLinksArrHash["left_navbar_brand_link"] %>">
+							<%= mainLinksArrHash["left_navbar_brand"] %>
+						</a>
+					<% end %>
+
+					<% #END left side branding section %>
+
+
+					<% #check to see if we should display login / register button %>
+					<% if not genboreeAccountLinksHash.empty? and not mainLinksArrHash.empty? %>
+						<% if mainLinksArrHash["display_login_button"] != "false" %>
+							<a href="#"><button href="#" class="btn btn-primary visible-sm small-sc-reg" data-toggle="modal" data-target="#reglog">Login / Register</button></a>
+						<% end %> 
+					<% end %> 
+				</div>
+
+				<!-- Collect the nav links, forms, and other content for toggling -->
+				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+					<ul class="nav navbar-nav navbar-right">
+						<% iteratorFlag = 1 %>
+						<% currentPosition = 1 %>
+						<% 
+							while iteratorFlag != 0 && currentPosition < 50
+							#while currentPosition < 10
+								link = mainLinksArrHash["link_#{currentPosition}"]
+								linkText = mainLinksArrHash["link_text_#{currentPosition}"]
+
+								if link != nil && link != "" %>
+									<li><a href="<%= link %>" target="_blank"><%= linkText %></a></li>
+						<%		else
+									iteratorFlag = 0
+								end
+								currentPosition += 1
+							end 
+						%>
+ 
+ 						<% #only display more drop down if we have things to put there %>
+ 						<% if dropDownLinksArrHash.size > 0 %>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></a>
+								<ul class="dropdown-menu" role="menu">
+									<%	dropDownLinksArrHash.each_with_index{ |dropDownHash, dropDownCount|
+											if dropDownCount > 0 %>
+												<li class="divider"></li>
+									<%		end	%>
+
+										<% 	iteratorFlag = 1 %>
+										<% 	currentPosition = 1 %>
+										<% 
+											while iteratorFlag != 0 && currentPosition < 50
+												link = dropDownHash["link_#{currentPosition}"]
+												linkText = dropDownHash["link_text_#{currentPosition}"]
+									
+												if link != nil && link != ""
+										%>
+													<li><a href="<%= link %>"><%= linkText %></a></li>
+										<% 		else
+													iteratorFlag = 0
+												end
+												currentPosition += 1
+											end 
+										%>		
+									 
+									<%	} %>
+
+								</ul>
+							</li>
+						<% end %>
+
+						<% #check to see if we should display login / register button %>
+						<% if not genboreeAccountLinksHash.empty? and not mainLinksArrHash.empty? %>
+							<% if mainLinksArrHash["display_login_button"] != "false" %>
+								<li><a href="#"><button href="#" class="btn btn-primary" data-toggle="modal" data-target="#reglog">Login / Register</button></a></li>
+							<% end %> 
+						<% end %>
+					<!-- 	<li><a href="#"><button href="#" class="btn btn-primary" data-toggle="modal" data-target="#stopGapLogin">Login / Register</button></a></li> -->
+
+<!-- 						<div id="sb-search" class="sb-search">
+							<form>
+								<input class="sb-search-input" placeholder="Enter your search term..." type="search" value="" name="search" id="search">
+								<input class="sb-search-submit" type="submit" value="">
+								<span class="sb-icon-search"></span>
+							</form>
+						</div> -->
+					</ul>
+				</div><!-- /.navbar-collapse -->
+			</div><!-- /.container-fluid -->
+		</nav>
+
+		<!-- ALERTS -->
+		<%# if (action == "splash")  # Splash page %>
+
+
+
+		<%# end %>
+		<!-- /ALERTS -->    
+
+	</header><!-- /Navigation -->
+
+<% end %>
+
+	<!-- Content -->
+	<div id="home">
+		<input type="hidden" id="action" value="<%= action %>">
+
+		<% #actions["ACTION"][action].inspect %>
+		<% #"----------------" %>
+		<% #if not actions["ACTION"].key?(action) %>
+
+
+		<% key_val = actions["ACTION"][action] %>
+		<% #if key_val == nil %>
+			<% #@server.rendr("four-zero-four") %>
+
+
+		<%# if the key_val is nil, that means that we do not have this path defined in action_config.json  %>
+		<%# if key_val == 76 %>
+		<% if key_val == nil %>
+			<%# get html response by trying to see if wiki page exists  %>
+			<% html_straight_from_wiki = @server.rendr("redmine", {:server => @server, :action => action}) %>
+			<%# html_straight_from_wiki.inspect %>
+			
+			<%# if wiki page does not exist and we get a 404 back, use our custom four-zero-four page to show help  %>
+			<% if html_straight_from_wiki =~ /Error 404: this may happen if you have entered/ %>
+				<%= @server.rendr("four-zero-four") %>
+			<%# otherwise wiki page exists, render it through genrate generic html function %>
+			<% else %>
+				<%= @server.rendr("generate-html-view") %>
+				
+				<% begin %>
+					<% contentArr = [] %>
+					<% contentArr = GenboreeRedmine.getRedminePage(@server, action) %>
+				<% rescue Exception => err %>
+	  				$stderr.puts "ERROR getting page= #{action} :\t#{err}"
+				<% ensure %>
+	  		
+				<% end %>
+
+				
+				<%# contentArr.inspect %>
+
+				<%# check to see if there is a type associated with page and we'll want to use the generate html functions %>
+				<% if html_straight_from_wiki =~ /type:/ %>
+					<%
+						contentArr.each{ |contentHash|
+							#check to see if a type is specified and if so, send it to generate-html-view for rendering
+							if contentHash["type"] != nil
+					%>
+								<%= GenerateHTML.genericSectionGenerateHTML(contentArr, contentHash["ID"], contentHash["type"], nil, nil, @redmineUrl, @server) %>
+					<%
+							end
+						}
+
+					%>
+				<%# otherwise, just render it %>
+				<% else %>
+					<section id="via_wiki">
+						<%= html_straight_from_wiki %>
+					</section>
+				<% end %>
+
+
+			<%# otherwise wiki page exists, render it  %>
+			<%# else %>
+				<%#= html_straight_from_wiki %>
+			<% end %>
+		<%# if we have defined path, render that page  %>
+		<% else %>
+			<%= @server.rendr("#{action}") %>
+		<% end %>
+
+
+	</div><!-- /#home -->	
+	<!-- /Content -->
+
+<% # also check to see if we should skip footer based on initial check %>
+<% if skipHeaderFooter == 0 %>
+	
+	<!-- Footer -->
+	<footer>
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-9 col-md-8 col-sm-7 col-xs-12">
+					<a href="<%= footerMainArrHash["left_navbar_brand_link"] %>" class="navbar-brand"><%= footerMainArrHash["left_navbar_brand"] %></a>
+				</div>
+
+				<% #check to see if we have right nav bar brand or image before using this section %>
+				<% if footerMainArrHash["right_navbar_brand"] != nil %>
+					<div class="col-lg-3 col-md-4 col-sm-5 col-xs-12 powered text-right">
+						<a href="<%= footerMainArrHash["right_navbar_brand_link"] %>" class="xnavbar-brand">
+							
+							
+							<% if footerMainArrHash["right_navbar_brand_fa_icon"] != nil %>
+								<i class="fa <%= footerMainArrHash["right_navbar_brand_fa_icon"] %>"></i>
+							<% end %>
+							
+							<%= footerMainArrHash["right_navbar_brand"] %>
+
+							<% if footerMainArrHash["right_navbar_image"] != nil %>
+								<img src="<%= @redmineUrl %><%= footerMainArrHash["right_navbar_image"] %>" class="">
+								<!-- <img src="<%= @redmineUrl %><%= footerMainArrHash["right_navbar_image"] %>" alt="<%= footerMainArrHash["right_navbar_brand"] %>" class=""> -->
+							<% end %>
+						</a>
+					</div>
+				<% end %>
+
+				<!-- <div class="col-sm-4 col-xs-12 footer-brand">
+					<a href="/" class="navbar-brand"><%= footerMainArrHash["left_navbar_brand"] %></a>
+				</div>
+				<div class="col-sm-3 col-xs-12 email">
+					<p>Sign up for our newsletter</p>
+				</div>
+				<div class="col-sm-5 col-xs-12">
+					<div class="email">
+						<form class="form-inline pull-right" role="form">
+							<div class="form-group">
+								<input type="email" class="form-control" placeholder="Email Address">
+							</div>
+							<button type="submit" class="btn btn-warning pull-right"><i class="fa fa-share"></i></button>
+						</form>
+					</div>
+				</div> -->
+			</div>
+		</div>
+		<hr>
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="row">
+						<div class="col-sm-6 col-md-4">
+							<div itemscope itemtype="http://schema.org/Organization">
+								<div itemprop="name" style="display:none"><%= footerMainArrHash["name"] %></div>
+								<div itemprop="description">
+									<h4><%= footerMainArrHash["h4"] %></h4>
+									<p><%= footerMainArrHash["p"] %></p>
+								</div>
+								<div itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
+									<span itemprop="streetAddress"><p><%= footerMainArrHash["streetAddress"] %></p> <p><%= footerMainArrHash["roomLocation"] %></p></span>
+									<p>
+										<span itemprop="addressLocality"><%= footerMainArrHash["addressLocality"] %></span>
+										<% if footerMainArrHash["addressRegion"] != nil %>
+											,
+										<% end %>
+										<span itemprop="addressRegion"><%= footerMainArrHash["addressRegion"] %></span> <span itemprop="postalCode"><%= footerMainArrHash["postalCode"] %></span>
+									</p>
+								</div>
+							</div>
+							<div class="row bay-logo">
+								<div class="col-sm-12">
+									<% if footerMainArrHash["institution_logo_link"] != nil %>
+										<a href="<%= footerMainArrHash["institution_logo_link"]%>" target="_blank"><img src="<%= @redmineUrl %><%= footerMainArrHash["institution_logo_path"] %>" alt="<%= footerMainArrHash["institution_logo_alt_text"] %>" class="img-responsive"></a>
+									<% else %>
+										<% if footerMainArrHash["institution_logo_path"] != nil %>
+											<img src="<%= @redmineUrl %><%= footerMainArrHash["institution_logo_path"] %>" alt="<%= footerMainArrHash["institution_logo_alt_text"] %>" class="img-responsive">
+										<% end %>
+									<% end %>
+
+									
+									
+
+									<% if footerMainArrHash["lab_logo_link"] != nil %>
+										<a href="<%= footerMainArrHash["lab_logo_link"]%>"><img src="<%= @redmineUrl %><%= footerMainArrHash["lab_logo_path"] %>" alt="<%= footerMainArrHash["lab_log_alt_text"] %>" class="img-responsive"></a>
+									<% else %>
+										<% if footerMainArrHash["lab_logo_path"] != nil %>
+											<img src="<%= @redmineUrl %><%= footerMainArrHash["lab_logo_path"] %>" alt="<%= footerMainArrHash["lab_log_alt_text"] %>" class="img-responsive">
+										<% end %>
+									<% end %>
+								</div>
+							</div>
+						</div>
+
+						<%	footerLinksArrHash.each_with_index{ |footerHash, dropDownCount| %>
+							<% 	iteratorFlag = 1 %>
+							<% 	currentPosition = 1 %>
+
+							<div class="col-sm-3 col-md-2">
+								<h4><%= footerHash["h4"] %></h4>
+							<% 
+								while iteratorFlag != 0 && currentPosition < 50
+								#while currentPosition < 10
+									link = footerHash["link_#{currentPosition}"]
+									linkText = footerHash["link_text_#{currentPosition}"]
+						
+									if link != nil && link != ""
+							%>
+										<p><a href="<%= footerHash["link_#{currentPosition}"] %>" target="_blank"><%= footerHash["link_text_#{currentPosition}"] %></a></p>
+							<%		else
+										iteratorFlag = 0
+									end
+
+									currentPosition += 1
+									#break
+								end 
+							%>		
+							</div>
+						<% 	} %>
+
+					</div>
+				</div>
+			</div>
+		</div>
+		<% if footerMainArrHash["copyright"] != nil %>
+			<p class="text-center muted push70">&copy; <%= footerMainArrHash["copyright"] %></p>
+		<% end %>
+	</footer>
+	<!-- /Footer -->
+
+	<!-- Login Modal -->
+	<div class="modal fade" id="reglog" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div id="login" class="modal-content">
+				<div class="blue-bg">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+						<h4 class="modal-title" id="myModalLabel">Log in to a Genboree Service</h4>
+					</div>
+				</div>
+				<div class="modal-body">
+					<div class="blue-bg">
+						<div class="row">
+							<div class="col-md-12">
+								<div class="row">
+									<% iteratorFlag = 1 %>
+									<% currentPosition = 1 %>
+									<% 
+										while iteratorFlag != 0 && currentPosition < 4
+											link = mainLinksArrHash["link_#{currentPosition}"]
+											linkText = mainLinksArrHash["link_text_#{currentPosition}"]
+
+											if link != nil && link != "" %>
+												<div class="col-md-4">
+													<a href="<%= link %>" class="btn btn-primary-white" target="_blank"><%= linkText %></a>
+													<br>
+													<br>
+												</div>
+									<%		else
+												iteratorFlag = 0
+											end
+											currentPosition += 1
+										end 
+									%>
+								</div>
+							</div>
+						</div>
+					</div>
+
+
+					<div class="row">
+						<div class="col-md-12">
+					
+							<h2>Manage your Genboree Account</h2>
+							<hr>
+
+							<div class="row">
+								<div class="col-md-12">
+									<div class="row">
+										<% iteratorFlag = 1 %>
+										<% currentPosition = 1 %>
+										<% 
+											while iteratorFlag != 0 && currentPosition < 4
+												link = genboreeAccountLinksHash["link_#{currentPosition}"]
+												linkText = genboreeAccountLinksHash["link_text_#{currentPosition}"]
+
+												if link != nil && link != "" %>
+													<div class="col-md-4">
+														<a href="<%= link %>" class="btn btn-primary-white" target="_blank"><%= linkText %></a>
+														<br>
+														<br>
+													</div>
+										<%		else
+													iteratorFlag = 0
+												end
+												currentPosition += 1
+											end 
+										%>
+									</div>
+								</div>
+							</div>
+
+							<div class="modal-footer">
+								<button type="button" class="btn btn-tertiary" data-dismiss="modal">Cancel</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- /Login Modal -->
+
+
+
+	<script src="<%= @context %>/js/classie.js"></script>
+	<!--script src="<%= @context %>/js/uisearch.js"></script-->
+
+	<script>
+		//new UISearch( document.getElementById( 'sb-search' ) );
+	</script>
+
+	
+	<!-- Include all compiled plugins (below), or include individual files as needed -->
+	<script src="<%= @context %>/js/bootstrap.min.js"></script>
+
+	<script src="<%= @context %>/js/modernizr.custom.js"></script>
+	<script src="<%= @context %>/js/brl.js"></script>
+
+	<script>
+		//Stop Video When Modal Closes
+		$('.modal').each(function(){var src = $(this).find('iframe').attr('src');$(this).on('click', function(){$(this).find('iframe').attr('src', '');$(this).find('iframe').attr('src', src);});});
+	</script>
+
+	
+
+
+<% end %>
+
+
+</body>
+</html>
+<% rescue Exception => err %>
+  <% $stderr.puts "INDEX.RHTML GENERAL ERROR:\t#{err}" %>
+
+  We are unable to fulfill your request at this time. We apologize for any inconvenience.
+  <br>
+  Please attach the following information when reporting bug:
+  <br><br>
+  Action: <%= action %>
+  <br>
+  Error: <%= err %>
+<% ensure %>
+
+<% end %> 

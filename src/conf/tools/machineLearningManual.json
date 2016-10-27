@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "machineLearningManual",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Machine Learning -> User supplied OTU table",
+    "shortLabel": "Machine Learning - User OTU"
+  },
+  "cluster": {
+    "walltime": "96:00:00"
+  }
+}

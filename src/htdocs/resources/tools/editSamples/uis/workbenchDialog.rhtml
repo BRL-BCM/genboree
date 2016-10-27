@@ -1,0 +1,251 @@
+<%# RENDER HTML%>
+<%
+  width = (@hasAccess ? 700 : 320)
+  height = (@hasAccess ? 600 : 320)
+  minConditions = @settings.key?('noSamples') ? false : true
+  height = minConditions ? height : 130
+%>
+<style type="text/css">
+  .selectImg {
+    background-image: url('/images/silk/add.png') ;
+    background-repeat: no-repeat ;
+  }
+</style>
+
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows you to edit sample attribute values from within Genboree.
+          <br>&nbsp;<br>
+          Please note that the state field requires an integer value -- your edits for this field will be rejected unless you provide one.
+        "
+      })
+  %>
+  <%
+    buff = ""
+  %>
+  <%
+    if(minConditions)
+  %>    
+    <%# Tool-specific UI widgets user provides/reviews %>    
+    <%
+      buff << "<div align=\"center\" id=\"sampleDiv\" style=\"height:auto;\" > </div>"
+    %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "Edit sample values:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => buff
+      })
+    %>
+    <%
+      btns = []
+      btns << { :type => :submit, :value => "Save", :onClick => "setBtnType(this.value)", :title => "Save your edits to the database" }
+      btns << { :type => :cancel}
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => btns
+        })
+    %>
+    </form>
+    <script type="text/javascript">
+    /* Utility function for accessing button values */
+    function setBtnType(btnValue)
+    {
+      wbFormSettings.set('btnType', btnValue) ;
+    }
+    /* Display grid in workbench dialog for editSamples tool to edit samples on the fly
+     * Uses two JSONs prepared by the rulesHelper for this tool
+     *   gridFields is a list of fields (attributes) in the order they are encountered in the input samples (name first)
+     *   gridRecs is a list of lists of values for those attributes for each sample with the empty String indicating an absence of value
+     * */
+    function createGrid(gridFieldsJson, gridRecsJson, gridRowUriMapJson)
+    {
+      var gridFieldsList = JSON.parse(gridFieldsJson) ;
+      var gridRecsMatrix = JSON.parse(gridRecsJson) ;
+      var gridRowUriMap = JSON.parse(gridRowUriMapJson) ;
+      var ii ;
+      var jj ;
+      var sampleEditObj = {} ;
+      // setup 3 parallel global hashes defined on the sample rows edited in the grid
+      wbFormSettings.set('sampleEditHash', new Hash()) ;
+      wbFormSettings.set('sampleAttributeRemoveHash', new Hash()) ;
+      wbFormSettings.set('sampleRowUriMap', new Hash()) ;
+      // convert gridFields to the form expected by ExtJS objects
+      var extFields = [];
+      for(ii=0; ii<gridFieldsList.length; ii++){
+        extFields.push({name: unescape(gridFieldsList[ii])}) ;
+      }
+      // unescape fields escaped in the RulesHelper
+      var unescapedGridRecs = [] ;
+      for(ii=0; ii<gridRecsMatrix.length; ii++){
+        unescapedGridRec = [] ;
+        for(jj=0; jj<gridRecsMatrix[ii].length; jj++){
+          unescapedGridRec.push(unescape(gridRecsMatrix[ii][jj])) ;
+        }
+        unescapedGridRecs.push(unescapedGridRec) ;
+      }
+      // prepare a data store to help with the grid panel
+      var myStore = new Ext.data.SimpleStore(
+        {
+          id: 'valueStore',
+          fields: extFields,
+          data: unescapedGridRecs
+        });
+      // prepare columns for grid panel
+      var extColumns = [] ;
+      // specially make name column (which we forced to be the first field in the RulesHelper) not editable
+      extColumns.push({header: gridFieldsList[0], dataIndex: gridFieldsList[0], width: 100, editable: false, sortable: true}) ;
+      for(ii=1; ii<gridFieldsList.length; ii++){
+        calcWidth = gridFieldsList[ii].length * 6 + 5 ;
+        colWidth = (calcWidth < 100 ? 100 : calcWidth) ; // min
+        colWidth = (colWidth > 200 ? 200 : colWidth) ; // max
+        extColumns.push({header: gridFieldsList[ii], dataIndex: gridFieldsList[ii], width: colWidth, sortable: true, editable: true,
+                         editor: new Ext.form.TextField({allowBlank: true})}) ;
+      }
+      // create the actual grid
+      var grid ;
+      grid = new Ext.grid.EditorGridPanel({
+        id: 'sampleGrid',
+        title: 'Double-click to edit values',
+        store: myStore,
+        height: 450,
+        width: 300,
+        columns: extColumns,
+        loadMask: true,
+        autoScroll: true,
+        stateful: false,
+        ddGroup:'myGridDD',
+        sm: new Ext.grid.CellSelectionModel(),
+        viewConfig: {
+          emptyText: 'No samples found',
+          forceFit: false
+        },
+        stripeRows: true
+      }) ;
+      // update wbFormSettings for use in JobHelper to make API calls to update sample values
+      grid.on('afteredit',
+      function(eObj)
+      {
+        var newValue = eObj.value ;
+        var sampleNum = eObj.row ;
+        var sampleName = unescapedGridRecs[sampleNum][0] ; // [name, attr1, attr2, ...]
+        var attributeNum = eObj.column ;
+        var attributeName = gridFieldsList[attributeNum] ;
+        var avpHash = {} ;
+        var attributeRemoveArray = [] ;
+        // handle attributes to be removed
+        if(wbFormSettings.get('sampleAttributeRemoveHash').get(sampleNum) == undefined)
+        {
+          // add the sampleNum as a key in the hash with an empty attributeRemoveArray
+          attributeRemoveArray = [] ;
+          wbFormSettings.get('sampleAttributeRemoveHash').set(sampleNum, attributeRemoveArray) ;
+        }
+        else
+        {
+          // get the existing attributeRemoveArray for the sampleName
+          attributeRemoveArray = wbFormSettings.get('sampleAttributeRemoveHash').get(sampleNum) ;
+        }
+        if(newValue == '<delete>')
+        {
+          // the "<delete>" string is a special value indicating we should remove these attributes
+          attributeRemoveArray.push(attributeName) ;
+          wbFormSettings.get('sampleAttributeRemoveHash').set(sampleNum, attributeRemoveArray) ;
+        }
+        // handle attributes to be edited or added
+        if(sampleName in sampleEditObj)
+        {
+          // add attribute-value pair to existing avpHash
+          avpHash = sampleEditObj[sampleName] ;
+          avpHash[attributeName] = newValue ;
+        }
+        else
+        {
+          // create new avpHash
+          sampleEditObj[sampleName] = {} ;
+          sampleEditObj[sampleName][attributeName] = newValue;
+        }
+        wbFormSettings.get('sampleEditHash').set(sampleNum, sampleEditObj[sampleName]) ;
+        wbFormSettings.get('sampleRowUriMap').set(sampleNum, gridRowUriMap[sampleNum]) ;
+      }) ;
+      // for neater display place Grid in Container
+      var gridContainer = new Ext.Container(
+      {
+        id: "gridContainer",
+        layout: 'fit',
+        renderTo: 'sampleDiv',
+        autoScroll: true,
+        monitorResize: true,
+        items: [
+          grid
+        ]
+      }) ;
+    }
+    createGrid('<%=@settings['gridFields']%>', '<%=@settings['gridRecs']%>', '<%=@settings['gridRowUriMap']%>') ;
+
+    // after submit has been rendered and grid has been created, 
+    // force cells still being edited when the save button is clicked to be committed
+    var wbButtons = document.getElementsByClassName("wbButton") ;
+    var submitButton ; 
+    for(var ii=0; ii<wbButtons.length; ii+=1)
+    {
+      wbButton = wbButtons[ii] ;
+      if(wbButton.getAttribute("type") == "submit")
+      {
+        submitButton = wbButton ;
+      } 
+    }
+
+    if(submitButton != undefined)
+    {
+      var grid = Ext.getCmp("sampleGrid")
+      var origOnClick = submitButton.getAttribute("onclick")
+      var newOnClick = "grid.stopEditing(false); " + origOnClick ;
+      submitButton.removeAttribute("onclick") ;
+      submitButton.setAttribute("onclick", newOnClick) ;
+    }
+    
+    </script>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO Samples:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "There are no samples in your Input Data."
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+        { :toolHelpOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

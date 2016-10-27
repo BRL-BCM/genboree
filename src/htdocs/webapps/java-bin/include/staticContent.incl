@@ -1,0 +1,122 @@
+<%@ page import="javax.servlet.http.*, java.util.*, java.sql.*,java.io.*, java.net.*,
+ org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*, org.genboree.message.*" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="userinfo.incl" %>
+<%
+  response.addDateHeader( "Expires", 0L ) ;
+  response.addHeader( "Cache-Control", "no-cache, no-store" ) ;
+
+  int i ;
+
+  if(grps == null)
+  {
+    Refseq[] rseqs2 = Refseq.fetchAll( db, is_admin ? null : grps ) ;
+    if( JSPErrorHandler.checkErrors(request, response, db, mys) )
+    {
+      return ;
+    }
+    if( rseqs2 == null )
+    {
+      rseqs2 = new Refseq[0] ;
+    }
+  }
+  else if(grps.length <= 0)
+  {
+    mys.setAttribute( "warnMsg", "<strong>Sorry, We have detected that you genboree account has some "+
+            "serious problems please contact genboree_admin@genboree.org immediately to fix your account</strong>" ) ;
+    GenboreeUtils.sendRedirect(request,response,  "/java-bin/warn.jsp" ) ;
+    return ;
+  }
+
+  boolean hasPermission = false ;
+  // groupAllowed <= comes from the .jsp file that is including this file ; contains the *name* of the group which is allowed to access the resource
+  //              <= if null, the permission will be granted but ACCESS MUST BE CHECKED AND COMMUNICATED BY OTHER CODE (possibily RHTML)
+  if(groupAllowed != null)
+  {
+    for( i=0; i<grps.length && hasPermission == false; i++ )
+    {
+      if(grps[i] == null)
+      {
+        System.err.println( "staticContent.incl => The group at index " + i + " is null") ;
+        continue ;
+      }
+      String myGroupName = grps[i].getGroupName() ;
+      if(myGroupName != null)
+      {
+        if(myGroupName.equalsIgnoreCase(groupAllowed))
+        {
+          hasPermission = true ;
+        }
+      }
+      else
+      {
+        System.err.println("staticContent.incl => The groupName is null") ;
+        continue ;
+      }
+    }
+  }
+  else // groupAllowed == null, then some other code will be checking access...intended only for proxied pages (e.g. RHTML), not for other Java/JSP code
+  {
+    hasPermission = true ;
+  }
+
+  // If the allowed group is Public, then automatic permission
+	if(groupAllowed != null && groupAllowed.equalsIgnoreCase("Public"))
+  {
+    hasPermission = true ;
+  }
+
+  // If no permission, then either:
+  // (a) user doesn't belong to group that is allowed (notify)
+  // (b) user is not logged in yet (either as themselves or as Public/Guest, which can be done automatically
+  // We only want to have the notifyAdmin come up if the user has no permission and the user is NOT Public/Guest
+  if(!hasPermission)
+  {
+    if(groupAllowed == null) // Incorrect args, redirect somewhere safe
+    {
+      GenboreeMessage.setErrMsg(mys, "It looks like you tried to reach a page improperly or by following an incorrect link. You have redirected to this page for safety.") ;
+      GenboreeUtils.sendRedirect(request, response,  request.getContextPath() + "/mygroup.jsp") ;
+    }
+    else if((userInfo != null && userInfo[0] != "Public")) // then user is logged in and not as Public/Guest, but don't have access
+    {
+      // Therefore, show notification window to contact group admin to request access
+      String myUrl = "/java-bin/notifyAdmin.jsp?";
+      if(groupAllowed != null && refSeqId == null)
+      {
+        myUrl += "groupAllowed=" + groupAllowed ;
+      }
+      else if(groupAllowed == null && refSeqId != null)
+      {
+        myUrl += "msgRefSeqId=" + refSeqId ;
+      }
+      else if(groupAllowed != null && refSeqId != null)
+      {
+        myUrl += "groupAllowed=" + groupAllowed + "&msgRefSeqId=" + refSeqId ;
+      }
+      else
+      {
+          mys.setAttribute( "warnMsg", "<strong>Sorry, We have detected that this page has "+
+                  "serious problems please contact genboree_admin@genboree.org immediately to fix your account</strong>" ) ;
+          GenboreeUtils.sendRedirect(request, response, "/java-bin/warn.jsp" ) ;
+      }
+      // redirect to notification page
+      mys.setAttribute("target", GenboreeUtils.getCurrentUrl(request)) ;
+      GenboreeUtils.sendRedirect(request, response, myUrl) ;
+    }
+    else // either not logged in or user is Public and that doesn't have access to the resource...send them to go login
+    {
+      // Therefore, redirect them to login.jsp but save where they are trying to go
+      System.err.println("staticContent.incl => No permission, redirecting to login.jsp" +
+                         "\n                   => curr url is: " + GenboreeUtils.getCurrentUrl(request)) ;
+      // Invalidate session and get a new one.
+      mys = GenboreeUtils.invalidateSession(mys, request, response, true) ;
+      mys.setAttribute("accessDenied", "true") ;
+      GenboreeUtils.sendRedirectSaveTarget(mys, request, response, "/java-bin/login.jsp");
+    }
+    return ;
+  }
+  else
+  {
+    mys.removeAttribute("accessDenied") ;
+  }
+%>

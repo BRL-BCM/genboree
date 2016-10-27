@@ -1,0 +1,24 @@
+@CHARSET "ISO-8859-1";
+
+.poster {
+  border: 1px black solid;
+  margin: 30px 30px 30px 60px;
+  width: 750px;
+  height: 200px;
+}
+
+.posterImage {
+  float: left;
+  height: 170px;
+  padding: 15px;
+  width: 220px;
+}
+
+.posterText {
+  color:black;
+  font-family:sans-serif,verdana,arial;
+  font-size:10pt;
+  overflow:hidden;
+  padding: 15px 15px 15px 0px;
+  text-decoration:none;
+}

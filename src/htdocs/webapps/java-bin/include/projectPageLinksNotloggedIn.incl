@@ -1,0 +1,61 @@
+<br/>
+<div id="projects" style="width: 100% ; margin-bottom: 5px ; text-align: center ; font-weight: bold ;">
+Project-Specific Pages:
+</div>
+
+<div id="publicProjs" class="projDiv" style="width: 100%;padding-top:5px">
+  Genboree Project links have been migrated to the new site.<br>  You can view this list by clicking <U><a href="http://www.genboree.org/site/project_specific_pages" target="_blank">HERE</a></U>
+</div>
+
+<br/>
+<br/>
+<br/>
+<hr>
+<br/>
+
+<div id="resources" style="width: 100% ; margin-bottom: 5px ; text-align: center ; font-weight: bold ;">
+Genboree Workbench Toolset Resources:
+</div>
+
+<p>
+  <!-- ITEM -->
+<div class="genbUpdateItem">
+  <nobr><U>&laquo; <I>Demo of Transcriptome Tools for RNA-seq analysis at the
+  Extracellular<br>RNA 2<sup>nd</sup> Investigators Meeting</I> &raquo;</U></nobr>
+  <br>
+  <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+    <li>&curren; <a href="http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki" target="_blank">Link to Demo Wiki</a></li>
+  </ul>
+</div>
+<p>
+  <!-- ITEM -->
+<div class="genbUpdateItem">
+  <nobr><U>&laquo; <I>Epigenomic Profile Analysis Workshop at the
+ASHG 2013 Meeting in<br>Boston</I> &raquo;</U></nobr>
+  <br>
+  <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+    <li>&curren; <a href="http://genboree.org/theCommons/projects/ashg2013/wiki/Ashg2013">Use Cases</a></li>
+  </ul>
+</div>
+<p>
+  <!-- ITEM -->
+<div class="genbUpdateItem">
+  <nobr><U>&laquo; <a href="http://www.genboree.org/java-bin/project.jsp?projectName=EDACC%20Workshop%20Mar%202013&isPublic=Yes"><I>6<sup>th</sup> Epigenome Informatics Workshop</I></a> &raquo;</U></nobr>
+  <br>
+  <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+    <li>&curren; <a href="http://genboree.org/theCommons/projects/6th-workshop/wiki/use_cases">Use Cases</a></li>
+    <li>&curren; <a href="http://genboree.org/theCommons/ezfaq/index/epigenome-workshop">FAQs</a></li>
+    <li>&curren; <a href="http://brl.bcm.tmc.edu/EpigeneticsWorkshopMarch2012.rhtml">Link to Workshop Presentations</a></li>
+  </ul>
+</div>
+<P>
+  <!-- ITEM -->
+<div class="genbUpdateItem">
+  <nobr><U>&laquo; <I>Genboree Microbiome Toolset Resrouces</I> &raquo;</U></nobr>
+  <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+    <li>&curren; <a href="http://genboree.org/theCommons/projects/pub-gen-microbiome">Web site</a> with links, docs, and other info</li>
+    <li>&curren; <a href="http://genboree.org/theCommons/projects/pub-gen-microbiome/wiki/Microbiome_Tutorial">Toolset tutorial</a> <sup style="font-size:7pt;">[<a href="http://genboree.org/theCommons/attachments/1410/Genboree_Microbiome_Toolset_-_Microbiome_Tutorial_-_The_Genboree_Commons.pdf">PDF</a>]</sup></li>
+    <li>&curren; <a href="http://genboree.org/microbiomeFiles/Riehle%20et%20al%20The%2016S%20The%20Genboree%20Microbiome%20Toolset%20and%20the%20Analysis%20of%2016S%20rRNA%20Microbial%20Sequences.pdf">Microbiome Toolset Publications</a></li>
+    <li>&curren; <a href="/java-bin/workbench.jsp">Workbench</a>, including the GMT</li>
+  </ul>
+</div>

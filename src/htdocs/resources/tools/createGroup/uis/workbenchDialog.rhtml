@@ -1,0 +1,48 @@
+<%# RENDER HTML %>
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 330px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will create/add a new group in a target Genboree host. Note that the group to be created should NOT already exist at the target host.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Host For Creating Group:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbHostListSummary, { :hostList => @outputs } )
+    })
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        {  :id => 'gpName', :label => 'Group Name', :type => :text, :size => "25", :title => "Give some name to the group. It should not already exist at the target host.", :value => ""},
+        {  :id => 'description', :label => 'Description', :type => :text, :size => "25", :title => "A line or two describing the group.", :value => ""}
+      ]
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<script type="text/javascript">
+  Ext.QuickTips.init() ;
+</script>

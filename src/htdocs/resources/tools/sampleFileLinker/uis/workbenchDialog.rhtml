@@ -1,0 +1,111 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  require 'brl/genboree/rest/apiCaller'
+  fileApiHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new(@dbu, @genbConf)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 520px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        This tool will links Samples to data Files. It is primarily intended to associate a Sample to an .SFF or .SRA that has been uploaded. It will set the <span style='font-family:monspaced;'>fileLocation</span> attribute to point to the data File.
+        <br>&nbsp;<br>
+        <i>This is a neccessary step for some tool suites, such as the Microbiome Workbench.</i>
+        <br>&nbsp;<br>
+        Review that the correct file(s) and sample(s)/sampleSet(s) have been selected.
+        <br>&nbsp;<br>
+        If you haven't uploaded your file(s) to Genboree, use the <span class='wbHelpMonoEntity'>Data &raquo; Files &raquo; Transfer File</span>. If you haven't uploaded your Sample records yet, use <span class='wbHelpMonoEntity'>Data &raquo; Samples &raquo; Import Samples</span>.
+        <br>&nbsp;<br>
+        Note that the <u>order of inputs</u> is very important to determine which Sample will be linked to which File. If you are selecting sampleSet(s),
+        then all the samples within that sample set will be linked to the selected file.
+        If you wish to associate multiple samples/sampleSets with multiple files, the order should be :
+
+          <ul style=\"margin-left: 20px;\">
+            <li><span class='wbHelpMono'>File1</span></li>
+            <li><span class='wbHelpMono'>Sample1/SampleSet1</span></li>
+            <li><span class='wbHelpMono'>Sample2/SampleSet2</span></li>
+            <li><span class='wbHelpMono'>File2</span></li>
+            <li><span class='wbHelpMono'>Sample3/SampleSet3</span></li>
+            <li><span class='wbHelpMono'>Sample4/SampleSet4</span></li>
+          </ul>
+        This will link Sample1/SampleSet1 & Sample2/SampleSet2 to File1 and Sample3/SampleSet3 & Sample4/SampleSet4 to File2.
+        <br>&nbsp;<br>
+        Note that you can select both samples and/or sampleSets. So your input can also look like this :
+
+          <ul style=\"margin-left: 20px;\">
+            <li><span class='wbHelpMono'>File1</span></li>
+            <li><span class='wbHelpMono'>SampleSet1</span></li>
+            <li><span class='wbHelpMono'>Sample1</span></li>
+            <li><span class='wbHelpMono'>File2</span></li>
+            <li><span class='wbHelpMono'>SampleSet2</span></li>
+            <li><span class='wbHelpMono'>Sample2</span></li>
+          </ul>
+        This will link Sample1 and all samples in SampleSet1 to File1 and Sample2 and all samples in SampleSet2 to File2.
+        <br>&nbsp;<br>
+        Sample sets can be created when using the <i>Import Samples</i> tool. If a sample set is specified when importing samples, all samples become part of that sample set.
+        <br>&nbsp;<br>
+        Empty sample sets can also be created using the <i>Add Sample Set</i> utility and then you can manually add samples to the empty sample set by using the
+        <i>Add Samples to Sample Sets<i> utility.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+        "
+      })
+  %>
+
+  <%# Input data help %>
+  <%=
+      # Extract the samples from the sample sets if sample sets have been dragged
+      inputs = []
+      dbrcFile = File.expand_path(ENV['DBRC_FILE'])
+      dbrc =  BRL::Genboree::GenboreeUtil.getSuperuserDbrc(@genbConf, @genbConf.dbrcFile)
+      user = dbrc.user
+      pass = dbrc.password
+      @inputs.each { |input|
+        if(input =~ BRL::Genboree::REST::Helpers::SampleApiUriHelper::NAME_EXTRACTOR_REGEXP) # For samples
+          inputs.push(input)
+        elsif(input =~ BRL::Genboree::REST::Helpers::SampleSetApiUriHelper::NAME_EXTRACTOR_REGEXP) # For samples)
+          uri = URI.parse(input)
+          rcscUri = uri.path.chomp("?")
+          apiCaller = ApiCaller.new(uri.host, "#{rcscUri}?detailed=true", user, pass)
+          apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+          apiCaller.get()
+          if(apiCaller.succeeded?)
+            retVal = JSON.parse(apiCaller.respBody)
+            data = retVal['data']
+            data.each_key { |key|
+              if(key == 'sampleList')
+                data[key].each { |sampleEntity|
+                  inputs.push(sampleEntity['refs'][BRL::Genboree::REST::Data::BioSampleEntity::REFS_KEY])
+                }
+                break
+              end
+            }
+          else
+            wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'MISSING_RESOURCE', "ApiCaller failed for getting samples for: #{input.inspect}. Samples missing?")
+            raise wue
+          end
+        else # file
+          inputs.push(input)
+        end
+      }
+      @inputs = inputs
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files/Samples:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbBioSampleOrFileListSummary, { :bioSampleOrFileList => @inputs, :label => "Files/Samples Of Interest" } )
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

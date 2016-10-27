@@ -1,0 +1,31 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 500px; height: 320px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Copy Tracks" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+          'Review that the correct tracks have been selected to copy to the target database. <i>Note that if the source database(s) and the target database are not based on the same genome assembly, then your copy job will fail.</i>'
+      })
+  %>
+  <%# Input resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Tracks to Copy:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs } )
+      })
+  %>
+  <%# Output targets summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Destination Database(s):",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

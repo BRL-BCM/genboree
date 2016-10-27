@@ -1,0 +1,51 @@
+{
+  "inputs": {
+    "maxItemCount": 3,
+    "ruleSet": [
+      [
+        "/files/",
+        1,
+        1
+      ],
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        2,
+        2
+      ]
+    ],
+    "minItemCount": 3
+  },
+  "settings": {
+    "patterns": {
+      "radius": [
+        "^\\s*\\d+\\s*$",
+        "Radius must be a positive integer."
+      ],
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ],
+      [
+        "/prj/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

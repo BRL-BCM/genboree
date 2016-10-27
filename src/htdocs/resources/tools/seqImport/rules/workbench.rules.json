@@ -1,0 +1,53 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/sample/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/bioSamples\\?$",
+        0,
+        null
+      ],
+      [
+        "/sampleSet/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/samples/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

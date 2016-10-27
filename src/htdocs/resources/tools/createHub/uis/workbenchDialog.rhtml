@@ -1,0 +1,156 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'json'
+  require 'brl/genboree/abstract/resources/user'
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 500 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will add a new hub in the target <u>Group</u>. Note that this tool will also update an existing hub in the group. The new hub created will be <u>public</u> for UCSC and WashU Genome Browsers to access the hub data.
+        <br>&nbsp;<br>
+        
+        <b>Inputs</b> Create Hub supports four track data types -  bigWig, bigBed, BAM or VCF.
+        <ul>
+          <li>bigWig and bigBed supported through track inputs (tracks, track entity lists or classes)</li>
+          <li>BAM and VCF supported through file inputs (files or file entity lists). Input files must follow the format specifications followed by UCSC for <a href='http://genome.ucsc.edu/goldenPath/help/bam.html' target='_blank'>BAM</a> and <a href='http://genome.ucsc.edu/goldenPath/help/vcf.html' target='_blank'>VCF</a> formats. </li> 
+        </ul>
+
+        <br>
+        Note: This tool will unlock and make all the source databases public, provided the user has sufficient permissions for it. 
+        <br>
+
+        "
+      })
+  %>
+  <%
+    $stderr.puts "INPUTS: #{@inputs}"
+    fileRecs = @settings['fileRecs']
+    dburi = @settings['pureDbUris']
+    
+    #$stderr.puts "DBURI: #{dburi}"
+    rowKeys = []
+    trkRecs = []
+    grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+    trkHash = @settings['trkHash']
+    #$stderr.puts "keys : #{trkHash.keys().inspect}"
+    #$stderr.puts "TrkHash : #{trkHash.inspect}"
+    trkRecs = []
+    rowKeys = []
+    trkHash.each_key { |dbUri|
+      uriObj = URI.parse(dbUri)
+      host = uriObj.host
+      grp = grpApiHelper.extractName(dbUri)
+      dbName = dbApiHelper.extractName(dbUri)
+      apiCaller = WrapperApiCaller.new(host, "#{uriObj.path}/trks/attributes/map?", @context['userId'])
+      apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+      apiCaller.get()
+      resp = JSON.parse(apiCaller.respBody)['data']
+      trkHash[dbUri].keys.sort.each { |trk|
+          bigWigValue = bigBedvalue = true
+          trkUri = "#{dbUri}/trk/#{CGI.escape(trk)}?"
+          #if(trkApiHelper.isHdhv?(trkUri, @hostAuthMap)) # Check whether the track is hdhv
+          if(resp[trk].key?('gbTrackRecordType'))
+            bigBedValue = false
+          else
+            bigWigValue = false
+          end
+          trkRecs << [ { :name => {:value => trk, :dropList => false, :title => "#{host} \: #{grp} - #{dbName}" } },
+                     { :type => { :value => { :bigWig => {:label => "Bigwig", :selected => bigWigValue}, :bigBed => {:label => "BigBed", :selected => bigBedValue} }, :dropList => true } } ]
+          rowKeys << trkUri
+        
+      }
+    }
+  %>
+
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "All tracks or files belong to:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dburi.keys()})
+    })
+  %>
+  <%# Output group summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets =
+              [
+                { :id => 'hubName', :label => 'Hub Name', :type => :text, :size => '30', :title => 'Name of the hub that will be displayed on the hub settings (hub.txt).' },
+                { :id => 'shortLabel', :label => 'Short Label', :type => :text, :size => '30', :title => 'Short Label of the hub. Length of the label must not exceed 17 characters.'},
+                { :id => 'longLabel', :label => 'Long Label', :type => :text, :size => '30', :title => 'Long Label of the hub. Length of the label must not exceed 80 characters.'},
+                { :id => 'Email', :label => 'Email', :type => :text, :size => '30', :title => 'Email that will be displayed on the hub settings (hub.txt).'}
+              ]
+    if(rowKeys.size > 0) 
+      widgets <<
+                { :id => 'trackOptions', :toggleText => "Track Options", :type => :advancedSection, :startWithExpanded => false, :widgets =>
+                   [
+                    { :id => "trkArray", :label => "", :labelWidth => "60px", :rowKeys => rowKeys, :type => :tabularDropListSection, :rows => trkRecs, :headerRow => ['Track Name', 'Type'], :noToggleBtn => false },
+                    { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'trkArray'}
+                   ]
+                }
+    end
+    if(fileRecs.size > 0)
+      widgets <<
+                { :id => 'FileInformation', :toggleText => "File Options", :type => :advancedSection, :startWithExpanded => false, :widgets => fileRecs }
+    end
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Create Hub Tool Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= 
+      renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

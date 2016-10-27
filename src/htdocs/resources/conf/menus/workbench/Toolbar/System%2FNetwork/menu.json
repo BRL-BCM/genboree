@@ -1,0 +1,33 @@
+[
+  {
+    "text": "User"
+  },
+  {
+    "text": "Groups"
+  },
+  {
+    "text": "Redmine Projects",
+    "iconCls": "wbRedminePrjTreeNode"
+  },
+  {
+    "text": "Hosts"
+  },
+  {
+    "text": "Jobs"
+  },
+  {
+    "text": "Request Feature",
+    "idStr": "requestFeature",
+    "tooltip": "Ask the Genboree team for additional features, new tools and enhancements."
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "Log Out",
+    "href": "/java-bin/login.jsp?rm=logout",
+    "cls": "wbBtnReady",
+    "iconCls": "wbLogOutMenuItem",
+    "tooltip" : "Logout of this Genboree host (leaving this page)"
+  }
+]

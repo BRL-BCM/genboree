@@ -1,0 +1,65 @@
+# ARJ
+# Ruby database access conf file. All Ruby scripts needing database access can use
+# BRL::DB::DBRC.new(ENV['DB_ACCESS_FILE'], <dbName>, [dbUser]) to get connection info (~DBRC that comes with DBI)
+#
+# Of course, apache has been configured by Andrew to pass along a value for DB_ACCESS_FILE (using RubySetEnv),
+# so this works in ruby cgi scripts that are being handled by mod_ruby.
+#
+# Just put 1 or more entries of this form in this file (make up values for the numbers if you don't care)
+# <dbName>	<dbUser>	<dbPass>	<driverDSN>	<timeout>	<reconnects>	<interval>
+#
+# NOTE: This file *MUST* be mode 600 and owned by the person executing the script--for apache, that's "nobody"--
+# or it will be ignored.
+
+# test this .dbrc file for use with require 'dbi/dbrc'
+
+# old stuff
+JDBC:__GENBOREE_webserverFQDN__	genboree	genboree	dbi:Mysql:localhost	10	8	30
+genboree		genboree	genboree	dbi:Mysql:database=genboree;socket=/usr/local/brl/local/var/mysql.sock	10	8	30
+prequeue		genboree	genboree	dbi:Mysql:database=prequeue;socket=/usr/local/brl/local/var/mysql.sock	10	8	30
+# svn://histidine.brl.bcmd.bcm.edu/brl-repo/PATCH_NOTES/genboree/2016-01-17.apiRespCache
+cacheGb			genboree	genboree	dbi:Mysql:database=cache;socket=/usr/local/brl/local/var/mysql.sock	10	5	30
+
+# MySQL
+DB:__GENBOREE_webserverFQDN__                     genboree          genboree      dbi:Mysql:database=genboree;socket=/usr/local/brl/local/var/mysql.sock   10 8 30
+DB:localhost                                      genboree          genboree      dbi:Mysql:database=genboree;socket=/usr/local/brl/local/var/mysql.sock   10 8 30
+DB:127.0.0.1                                      genboree          genboree      dbi:Mysql:database=genboree;socket=/usr/local/brl/local/var/mysql.sock   10 8 30
+
+# MongoDB
+NOSQL:__GENBOREE_webserverFQDN__                  genboree          genboree      NoSQL:MongoDB:host=localhost;port=16001;w=1;j=true   10 5 30
+NOSQL:localhost                                   genboree          genboree      NoSQL:MongoDB:host=localhost;port=16001;w=1;j=true   10 5 30
+NOSQL:127.0.0.1                                   genboree          genboree      NoSQL:MongoDB:host=localhost;port=16001;w=1;j=true   10 5 30
+
+# Super User
+API:__GENBOREE_webserverFQDN__                    genboree          Sz3N7d4E3Qr   dbi:Mysql:localhost   10 8 30
+API:localhost                                     genboree          Sz3N7d4E3Qr   dbi:Mysql:localhost   10 8 30
+API:127.0.0.1                                     genboree          Sz3N7d4E3Qr   dbi:Mysql:localhost   10 8 30
+
+# Redmine
+REDMINE:__GENBOREE_webserverFQDN__                admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
+REDMINE:localhost                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
+REDMINE:127.0.0.1                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
+
+# ----------- role-based system users
+# 2015-09-10.conclusionAndEvidenceCollCacheScripts
+API-GB_CACHE_USER:__GENBOREE_webserverFQDN__      gbCacheUser       X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+API-GB_CACHE_USER:localhost                       gbCacheUser       X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+API-GB_CACHE_USER:127.0.0.1                       gbCacheUser       X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+# 2015-09-17.toolJobSubmitDiscoverableKeyAwar e
+CLINGEN_PUB_TOOL_USER:__GENBOREE_webserverFQDN__  gbPublicToolUser  X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+CLINGEN_PUB_TOOL_USER:localhost                   gbPublicToolUser  X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+CLINGEN_PUB_TOOL_USER:127.0.0.1                   gbPublicToolUser  X9dEGVs8d3r   api:API:genboree:__GENBOREE_webserverFQDN__   10 5 30
+
+# ------------- untested
+# 2015-04-15.disableValidationForKbDocsUploadViaTool
+GBSYS:__GENBOREE_webserverFQDN__                  genboree          Sz3N7d4E3Qr   gb:gbSys:database=genboreeKB;host=localhost   10 5 30
+# 2015-09-08.virtualFtpImplementation
+REMOTESTORGENFTP:gbFTP___GENBOREE_webserverFQDN__ genboree          Sz3N7d4E3Qr   ftp:FTP:gbFTP___GENBOREE_webserverFQDN__      10 5 30
+# 2015-12-17.3rdGenUpdateForFTPPipelineAndOtherExceRptUpdates
+FTP:gbFTP___GENBOREE_webserverFQDN__              genboree          Sz3N7d4E3Qr   ftp:FTP:gbFTP___GENBOREE_webserverFQDN__      10 5 30
+POLLER:gbFTP___GENBOREE_webserverFQDN__           genboree          nil           ftp:FTP:gbFTP___GENBOREE_webserverFQDN__      10 5 30  
+
+# it must be solved somehow
+ALLELE_REG:reg.test.genome.network Registry     Registry        api:API:genboree:reg.test.genome.network    10      8       30
+ALLELE_REG:reg.genome.network Registry     Registry        api:API:genboree:reg.genome.network    10      8       30
+ALLELE_REG:localhost Registry     Registry        api:API:genboree:localhost    10      8       30

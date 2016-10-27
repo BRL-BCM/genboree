@@ -1,0 +1,10 @@
+{
+  "rsrc" : {
+    "pathBase" : "/REST-ext/clingen/variations/view/mvid"
+  },
+  "remoteUrl" : {
+    "template": "http://myvariant.info/v1/variant/{variant}",
+    "timeout": 5
+  },
+  "htmlTemplateFile" : "/usr/local/brl/local/lib/ruby/site_ruby/1.8/brl/genboree/rest/extensions/clingen/templates/variant.html.erb"
+}

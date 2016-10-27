@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "trkMerge",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Merge Track Annotations",
+    "shortLabel": "Merge Track Annotations"
+  }
+}

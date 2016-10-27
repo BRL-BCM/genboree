@@ -1,0 +1,22 @@
+<%= @server.rendr("generate-html-view") %>
+
+<%
+	#check to see if toolContentArr has publication section or not, if it does, THEN request publications page, otherwise don't waste energy
+	publicationsArrHash = Hash.new(0)
+	#also check to see if toolContentArr has type == contact_us section, otherwise don't get it
+	teamArrHash = Hash.new(0)
+
+	#get array of hashes for all team members
+	teamArrHash = GenboreeRedmine.getRedminePage(@server, "TEAM")
+	#teamAdditionalInfoHash = GenboreeRedmine.getRedminePage(@server, "TEAM_ADDITIONAL_INFO")[0]
+
+	#get additional information associated with team page
+	teamAdditionalInfoHashARRAY = GenboreeRedmine.getRedminePage(@server, "TEAM_ADDITIONAL_INFO")
+
+%>
+
+<section class="blue-bg hr">
+	<hr>
+</section>
+
+<%= GenerateHTML.genericSectionGenerateHTML(teamAdditionalInfoHashARRAY, teamAdditionalInfoHashARRAY[0]["ID"], teamAdditionalInfoHashARRAY[0]["type"], publicationsArrHash, teamArrHash, @redmineUrl, @server) %>

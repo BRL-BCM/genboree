@@ -1,0 +1,17 @@
+<p>
+  <!-- ITEM -->
+<div class="genbUpdateItem">
+  <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+    <li>
+    <video controls="controls" width="275px" height="175px">
+      <source src="http://genboree.org/projects/Genboree%2520Video%2520Tutorials/genb%5E%5EadditionalFiles/GenboreeWorkbenchIntro.mp4" type='video/mp4'>
+      <source src="http://genboree.org/projects/Genboree%2520Video%2520Tutorials/genb%5E%5EadditionalFiles/GenboreeWorkbenchIntro.webmvp8.webm" type='video/webm'>
+      <source src="http://genboree.org/projects/Genboree%2520Video%2520Tutorials/genb%5E%5EadditionalFiles/GenboreeWorkbenchIntro.theora.ogv" type='video/ogg'>
+      Your browser does not support HTML5 video. You can <a href="http://genboree.org/projects/Genboree%2520Video%2520Tutorials/genb%5E%5EadditionalFiles/GenboreeWorkbenchIntro.mp4">download</a> the video and watch it using some media player. 
+    </video> 
+      
+    <!--  <iframe src="https://docs.google.com/file/d/0Bz3_YiJBA_j3Tk1uOFlIazdMbkk/preview?pli=1" width="275" height="175"></iframe>
+    -->
+    </li>
+  </ul>
+</div>

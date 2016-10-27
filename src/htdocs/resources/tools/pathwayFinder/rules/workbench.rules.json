@@ -1,0 +1,37 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/files/entityList/",
+        0,
+        1
+      ],
+      [
+        "/file/",
+        0,
+        1
+      ],
+      [
+        "/files/",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+    ],
+    "minItemCount": 0
+  }
+}

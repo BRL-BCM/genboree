@@ -1,0 +1,579 @@
+/**********************************
+* Project: VGP UI Integration
+*   This project creates a new User Interface (UI) to assist users in
+*   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+*   The integration also creates a server-side support environment to create
+*   necessary configuration files, queue a VGP job with the Genboree environment
+*   and then package the VGP output files and notify the user of job completion.
+*
+* vgpConfig.css - This javascript file defines the styles for the UI
+*
+* Developed by Bio::Neos, Inc. (BIONEOS)
+* under a software consulting contract for:
+* Baylor College of Medicine (CLIENT)
+* Copyright (c) 2008 CLIENT owns all rights.
+* To contact BIONEOS, visit http://bioneos.com
+**********************************/
+
+*
+{
+  margin: 0 ;
+}
+
+body
+{
+  /*font-family: "verdana", "arial", sans-serif ;*/
+  font-size: 100% ;
+}
+
+/* TODO: Evaluate better class selectors */
+/* I don't think this will work in IE, TODO: Check */
+input[type="text"], textarea
+{
+  font: normal 12px tahoma,arial,helvetica,sans-serif ;
+  background-color: #FFF ;
+  background-image: url(/images/vgpTextBg.gif) ;
+  background-repeat: repeat-x ;
+  background-position: 0 0 ;
+  border: 1px solid #B5B8C8 ;
+  padding: 2px 2px ;
+}
+
+input[type="text"].disabled
+{
+  background-color: #F3F3F3 ;
+}
+
+.checkbox
+{
+  /** IE Hacks **/
+  width: 13px ;
+  height: 13px ;
+  margin-bottom: 2px ;
+}
+
+.radio
+{
+  vertical-align: bottom ;
+  margin-right: 5px ;
+}
+
+input.error
+{
+  background-image: url(/images/vgpTextError.gif) ;
+  background-repeat: repeat-x ;
+  background-position: 0 0 ;
+  border: 1px solid #F00 ;
+}
+
+textarea
+{
+  width: 100% ;
+}
+
+ul, select 
+{
+  padding: 0 ;
+}
+
+ul li, ol li
+{
+  border: 1px solid #BBB ;
+  padding: 3px ;
+  /*height: auto ;*/
+  margin: 5px 0 ; 
+  background: #FFF ;
+  list-style-type: none ;
+}
+
+fieldset
+{
+  padding: 5px ;
+  margin: 3px 0 ;
+}
+
+fieldset legend
+{
+  color: #4C3D99 ;
+}
+
+.movable
+{
+  cursor: move ;
+}
+
+.clickable
+{
+  cursor: pointer ;
+}
+
+.instruction
+{
+  font-size: 110% ;
+  font-style: normal ;
+  font-weight: normal ;
+  color: #4C3D99 ;
+  padding: 3px ;
+  border: 1px dashed #CCC ;
+  background-color: #EFEFEF ;
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+}
+
+.widgetRef
+{
+  color: #4C2399 ;
+  font-style: italic ;
+}
+
+.reference
+{
+  padding-top: 5px ;
+  padding-bottom: 5px ;
+  background-color: #DDD ;
+}
+
+.selected
+{
+  border: 2px solid #999 ;
+}
+
+#epsList .selected
+{
+  border: 1px solid #777 ;
+}
+
+.optionsGroup
+{
+  padding: 5px ; 
+  overflow: auto ;
+}
+
+.optionsGroup a.advancedLink
+{
+  clear: left ;
+  float: left ;
+  padding-left: 16px ;
+  background-image: url(/images/vgpPlus.gif) ;
+  background-repeat: no-repeat ;
+  background-position: 2px 50% ;
+}
+  
+.option
+{
+  overflow: auto ;
+  overflow-y: hidden ; /** Hack for firefox 3 on mac to hide needless vertical scroll **/
+  margin-bottom: 3px ;
+  clear: left ;
+}
+
+.option label
+{
+  /*display: block ;*/
+  float: left ;
+  width: 30em ;
+}
+
+.optionInput
+{
+  float: left ;
+  width: 45% ;
+}
+
+.colorInput
+{
+  height: 1.6em ;
+  position: relative ;
+}
+
+.optionInput .colorLink
+{
+  position: absolute ;
+  bottom: 0 ;
+}
+
+.advancedOptions
+{
+  margin: 5px 1% ; 
+  padding: 0 ;
+  border: 1px solid #EDEDED ; 
+  background-color: #FBFBFB ;
+  clear: left ;
+  zoom: 1 ; /* Sadly, an IE hack to fix a hasLayout bug */
+}
+
+.advancedOptions div .smallOption
+{
+  left: 7em ;
+  width: 50% ;
+}
+
+.dataList
+{
+  width: 55% ; height: 400px ;
+  overflow: auto ;
+  margin: 5px 0 ;
+  padding: 5px ;
+  border: 1px solid #DDD ;
+  background-color: #FBFBFB ;
+}
+
+.entryPoint
+{
+  padding: 2px ;
+  overflow: auto ;
+}
+
+.entryPointName
+{
+  padding-left: 5px ;
+  float: left ;
+}
+
+.entryPointControl
+{
+  padding-right: 5px ;
+  text-align: right ;
+}
+
+.even
+{
+  background-color: #EAE6FF ;
+}
+
+.odd
+{
+  background-color: #FFF ;
+}
+
+.disabled
+{
+  color: #999 ;
+}
+
+.swatch
+{
+  width: 1.6em ; height: 1.6em ; 
+  border: 1px solid #B5B8C8 ;
+  margin-right: 5px ;
+  float: left ;
+}
+
+.buttonPanel
+{
+  clear: both ;
+}
+
+.statusTable, .statusList
+{
+  width: 100% ;
+  text-align: left ;
+  margin-top: 10px ;
+  margin-bottom: 5px ;
+  margin-left: 0 ;
+  margin-right: 0 ;
+  border-top: 1px solid #A9A6BF ;
+  border-bottom: 1px solid #A9A6BF ;
+}
+
+.statusList li
+{
+  border: none ;
+  list-style-type: disc ;
+  margin: 2px 2em ;
+}
+
+.statusList li.header
+{
+  list-style-type: none ;
+  margin: 2px ;
+}
+
+.statusTable th, .statusList li.header
+{
+  border: 1px solid #CFC8E1 ;
+  background-color: #EAE6FF ;
+  font-weight: bold ;
+  padding: 1px ;
+}
+
+#errorList li, .errorsExist
+{
+  color: #D53333 ;
+}
+
+#warningList li, .warningsExist
+{
+  color: #DC6709 ;
+}
+
+#errorList li.header, #warningList li.header
+{
+  color: #403C59 ;
+}
+
+.feedback
+{
+  margin: 10px 0 ;
+}
+
+.feedback ul
+{
+  padding: 0 ;
+  margin-left: 10px ;
+}
+
+.feedback li
+{
+  border: none ;
+  list-style-type: none ;  
+  color: inherit ;
+  background-color: inherit ;
+}
+
+.feedback div
+{
+  padding: 10px ;
+}
+
+.feedback div a, .feedback div a:visited, .feedback div a:active
+{
+  color: inherit ;
+}
+
+.feedback div.success
+{
+  background-image: url(/images/vgpCheckmark.png) ;
+  /*background-color: #EBFEE0 ;*/
+  background-color: #E6FFEA ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #58A263 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+  color: #58A263 ;
+}
+
+.feedback div.failure
+{
+  background-image: url(/images/vgpFailure.png) ;
+  background-color: #FFEFEF ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #C64848 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+  color: #C64848 ;
+}
+
+.feedback div.warning
+{
+  background-image: url(/images/vgpWarning.png) ;
+  background-color: #FBE4D2 ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #DC6709 ;
+  color: #DC6709 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+}
+
+.feedback div.failure li
+{
+  border-left: 2px solid  #D53333 ;
+  padding-top: 0 ;
+  padding-bottom: 0 ;
+}
+
+#main
+{
+  margin-top: 15px ;
+  margin-bottom: 10px ;
+}
+
+#container
+{
+  padding: 6px ;
+  margin: 0px ;
+  border: 1px solid #CBC8E1 ;
+  background-color: #EAE6FF ;
+  clear: left ;
+}
+
+#content
+{
+  background-color: #FFF ;
+  padding: 5px ;
+  border: 1px solid #CCC ;
+}
+
+#tabs
+{
+  margin: 0 ;
+  margin-bottom: 0px ;
+  padding: 0 ;
+  width: 100% ;
+  list-style-type: none ;
+  list-style-image: none ;
+  list-style-position: outside ;
+}
+
+#tabs li
+{
+  text-align: center ;
+  margin: 0 ;
+  margin-right: 5px ;
+  float: left ;
+  padding: 0px ;
+  border: 0px ;
+}
+
+#tabs li a
+{
+  width: auto ;
+  min-height: 1.4em !important ;
+  display: block ;
+  padding: 2px 5px 0 5px ;
+  margin-bottom: 0px ;
+  background-color: #CBC8E1 ;
+  border: 1px solid #A9A6B8 ;
+  text-decoration: none ;
+  position: relative ;
+  top: 1px ;
+}
+
+#tabs li a.active
+{
+  min-height: 1.9em !important ;
+  z-index: 1000 ;
+  border: 1px solid #CBC8E1 ;
+  border-bottom: 0px ;
+  background-color: #EAE6FF ;
+  position: relative ;
+  bottom: -1px ;
+  outline: none ;
+}
+
+#tabs li a:visited
+{
+  color: #403C80 ;
+  outline: none ;
+}
+
+#tabs li a:hover
+{
+  color: #403C80 ;
+  background-color: #EAE6FF ;
+  outline: none ;
+}
+
+#epsList
+{
+  height: 500px ;
+}
+
+#epsList li
+{
+  border: none ;
+  padding: 0 ;
+  margin: 0 ;
+  cursor: pointer ;
+}
+
+#epsList .hidden
+{
+  background-color: #CCC ;
+}
+
+#annotTracks
+{
+  width: auto ;
+  height: auto ;
+}
+
+#annotTracksSortable
+{
+  padding: 0 ;
+}
+
+#availTracksList
+{
+  width: 50% ;
+  height: 20em ;
+  overflow: auto ;
+  margin: 5px 0 ;
+  padding: 0 ;
+  border: 1px solid #EDEDED ;
+  background-color: #FBFBFB ;
+}
+
+#availTracksList li
+{
+  border: none ;
+  background-color: #FBFBFB ;
+  padding: 0 3px ;
+  margin: 0 ;
+}
+
+#availTracksList li a, #availTracksList li a:visited, #availTracksList li a:hover, #annotTracks li a, #annotTracks li a:visited, #annotTracks li a:hover
+{
+  text-decoration: none ;
+  color: #000 ;
+  width: 100% ;
+  display: block ;
+}
+
+#availTracksList li:hover
+{
+  background: #F0F0F0 ;
+  cursor: pointer ;
+}
+
+#dataColumns
+{
+  height: auto ;
+  position: relative ;
+  overflow-y: visible ;
+  overflow-x: hidden ;
+}
+
+#dataColumns li a, #dataColumns li a:visited, #dataColumns li a:hover
+{
+  text-decoration: none ;
+  color: #000 ;
+  width: 100% ;
+  display: block ;
+  cursor: move ;
+}
+
+#columnOptions
+{
+  float: right ;
+  width: 50% ;
+  height: 17em ;
+  margin-top: 5px ;
+  padding: 10px 5px 0 5px ;
+  border: 1px solid #999 ;
+}
+
+#columnOptions .advancedOptions label
+{
+  width: 10em ;  
+}
+
+#debug
+{
+  margin-top: 15px ;
+  border: 1px solid #008888 ;
+  background-color: #00DDDD ;
+  color: white ;
+  font-size: 8pt ;
+  padding: 5px ;
+  font-family: courier, serif ;
+}

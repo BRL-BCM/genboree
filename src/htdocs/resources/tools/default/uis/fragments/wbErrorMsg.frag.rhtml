@@ -1,0 +1,98 @@
+<%# INIT %>
+<%
+  wbErrorMsg = @context['wbErrorMsg']
+  msgHtml = WorkbenchFormHelper.overflowMsgFromContext(@context)
+%>
+<%# RENDER HTML %>
+<div class="wbDialog" style="height:auto; width:auto; margin-top: 0px;">
+  <%# Error Info %>
+  <div class="wbDialogFeedback wbDialogFail">
+    <span class="wbErrorLabel"><b>ERROR:</b> There is an error in your job submission. The job was rejected.</span>
+    <br>
+    <br>
+<%  if(@context['wbErrorName'].is_a?(String)) %>
+      <b>Error Name:</b> <%= @context['wbErrorName'] %><br>
+<%  end %>
+<%  if(wbErrorMsg.is_a?(String) or wbErrorMsg.is_a?(Array)) %>
+      <b>Error Details:</b><br>
+      <%= msgHtml %>
+      <br>
+<%  else %> <%# is a Hash and we need to part it depending on what is inside %>
+      <%
+        errType = wbErrorMsg[:type]
+        errInfo = wbErrorMsg[:info]
+      %>
+      <%  if(errType == :versions) %>
+            <%= renderFrag(@toolIdStr, :wbSimplePropertyTable,
+                {
+                  :msg => wbErrorMsg[:msg],
+                  :nameColHeader => 'Input Database(s)',
+                  :propertyColHeader => 'Genome Assembly Version',
+                  :propertyHash => errInfo[:inputs]
+                })
+            %>
+            <%= renderFrag(@toolIdStr, :wbSimplePropertyTable,
+                {
+                  :msg => '',
+                  :nameColHeader => 'Output Database(s)',
+                  :propertyColHeader => 'Genome Assembly Version',
+                  :propertyHash => errInfo[:outputs]
+                })
+            %>
+      <%  elsif(errType == :invalidName) %>
+            <%= renderFrag(@toolIdStr, :wbInvalidName,
+                {
+                  :msg => wbErrorMsg[:msg],
+                  :entityType => wbErrorMsg['entityType'],
+                  :name => wbErrorMsg['name']
+                })
+            %>
+      <%  else %> <%# (errType == :emptyTrks or errType == :readableTrks or errType == :writeableDbs or errType == :writeableTrks) %>
+            <% if(wbErrorMsg[:msg]) %>
+              <b>Error Details:</b><br>
+              <%= wbErrorMsg[:msg] %>
+              <br>
+            <% end %>
+            <b>Additional Info:</b><br>
+            <%
+              if(errType == :emptyTrks) # errInfo is trkName => isEmpty? Hash
+                errInfo.merge!(errInfo) { |kk, vv| vv ? 'YES' : 'no' }
+                nameColHeader = 'Input Track Name'
+                propColHeader = 'Is Empty?'
+              elsif(errType == :readableTrks)
+                errInfo.merge!(errInfo) { |kk, vv| vv ? 'yes' : 'NO' }
+                nameColHeader = 'Input Track Name',
+                propColHeader = 'Read Access?'
+              elsif(errType == :writeableDbs)
+                errInfo.merge!(errInfo) { |kk, vv| vv ? 'yes' : 'NO' }
+                nameColHeader = 'Output Database Name'
+                propColHeader = 'Write Access?'
+              elsif(errType == :writeableTrks)
+                errInfo.merge!(errInfo) { |kk, vv| vv ? 'yes' : 'NO' }
+                nameColHeader = 'Output Track Name'
+                propColHeader = 'Write Access?'
+              end
+              $stderr.puts "DEBUG: error reporting:"
+              $stderr.puts JSON.pretty_generate({
+                :msg => wbErrorMsg[:msg],
+                :nameColHeader => nameColHeader,
+                :propertyColHeader => propColHeader,
+                :propertyHash => errInfo
+              })
+            %>
+            <%= renderFrag(@toolIdStr, :wbSimplePropertyTable,
+                {
+                  :msg => '', # already displayed above if present, make empty so won't display again
+                  :nameColHeader => nameColHeader,
+                  :propertyColHeader => propColHeader,
+                  :propertyHash => errInfo
+                })
+            %>
+      <%  end %>
+<%
+    end
+%>
+    <br>
+    <span class="contact">If you have questions, please contact <a href="mailto:<%= @context['gbAdminEmail'] %>"><%= @context['gbAdminEmail'] %></a> for assistance.</span>
+  </div>
+</div>

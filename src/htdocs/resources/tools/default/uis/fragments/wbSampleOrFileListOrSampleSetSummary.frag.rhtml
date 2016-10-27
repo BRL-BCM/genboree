@@ -1,0 +1,41 @@
+<%
+require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%
+  @sampleOrFileListOrSampleSetList = [ @sampleOrFileListOrSampleSetList ] unless(@sampleOrFileListOrSampleSetList.is_a?(Array) or @sampleOrFileListOrSampleSetList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@sampleOrFileListOrSampleSetList.nil? or @sampleOrFileListOrSampleSetList.empty?) ? "" : "rowspan='#{@sampleOrFileListOrSampleSetList.size}'") %> ><%= (@label || "Sample/SampleSet/File") %>:</th>
+<%  if(@sampleOrFileListOrSampleSetList.nil? or @sampleOrFileListOrSampleSetList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      sampleHelperObj = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new()
+      sampleSetHelperObj = BRL::Genboree::REST::Helpers::SampleSetApiUriHelper.new()
+      @sampleOrFileListOrSampleSetList.each_index { |ii|
+        item = @sampleOrFileListOrSampleSetList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        sampleOrFileOrSampleSet = sampleHelperObj.extractName(item)
+        $stderr.puts "sampleOrFileOrSampleSet: #{sampleOrFileOrSampleSet.inspect}"
+        unless(sampleOrFileOrSampleSet)
+          sampleOrFileOrSampleSet = sampleSetHelperObj.extractName(item)
+          unless(sampleOrFileOrSampleSet)
+            sampleOrFileOrSampleSet = WorkbenchFormHelper.getNameFromURI(:file, item, true, true)
+          end
+        end
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== sampleOrFileOrSampleSet %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

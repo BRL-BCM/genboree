@@ -1,0 +1,348 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'pp'
+  require 'json'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/abstract/resources/role'
+
+  include BRL::Genboree::Abstract::Resources
+
+  $VERBOSE = true
+  @req = Apache.request
+  @serverName = @req.server_name
+  @serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+
+  # --------------------------------------------------------------------------
+  # METHODS
+  # --------------------------------------------------------------------------
+
+
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+    # Context In variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    context[:userId] = context.cgi['userId']
+    context[:errCode] = OK
+    context[:err] = nil
+    context[:timer] = timer
+    context[:req] = @req
+    context[:isPublicAccess] = (context.cgi['isPublic'] and context.cgi['isPublic'] =~ /^YES|TRUE$/i)
+    
+    groupId = context.cgi['group_id']
+    userId = context.cgi['userId']
+    
+  
+    dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil)
+
+    # -----------------------------------------
+    # Process POST    
+    # -----------------------------------------
+
+    if (!context.cgi['payload'].nil? and !context.cgi['payload'].empty?)
+      validationMessages = []
+      confirmationMessage = ''
+    
+      # Get targetGroupId, newGroupName, userList
+      payloadStr = context.cgi['payload']
+      payload = JSON::parse(context.cgi['payload'])
+      targetGroupId = payload['targetGroupId'].strip
+      newGroupName = payload['newGroupName'].strip
+      users = payload['users']
+
+      # Check that a target group and users have been selected
+      if(users.nil? or users.empty?)
+        validationMessages.push("Please select at least one user to copy.")
+      end
+      if(targetGroupId.nil? or targetGroupId.empty?)
+        validationMessages.push("Please select a destination group.")
+      end
+
+      # Process Group, if new try to create
+      if(targetGroupId == 'new')
+        # requires newGroupName, 
+        # sets targetGroupId, validationMessages, confirmationMessage
+        if(newGroupName =~ /^.+$/)
+          # Check that group doesn't already exist
+          groupRow = dbu.selectGroupByName(newGroupName)
+          unless(groupRow.empty?)
+            validationMessages.push("A group with that name already exists.  Please use a different name.")
+          else
+            dbu.insertGroup(newGroupName)
+            targetGroupId = dbu.genbDbh.func(:insert_id)
+            # Add the user to the new group as administrator
+            rowsInserted = dbu.insertUserIntoGroupById(userId, targetGroupId, 'o')
+            if(rowsInserted > 0)
+              confirmationMessage += "The group #{newGroupName} was created and you have been added as Administrator.<br>" 
+              confirmationMessage += "<a href=\"/java-bin/mygroup.jsp?group_id=#{targetGroupId}\">Click here to view the new group: #{newGroupName}.</a><br>" 
+            end
+          end
+        else
+          validationMessages.push("The group name is invalid.")
+        end
+      end
+  
+      # Process Users and make sure the logged in user submitting the request is admin of the target group
+      if(targetGroupId.to_i > 0)
+        if(dbu.getAccessByUserIdAndGroupId(userId, targetGroupId).to_s == 'o')
+          usersAdded = 0
+          users.each { |user|
+            # skip the user that is logged in because they were added as administrator above
+            unless(user['userId'] == userId)
+              status = BRL::Genboree::Abstract::Resources::Role.addUserGroupAccessToDb(dbu, user['userId'], targetGroupId, user['role'])
+              if(status == :OK)
+                usersAdded += 1             
+              end
+            end
+          }
+          if(usersAdded > 0)
+            confirmationMessage += "There #{(usersAdded > 1) ? 'were' : 'was'} #{usersAdded} user#{(usersAdded) > 1 ? 's' : ''} added the the destination group.<br>" 
+          end
+        else
+          validationMessages.push("You do not have permission to add users to that group.")
+        end  
+      end
+    end
+    
+    # ---------------------------------------
+    # Prepare data for display
+    #----------------------------------------
+     
+    # Get users in the group
+    groupMembersRows = dbu.getUsersByGroupId(groupId, 'name')
+    
+    # Convert results from array of DBI::Row's to array of Hashes,
+    # skipping the logged in user because they should already be an admin of the destination group
+    # Also skip the user 'admin' because this user is special and shouldn't be displayed (Issue 210)
+    # or they will be added if a new group is created.
+    groupMembersHash = Array.new
+    groupMembersRows.each { |row| groupMembersHash.push(row.to_h) unless(row['userId'].to_i == userId.to_i or row['name'] == 'admin') } 
+    # Append each user's role in the group
+    groupMembersHash.each { |userHash| userHash['role'] = Role.roleFromAccess(dbu.getAccessByUserIdAndGroupId(userHash['userId'], groupId)).upcase }
+
+    # Get target groups - must be Admin access level.
+    targetGroups = dbu.getGroupsByUserIdAndAccess(userId, ['o'], 'groupName')
+
+    # Reset the payload data if the form submitted successfully
+    unless(confirmationMessage == '')
+      payloadStr = ''
+    end
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+%>
+  
+<style>
+td.form_content {
+  background:white;
+}
+td.form_body {
+  font-weight:bold;
+  font-size:.75em;
+}
+div.error {
+  border:1px solid;
+  padding:10px;
+  margin:10px;
+  background:#FFDDDD;
+  font-weight:bold;  
+}
+div.confirmation {
+  border:1px solid;
+  padding:10px;
+  margin:10px;
+  background:#EEEEEE;
+  font-weight:bold;  
+}
+div#selectButtons {
+  padding-bottom:6px;
+}
+</style>
+
+<h2>Copy Users to Another Group</h2>
+<p>This feature allows you to copy users FROM this group TO another group.  Select the users that you would like to copy, and then select the target group.</p>
+<p>You must be an Administrator of the destination group.  If you specify a new group, you will be added to the group as Administrator.</p>
+
+<% if(groupMembersHash.empty?) %>
+  <div class="error">
+    There aren't any users in this group, other than yourself.
+  </div>
+<% else %>
+
+
+<% unless(validationMessages.nil? or validationMessages.empty?) %>
+<div class="error">
+  The form contains the following errors.
+  <ul>
+  <% validationMessages.each do |message| %>
+    <li><%= message %></li>
+  <% end %>
+</ul>
+</div>
+<% end %>
+
+<% unless(confirmationMessage.nil? or confirmationMessage.empty?) %>
+<div class="confirmation">
+  <%= confirmationMessage %>
+</div>
+<% end %>
+
+<script>
+/* Initialize */
+var userCurrentRoles = [] ;
+var userCheckboxes = [] ;
+var userTargetRoleSelects = [] ;
+var targetGroups = [] ;
+var payloadObj ;
+var payloadStr = '<%= payloadStr %>' ;
+</script>
+
+<input type="hidden" name="payload" id="payload" />
+<div id="selectButtons">
+  <button class="btn" onclick="userCheckboxes.each(function(e){ e.checked = 1; toggleTargetRole(e); });return false;">Select All</button>&nbsp;
+  <button class="btn" onclick="userCheckboxes.each(function(e){ e.checked = 0; toggleTargetRole(e); });return false;">Select None</button>
+</div>
+
+<div style="width:670px;overflow:auto;">
+  <table id="userListTable" name="userListTable" border="0" cellpadding="3" cellspacing="1" bgcolor="navy" width="100%">
+  <tbody>
+    <tr>
+      <td class="form_body" width="15px">&nbsp;</td>
+      <td class="form_body" width="1%"><a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">Login&nbsp;Name&nbsp;<span class="sortarrow" sortdir="down">&darr;</span></a></td>
+      <td class="form_body"><a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">
+        <i>Full&nbsp;Name</i><br />
+        Email&nbsp;Address<span class="sortarrow">&nbsp;</span></a>
+      </td>
+      <td class="form_body" width="1%"><a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">Current Role&nbsp;<span class="sortarrow">&nbsp;</span></a></td>
+      <td class="form_body" width="124px">Target Group Role</td>
+    </tr>
+  <% groupMembersHash.each do |user| %>
+    <tr>
+      <td class="form_content"><input type="checkbox" name="userIds[<%= user['userId'] %>]" id="userIds[<%= user['userId'] %>]" value="<%= user['userId'] %>" onclick="toggleTargetRole(this);" /></td>
+      <td class="form_content">
+        <label for="userIds[<%= user['userId'] %>]"><%= user['name'] %></label>
+      </td>
+      <td class="form_content">
+        <label for="userIds[<%= user['userId'] %>]">
+          <i><%= user['firstName'] %>&nbsp;<%= user['lastName'] %></i><br>
+          <%= user['email'] %>
+        </label>
+      </td>
+      <td class="form_content"><%= user['role'] %></td>
+      <td class="form_content">
+        <div style="height:22px"> <!-- This div prevents cells from 'jumping' in FF when div is displayed -->
+          <div style="height:100%;text-align:center;vertical-align:middle;line-height:22px;" id="notSelected_userIds[<%= user['userId'] %>]"><i>n/a</i></div>
+          <div style="display:none;" id="targetRoleDiv_userIds[<%= user['userId'] %>]">
+  
+            <select id="userTargetRoles[<%= user['userId'] %>]" class="targetRole" style="font-size: 8pt;" name="userTargetRoles[<%= user['userId'] %>]"/>
+              <% Role.getRoleNames(true).each_pair do |key, role| %>
+              <option value=<%= role %> <%= (role == user['role']) ? 'selected="selected"' : ''  %>><%= role %></option>
+              <% end %>
+            </select>
+          </div>
+        </div>
+      </td>
+    </tr>
+  <script>
+  /* Add user info to arrays */
+  userCurrentRoles.push('<%= user['role'] %>');
+  userCheckboxes.push($('userIds[<%= user['userId'] %>]'));
+  userTargetRoleSelects.push($('userTargetRoles[<%= user['userId'] %>]'));
+  </script>
+  <% end %>
+  </tbody>
+  </table>
+</div>
+
+<br />
+<table border="0" cellpadding="4" cellspacing="2" width="100%">
+  <tbody>
+   <tr>
+      <td class="form_body" width="235px;">
+        Set Permission for Selected Users To:
+      </td>
+      <td class="form_content">
+        <select name="permission" id="permission" class="txt" onchange="updateTargetRoles(this)" style="width:150px;max-width:150px;">
+          <option value="same">Same as this group</option>
+          <% Role.getRoleNames(true).each_pair do |key, role| %>
+          <option value="<%= role %>"><%= role %></option>
+          <% end %>
+        </select>
+        <a onclick="return displayHelpPopup(this, helpMessages['assignPermission'].text, helpMessages['assignPermission'].title);" href="javascript:void(0);" id="ext-gen83">
+          <img width="16" height="16" border="0" style="margin-left: 5px;" src="/images/gHelp1.png"/>
+        </a>        
+      </td>
+   </tr>
+   <tr>
+      <td class="form_body">
+        <span id="targetGroupIdLabel">
+          Copy Selected Users To:
+        </span>
+      </td>
+      <td class="form_content">
+        <select name="targetGroupId" id="targetGroupId" style="width:150px;max-width:150px;" class="txt" onchange="document.getElementById('newGroupDiv').style.display=(this.value=='new')?'inline':'none'">
+          <option value="">Choose Existing Group</option>
+          <optgroup>
+            <% targetGroups.each do |key, name| %>
+            <option value="<%= key %>"><%= name %></option>
+            <script>targetGroups.push('<%= name %>')</script>
+            <% end %>
+          </optgroup>
+          <option value="new">New Group</option>
+        </select>
+        <div id="newGroupDiv" style="display:none">
+          <b>New Group Name:</b>&nbsp;<input name="newGroupName" id="newGroupName" class="txt" type="text" size="15">
+        </div>
+        <a onclick="return displayHelpPopup(this, helpMessages['targetGroup'].text, helpMessages['targetGroup'].title);" href="javascript:void(0);" id="ext-gen83">
+          <img width="16" height="16" border="0" style="margin-left: 5px;" src="/images/gHelp1.png"/>
+        </a>
+      </td>
+   </tr>
+   </tbody>
+</table>
+<br />
+<input name="btnCopyUsers" id="btnCopyUsers" class="btn" value=" Copy&nbsp;Users " type="submit">&nbsp;
+<input name="btnCancel" id="btnCancel" class="btn" value=" Cancel " type="button" onclick="document.location = '/java-bin/mygroup.jsp';">
+
+<script>
+initFormFromPayload()
+</script>
+
+<% end %>
+
+<%
+
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the page.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

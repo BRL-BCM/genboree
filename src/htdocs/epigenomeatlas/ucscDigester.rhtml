@@ -1,0 +1,155 @@
+<%
+#THIS FILE USES eruby.
+# Forwards the selected track list to WashU/UCSC browser
+# For UCSC the digest resource is used to generate track metadata
+# and is forwarded to ucscForwarderMulti.rhtml
+%>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require "timeout"
+require "cgi"
+require "uri"
+require "json"
+require "net/http"
+require "uri"
+require "brl/util/util"
+require "brl/genboree/genboreeUtil"
+require "brl/genboree/geneViewer/gbTrackUtil.rb"
+require "brl/genboree/genboreeDBHelper"
+require "brl/genboree/genboreeContext"
+require "brl/genboree/rest/apiCaller"
+require "brl/db/dbrc"
+load "brl/genboree/geneViewer/gbTrackUtilNew.rb"
+require "brl/genboree/geneViewer/gbTrackUtilNew.rb"
+require 'brl/genboree/abstract/resources/user'
+include BRL::Genboree::GeneViewer
+begin
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  self.extend(BRL::Genboree)
+  apiHost = ENV["HTTP_HOST"]
+  brlMirror = false
+  errMsg = nil
+  @errorMsg = ''
+  ucscHost = @context.cgi["ucscHost"]
+  if(ucscHost.nil? or ucscHost.empty? or (ucscHost.downcase =~/wash/)) then
+    ucscHost = "washU"
+    washU = true
+  end
+  # No tracks selected. So do nothing
+  if(@context.cgi["xattrVals"].nil? || @context.cgi["xattrVals"].empty? || @context.cgi["yattrVals"].nil? || @context.cgi["yattrVals"].empty?) then
+    errMsg = "ERROR: No tracks requested"
+  elsif(@context.cgi["dbList"].nil? or @context.cgi["dbList"].empty?)
+    errMsg = "ERROR: No DB List information provided"
+  else
+    xattr = CGI.unescape(@context.cgi["gbGridXAttr"]);
+    yattr = CGI.unescape(@context.cgi["gbGridYAttr"]);
+    xattrVals = @context.cgi["xattrVals"].split(/,/).map{|xx| CGI.unescape(xx)}
+    yattrVals = @context.cgi["yattrVals"].split(/,/).map{|yy| CGI.unescape(yy)}
+    dbList = CGI.unescape(@context.cgi["dbList"]).split(/,/)
+    genome = CGI.unescape(@context.cgi["genome"])
+    userId = CGI.unescape(@context.cgi["userId"])
+    if(genome.nil? or genome.empty?) then genome = "hg19" end
+    jsonHash = {}
+    jsonHash["xattr"] = xattr
+    jsonHash["yattr"] = yattr
+    jsonHash["xattrVals"] = xattrVals
+    jsonHash["yattrVals"] = yattrVals
+    jsonHash["dbList"] = dbList
+    jsonHash["genome"] = genome
+    jsonHash["userId"] = userId
+    # If WashU then make the "custom-bigwig" url string
+    # This version supports only bigwig
+    if(washU)
+      attrList = [yattr,xattr]
+      attrValues = Array.new()
+      yattrVals.each_with_index{|yy,ii| attrValues << [yy,xattrVals[ii]]}
+      gbTrackUtil = GBTrackUtil.new()
+      attrInfo = gbTrackUtil.getAllTracksAndValuesMulti(dbList, attrList, attrValues)
+      trkString = Array.new()
+      # get the track string for Wash u browser
+      attrInfo.each_key { |db|
+        attrInfo[db].each_key { |track|
+          trkString << CGI.escape(track)
+          # This version supports only bigwig
+          # And the db MUST be public
+          trkUrl = "#{db}/trk/#{CGI.escape(track)}/bigWig"
+          trkString << trkUrl
+        }
+      }
+      # make the WashU browser url
+      fullTrkString = trkString.join(",")
+      if(fullTrkString.length > 6000)
+      @errorMsg = "URL length exceeds the limit for WashU browser. #{fullTrkString.length}"
+      else
+        urlSuffix = "?genome=#{genome}&custombigwig=#{fullTrkString}"
+        print cgi.header( { 'Status' => '302 Moved', 'location' => "http://epigenomegateway.wustl.edu/browser/#{urlSuffix}"})
+      end
+    # It is for UCSC browser
+    # Make the API call and put the digest records
+    # Forwarding to ucscForwarderMulti.rhtml (this is where the track metadata is generated)
+    else
+      dbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc()
+      dbrc.user = dbrc.user.dup.untaint
+      dbrc.password = dbrc.password.dup.untaint
+      apiCaller = BRL::Genboree::REST::ApiCaller.new(apiHost,"/REST/v1/digests",dbrc.user,dbrc.password)
+      payload = { "data" => { "text" => jsonHash.to_json } }
+      hr = apiCaller.put({}, payload.to_json)
+      if(apiCaller.succeeded?) then
+        apiCaller.parseRespBody
+        digest=CGI.escape(apiCaller.apiDataObj["url"].gsub(/.+\//,""))
+        shortUrl = CGI.escape("http://#{apiHost}/epigenomeatlas/ucscForwarderMulti.rhtml?digest=#{digest}")
+        # URL to redirect to differs based on whether UCSC browser history must be cleared
+        urlSuffix = "cgi-bin/hgTracks?db=#{genome}&hgct_customText=#{shortUrl}&ucscSafe=on"
+        # UCSC history must be cleared. Send to cart-reset page first and then use that page's destination= parameter to redirect to the actual ucsc url after clearing history
+        print cgi.header( { 'Status' => '302 Moved', 'location' => "http://genome.ucsc.edu/#{urlSuffix}"})
+      else
+        digestError = true;
+        $stderr.puts "-"*50
+        $stderr.puts  "#{Time.now} ERROR:Problem generating short url.\n"
+        $stderr.puts  apiCaller.respBody
+        $stderr.puts "-"*50
+        @errorMsg = "Error in generating short url"
+      end
+    end
+
+  end
+      #genbUrl = "http://#{apiHost}/REST/v1/grp/#{CGI.escape(grpName)}/db/#{CGI.escape(dbName)}/trks?gbKey=#{scoreGBKey}&format=ucsc_browser&ucscTracks=#{trackStringEscape}"
+      # Use Genboree's 'short url' facility to overcome any url length restrictions at UCSC
+  %>
+  <%
+rescue => err
+  $stderr.puts "-"*50
+  $stderr.puts  "ERROR:Could not submit tracks for viewing to the genome browser\n" +
+  "- Exception: #{err.message}\n" +
+  err.backtrace.join("\n")
+  $stderr.puts "-"*50
+  %>
+
+  <%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+ensure
+  if (@errorMsg.nil? or @errorMsg.empty?) then @errorMsg = "The page you are looking for is temporarily unavailable. Please try again later." end
+  %>
+  <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+  <html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv= content=>
+  <title>Atlas Error</title>
+  </head>
+  <body >
+  <div style="font:bold 15px verdana,sans-serif;text-align:center;margin:0 auto;width:800px;"><%= @errorMsg %></div>
+  </body>
+  </html>
+  <%
+end # begin
+
+%>

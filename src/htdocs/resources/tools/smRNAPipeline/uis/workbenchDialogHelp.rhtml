@@ -1,0 +1,287 @@
+<%
+  require 'json'
+  @gbSmallRNASeqPipelineGenomesInfo = JSON.parse(File.read(@genbConf.gbSmallRNASeqPipelineGenomesInfo))
+  width = (@hasAccess ? 775 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle, { :includeToolVersion => true }) %>
+
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+    <% if !@context['wbErrorMsg'].nil? and !@context['wbErrorMsg'].empty? %> 
+      <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+    <% end %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      {
+        :toolHelpOverview =>
+        "
+        <ul>
+          <li><a href=\"#OverviewAnchor\">Overview</a></li>
+          <li><a href=\"#InputsAnchor\">Inputs</a></li>
+          <li><a href=\"#SettingsAnchor\">Settings</a></li>
+          <li><a href=\"#smRNAAnchor\">Sources of small RNA Libraries</a></li>
+          <li><a href=\"#OutputsAnchor\">Outputs</a></li>
+          <li><a href=\"#TutorialsAnchor\">Tutorials & Version Updates</a></li>
+          <li><a href=\"#addendumAnchor\">Addendum</a></li>
+          <li><a href=\"#workflowAnchor\">Workflow</a></li>
+          <li><a href=\"#inputNotesAnchor\">Important Notes</a></li>
+        </ul>
+        
+        <a name='overview' id='OverviewAnchor'><b>Overview</b></a>
+        <p>
+        The <b>exceRpt</b> small RNA-seq Pipeline is for the processing and analysis of RNA-seq data generated to profile small-exRNAs. The pipeline is highly modular, allowing the user to define the libraries containing small RNA sequences that are used during RNA-seq read-mapping, including an option to provide a library of spike-in sequences to allow absolute quantitiation of small-RNA molecules. It also performs automatic detection and removal of 3' adapter sequences. The output data includes abundance estimates for each of the requested libraries, a variety of quality control metrics such as read-length distribution, summaries of reads mapped to each library, and detailed mapping information for each read mapped to each library. 
+        <br><br>
+        Finally, after the pipeline finishes processing all submitted samples, a separate post-processing tool (processPipelineRuns) is run on all successful pipeline outputs.  This tool generates useful summary plots and tables that can be used to compare and contrast different samples.  You can find your post-processing results in the processedResults folder within your output folder.
+        <br>&nbsp;<br>
+        The <a href=\"#workflowAnchor\">workflow</a> and an example dataset to run the pipeline is provided in the <a href=\"#addendumAnchor\">addendum</a> section below.
+        <br><br>
+        Please note that this version of exceRpt is stable but outdated. The new version of exceRpt (found in Transcriptome -> Analyze Small RNA-Seq Data -> exRNA Data Analysis -> 3rd Generation exceRpt small RNA-seq Pipeline (New)) no longer uses sRNAbench and has a number of added benefits over this version. We recommend that you use the other version of exceRpt and report any errors that occur to the Genboree development team.
+        </p>
+        
+        <b>Supported Reference Genomes</b>: <b><font color=green>  #{@gbSmallRNASeqPipelineGenomesInfo.keys.join(", ")}</font></b>
+        <br>&nbsp;<br>
+      
+        <b>To create a Genboree database for reference genomes hg38 or mm10</b>
+        <br>Use <code>Data</code> &raquo; <code>Databases</code> &raquo <code>Create Database</code> tool from the toolset menu.
+        <br>In the tool settings, select the <b>User Will Upload</b> option for <b>Reference Sequence</b>
+        and provide appropriate values for the Species and Version text boxes as given below:
+        <br>
+        <table>
+          <tr>
+            <th>Your Genome of Interest</th><th>Species</th><th>Version</th>
+          </tr>
+          <tr>
+            <td>Human genome hg38</td><td>Homo sapiens</td><td>hg38</td>
+          </tr>
+          <tr>
+            <td>Mouse genome mm10</td><td>Mus musculus</td><td>mm10</td>
+          </tr>
+        </table>
+        
+        <br>
+        <a name='inputs' id='InputsAnchor'><b>Inputs</b></a>
+        <br>
+        <i>Individual Input files</i> - One or more <b>single-end small RNA-seq read files</b> in <a href='http://en.wikipedia.org/wiki/FASTQ_format' target='_blank'>FASTQ</a> or SRA formats. The input files can be compressed.
+        <br>
+        <i>Batches of Input file archives</i> - You can also upload one or more compressed archives of multiple FASTQ files, each FASTQ file can also be compressed inside these archives. 
+        <br>&nbsp;<br>
+        Please see <a href=\"#inputNotesAnchor\">IMPORTANT NOTES</a> in the <a href=\"#addendumAnchor\">addendum</a> section to prepare your input files.
+        <br>
+        <u>NOTE</u>: To upload input files to your database, use <code>Data</code> &raquo; <code>Files</code> &raquo <code>Transfer File</code> from the toolset menu.
+
+        <br>&nbsp;<br>
+        <a name='settings' id='SettingsAnchor'><b>Settings</b></a>
+        <br>
+        <b>3' Adapter Sequence</b>
+        <ul>
+          <li>If you know the 3' adapter sequence for this sample, it is highly recommended to provide that adapter sequence in the <code>3' Adapter Sequence</code> text box.</li>
+          <li>However, the pipeline has a step that finds the 3' adapter sequence in the input FASTQ file and removes it, so it is NOT required to provide an adapter-clipped input file. If the 3' adapter sequence is already clipped in your input FASTQ file, then check the box <code>Clipped Input FASTQ File</code> in the Tool Settings dialog while submitting the job.</li>
+        </ul>
+        <br>
+        <b>Custom Spike-in (oligo) sequences</b>
+        You can upload a single file with all spike-in sequences in <a href='http://en.wikipedia.org/wiki/FASTA_format' target='_blank'>FASTA</a> format.
+        <br>
+        <u>NOTE:</u>
+        <ul>
+          <li>Each FASTA sequence should have a description or defline starting with \">\" followed by a non-space character.</li>
+          <li>Blank lines are not allowed in the middle of FASTA file.</li>
+        </ul>
+        
+        <br>
+        <a name='smRNA' id='smRNAAnchor'><b>Sources of small RNA Libraries</b></a>
+          <ul>
+            <li>rRNAs from  NCBI Sequence IDs <a href='http://www.ncbi.nlm.nih.gov/gene/100861532' target='_blank'>100861532</a> and <a href='http://www.ncbi.nlm.nih.gov/gene/100169751' target='_blank'>100169751</a>
+            <li>miRNAs from <a href='http://www.mirbase.org/' target='_blank'>miRBase</a> version 21</li>
+            <li>tRNAs from <a href='http://gtrnadb.ucsc.edu/' target='_blank'>gtRNAdb</a></li>
+            <li>piRNAs from <a href='http://research.imb.uq.edu.au/rnadb/' target='_blank'>RNAdb</a></li>
+            <li>Annotations from <a href='http://www.gencodegenes.org/' target='_blank'>Gencode</a> version 21 (hg38), version 18 (hg19), version M4 (mm10)</li>
+            <!-- <li>snoRNAs from <a href='https://www-snorna.biotoul.fr/' target='_blank'>snoRNA-LBME-db</a></li> 
+            <li>snRNAs and other RNA families from <a href='http://rfam.xfam.org/' target='_blank'>RFam</a></li> -->
+          </ul>
+        <br>
+        <a name='outputs' id='OutputsAnchor'><b>Outputs</b></a>
+        <br>
+        <u>NOTE</u>: To download any file from your database to your computer, click the file name in the <code>Data Selector</code> tree, then click on <code>Click to Download File</code> link from the <code>Details</code> panel. 
+
+        <ul>
+          <li>All result files are compressed in <i>AnalysisName</i>_results.zip</li>
+          <li>Genboree Job Specification File: <em>jobFile.json</em></li>
+        </ul>
+        <br>
+        
+        <a name='tutorials' id='TutorialsAnchor'><b>Tutorials</b></a>
+        <br>
+        Tutorials to run this tool can be found in this <a href='http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Small%20RNA-seq%20Pipeline' target='_blank'>Wiki</a> page.
+        <br>&nbsp;<br>
+        Check this Wiki page for <a href='http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Version_Updates' target='_blank'>Version Updates</a>.
+        
+        <br><br>
+        <span style='font-size: 80%'><i>This tool has been deployed in the context of the <a href='http://exrna.org/' target='_blank'>Extracellular RNA Communication Consortium</a>. Please contact <a href='mailto:sailakss@bcm.edu'>Sai Lakshmi Subramanian</a> at the Data Coordination Center (DCC) of the ERCC with questions or comments, or for help with using it on your own data.</i></span>        
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag one or more FASTQ files into &quot;Input Data&quot;.',
+          "Optionally drag a folder or a file entity list or one or more compressed archives with FASTQ files into &quot;Input Data&quot;. "
+        ],
+        :types              => [ [ 'File', 'min: 1 ; max: any' ], [ 'Files Dir', 'min: 1 ; max: 1' ], [ 'Files Entity', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>smallRNAseqPipeline</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Analysis Name</span> will be used as a sub-folder to hold the files generated by that run of the tool.'
+                               ],
+        :types              => [ ['Database', 'min: 1 ; max: 1'] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'smallRNAseqPipeline') used to organize smallRNA-seq Pipeline results."],
+          [ 'Genome Version', "This is automatically chosen based on the genome version of the target database."],
+          [ 'Clipped Input FASTQ File', "Check this box if the 3' adapter sequence is clipped in your input FASTQ file. If you check this box, the pipeline will not identify or clip the 3' adapter sequence. Default: Assumes unclipped input, so pipeline will try to identify the adapter sequence."],
+          [ '3\' Adapter Sequence', "Enter the 3' adapter sequence, if known. If you leave this field blank, the pipeline will try to identify the adapter for clipping. NOTE: It is highly recommended to enter the 3' adapter sequence if it is known."],
+          [ 'Oligo (Spike-in) Library Options', "Select if you prefer to map to a custom oligo library. You can either upload the custom oligo library or select an oligo library from your database."],
+          [ 'miRNAs', "Select an option to map to miRNAs. Default: endogenous + exogenous (miRNA)"],
+          [ 'Endogenous + Exogenous (miRNA)', "Endogenous + Exogenous (miRNA) - Pipeline will map reads to exogenous miRNAs in miRBase (i.e. from plants and viruses). "],                   
+          [ 'Endogenous + Exogenous (miRNA + genome)', "Endogenous + Exogenous (miRNA + genome) - Map to exogenous miRNAs in miRbase AND the genomes of all sequenced species in Ensembl/NCBI. If you select this option, then tRNA/piRNA/Gencode mapping will be done by default."],
+          [ 'Endogenous-only', "Endogenous-only - Disable mapping to exogenous miRNAs."], 
+          [ 'tRNAs', "Check this box if you want to map to tRNAs. Default: Pipeline will map reads to tRNAs. You can uncheck this box to disable mapping to the tRNA library."],
+          [ 'piRNAs', "Check this box if you want to map to piRNAs. Default: Pipeline will map reads to piRNAs. You can uncheck this box to disable mapping to piRNA library."],
+          [ 'Gencode Annotations', "Check this box if you want to map to other RNA families and annotations from Gencode. Default: Pipeline will map reads to Gencode annotations. You can uncheck this box to disable mapping to Gencode annotations."],
+          [ 'Advanced Options - Mapping', "" ],
+          [ 'Number of Mismatches in miRNA Mapping', "Enter the number of mismatches that are allowed in miRNA mapping. Note that bowtie1 is used as part of the sRNAbench tool to map to miRNAs. Default: 1." ],
+          [ 'Number of Mismatches in Mapping to Other Libraries', "Enter the number of mismatches that are allowed in mapping to other libraries. Note that bowtie1 is used as part of the sRNAbench tool to map to other libraries. Default: 2." ],          
+          [ 'Submit', "Once you have reviewed the inputs, the output destination database, and your settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'This tool has been developed by the Data Integration and Analysis Component (DIAC) of the <a href=\'http://exrna.org/\' target=\'_blank\'>Extracellular RNA Communication Consortium</a>. ', nil ],
+                                  [ 'exceRpt small RNA-seq Pipeline was written by Robert Kitchen at the <a href=\'http://www.gersteinlab.org/\' target=\'_blank\'>Gerstein Lab</a> at Yale University. ', nil ],
+                                  [ 'Barturen et al. <i>sRNAbench: profiling of small RNAs and its sequence variants in single or multi-species high-throughput experiments.</i>  Methods in Next Generation Sequencing. <b>2014</b>
+                                   <span style="font-size: 78%;">[<a href="http://dx.doi.org/10.2478/mngs-2014-0001">Link</a>]</span>'],
+                                  [ 'Langmead B, Trapnell C, Pop M, Salzberg SL. <i>Ultrafast and memory-efficient alignment of short DNA sequences to the human genome. </i> Genome Biology. <b>2009</b> Mar 4;<b>10(3)</b>:R25.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/19261174">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Kozomara A, Griffiths-Jones S. <i>miRBase: integrating microRNA annotation and deep-sequencing data.</i> NAR <b>2011</b> 39 (Database Issue):D152-D157
+                                   <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/24275495">PubMed</a>]</span>'
+                                  ],
+                                  ['Langmead B, Salzberg SL. <i>Fast gapped-read alignment with Bowtie 2.</i> Nature Methods.  <b>2012</b> Mar 4; <b>9 </b>: 357-359. 
+                                  <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/22388286">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Integrated into the Genboree Workbench by <a href=\'mailto:sailakss@bcm.edu\'>Sai Lakshmi Subramanian</a> at <a href=\'http://genboree.org/site/team\' target=\'_blank\'>BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum' id='addendumAnchor'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>  
+              Addendum
+            </div>
+          </a>
+          <b>Example data for exceRpt small RNA-seq Pipeline</b>
+          Four samples from deep sequencing experiments of barcoded small RNA cDNA libraries for profiling microRNAs in cell-free serum and plasma from human volunteers has been used in this example. This sample was analyzed using the smallRNA-seq Pipeline. 
+          <br>
+          The input FASTQ and output files can be found here:
+          <br><br>
+          <img src='/images/workbench/smallRNAPipelineTestData.png' style='float:center; width:663px; height:510px; margin: 0px 3px 0px 3px;'>
+          <br><br>
+          <ul>
+            <li>Under the group <code>Examples and Test Data</code>, select the database <code>smallRNA-seq Pipeline - Example Data</code></li>
+            <li>Input compressed file can be found under: <code>Files</code> &raquo; <code>smallRNA_4_samples_SRA.tar.gz</code></li>
+            <li>A zip file of results from small RNA-seq Pipeline can be found under <code>Files</code> &raquo; <code>smallRNAseqPipeline</code> folder of this database.</li>
+            <li>Post-processing plots and results can be found under <code>processedResults</code> folder under your results folder of this database.</li>
+          </ul>
+
+          <br>&nbsp;<br>
+          <a name='inputNotes' id='inputNotesAnchor'>
+          <b>IMPORTANT NOTES</b> to prepare input archives:<br>
+          </a>
+          <ul>
+            <li>Commonly used compression formats like .zip, .gz, .tar.gz, .bz2 are accepted.</li>
+            <li>The archive should not contain any folders or sub-folders - all files should be directly placed into the archive.</li> 
+            <li>Each compressed archive should not be larger than 10GB. If you have multiple FASTQ files, we recommend splitting the
+            job into batches by preparing multiple archives, then upload all the compressed archives of input files to your Genboree Database
+            and using all of them together for analysis. This will allow you to successfully upload many input files together
+            as well as reduce upload issues and also submit all your input files for analysis, thereby allowing you to
+            compare and contrast the results of all your input files in one job submission.</li>
+            <li>If you are using Mac OS to prepare your files, remember to remove the \"__MACOSX\" sub-directory that gets added to the compressed archives.</li>
+            <li>In order to create the input file archive using the terminal in Linux/MacOSX, first navigate to the directory where the input files are located.
+            <br>
+            <b>EXAMPLE:</b> If the files were located in C:/Users/John/Desktop/Submission, use the \"cd\" command. In the terminal, type    
+            <code>cd C:/Users/John/Desktop/Submission</code>
+            Next, use the zip command with the -X parameter (to avoid saving extra file attributes) to compress the files.
+            <br>
+            <b>EXAMPLE:</b> To submit 4 data files :
+            <code>inputSequence1.fq.gz, inputSequence2.fq.bz2, inputSequence3.fq.zip, inputSequence4.sra</code>
+            <br>and name the .zip file <i>johnSubmission.zip</i>, type the following in the terminal:
+            <code>zip -X johnSubmission.zip inputSequence1.fq.gz inputSequence2.fq.bz2 inputSequence3.fq.zip inputSequence4.sra</code>
+            </li>
+          </ul>
+          <br>&nbsp;<br>
+          
+          <a name='workflow' id='workflowAnchor'>
+          <b>smallRNA-seq Pipeline Workflow</b>
+          </a>
+          <br>&nbsp;<br>
+
+          <img src='/images/workbench/exceRpt_workflow1.png' style='width:742px; height:861px; margin: 0px 3px 0px 3px;' />
+          <br>&nbsp;<br>
+        "
+      })
+%>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <ul>
+            <li>We are investigating anomalies in pipeline execution for certain cases. </li>
+            <li>We have disabled this tool while we investigate, in case there is an 
+            effect on output correctness. </li>
+          </ul>
+          <span style='color: red;'>
+            We aim to have the smallRNA-seq Pipeline available again soon.
+            Sorry for the inconvenience.
+          </span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+
+</div>

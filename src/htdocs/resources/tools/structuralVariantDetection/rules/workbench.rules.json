@@ -1,0 +1,37 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        2,
+        null
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

@@ -1,0 +1,96 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 500 : 320)
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will merge overlapping annotations in a single track to create a final track.
+          <br>&nbsp;<br>
+          The tool uses the <a href=\"http://bedtools.readthedocs.org/en/latest/content/tools/merge.html\" target=\"blank\">BedTools</a> package to perform the merging operation.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the input track into &quot;Input Data&quot;.'
+        ],
+        :types              => [ ['Tracks', 'min: 1 ; max: 1'] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The resultant track will end up in that database. ' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Track Name', "Type and Subtype of the final combined track."],
+          [ 'Track Class', "The class you want to associate the track with."],
+          [ 'Merge only if same strand', "Check this to ALSO use strand information when merging. [Default: unchecked, will only use chr, start and stop]"],
+          [ 'Score Type', "Select what should go in the score column for merge annotations."],
+          [ 'Force Merge Distance', "Force merge to combine more distant features. For example, if set to 1000, any features that overlap or are within 1000 base pairs of one another will be combined. [Default: 0]"],
+          [ 'Submit', "Once you've reviewed the input track, the output destination database, and your settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Integrated into the Genboree Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+
+      })
+  %>
+
+  <%# Tool-specific Addendum %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

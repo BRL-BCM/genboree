@@ -1,0 +1,262 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 450 : 320)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+   <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          HOMER (Hypergeometric Optimization of Motif EnRichment) is a suite of tools for Motif Discovery and ChIP-Seq analysis
+          <br>&nbsp;<br>
+          It is a collection of command line programs for unix-style operating systems written in mostly perl and c++.
+          Homer was primarily written as a de novo motif discovery algorithm that is well suited for finding 8-12 bp motifs in large scale genomics data
+          <br>&nbsp;<br>
+          For more information on HOMER, please visit: <a href=\"http://biowhat.ucsd.edu/homer/introduction/basics.html\" target=\"_relogin\">http://biowhat.ucsd.edu/homer/introduction/basics.html</a>
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Track:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs, :label => "Genes/Peaks of Interest" } )
+      })
+  %>
+
+  <%# Output resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database/Project:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # Build the list of the promoter-sets for each genome: required if the user selects 'Run against Promoters'
+    genomeVersion = @settings['genomeVersion']
+    gbHomerGenomesInfo = JSON.parse(File.read(@genbConf.gbHomerGenomesInfo))
+    promSet = gbHomerGenomesInfo[genomeVersion]['promoters']
+    promSetOpts = {}
+    cc = 0
+    promSet.each_key { |key|
+      if(cc == 0)
+        promSetOpts[:"#{key}"] = {:label => key, :selected => true}
+      else
+        promSetOpts[:"#{key}"] = {:label => key }
+      end
+      cc += 1
+    }
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Homer-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => "The top-level output folder used to organize HOMER results"},
+        { :id => "genomeVersion", :label => "Genome Version", :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the inputs/outputs"},
+        { :id => 'homerType', :label => '', :type => :extRadioGroup, :list => ['Run against Genome', 'Run against Promoters'], :hideBox => false },
+        { :id => 'promoterSet', :label => 'Promoter Set', :type => :select, :hidden => false,
+          :options => promSetOpts, :title => "Only available when running against promoters."  
+        },
+        { :id => 'basicSettings', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them.)',
+          :toggleText => "Basic Options",
+          :widgets =>
+          [
+            { :id => '-mask', :label => 'Mask Repeats', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => ''},
+            { :id => '-len', :label => 'Motif Length', :labelStyle => 'width:250px;', :type => :text, :value => '8,10,12', :style => 'font-size: 80%', :title => 'Comma separated list of lengths. Note: values greater 12 may cause the program to run out of memory - in these cases decrease the number of sequences analyzed or try analyzing shorter sequence regions (i.e. Size 100)'},
+            { :id => '-size', :label => 'Fragment Size', :labelStyle => 'width:250px;', :type => :text, :value => '200', :style => 'font-size: 80%', :title => 'Fragment size to use for motif finding. Can also provide two comma separated values to get sequences relative to center (-100,50 will get sequences from -100 to +50 relative from center). [Only available when running against genome]'},
+            { :id => '-S', :label => 'Number of motifs to optimize', :labelStyle => 'width:250px;', :type => :text, :value => '25', :style => 'font-size: 80%', :title => ''},
+            { :id => '-mis', :label => 'Global optimization', :labelStyle => 'width:250px;', :type => :text, :value => '2', :style => 'font-size: 80%', :title => 'Global optimization: searches for strings with # mismatches, default: 2'},
+            { :id => '-norevopp', :label => 'No Rev strand search', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't search reverse strand for motifs"},
+            { :id => '-nomotif', :label => 'No de novo motif enrich.', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't search for de novo motif enrichment"},
+            { :id => '-rna', :onClick => "turnOnNoRevOpp(this.checked)", :label => 'Output RNA motif logos.', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Output RNA motif logos and compare to RNA motif database, automatically sets No rev strand search"},
+            { :id => '-start', :label => 'Start offset from TSS', :labelStyle => 'width:250px;', :type => :text, :value => '-300', :style => 'font-size: 80%', :title => '(offset from TSS, default=-300) [max=based on Promoter Set] [Only available when running against promoters]'},
+            { :id => '-end', :label => 'End offset from TSS', :labelStyle => 'width:250px;', :type => :text, :value => '50', :style => 'font-size: 80%', :title => '(offset from TSS, default=-50) [max=based on Promoter Set] [Only available when running against promoters]'}
+          ]
+        },
+        { :id => 'advancedSettings', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them)',
+          :toggleText => "Advanced Options",
+          :widgets =>
+          [
+            { :id => '-h', :label => 'Use hypergeometric', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => 'Use hypergeometric for p-values (binomial is default) [Only available when running against genome]'},
+            { :id => '-N', :label => 'Num Sequences for motif finding', :labelStyle => 'width:250px;', :type => :text, :value => '', :style => 'font-size: 80%', :title => '(Number of sequences to use for motif finding, default=max(50k, 2x input) [Only available when running against genome]'},
+            { :id => '-local', :label => 'Local Background', :labelStyle => 'width:250px;', :type => :text, :value => '2', :style => 'font-size: 80%', :title => 'Use local background, # of equal size regions around peaks to use i.e. 2. [Only available when running against genome]'},
+            { :id => '-redundant', :label => 'Remove redundant sequences', :labelStyle => 'width:250px;', :type => :text, :value => '-0.5', :style => 'font-size: 80%', :title => 'Remove redundant sequences matching greater than # percent, i.e. 0.5 [Only available when running against genome]'},
+            { :id => '-rand', :label => 'Randomize', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => 'Randomize labels for target and backgound sequences'},
+            { :id => '-oligo', :label => 'Analyze ind. oligo enrich.', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Perform analysis of individual oligo enrichment"},
+            { :id => '-dumpFasta', :label => 'Dump Fasta Files', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Dump fasta files for target and background sequences for use with other programs"},
+            { :id => '-preparse', :label => 'Pre parse', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Force new background files to be created [Only available when running against genome]"},
+            { :id => '-fdr', :label => 'Number of randomizations', :labelStyle => 'width:250px;', :type => :text, :value => '', :style => 'font-size: 80%', :title => 'Calculate empirical FDR for de novo discovery #=number of randomizations.'},
+            { :id => '-b', :label => 'Use binomial', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => 'Use binomial distribution to calculate p-values, hypergeometric is default [Only available when running against promoters]'},
+            { :id => '-nogo', :label => 'NO GO search', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't search for gene ontology enrichment [Only available when running against promoters]"},
+            { :id => "normalization", :label => "Normalization", :type => :select, :labelStyle => 'width:250px;', :style => 'font-size: 80%', :options =>
+            {
+              "-gc" => {:label => "GC%", :selected => true},
+              "-cpg" => {:label => "CpG%"}
+            }, :title => "Select between GC% and CpG% for sequence content normalization"
+            },            
+            { :id => '-noweight', :label => 'No CG correction', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "No CG enrichment"},
+            { :id => '-noredun', :label => "Don't remove pre-det red. prom/seq", :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't remove predetermined redundant promoters/sequences [Only available when running against promoters]"},
+            { :id => '-peaks', :label => "Produce Peaks", :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Will produce peak file of promoters to use with findMotifsGenome.pl [Only available when running against promoters]"},
+            { :id => '-min', :label => 'Min Seq Length', :labelStyle => 'width:250px;', :type => :text, :value => '0', :style => 'font-size: 80%', :title => 'Remove sequences shorter than #, default: 0. [Only available when running against promoters]'},
+            { :id => '-max', :label => 'Max Seq Length', :labelStyle => 'width:250px;', :type => :text, :value => '1e10', :style => 'font-size: 80%', :title => 'Remove sequences longer than #, default: 1e10. [Only available when running against promoters]'},
+            { :id => '-nlen', :label => 'Len of low-order oligos', :labelStyle => 'width:250px;', :type => :text, :value => '3', :style => 'font-size: 80%', :title => 'Length of lower-order oligos to normalize in background, default: 3'},
+            { :id => '-nmax', :label => 'Max Normalization iter.', :labelStyle => 'width:250px;', :type => :text, :value => '160', :style => 'font-size: 80%', :title => 'Max normalization iterations, default: 160'},
+            { :id => '-olen', :label => 'Lower-order oligo norm.', :labelStyle => 'width:250px;', :type => :text, :value => '', :style => 'font-size: 80%', :title => "Lower-order oligo normalization for oligo table, use if 'Len of low-order oligos' isn't working well"},
+            { :id => '-e', :label => 'Max exp motif.', :labelStyle => 'width:250px;', :type => :text, :value => '0.01', :style => 'font-size: 80%', :title => 'Maximum expected motif instance per bp in random sequence, default: 0.01'},
+            { :id => '-minlp', :label => 'Min logp Score', :labelStyle => 'width:250px;', :type => :text, :value => '-10', :style => 'font-size: 80%', :title => 'Stop looking for motifs when seed logp score gets above #, default: -10'}
+          ]
+        },
+        { :id => 'visSettings', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them.)',
+          :toggleText => "Known Motif Options/Visualizations",
+          :widgets =>
+          [
+            { :id => "-mset", :label => "Check against motif collects", :type => :select, :labelStyle => 'width:250px;', :style => 'font-size: 80%', :options =>
+            {
+              "auto" => {:label => "auto", :selected => true},
+              "vertebrates" => {:label => "vertebrates"},
+              "insects" => {:label => "insects"},
+              "worms" => {:label => "worms"},
+              "plants" => {:label => "plants"},
+              "yeast" => {:label => "yeast"},
+              "all" => {:label => "all"}
+            }, :title => ""
+            },
+            { :id => '-basic', :label => 'Basic', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Just visualize de novo motifs, don't check similarity with known motifs [Default: unchecked]"},
+            { :id => '-bits', :label => 'Scale Seq logos', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Scale sequence logos by information content, default: doesn't scale"},
+            { :id => '-nocheck', :label => 'No Check', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't search for de novo vs. known motif similarity"},
+            { :id => '-noknown', :label => 'No known', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :title => "Don't search for known motif enrichment, default: -known"}
+          ]
+        }
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+function turnOnNoRevOpp(checked)
+{
+  if(checked)
+  {
+    Ext.get('-norevopp').dom.checked = true ;
+  }
+}
+Ext.onReady(function(){
+  var homerType = Ext.getCmp('radioGroup_homerType') ;
+  homerType.addListener(
+    'change',
+    function()
+    {
+      var rbtns = document.getElementsByName('radioGroup_homerType_btn') ;
+      var ii ;
+      for(ii=0; ii < rbtns.length; ii++)
+      {
+        var btn = rbtns[ii] ;
+        if(btn.checked)
+        {
+          if(btn.value == 'Run against Promoters')
+          {
+            Ext.get('-size').dom.disabled = true ;
+            Ext.get('-h').dom.disabled = true ;
+            Ext.get('-N').dom.disabled = true ;
+            Ext.get('-local').dom.disabled = true ;
+            Ext.get('-redundant').dom.disabled = true ;
+            Ext.get('-preparse').dom.disabled = true ;
+            Ext.get('-size').dom.disabled = true ;
+            Ext.get('-start').dom.disabled = false ;
+            Ext.get('-end').dom.disabled = false ;
+            Ext.get('-min').dom.disabled = false ;
+            Ext.get('-max').dom.disabled = false ;
+            Ext.get('-peaks').dom.disabled = false ;
+            Ext.get('-noredun').dom.disabled = false ;
+            Ext.get('-nogo').dom.disabled = false ;
+            Ext.get('-b').dom.disabled = false ;
+            Ext.get('-mis').dom.value = '1' ;
+            Ext.get('promoterSet').dom.disabled = false ;
+          }
+          else
+          {
+            Ext.get('-h').dom.disabled = false ;
+            Ext.get('-N').dom.disabled = false ;
+            Ext.get('-local').dom.disabled = false ;
+            Ext.get('-redundant').dom.disabled = false ;
+            Ext.get('-preparse').dom.disabled = false ;
+            Ext.get('-size').dom.disabled = false ;
+            Ext.get('-start').dom.disabled = true ;
+            Ext.get('-end').dom.disabled = true ;
+            Ext.get('-min').dom.disabled = true ;
+            Ext.get('-max').dom.disabled = true ;
+            Ext.get('-peaks').dom.disabled = true ;
+            Ext.get('-noredun').dom.disabled = true ;
+            Ext.get('-nogo').dom.disabled = true ;
+            Ext.get('-b').dom.disabled = true ;
+            Ext.get('-mis').dom.value = '2' ;
+            Ext.get('promoterSet').dom.disabled = true ;
+          }
+        }
+      }
+    }
+  ) ;
+  Ext.get('-start').dom.disabled = true ;
+  Ext.get('-end').dom.disabled = true ;
+  Ext.get('-min').dom.disabled = true ;
+  Ext.get('-max').dom.disabled = true ;
+  Ext.get('-peaks').dom.disabled = true ;
+  Ext.get('-noredun').dom.disabled = true ;
+  Ext.get('-nogo').dom.disabled = true ;
+  Ext.get('-b').dom.disabled = true ;
+  Ext.get('promoterSet').dom.disabled = true ;
+}) ;
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

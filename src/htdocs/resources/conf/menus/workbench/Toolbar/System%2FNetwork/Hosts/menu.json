@@ -1,0 +1,12 @@
+[
+  {
+    "text"   : "Save Remote Access Info",
+    "idStr"  : "setHostAccess",
+    "tooltip": "Save access credentials for a remote Genboree host,<br>so you can see and work with it here."
+  },
+  {
+    "text": "Remove/Delete Remote Access Info",
+    "idStr": "deleteHostAccess",
+    "tooltip": "Delete previously saved  access credentials for a remote Genboree host.<br>You will no longer see it here."
+  } 
+]

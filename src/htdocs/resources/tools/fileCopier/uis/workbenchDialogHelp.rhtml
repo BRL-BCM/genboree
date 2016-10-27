@@ -1,0 +1,56 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will copy/move file(s) from one database (or Files Section) to another.
+        <br>&nbsp;<br>
+        Review that the correct file(s) are going to be copied/moved.
+        "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>File(s)</u> into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Files', 'min: 1 ; max: none' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database/Files Dir</u> into &quot;Output Targets&quot;. The file(s) will be copied/moved to the target destination.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ], [ 'Files Dir', 'min: 0 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Copy Files? [Default]',    'Check this to only copy files to the target database. This will not remove the file from the source database.' ],
+          [ 'Move Files?',    'Check this to move the file(s) to the destination database/Files area (This will remove the file(s) from the source database/Files area). ' ],
+          [ 'Submit', "Once you've reviewed the input files, the output destination, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+</div>

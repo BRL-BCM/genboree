@@ -1,0 +1,34 @@
+<%
+require 'brl/genboree/rest/helpers/projectApiUriHelper'
+%>
+
+<%
+  @projectOrDatabaseList = [ @projectOrDatabaseList ] unless(@projectOrDatabaseList.is_a?(Array) or @projectOrDatabaseList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@projectOrDatabaseList.nil? or @projectOrDatabaseList.empty?) ? "" : "rowspan='#{@projectOrDatabaseList.size}'") %> ><%= (@label || "Project/DB") %>:</th>
+<%  if(@projectOrDatabaseList.nil? or @projectOrDatabaseList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      projectHelperObj = BRL::Genboree::REST::Helpers::ProjectApiUriHelper.new()
+      @projectOrDatabaseList.each_index { |ii|
+        item = @projectOrDatabaseList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        projectOrDb = projectHelperObj.extractName(item)
+        unless(projectOrDb)
+          projectOrDb = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        end
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== projectOrDb %></i></td>
+          <td class="explain">Group: <i><%== grp %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

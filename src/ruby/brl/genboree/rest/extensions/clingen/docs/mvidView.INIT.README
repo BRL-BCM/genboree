@@ -1,0 +1,26 @@
+
+================================================
+Initial Config/Setup for the mvidView API Extensions
+================================================
+
+After the usual code deployment of files, the ehrSendPdf extension need configuration.
+
+1. Deploy the conf/mvidView.json AND the templates/variant.html.erb to your API Extension confs dir.
+- Base dir is specified by the "gbApiExtConfsDir" property in your genboree.config.properties
+- Probably /usr/local/brl/local/conf/apiExtensions/
+- Make it now if not present and add that property to your genboree.config.properties
+- Create the clingen/ extension subdir under that base dir.
+- Put ehrSendPdf.json in that subdir.
+- You now have something like /usr/local/brl/local/conf/apiExtensions/clingen/mvidView.json
+
+2. Configure the mvidView extension's config
+- Edit your conf/mvidView.json
+- Change the base resource path if you don't like the default
+  . NOTE: if you change the top-level (mount) you MUST configure your nginx
+    proxy server to support the new mount area!
+- Probably the htmlTemplateFile setting is correct (because of step 1 above) but
+  review that the path there is correct.
+
+3. Configure nginx to support your new mount if you don't want this service exposed under /REST-ext
+- Mimic the setup for REST & REST-ext, basically.
+

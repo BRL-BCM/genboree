@@ -1,0 +1,23 @@
+{
+  "info": {
+    "idStr": "epigenomicsHeatmap",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 2,
+    "pvmem": "10gb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "48:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Compute Similarity Matrix (heatmap)",
+    "shortLabel": "Heatmap",
+    "advisoryHtml": 
+    {
+      "beta": "<div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'> This tool has recently been upgraded with additional settings and has been marked as <font color=\"red\">BETA</font>. We recommend using the default settings (unless noted otherwise in a use case), until all testing of the new settings is complete. Please contact <a href='mailto:genboree_admin@genboree.org'>genboree_admin@genboree.org</a> with questions or comments, or for help using it on your own data.</div>"
+    }
+  }
+}

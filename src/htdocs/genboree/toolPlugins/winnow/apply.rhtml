@@ -1,0 +1,34 @@
+<style>
+    .samples{ margin-left: 15px; }
+    TD.bordered{ border: thin solid black; }
+    .centered{ text-align: center; }
+</style>
+<div id="time"><%= Time.now %></div>
+<br>
+Samples classified as 'true' (<%= yay.size %>)
+<div class="samples">
+    <% unless yay.empty? %>
+    <table cellpadding="3" cellspacing="0">
+        <tr class="centered"><td></td><td>Start</td><td>Stop</td><td>Strand</td></tr>
+        <% yay.each do |yy| %>
+            <% tmp, chr, start, stop, tmp = yy.desc.split("|") %>
+            <% strand = yy.desc.split("STRAND: ").last %>
+            <tr><td class="bordered"><%= chr %></td><td  class="bordered"><%= start %></td><td class="bordered"><%= stop %></td><td class="bordered" style="text-align: center;"><%= strand %></td></tr>
+        <% end %>
+    </table>
+    <% end %>
+</div>
+<BR><BR>
+Samples classified as 'false' (<%= nay.size %>)
+<div class="samples">
+    <% unless nay.empty? %>
+    <table cellpadding="3" cellspacing="0">
+        <tr class="centered"><td></td><td>Start</td><td>Stop</td><td>Strand</td></tr>
+    <% nay.each do |nn| %>
+        <% tmp, chr, start, stop, tmp = nn.desc.split("|") %>
+        <% strand = nn.desc.split("STRAND: ").last %>
+        <tr><td class="bordered"><%= chr %></td><td  class="bordered"><%= start %></td><td class="bordered"><%= stop %></td><td class="bordered" style="text-align: center;"><%= strand %></td></tr>
+    <% end %>
+    </table>
+    <% end %>
+</div>

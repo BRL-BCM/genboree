@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "sampleCentricLimma",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "11716mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "48:00:00"
+  },
+  "ui": {
+    "label": "Compare by LIMMA -> Track with Sample Metadata",
+    "shortLabel": "LIMMA - Track with Sample Metadata"
+  }
+}

@@ -1,0 +1,33 @@
+/** Publication Styles **/
+ul.publications
+{
+  list-style: none ;
+}
+
+.publication
+{
+  margin-bottom: 2em ;
+}
+
+.publication p
+{
+  margin: 2px 0 ;
+}
+
+.publication p i
+{
+  color: #15428B ;
+  margin-right: 5px ;
+}
+
+.publication p.authors
+{
+  font-style: italic;
+}
+
+.publication p.title
+{
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-bottom: 12px;
+}

@@ -1,0 +1,38 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will view an image file from a database.
+      "
+    })
+%>
+
+ <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+    })
+  %>
+  
+ <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

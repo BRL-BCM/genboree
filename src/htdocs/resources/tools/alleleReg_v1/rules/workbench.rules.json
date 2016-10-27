@@ -1,0 +1,14 @@
+{
+  "settings": {
+    "patterns": {
+      "hgvsVal": [
+        "\\S+",
+        "The HGVS String must be a non-empty, HGVS-compliant string."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  }
+}

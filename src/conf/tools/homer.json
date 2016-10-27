@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "homer",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "5858mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "08:00:00"
+  },
+  "ui": {
+    "label": "HOMER",
+    "shortLabel": "HOMER" 
+  }
+}

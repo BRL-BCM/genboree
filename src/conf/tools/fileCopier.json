@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "fileCopier",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "queue": "gb",
+    "pvmem": "750mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "File Copier",
+    "shortLabel": "File Copier"
+  }
+}

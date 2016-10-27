@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "makeSignalChrom",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 4,
+    "mem": "70gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "FindER and ChromHMM",
+    "shortLabel": "FindERChromHMM",
+    "groupAccessUri": null
+  }
+}

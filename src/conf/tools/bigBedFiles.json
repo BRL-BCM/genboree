@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "bigBedFiles",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "11716mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "12:00:00"
+  },
+  "ui": {
+    "label": "Generate BigBed Files",
+    "shortLabel": "Generate BigBed Files"
+  }
+}

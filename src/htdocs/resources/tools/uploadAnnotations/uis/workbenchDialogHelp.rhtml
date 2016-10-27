@@ -1,0 +1,49 @@
+<%# RENDER HTML %>
+<div style="height: 400px;" class="wbDialog wbHelp" >
+  <%
+    instructions = 'Specify the <ul><li>Input format of the data file</li><li>If the Annotations should be stored in a new or existing Track</li>' 
+    instructions << '<li>Any format specific options</li></ul>'
+    instructions << '<div>Note that for the LFF file format, no other options are needed</div>'
+    instructions << '<div>If you are uploading Annotations to a new Track, you must specify the Class, Type and Subtype of the new track. Note '
+    instructions << 'that the Track Name (composed by &lt;Type&gt;:&lt;Subtype&gt;) must be less than 19 characters long and cannot contain a colon (:)</div>'
+  %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>  'This tool allows you to upload data from a file to Genboree, as Annotations.' })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       => [ 'Drag 1 file into &quot;Input Data&quot;' ],
+        :types              =>
+        [
+          [ 'File', 'min: 1 ; max: 1' ]
+        ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 database into the &quot;Output Targets&quot; to specify where the Annotations should be uploaded to' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     => [ [ 'Upload Annotation', instructions] ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed by Bio:Neos for <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

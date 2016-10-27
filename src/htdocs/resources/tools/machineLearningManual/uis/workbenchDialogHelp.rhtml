@@ -1,0 +1,155 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 620px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            <b>Overview</b><br>
+            This tool will run a machine learning pipeline on an OTU table and sample information provided by the user. Currently, two random forest algorithms are run, each provided by an R package:
+            <ul>
+              <li>Random Forest</li>
+              <li>Boruta</li>
+            </ul>
+            <br>
+            The input OTU table will be filtered and normalized. A list of significant OTUs for differentiating sample sets will be generated as output.
+            <br>&nbsp;<br>
+            <b>Providing the OTU Table</b><br>
+            The <i>first</i> file in the &quot;Input Data&quot; panel must be an OTU table file.
+            <br>&nbsp;<br>
+            (As with any raw data file, first transfer your OTU table file to Genboree using the <span class='wbHelpMonoEntity'>Data -&gt; Files -&gt; Transfer File</span> tool. This will place the file in the <span class='wbHelpMono'>Files</span> area of the user database you select.)
+            <br>&nbsp;<br>
+            The OTU table must involve at least 3 samples and should be formatted the same way that Qiime outputs the OTU tables it makes. Specifically:<br>
+            <ul>
+              <li>The first header line <i>must</i> be &quot;<span class='wbHelpMono'># QIIME v1.2.0 OTU table</span>&quot;. (Some versions of Qiime output a different format or a different header; double-check yours.)</li>
+              <li>The next header line provides the OTU column names. The first column header must be &quot;<span class='wbHelpMono'>#OTU ID</span>&quot; and then the subsequent column names should match <i>each sample name</i>. These names <i>must</i> match the sample names in your sample metadata file or in the sample entities you dragged. The &quot;Concensus Lineage&quot; column at the end is optional for Machine Learning.</li>
+            </ul>
+            <br>
+            <b>Providing Sample Information</b><br>
+            In addition to the OTU table data, we need metadata information about the samples.<br>
+            You can provide this in two ways:<br>
+            <ol style='margin-left: 8px;'>
+              <li>
+                <u>Imported Sample Metadata</u><br>
+                <ul>
+                  <li>If you already imported your sample data into Genboree in order to perform such analyses, then drag the relevant samples into the &quot;Input Data&quot; area.</li>
+                </ul>
+              </li>
+              <li>
+                <u>Ad Hoc Sample Metadata File</u><br>
+                <ul>
+                  <li>Alternatively you can provide a tab-delimited sample metadata file. This file must be <i>after</i> the OTU file in the &quot;Input Data&quot; list.</li>
+                  <li>(As with the OTU file, first transfer this file to Genboree using the <span class='wbHelpMonoEntity'>Data -&gt; Files -&gt; Transfer File</span>. Then drag the file into the &quot;Input Data&quot; area.)
+                  <li>The sample file format is the same as that used for the <span class='wbHelpMono'>Sample Importer</span>:
+                    <ul>
+                      <li>The first line of the file contains the column headers, as a comment-line. It must start with a '#'.</li>
+                      <li>The first column MUST be called 'name' whose value is unique for all Sample records.</li>
+                      <li>It is recommended to have a 'barcode' column, and the sample records to have their respective DNA barcodes in this column.</li>
+                      <li>The other columns are the metadata features.</li>
+                      <li>All records MUST have the same number of fields/columns.</li>
+                    </ul>
+                  </li>
+                  <li>Each sample present in your OTU file <i>must</i> be present in the samples file. The 'name' of the sample must match the name in the OTU file. (It's ok to have extra sample records, they will be removed.)</li>
+                  <li>As documented in other Microbiome tools, certain special column/field names are used internally by our regular Microbiome Workbench pipeline and should be avoided (they will not be available as features for machine learning):<br>'barcode', 'type', 'region', 'state', 'minseqLength', 'minAveQual', 'minseqCount', 'proximal', 'distal', 'region', 'sampleID'.</li>
+                  <li>We remove sample records not present in the OTU table. After this removal, if some features now have the <i>same value</i> amongst ALL remaining samples, those features cannot be used in machine learning [obviously], even if you were allowed to select those features in the UI. You will be informed in the email if this happens.</li>
+                  <li>Similarly, if removal of superfluous samples results in there being fewer than 3 sample records, then machine learning cannot proceed. You will be informed by email if this happens.</li>
+                </ul>
+              </li>
+            </ol>
+            <br>&nbsp;<br>
+            <div style='width:100%; text-align:center; font-size: 80%;'><i>This tool is part of the <u>Microbiome Workbench</u>. Additional details and a summary of the output files generated are provided in the </i><a href='#addendum'>Addendum</a><i> at the bottom of this Help dialog.</i></div>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Either drag the OTU File (first) and then the Samples File (second) into &quot;Input Data&quot; OR drag an OTU File and at least 3 samples.',
+        ],
+        :types              => [ ['Files', 'min: 1 ; max: 2'  ], ['Samples', 'min: 0 ; max: any']],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database under the Files area. Optionally, drag a project into &quot;Output Targets&quot for creating links to html files (generated by QIIME) from the project page' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ], [ 'Project', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Study Name', 'The output folder for the Machine Learning results.' ],
+          [ 'Job Name', 'Give this job a unique name.' ],
+          [ 'Feature List', "Metadata features provided by user. (Example: age, ethnic, etc)."],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+          :references         =>  [
+                                    [ 'The following article discusses the use of random forests, and Boruta specifically, in feature selection:',
+                                     'Breiman, Leo (2001). "Random Forests". Machine Learning  45 (1): 5–32. Miron B. Kursa, Witold R. Rudnicki (2010)
+                                      <i>Feature Selection with the Boruta Package.</i> Journal of Statistical Software Vol. 36. Issue 11, Sep 2010.'
+                                    ],
+                                    [ 'Tool pipeline developed internally by Kevin Riehle, Jun Ma; integrated into the workbench by Arpit Tandon and Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                  ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>A. Context Within the Microbiome Workbench</b><br>
+          This 'Manual' version of the Machine Learning tool allows you to provide your own OTU table file, rather than first running Qiime using the Microbiome Workbench and then using the Qiime results folder as the simple input for the Machine Learning tool. This should allow advanced users who have custom OTU files to bypass some of the prerequisite steps.
+          <br>&nbsp;<br>
+          This allows you to use a custom (but Qiime compatible) OTU table you generated yourself, or one output by your own tool, or one you enhanced in some other way.
+          <br>&nbsp;<br>
+          We need information about your samples. In the regular machine learning tool, we can figure this out from the information in the Qiime job folder you dragged, since you already Imported the samples into Genboree. In this 'Manual' version, we need you to provide this information. For flexibility, you can reuse your Imported samples OR you can provide a simple tab-delimited file with the sample records.
+          <br>&nbsp;<br>
+          When we run Qiime for you, we can be sure of the OTU file name, syntax, and contents. Similarly, we can retrieve the appropriate Sample metadata for the samples in the OTU table. In this manual version, we get this data from you. As a result, there are a few extra validation checks. However, we have tried to be very accommodating and not impose too many restrictions. If something doesn't work, the email from the job should provide important clues about what the problem was.
+          <br>&nbsp;<br>
+          <b>B. Output Produced</b><br>
+          <b>i. Output Files</b><br>
+          This 'Manual' version of the Microbiome Machine Learning tool uses the same output organization as the regular Microbiome Workbench version.
+          <br>&nbsp;<br>
+          The tool will output several archives containing a specific type of diversity analysis plot (as PDFs), in addition to the raw intermediate data:
+          <br>
+          <img src='/images/workbench/help/microbiomeWorkbench/ml_outputLocations_files.png' style='float:left; margin:5px 5px 5px 0px; width:297px; height:277px;'>
+          <div style='display: block; float: left; width: 49%;'>
+            <ul>
+              <li>
+                <u><b>otu_abundance_cutoff_25.result.tar.gz</b>, <b>otu_abundance_cutoff_25.result.tar.gz</b></u> - Archives of the classification results for each feature, at specific cutoffs.
+              </li>
+              <li>
+                <u><b>raw.results.tar.gz</b></u> - Archive of the intermediate machine learning files, including some plot PDFs and transformed OTU table files, and an R script for the job.
+              </li>
+              <li>
+                <u><b>sample.metadata</b></u> - A tab-delimited file of all Sample records involved in this Qiime job.
+              </li>
+              <li>
+                <u><b>settings.json</b></u> - A JSON file with the input &amp; output information, the tool settings, and some context for this tool job.
+              </li>
+            </ul>
+          </div>
+        "
+      })
+  %>
+</div>

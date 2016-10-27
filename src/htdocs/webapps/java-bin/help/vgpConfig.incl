@@ -1,0 +1,918 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&ldquo;9. Virtual Genome Painter (VGP) Interface&rdquo;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLast">
+  <P><FONT class="tocText">On This Page:</FONT></P>
+  <UL class="compact1_10">
+    <LI class="compact1_10"><A HREF="#vgpuiIntro">9.1 The Virtual Genome Painter (VGP)</A></LI>
+    <LI class="compact1_10"><A HREF="#selectingEPs">9.2 Selecting Entry Points</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#epList"><FONT CLASS="tocSmall">9.2.1 Entry Points List</FONT></A></LI>
+      <LI><A HREF="#epManual"><FONT CLASS="tocSmall">9.2.2 Manually Specifying Entry Points</FONT></A></LI>
+      <LI><A HREF="#epSegments"><FONT CLASS="tocSmall">9.2.3 Entry Point Segments</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#specifyingImages">9.3 Specifying Images and Labels</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#genomeView"><FONT CLASS="tocSmall">9.3.1 The Genome View</FONT></A></LI>
+      <LI><A HREF="#chromView"><FONT CLASS="tocSmall">9.3.2 The Chromosome View</FONT></A></LI>
+      <LI><A HREF="#imgLabels"><FONT CLASS="tocSmall">9.3.3 Image Labels</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#dataColumns">9.4 Data Columns</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#addDataCol"><FONT CLASS="tocSmall">9.4.1 Adding Data Columns</FONT></A></LI>
+      <LI><A HREF="#updateDataCol"><FONT CLASS="tocSmall">9.4.2 Update Data Columns</FONT></A></LI>
+      <LI><A HREF="#removeDataCol"><FONT CLASS="tocSmall">9.4.3 Remove Data Columns</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#annotTracks">9.5 Annotation Tracks</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#refTrack"><FONT CLASS="tocSmall">9.5.1 The Reference Track</FONT></A></LI>
+      <LI><A HREF="#annotTrackStyles"><FONT CLASS="tocSmall">9.5.2 Drawing Styles and Options</FONT></A></LI>
+      <LI><A HREF="#addAnnotTracks"><FONT CLASS="tocSmall">9.5.3 Adding Annotation Tracks</FONT></A></LI>
+      <LI><A HREF="#updateAnnotTracks"><FONT CLASS="tocSmall">9.5.4 Updating Annotation Tracks</FONT></A></LI>
+      <LI><A HREF="#removeAnnotTracks"><FONT CLASS="tocSmall">9.5.5 Removing Annotation Tracks</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#vgpSubmit">9.6 Submitting a VGP Job</A></LI>
+  </UL>
+</DIV>
+<DIV class="tocLeft">
+  <FONT class="tocText">See Also:</FONT><BR>
+  <UL class="compact1_10">
+    <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13" style="margin-right: 5px;">Help Home</A>
+  </UL>
+</DIV>
+<DIV style="clear: both ;" />
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="vgpuiIntro">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">9.1. The Virtual Genome Painter (VGP):</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<div>
+  <p class="body">
+    The Virtual Genome Painter is a visualization tool developed by the BRL that summarizes annotation data
+    in either a genome-wide or chromosome-specific manner. This flexible tool allows users to generate publication
+    quality images from data stored in Genboree.
+  </p>
+  <p class="body">
+    VGP offers a high-level of control over the resulting images by allowing users to
+    customize virtually all aspects of the images, including: specifying entry points to be drawn, 
+    specifying the drawing style, drawing order and color of annotation data, as well 
+    specifying image labels such as legends and axis labels. 
+  </p>
+  <p class="body">
+    The VGP User Interface (UI) was created to provide users with a simple way to use this
+    powerful command-line tool. The VGP UI helps simplify running the VGP application by
+    creating the complex parameter files that control how VGP draws an image for the user 
+    and executing the application on Genboree servers. 
+  </p>
+  <p class="body">
+    The VGP UI provides a wizard-like interface for configuring a run of VGP. Each tab can be
+    traversed in order by clicking the <span class="genbLabel">Next Step</span> and 
+    <span class="genbLabel">Previous Step</span> buttons. However visiting each tab is not
+    required to configure VGP. If you are familiar with the VGP UI and know exactly which tab to visit to 
+    customize your desired option you can go directly to the tab by clicking on the tab title.
+  </p>
+</div>
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="selectingEPs">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">9.2. Selecting Entry Points</SPAN>
+  <p class="body">
+    Under the <span class="genbLabel">Select Entry Points</span> tab, a user can specify which entry points should be
+    drawn in the images. If the <span class="genbLabel">Chromosome View</span> images are enabled, a separate chromosome image
+    will be created for each selected entry point. If the <span class="genbLabel">Genome View</span> image is enabled then all
+    selected entry points will be drawn in the genome view. 
+  </p>
+  <div class="egDiv2">
+    <p>
+      NOTE: At least one entry point must be selected for drawing
+    </p>
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="epList">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.2.1. Entry Points List</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  When there is a reasonably small number of entry points available (<100), the UI will display the available
+  entry points as a list. An entry point can be enabled/disabled for drawing by checking the <span class="genbLabel">Draw</span> 
+  check-box next to the entry point name. Disabled entry points will have a gray background. By default, all 
+  <span style="font-style: italic ;">*_random</span> entry points will not be drawn.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/vgpEpSelectList.png" alt="EPs Selection List" />
+</div>
+<p class="body">
+  In this selection mode, <span class="genbLabel">Draw All</span> and <span class="genbLabel">Draw None</span>
+  buttons are available to quickly select all or clear all entry points for drawing, respectively.
+</p>
+<A NAME="epManual">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.2.2. Manually Specifying Entry Points</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  When the available entry points in a database is relatively large (>100), the UI will require the user to manually
+  specify the entry points to be drawn by name. The UI will display the total number of entry points in the database
+  along with a count of the current entry points specified. To add an entry point, enter the name into the text field
+  and click the <span class="genbLabel">Add</span> button. To remove an already specified entry point, select the 
+  entry point from the list and click the <span class="genbLabel">Remove</span> button.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/vgpEpSelectManual.png" alt="Manually adding EPs" />
+</div>
+<A NAME="epSegments">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.2.3. Entry Point Segments</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  Any entry point can be segmented so only small pieces of the original entry point will be drawn. This can be 
+  particularly useful if a user wants to focus on a small piece of an entry point. A user can specify to draw 
+  only the defined entry point, the defined entry point and any segments specified or draw only the segments 
+  that are specified (the whole defined entry point will not be drawn). Each specified segment will appear as a 
+  new entry point ; each segment will have its own Chromosome View image and will appear as a unique entry point 
+  in the Genome View.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/vgpEpSegments.png" alt="Specifying Entry Point Segments" />
+</div>
+<p class="body">
+  To add a segment to an entry point, first select an entry point from the <span class="genbLabel">Available Entry Points</span>
+  list. Upon selection, the name and length fields in the <span class="genbLabel">Entry Point Details</span> section will be updated. 
+  Select either <span class="genbLabel">Draw the whole entry point and the segments below</span> or 
+  <span class="genbLabel">Only draw the segments below</span> to create a segment. Enter the desired entry point segment start and 
+  end positions then click the <span class="genbLabel">Add Segment</span> button.
+</p>
+<p class="body">
+  An entry point segment can be updated or removed using a similar process. Select the desired entry point from the 
+  <span class="genbLabel">Available Entry Points</span> to view the current segments defined. Next select the desired segment from the 
+  <span class="genbLabel">Current Segments List</span>. To upate the segment, change the segment start or end and then click the 
+  <span class="genbLabel">Update Segment</span> button. To remove the segment, simply click the <span class="genbLabel">Remove Segemnt</span> 
+  button.
+</p>
+<div class="egDiv2">
+  <p>
+    If you want to simply disable the segments for drawing instead of deleting them, you can simply select 
+    <span class="genbLabel">Draw the whole entry point</span> for the selected entry point.
+  </p> 
+</div>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="specifyingImages">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">9.3. Specifying Images and Labels</SPAN>
+  <p class="body">
+    VGP creates two types of images, the <span class="genbLabel">Genome View</span> and <span class="genbLabel">Chromosome View</span> images.
+    The <span class="genbLabel">Specify Images</span> tab provides options to customize those images as well as add a variety of image
+    labels. Image labels can be added to provide additional information regarding your images and promote understanding for viewers. 
+  </p>
+  <p class="body">
+    In a run of VGP, you can only create one type of image at a time: either the <span class="genbLabel">Genome View</span> or the 
+    <span class="genbLabel">Chromosome Views</span>. Rarely do the same track widths and margins for both image types produce attractive 
+    results. The simplest method for creating both image types is to configure the VGP UI for one image type, set the margins and track 
+    widths for that type and then submit the VGP job (via the <span class="genbLabel">Submit</span> tab). After submitting, click the 
+    <span class="genbLabel">Specify Images</span> tab and select the other image type for drawing. Then proceed to change the margins and track widths 
+    to suitable values for any desired data columns or annotation tracks. Finally submit a new VGP job for this new image type.
+  </p>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="genomeView">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.3.1. The Genome View</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  The <span class="genbLabel">Genome View</span> draws annotations from all entry points in a horizontal side-by-side fashion on the same canvas.
+  This view provides a high level visual overview and allows for easy comparison between annotations of all entry points.
+</p>
+<div class="egDiv2">
+  <p>
+    A slice of a <span class="genbLabel">Genome View</span> image:
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpGenomeViewScreen.png" alt="Slice of a Genome View" />
+</div>
+<div class="egDiv2">
+  <p>
+    The <span class="genbLabel">Genome View</span> UI widgets with the <span class="genbLabel">Advanced Options</span> expanded:
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpGenomeViewUI.png" alt="Genome View UI" />
+</div>
+<div style="margin-left: 15px ;">
+  <div style="font-weight: bold ;">Enabling/Disabling the Genome View</div>
+  <p class="body">
+    The <span class="genbLabel">Genome View</span> can be enabled or disabled by checking 
+    or unchecking the <span class="genbLabel">Create genome view?</span> check-box.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Chromosome Labels</div>
+  <p class="body">
+    Chromosome labels are drawn above each respective entry point in the <span class="genbLabel">Genome View</span>. 
+    The text label displayed corresponds to the entry point name as defined in Genboree. Chromosome labels can be enabled 
+    or disabled by checking or unchecking the <span class="genbLabel">Draw chromosome labels?</span> check-box.
+  </p>
+  <p class="body">
+    The chromosome labels are text components and the <a href="#fonts">font attributes</a> can be altered.
+  </p>
+  <div class="egDiv2">
+    <p>
+      NOTE: If the entry points are chromosomes then just the chromosome number will be displayed. For example, the 
+      chromosome label for &ldquo;chr1&rdquo; would simply be &ldquo;1&rdquo;
+    </p> 
+  </div>
+  <div style="font-weight: bold ; margin-top: 5px ;">Chromosome Borders</div>
+  <p class="body">
+    A border can be drawn around each entry point figure in the <span class="genbLabel">Genome View</span> to help 
+    differentiate entry points. The <span class="genbLabel">Draw borders around individual chromosomes?</span> 
+    check-box controls the drawing of the border.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Margins</div>
+  <p class="body">
+    The margin options specifies the space between each entry point in the <span class="genbLabel">Genome View</span>. 
+    A 5-pixel margin is set by default. The margin value is required and must be an integer value greater than or equal to 0.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Empty Cytoband Tracks</div>
+  <p class="body">
+    Some entry points might not have cytogenetic banding information defined. If an annotation track without data is drawn in the  cytoband style,
+    an empty space will be drawn. When viewed next to entry points that do have this data, the results can be visually unappealing. The <span class="genbLabel">
+    Draw empty track for Cytoband tracks without data</span> option can be enabled to draw an empty chromsome structure for the entry point missing cytoband information.
+  </p>
+</div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="chromView">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.3.2. The Chromosome View</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  The <span class="genbLabel">Chromosome View</span> draws annotations from a specific entry point onto a single canvas.
+  This view usually offers a higher resolution and can typically present more data and utilize drawing styles that can be 
+  uninformative at the <span class="genbLabel">Genome View</span> level (such as the callout style.)
+</p>
+<div class="egDiv2">
+  <p>
+    A slice of a <span class="genbLabel">Chromosome View</span> image:
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpChromViewScreen.png" alt="Slice of a Chromosome View" />
+</div>
+<div class="egDiv2">
+  <p>
+    The <span class="genbLabel">Chromosome View</span> UI widgets with the <span class="genbLabel">Advanced Options</span> expanded:
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpChromViewUI.png" alt="Chromosome View UI" />
+</div>
+<div style="margin-left: 15px ;">
+  <div style="font-weight: bold ;">Enabling/Disabling the Chromosome View</div>
+  <p class="body">
+    The <span class="genbLabel">Chromosome View</span> images can be enabled or disabled by checking 
+    or unchecking the <span class="genbLabel">Create chromosome views?</span> check-box.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Chromosome Borders</div>
+  <p class="body">
+    A border can be drawn around the entry point figure in the image, similar to the <span class="genbLabel">Genome View</span>. 
+    The <span class="genbLabel">Draw border around chromosome?</span> check-box controls the drawing of the border.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">X-Axis Label Position</div>
+  <p class="body">
+    If an <span class="genbLabel">X-Axis label</span> is specified, you can control where on the
+    <span class="genbLabel">Chromosome View</span> image the label will appear. You can chose to draw the label at either 
+    the top or bottom of the image. The <span class="genbLabel">X-Axis label position</span> drop-down box controls the 
+    drawing position.
+  </p>
+  <div class="egDiv2">
+    <p>
+      Slice of a <span class="genbLabel">Chromosome View</span> image with the <span class="genbLabel">X-Axis label position</span> 
+      set to <span class="genbField">bottom</span>.
+    </p>
+    <img style="border: 1px solid #CCC ;" src="/images/vgpChromXAxisLabel.png" alt="X-Axis label position" />
+  </div>
+  <div style="font-weight: bold ; margin-top: 5px ;">Empty Cytoband Tracks</div>
+  <p class="body">
+    Some entry points might not have cytogenetic banding information defined. If an annotation track without data is drawn in the  cytoband style,
+    an empty space will be drawn. When viewed next to entry points that do have this data, the results can be visually unappealing. The <span class="genbLabel">
+    Draw empty track for Cytoband tracks without data</span> option can be enabled to draw an empty chromsome structure for the entry point missing cytoband information.
+  </p>
+</div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="imgLabels">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.3.3. Image Labels</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  <span class="genbLabel">Image labels</span> can be added to convey additional information and help orient image viewers. 
+  All the <span class="genbLabel">Image labels</span> are optional and if left blank or unchecked will be omitted from the
+  created images. Also, any leading and trailing white-space will be removed from any text input options, if specified. 
+  Multiple lines in a text field are supported.
+</p>
+<a name="fonts"></a>
+<p class="body">
+  The <span class="genbLabel">image labels</span> are text components. The font size, color and face of all text components 
+  in VGP images can be customized. The options for these settings are under the <span class="genbLabel">Advanced Options</span> section. 
+  These settings are hidden by default but can be exposed by clicking on the <span class="genbLabel">Advanced Options</span>
+  title. The font size is required and must be an integer greater than 0 point. Clicking the color palette icon will display a 
+  panel of selectable color options. You can also change the font color by manually entering the hexadecimal color value into the 
+  input. The color swatch before the input will display a sample of the currently selected color.
+</p>
+<div class="egDiv2">
+  <p>
+    <span class="genbLabel">Image label</span> components displayed on a <span class="genbLabel">Chromosome View</span>
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpImgLabelsScreen.png" alt="Image Labels" />
+</div>
+<div class="egDiv2">
+  <p>
+    <span class="genbLabel">Image labels</span> UI widgets with the <span class="genbLabel">Advanced Options</span> hidden:
+  </p>
+  <img style="border: 1px solid #CCC ;" src="/images/vgpImgLabelsUI.png" alt="Image Labels UI" />
+</div>
+<div style="margin-left: 15px ;">
+  <div style="font-weight: bold ;">Image Title</div>
+  <p class="body">
+    The specified title text appears at the top of the images. If left blank, no title text will be drawn on any 
+    images.
+  </p>
+  <div style="font-weight: bold ;">Image Subtitle</div>
+  <p class="body">
+    The subtitle text appears just below the title and is, by default, approximately 60% of the image title size. 
+    If left blank, no subtitle text will be drawn on any images.
+  </p>
+  <div style="font-weight: bold ;">X-Axis Label</div>
+  <p class="body">
+    The X-Axis label text is most often used to convey information about entry points. For the 
+    <span class="genbLabel">Chromosome View</span> you can specify whether the X-Axis label should be drawn at the
+    <span class="genbField">top</span> or <span class="genbField">bottom</span> of the image. The X-Axis label will
+    always draw at the <span class="genbField">top</span> of the image in the <span class="genbLabel">Genome View</span>.
+    If left blank, no X-Axis label will be drawn on any images.
+  </p>
+  <div class="egDiv2">
+    <p>
+      NOTE: VGP automatically appends the entry point name to the X-Axis label text for 
+      <span class="genbLabel">Chromosome View</span> images. If your entry points are chromosomes then only 
+      the chromosome number will be appended.
+    </p>
+  </div>
+  <div style="font-weight: bold ;">Y-Axis Label</div>
+  <p class="body">
+    The Y-Axis label text is drawn as vertically-oriented text on the far left of all images. If left blank, no Y-Axis label will be drawn on any images.
+  </p>
+  <div style="font-weight: bold ;">Y-Axis Scale</div>
+  <p class="body">
+    The Y-Axis scale can be used to provide a positional context for your images. The Y-Axis scale, if enabled, will be drawn from the start of the 
+    entry point to approximately the end, providing position increments along the way. The Y-Axis scale has four configuration options: 
+    <span class="genbField">No Scale</span>, <span class="genbField">Left Side</span>, <span class="genbField">Right Side</span> or 
+    <span class="genbField">Both Sides</span>.
+  </p>
+  <div class="egDiv2">
+    <p>
+      NOTE: The <span class="genbField">Both Sides</span> option only applies to the <span class="genbLabel">Genome View</span> image. 
+      If selected, the Y-Axis label will be drawn on the <span class="genbField">Left Side</span> of the
+      <span class="genbLabel">Chromosome View</span> images.
+    </p>
+  </div>
+  <div style="font-weight: bold ;">Track-based &amp; Column-based Legends</div>
+  <p class="body">
+    Legends can be added to your images to provide additional information to viewers. The track-based legend provides keys for each unique 
+    <a href="#annotTracks">annotation track</a> that exists in the images. The keys provide a text description of the track as well as an 
+    icon representing the color and drawing style of the track.
+  </p>
+  <p class="body">
+    The column-based legend provides keys for each <a href="#dataColumns">data column</a> that exists in the images. The key provides 
+    a text label denoting the physical number of the column (from left-to-right in the image) and a text description of the contents of the
+    data column.
+  </p>
+  <p class="body">
+    Both legends can be drawn in the same image. However, if both legends are drawn in the same primary position then each legend must have a 
+    unique secondary position. The secondary position for the track-based legend can be specified and the secondary position of the column-based 
+    legend will be automatically set. Note that the <span class="genbLabel">Secondary position</span> widgets only appear when a conflict in 
+    the primary position is detected.
+  </p>
+  <p class="body">
+    The number of columns in each legend can be specified to control the look over the legend. If the number of columns is specified as 1, then 
+    a single column will be created from all the keys. If the number of columns specified is greater than or equal to the number of keys available, 
+    then a single row will be created from all the keys.
+  </p>
+  <div class="egDiv2">
+    <p>
+      Legend UI widgets:
+    </p>
+    <img style="border: 1px solid #CCC ;" src="/images/vgpLegendsScreen.png" alt="Legends UI" />
+  </div>
+</div>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="dataColumns">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">9.4. Data Columns</span>
+  <p class="body">
+    Data columns are spatial elements that can be thought of as containers for your <a href="annotTracks">annotation tracks</a>. 
+    Once a data column is created, specified and positioned, then annotation tracks can be added to that column. 
+    A column can contain as many annotation tracks as needed. When VGP draws a data column, all the the tracks in 
+    that column are drawn (layered on top of each other) in the space that the column occupies. A user can specify 
+    the position of a column relative to other columns and add labels to the columns. The <span class="genbLabel">Define Data Columns</span> 
+    tab contains all the customization options for data columns
+  </p>
+  <div class="egDiv2">
+    <p>
+      Data column UI widgets for adding, updating and removing columns:
+    </p>
+    <img style="border: 1px solid #CCC ;" src="/images/vgpColsUI.png" alt="Data Columns UI" />
+  </div>
+  <p class="body">
+    The <span class="genbLabel">Current Columns List</span> displays a listing of all the currently added columns. Each item in the list 
+    represents a column and displays the position, the specified title and the total number of annotation tracks that have been added to 
+    that specific column. Selecting a column from the list will display the specified options for column in the <span class="genbLabel">Column Definition</span> 
+    widgets.
+  </p>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="addDataCol">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.4.1 Adding Data Columns</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To add a data column, specify values for the desired options and click the <span class="genbLabel">Add Column</span> button. The column will be added as the right-most data column, 
+  by default.
+</p>
+<p class="body">
+  The column title is a text label that is drawn above the data column in the created images. The title can be used to provide a 
+  brief description of the annotation tracks contained in the column. The column title is optional and if left blank no text will be 
+  drawn.
+</p>
+<p class="body">
+  The column label is drawn at the bottom for the data column in the created images and provides positional information to the 
+  viewer. The column label is of the form &ldquo;Column #&rdquo;, where # represents the position of the column in the figure. The 
+  column label can be enabled with the <span class="genbLabel">Draw column label?</span> check-box.
+</p>
+<div class="egDiv2">
+  <p>
+    The column title and column label are text components and the <a href="#fonts">font attributes</a> for these elements can be specified in the 
+    <span class="genbLabel">Advanced Options</span> on the <span class="genbLabel">Define Data Columns</span> tab.
+  </p>
+</div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="updateDataCol">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.4.2. Updating Data Columns</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To update the options for a data column, select the column from the <span class="genbLabel">Current Columns List</span>. The values for the selected column will 
+  appear in the corresponding widgets. Make the desired changes and then click the <span class="genbLabel">Update Column</span> button. If the button is not 
+  clicked then the changes will be lost.
+</p>
+<p class="body">
+  The drawing position of the column can be changed by selecting the column item from the list and dragging the item up or down to the desired position. The new position 
+  will automatically be saved on release.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="removeDataCol">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.4.3. Removing Data Columns</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To remove a data column from the image, select the column from the <span class="genbLabel">Current Columns List</span>. Click the 
+  <span class="genbLabel">Remove Column</span> button to completely remove the column. Any annotation tracks that were 
+  added to the column will also be removed.
+</p>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="annotTracks">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">9.5. Annotation Tracks</span>
+  <p class="body">
+    Any annotation track that exists in your Genboree database can be added to your VGP images and visualized in a variety of 
+    drawing styles. Annotation tracks are added to a data column and are drawn in the data columns position, along with any 
+    other tracks in the column. The <span class="genbLabel">Add Annotation Tracks</span> tab in the UI allows you to 
+    add and specify tracks.
+  </p>
+  <a name="cullAnnotation"></a>
+  <p class="body">
+    VGP creates low resolution images of entry points. Because of this, VGP cannot draw every piece of annotation present at every 
+    base pair in the entry point. To accurately represent the visible annotation in the image space, VGP performs a culling phase on all 
+    annotation tracks that are drawn. During the culling, VGP determines which annotations will be visible on the image and discards those 
+    that are not. Note that as many annotations will be drawn as possible, but due to the available space some annotations will not be 
+    represented in the final image.
+  </p>
+  <div class="egDiv2">
+    <p>
+      Annotation Track UI widgets for adding, updating and removing tracks:
+    </p>
+    <img style="border: 1px solid #CCC ;" src="/images/vgpTracksUI.png" alt="Annotation Tracks UI" />
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="refTrack">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.5.1. The Reference Track</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  The reference track is a special annotation track that, as the name suggests, is meant to be the reference that other annotation 
+  tracks are drawn in relation to. The reference track is used most commonly in conjunction with the cytoband drawing style. If a 
+  track is drawn with the cytoband drawing style and the annotations in the track contain banding information, then VGP will produce 
+  a cytoband structure, with proper staining colors.
+</p>
+<div class="egDiv2">
+  <p>
+    When the reference track checkbox is checked, it will automatically change the drawing style of the track to Cytoband. This is 
+    done to help reduce the possibility of the reference track not appearing correctly. The drawing style does not have to be Cytoband 
+    and can be changed.
+  </p>
+</div>
+<p class="body">
+  Only one annotation track can be marked as the reference track. When a track is set as the reference track, its containing column 
+  on the <span class="genbLabel">Define Data Columns</span> tab will have a gray background set. If a track was marked as the reference 
+  track previously and a new track is now marked as the reference, the old track will no longer be the reference. The reference track 
+  is not required.
+</p>
+<div class="egDiv2">
+  <p>
+    If drawing a track as a Cytoband and the resulting image produces an incorrect structure or staining, ensure that the track is 
+    marked as the reference track. If it is and problems still arise, contact your Genboree administrator to ensure the annotation 
+    has the proper values specified (i.e. band type).
+  </p>
+</div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="annotTrackStyles">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.5.2. Drawing Styles and Options</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  VGP can draw annotation tracks in one of six different visual representations. The styles and style-specific options are listed below:
+  <ol>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Block</span> - Annotations are represented as colored blocks.
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Box</span> - Annotations are represented as a colored box with an outline color and 
+      a fill color specified. The box can also have a transparency level set so annotations layered beneath the box can be seen or highlighted.
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Box fill color</span>
+            <p style="margin-top: 3px ;">
+              The box fill color specified will be used to draw the box. The <span class="genbLabel">Track color</span> specified will be used 
+              to draw the outline of the box.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Transparency</span>
+            <p style="margin-top: 3px ;">
+              The transparency of the box fill color. The value must be within the range [0, 100]. A value of 0 means a completely opaque box 
+              will be drawn. A value of 100 means a completely transparent box will be drawn.
+            </p>
+          </div>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Cytoband</span> - Annotations are used to create a cytoband structure. If the annotation has properly 
+      specified cytogenetic bands, that information will be used to construct and color the cytoband for the entry point.
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Score</span> - Annotations are represented as a horizontally-oriented bar graph. The score attribute 
+      of the annotation will determine the length of the annotation in the graph.
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Minimum/Maximum annotation score</span>
+            <p style="margin-top: 3px ;">
+              The minimum and maximum annotation score options can be set to filter the annotation track. If a the score of a piece of 
+              annotation falls outside of the range, it will not be drawn. This option can accept decimal values and can be left blank. 
+              If left blank, no restrictions will be placed on annotation scores.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw axis?</span>
+            <p style="margin-top: 3px ;">
+              Enable or disable the drawing of a score axis. If enabled, an incremented axis with text labels will be drawn above the track. 
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Threshold line:</span>
+            <p style="margin-top: 3px ;">
+              A threshold line is a faint gray line drawn at the specified value to help denote annotation score values. 
+              This option can accept decimal values and can be left blank. If left blank, no threshold lines will be drawn.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Annotation drawing direction:</span>
+            <p style="margin-top: 3px ;">
+              The scores can be drawn progressing to either the <span class="genbField">left</span> or <span class="genbField">right</span>. 
+              If you have enabled a reference track and the column for this score track is drawn to the left, you typically want to set the 
+              drawing direction to the <span class="genbField">left</span>. If it is drawn to the right, a <span class="genbField">right</span> 
+              drawing direction is typical.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Score overlap mode:</span>
+            <p style="margin-top: 3px ;">
+              In the event that annotation scores overlap in physical position or in drawing position, the overlap mode can be specified. 
+              The <span class="genbField">maximum</span> or <span class="genbField">minimum</span> annotation value at that position or the 
+              <span class="genbField">average</span> or <span class="genbField">median</span> of all values at the position can be specified. 
+              This option is in the <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Axis increment:</span>
+            <p style="margin-top: 3px ;">
+              If the axis has been enabled, you can specify the size of increments on the score axis. A text label for the increment will 
+              be drawn above the tick mark, if possible. This option can accept positive integer values and can be left blank. If left blank 
+              and the axis is enabled, four equal sized increments will be created. This option is in the <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw grid?</span>
+            <p style="margin-top: 3px ;">
+              Enabling the grid draws faint gray dashed-lines from the top to the bottom of the annotation track. The interval of the dashed-lines correspond 
+              to the increments of the score axis. Note that the score axis does not have to be enabled for the grid to be enabled. This option is in 
+              the <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Axis label font properties</span>
+            <p style="margin-top: 3px ;">
+              If the axis is enabled, axis labels will be drawn above each tick mark, if possible, to denote the increment. These axis labels are 
+              text components and the <a href="#fonts">font attributes</a> can be specified. These options are in the 
+              <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Double-sided Score</span> - Annotations are represented similar to the Score style, in a horizontal bar 
+      graph fashion. However, the double-sided score style supports drawing diverging, positive and negative values on the same graph. The 
+      double-sided score style has all of the same drawing-style specific options available as the score based. However, because the double-sided 
+      score can draw diverging values you can specify both negative and positive threshold lines.
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Callout</span> - Annotations are represented as text labels with connecting lines to the appropriate 
+      genomic position. Currently the annotation name is used as the text label.
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of characters to show</span>
+            <p style="margin-top: 3px ;">
+              The number of characters to draw in the callout text can be specified. If the callout text is longer than the specified number of characters, 
+              the text will be truncated and an ellipsis (&hellip;) will be appended. The minimum number of characters to show is 1 and the maximum is 100. 
+              This option is in the <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Attribute value for callout text</span>
+            <p style="margin-top: 3px ;">
+              The text of the callout can be specified by determing which annotation attribute to use for drawing. Any of the 15 
+              <a href="showHelp.jsp?topic=lffFileFormat">standard LFF</a> attributes can be selected, as well as a computed annotation length. 
+              Any <a href="showHelp.jsp?topic=lffFileFormat#specialAttributes">AVPs</a> specified for the selected track can also be selected. 
+              This option is in the <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Axis label font properties</span>
+            <p style="margin-top: 3px ;">
+              The callout annotations are text components and the <a href="#fonts">font attributes</a> can be specified. These options are in the 
+              <span class="genbLabel">Advanced Options</span>.
+            </p>
+          </div>
+        </li>
+      </ul>
+      <div class="egDiv2">
+        <p>
+          Note that annotation is <a href="#cullAnnotation">culled</a> to draw the maximum number of callout annotations in the available space. 
+          However, due to the size requirements of the callout, it is likely that some annotations will not be drawn. In areas of dense annotation, 
+          only a few callouts might be represented.
+        </p>
+      </div>
+    </li>
+  </ol>
+</p>
+<p class="body">
+  There are also general drawing options available to all drawing styles. The following options can be specified:
+  <ul style="list-style-type: none ; margin-left: 2.5em ;">
+    <li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Is this the reference track?</span>
+        <p style="margin-top: 3px ;">
+          Mark the check-box if you would like the track to be the <a href="#refTrack">reference track</a>. Only one track can be set as the 
+          reference track so any previous tracks marked as the reference track will no longer be specified as such.
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Track width</span>
+        <p style="margin-top: 3px ;">
+          The drawing width of the track, in pixel units. This option must be a positive integer and is required. 
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Track color:</span>
+        <p style="margin-top: 3px ;">
+          The color to use when drawing the annotations of this track. This option is required.
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Override track color for individual annotation?</span>
+        <p style="margin-top: 3px ;">
+          If any annotations of the track have a specific color set in Genboree, you can use that color to draw that piece of annotation 
+          by marking the check-box. If the check-box is unmarked, the <span class="genbLabel">Track color</span> will be used for all 
+          annotation.
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Track display name:</span>
+        <p style="margin-top: 3px ;">
+          The value of the <span class="genbLabel">Track display name</span> is used to represent this track in the track-based legend, if drawn.
+          This option is in the <span class="genbLabel">Advanced Options</span> and it is required.
+        </p> 
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Margin:</span>
+        <p style="margin-top: 3px ;">
+          The <span class="genbLabel">Margin</span> field specifies space to be drawn between each track. This option accepts zero and positive 
+          integers and is required. Note that if multiple tracks are drawn in the same column and you would like all the tracks to line up inside 
+          the column, make sure to specify the same margin value. This option is in the <span class="genbLabel">Advanced Options</span>.
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw a border around the track?</span>
+        <p style="margin-top: 3px ;">
+          A single pixel, black colored border can be drawn around each annotation track. Mark the check-box to enable the border
+          text components and the <a href="#fonts">font attributes</a> can be specified. This option is in the <span class="genbLabel">Advanced Options</span>.
+        </p>
+      </div>
+    </li>
+    <li style="margin-bottom: 0.5em ;">
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Order in the track legend:</span>
+        <p style="margin-top: 3px ;">
+          The order of the tracks in the track-legend, if drawn, can be controlled by specifying this value. This option accepts positive integers and 
+          can be left blank. This option is in the <span class="genbLabel">Advanced Options</span>.
+        </p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw annotation with a score above/below <x> in color <y>:</span>
+        <p style="margin-top: 3px ;">
+          VGP supports autocoloring of annotation that meet certain criteria. A user can specify if a piece of annotation has a score value above 
+          or below a specified threshold, then that annotation should be drawn in a different user-specified color. Specify a threshold and choose 
+          a color to enable autocoloring. This option is in the <span class="genbLabel">Advanced Options</span>.
+        </p>
+      </div>
+    <div class="egDiv2">
+      <p>
+        The autocolor features are available to all drawing styles except the cytoband drawing style.
+      </p>
+    </div>
+    </li>
+  </ul>
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="addAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.5.3. Adding Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To add an annotation track to a data column, first select the desired column from the <span class="genbLabel">Columns</span> drop-down. 
+  Selecting the column from the drop-down will update the <span class="genbLabel">List of Tracks in Selected Column</span> with the current 
+  tracks that have been added to the column. The <span class="genbLabel">Available tracks</span> drop-down list will also be updated to 
+  reflect the tracks that can be added to the selected column.
+</p>
+<p class="body">
+  Select the annotation track to add from the <span class="genbLabel">Available tracks</span> drop-down. Specify the desired track options 
+  and click the <span class="genbLabel">Add Track</span> button to add the annotation track to the data column. By default, the track will 
+  be drawn at the highest layer, on top of all other annotation tracks in the column.
+</p>
+<div class="egDiv2">
+  <p>
+    The <span class="genbLabel">Add/Update/Remove Track</span> buttons will be disabled if a data column has not been added yet.
+  </p>
+</div>
+<div class="egDiv2">
+  <p>
+    A specific annotation track can only be added to the same data column once. When the track is added, it will disappear from the 
+    <span class="genbLabel">Available tracks</span> drop-down.
+  </p>
+</div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="updateAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.5.4. Updating Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To update a track, select it from the <span class="genbLabel">List of Tracks In Selected Column</span>. Selecting the track item will 
+  populate the UI widgets <span class="genbLabel">Track Settings</span> section with the currently set track options. Change the desired options 
+  and click the the <span class="genbLabel">Update Track</span> to save the changes. If the button is not clicked then the changes will be lost.
+</p>
+<p class="body">
+  The layering of an annotation track can be changed by selecting the track item from the list and dragging the item up or down to the 
+  desired position. Moving a track to a higher numbered layer (dragging down) will cause the track to be drawn on top of lower numbered 
+  tracks. The new layer position will automatically be saved on release.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="removeAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">9.5.5. Removing Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To remove a track, select it from the <span class="genbLabel">List of Tracks In Selected Column</span>. Click the <span class="genbLabel">Remove Track</span> 
+  button to completely remove the track. The corresponding column item on the <span class="genbLabel">Define Data Columns</span> tab will update the 
+  number of tracks to reflect the change.
+</p>
+<div class="egDiv2">
+  <p>
+    When a track is removed, it will become available again to be added to the selected data column. The track name will be added to the end of the 
+    <span class="genbLabel">Available tracks</span> drop-down list.
+  </p>
+</div>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="vgpSubmit">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">9.6. Submitting a VGP Job</span>
+  <p class="body">
+    When you have finished specifying how your VGP images should be created, you can submit the job to the Genboree servers for processing 
+    by going to the <span class="genbLabel">Submit</span> tab.
+  </p>
+  <div class="egDiv2">
+    <p>
+      Submit tab UI:
+    </p>
+    <img style="border: 1px solid #CCC ;" src="/images/vgpSubmitUI.png" alt="Submit tab UI" />
+  </div>
+  <p class="body">
+    The <span class="genbLabel">Submit</span> tab also informs you of the status of you current VGP configuration. To submit a job, there must 
+    be no errors in your configuration and all of the required options must be specified. The options table at the top of the page will display 
+    the options and their current status.
+  </p>
+  <p class="body">
+    The errors table will inform you of any specified options that have invalid values set. All errors must be fixed to submit a job. 
+  </p>
+  <p class="body">
+    The warnings table will provide information about specified options that have values that might produce unexpected results. 
+    The warnings do not have to be removed before submitting a VGP job and can be ignore if they are expected.
+  </p>
+  <p class="body">
+    Upon submitting the job for processing, the server will be sent your request and return an acknowledgment. If an error occurs 
+    while communicating with the server, an error message will be returned. If the request occurs successfully, you will be informed 
+    and given a <span class="genbLabel">Job ID</span> for your VGP job. When the job has finished processing, you will be notified via 
+    email and provided a link to visit so you can view the results.
+  </p>
+  <p class="body">
+    If you have any questions about a submitted VGP job, contact your Genboree administrator and provide them with your VGP Job ID so 
+    they can properly assist you.
+  </p>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

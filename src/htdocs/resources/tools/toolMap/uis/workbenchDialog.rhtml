@@ -1,0 +1,18 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/ui/menu/toolMenuGenerator'
+%>
+<div style="height: 490px; width: 590px; " class="wbDialog wbHelp" >
+  <h4 align="center" class="wbTitle">Tools available in Genboree Workbench</h4>
+  <h5 align="center">[Click the tool name to open tool Help information]</h5>
+  <br>
+<%
+  # Initialize our menuGenerator object with options
+  menuGenerator = BRL::Genboree::UI::Menu::ToolMenuGenerator.new()
+  # Render menu, get's it from cache if it's there
+  htmlStr = menuGenerator.renderMenu()
+%>
+<%= htmlStr %>
+ 
+</div>
+

@@ -1,0 +1,292 @@
+#!/usr/bin/env ruby
+require 'brl/util/textFileUtil'
+require 'brl/util/util'
+
+	
+class TrimSmallRNAs
+  DEBUG = false
+  DEBUGINDEX = false
+  DEBUG_SUMMARIZE_FASTQ=false
+  def initialize(optsHash)
+		@optsHash = optsHash
+		setParameters()
+		@adaptorSequences = ["TCGTATGCCGTCTTCTGCTTG"]
+	end  
+  
+  def setParameters()
+    @readsFile = @optsHash['--readsFile']
+    @outputFile = @optsHash['--outputFile']
+    @usableReads = @optsHash['--usableReads']
+    @adapterTag =""
+    if(@optsHash['--adapterSeq']!="")
+      @adapterTag = @optsHash['--adapterSeq']
+    else
+      @adapterTag ="[AN][TN][CN][TN][CN][GN]"
+    end
+    
+    
+    $stderr.puts @adapterTag
+  end
+  
+  def populateSubAdapterSequences
+    adapter = @adaptorSequences[0]
+    @adapterArray = []
+    adapterSize = adapter.size
+    adapterSize.downto(5) { |i|
+      subAdaptor = adapter[0, i]
+      $stderr.puts "added subadapter #{subAdaptor}" if (DEBUG)
+      @adapterArray.push(subAdaptor)
+    }
+  end
+  
+  def removeHGSCAdapter(tag)
+    trimTag = tag
+    reverseTag = tag.reverse.tr("actgnACTGN", "TGACNTGACN")
+    trimReverseTag = reverseTag  
+    # now check for subadapter substring
+    @adapterArray.each {|a|
+      ind = tag.index(a)
+      $stderr.puts "#{a} --> #{ind}" if (DEBUGINDEX)
+      if (!ind.nil?) then
+        trimTag = tag[0,ind]
+        trimTag = "" if (trimTag.nil?)
+        if (trimTag.size < 10) then
+          $stderr.puts "tag #{tag} trims to #{trimTag} by #{a}, which is too short" if (DEBUG)
+          @discardedShortTags += 1
+          trimTag = ""
+        end
+        break
+      end
+    }
+    
+    $stderr.puts "R: #{reverseTag}" if (DEBUG)
+    # now check for subadapter substring
+    @adapterArray.each {|a|
+      ind = reverseTag.index(a)
+      $stderr.puts "R: #{a} --> #{ind}" if (DEBUGINDEX)
+      if (!ind.nil?) then
+        trimReverseTag = reverseTag[0,ind]
+        trimReverseTag = "" if (trimReverseTag.nil?)
+        if (trimReverseTag.size < 10) then
+          $stderr.puts "reverse tag #{reverseTag} trims to #{trimReverseTag} by #{a}, which is too short" if (DEBUG)
+          if (trimTag.size > 0) then
+            trimTag = ""
+            @discardedShortTags += 1
+          end
+          trimReverseTag = ""
+        end
+        break
+      end
+    }
+    return trimTag
+  end
+  
+  def removeAdapter(tag)
+    # [AN][TN][CN][TN][CN][GN]
+    trimTag = tag
+    if (tag =~ /(.*)#{@adapterTag}/) then
+      trimTag = $1
+    end
+    return trimTag
+  end
+  
+  def generateSummaryFastq()
+    $stderr.puts @adapterTag
+    $stderr.puts "Start summary fastq #{Time.now()}"
+    presortedFastqFile = "#{File.dirname(@outputFile)}/#{File.basename(@outputFile)}.presorted.fastq.#{Process.pid}"
+    sortedFastqFile = "#{File.dirname(@outputFile)}/#{File.basename(@outputFile)}.sorted.fastq.#{Process.pid}"
+    @summaryReadsFile = "#{File.dirname(@outputFile)}/#{File.basename(@outputFile)}.summary.fastq.#{Process.pid}"
+    presortedWriter = BRL::Util::TextWriter.new(presortedFastqFile)
+    
+    inputReader = BRL::Util::TextReader.new(@readsFile)
+    inputReader.each {|l|
+      if (inputReader.lineno%4==2) then
+        presortedWriter.print l
+        @totalTags += 1
+      end
+    }
+    presortedWriter.close()
+    inputReader.close()
+    
+    sortCmd = "sort -T #{File.dirname(@outputFile)} -o #{sortedFastqFile} #{presortedFastqFile}"
+    $stderr.puts "sort command #{sortCmd}" if (DEBUG_SUMMARIZE_FASTQ)
+    system(sortCmd)
+    summaryWriter = BRL::Util::TextWriter.new(@summaryReadsFile)
+    sortedReader = BRL::Util::TextReader.new(sortedFastqFile)
+    count = 0
+    prevSeq = nil
+    qualString = nil
+    sortedReader.each {|l|
+      if (l.strip == prevSeq) then
+        count += 1
+      else
+        if (!prevSeq.nil?) then
+          trimmedTag = removeAdapter(prevSeq)
+          if (trimmedTag.size==prevSeq.size) then
+            @notTrimmed += count
+          else
+            @forwardTrimmed += count
+          end
+          if (trimmedTag.size>0) then
+            qualString = "h"*trimmedTag.size
+            summaryWriter.puts "#{trimmedTag}\t#{count}"  
+          end
+          
+        end
+        prevSeq = l.strip
+        count = 1
+      end
+    }
+    if (!prevSeq.nil?) then
+      trimmedTag = removeAdapter(prevSeq)
+      if (trimmedTag.size==prevSeq.size) then
+        @notTrimmed += count
+      else
+            @forwardTrimmed += count
+      end
+      if (trimmedTag.size>0) then
+        qualString = "h"*trimmedTag.size
+        summaryWriter.puts "#{trimmedTag}\t#{count}"  
+      end
+    end
+    sortedReader.close()
+    summaryWriter.close()
+    $stderr.puts "Finished tag trimming step at #{Time.now()}"
+    system("unlink #{presortedFastqFile}")
+    system("unlink #{sortedFastqFile}")
+    sortedTrimmedTagsFile = "#{File.dirname(@outputFile)}/#{File.basename(@outputFile)}.trimmed.tags.#{Process.pid}"
+
+    sortCmd = "sort -k1,1 -T #{File.dirname(@outputFile)} -o #{sortedTrimmedTagsFile} #{@summaryReadsFile}"
+    system(sortCmd)
+    
+
+    outputWriter = BRL::Util::TextWriter.new("#{@outputFile}/#{File.basename(@readsFile)}.output.tags")
+    sortedTrimmedTagsReader = BRL::Util::TextReader.new(sortedTrimmedTagsFile)
+    count = 0
+    prevSeq = nil
+    qualString = nil
+    sortedTrimmedTagsReader.each {|l|
+      ff = l.strip.split(/\t/)
+      if (ff[0] == prevSeq) then
+        count += ff[1].to_i
+      else
+        if (!prevSeq.nil?) then
+	  if(@usableReads=='T')
+	    if (uhFilter(prevSeq, count)) then
+	      qualString = "h"*prevSeq.size
+	      outputWriter.puts "@#{prevSeq}__#{count}\n#{prevSeq}\n+\n#{qualString}"
+	    end
+	  else
+	    qualString = "h"*prevSeq.size
+	    outputWriter.puts "@#{prevSeq}__#{count}\n#{prevSeq}\n+\n#{qualString}"
+	  end
+        end
+        prevSeq = ff[0]
+        count = ff[1].to_i
+      end
+    }
+    if (!prevSeq.nil?) then
+      if(@usableReads=='T')
+	if (uhFilter(prevSeq, count) )then
+	  qualString = "h"*prevSeq.size
+	  outputWriter.puts "@#{prevSeq}__#{count}\n#{prevSeq}\n+\n#{qualString}"
+	end
+      else
+	qualString = "h"*prevSeq.size
+	outputWriter.puts "@#{prevSeq}__#{count}\n#{prevSeq}\n+\n#{qualString}"
+      end
+    end
+    sortedTrimmedTagsReader.close()
+    outputWriter.close()
+    system("unlink #{sortedTrimmedTagsFile}")
+    system("unlink #{@summaryReadsFile}")
+    $stderr.puts "Done with summary fastq #{Time.now()}"
+    
+    @readsFile = "#{@outputFile}/#{File.basename(@readsFile)}.output.tags.#{Process.pid}"
+    @baseName = File.basename(@readsFile)
+  end
+  
+  def uhFilter(sequence, count)
+    result = false
+    if (sequence.size>=10 && sequence.size <=30 && count >=5) then
+      if (sequence=~/(A+|C+|G+|N+|T+)$/) then
+        if ($1.size>=9) then
+          result = false
+        else
+	  result = true
+        end
+      end
+    end
+    return result
+  end
+  
+  
+  def work()
+    @totalTags = 0
+    @discardedShortTags = 0
+    @forwardTrimmed = 0
+    @notTrimmed = 0
+    
+    populateSubAdapterSequences()
+    generateSummaryFastq()
+    $stderr.puts "total tags\t#{@totalTags}\nshortTags\t#{@discardedShortTags}\ntrimmed tags\t#{@forwardTrimmed}\nnot trimmed\t#{@notTrimmed}"
+  end
+  
+  def TrimSmallRNAs.processArguments()
+		# We want to add all the prop_keys as potential command line options
+		optsArray =	[ ['--readsFile',       '-r', GetoptLong::REQUIRED_ARGUMENT],
+									['--outputFile',     '-o', GetoptLong::REQUIRED_ARGUMENT],
+									['--usableReads',    '-u', GetoptLong::REQUIRED_ARGUMENT],
+									['--adpaterSeq',     '-a', GetoptLong::OPTIONAL_ARGUMENT],
+									['--help',           '-h', GetoptLong::NO_ARGUMENT]
+								]
+		
+		progOpts = GetoptLong.new(*optsArray)
+		optsHash = progOpts.to_hash
+		TrimSmallRNAs.usage() if(optsHash.key?('--help'));
+		
+		unless(progOpts.getMissingOptions().empty?)
+			TrimSmallRNAs.usage("USAGE ERROR: some required arguments are missing") 
+		end
+	
+		TrimSmallRNAs.usage() if(optsHash.empty?);
+		return optsHash
+	end
+	
+	def TrimSmallRNAs.usage(msg='')
+			unless(msg.empty?)
+				puts "\n#{msg}\n"
+			end
+			puts "
+PROGRAM DESCRIPTION:
+  Trim adaptor sequence from small RNA tags.
+
+COMMAND LINE ARGUMENTS:
+  --readsFile          | -r   => small RNAs reads file in fastq format
+  --outputFile         | -o   => output fastq file for reads without adaptors
+                                 identical reads are replaced by readSequence_<tagCount>
+  --usableReads        | -u   =>  (Y|N) selected reads having lenght of >=10 and < =30
+                              occur at least 4 times
+                              ends up with A,T,G and C wiht streak of lenght <=9
+  --adapterSeq         | -a   => (Optional) by default, [AN][TN][CN][TN][CN][GN]
+  --help               | -h   => [optional flag] Output this usage info and exit
+
+USAGE:
+  prepareSmallRNA.rb  -r reads_file -o outputFile.fa -u T
+";
+			exit(2);
+	end
+end
+
+
+########################################################################################
+# MAIN
+########################################################################################
+
+# Process command line options
+optsHash = TrimSmallRNAs.processArguments()
+# Instantiate analyzer using the program arguments
+TrimSmallRNAs = TrimSmallRNAs.new(optsHash)
+# Analyze this !
+TrimSmallRNAs.work()
+exit(0);

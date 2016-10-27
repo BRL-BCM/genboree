@@ -1,0 +1,4 @@
+USAGE:
+BRL_UCSC_chimpchainlff.rb -r chr1_chainPanTro2.txt.gz -t Alignment:Chain -s Human -q Chimp >chr1_chainPaTro2_LFF.txt
+Notes:
+  The "BRL_UCSC_chimpchainlff.rb" has been tested and the input file (chr*_chainPanTro2.txt.gz) and output file (chr*_chainPanTro2_LFF.txt) have been put under the directory "/users/ybai/work/Project1/Converter/UCSC/chain/".

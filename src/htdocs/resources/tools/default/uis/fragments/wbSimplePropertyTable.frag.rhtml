@@ -1,0 +1,11 @@
+<%= @msg %>
+<table class="propTable">
+  <tr>
+    <th><%== @nameColHeader %></th><th><%== @propertyColHeader %></th>
+  </tr>
+<%  @propertyHash.keys.sort{|aa,bb| aa.downcase <=> bb.downcase}.each { |name| %>
+      <tr>
+        <td><%== name %></td><td><%= @propertyHash[name] %></td>
+      </tr>
+<%  } %>
+</table>

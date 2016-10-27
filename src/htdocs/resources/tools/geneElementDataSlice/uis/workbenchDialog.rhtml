@@ -1,0 +1,122 @@
+
+<%# RENDER HTML %>
+<%
+require 'brl/genboree/rest/helpers/fileApiUriHelper'
+width = (@hasAccess ? 500 : 320)
+height = (@hasAccess ? 425 : 320)
+
+formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => GenboreeRESTRackup.toolIdMap[@context['toolIdStr']]  } ) %>
+<%# Overview text %>
+<%
+if(@hasAccess)
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+  { :toolOverview =>
+    "
+    <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+    <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+    This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+    </div>
+    This tool extracts epigenomic data in a TAB delimited format suitable for viewing using Microsoft Excel and for use in further off-line
+    analysis by a user. The tool has the following inputs:
+    To set up the analysis,
+    <br>&nbsp;<br>
+    <ul>
+    <li>epigenomic experiment score tracks *AND/OR*</li>
+    <li>epigenomic experiments sets (termed entity lists) selected by a user using an Epigenomic Grid view</li>
+    <li>a TAB delimited file containing in the first column official gene symbols</li>
+    </ul>
+    <p></p>
+    The tool employs a gene model the contains gene exons, introns, promoters, 5'UTR and 3'UTR. The tools projects each of the epigenomic
+    experiments score tracks over the gene elements for the input genes. Next, it collates the scores for each experiment into one data matrix,
+    having the experiments as column headers and the particular gene elements as rows. A user will be able to download this matrix as a
+    TAB-delimited file
+    "
+  })
+  %>
+  <%# Input resource summary %>
+  <%#= renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Input Files Directory:",
+
+    :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @inputs[0] } )+
+    renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs[1 .. -1], :label => "Targets" } )
+  })
+  %>
+
+  <%=
+  inputHash = {}
+  idx = nil
+  @inputs.each_with_index{|input,ii|
+    if(BRL::Genboree::REST::Helpers::FileApiUriHelper.new().extractName(input)) then
+      idx = ii;
+    else
+      inputHash[input] = true
+    end
+  }
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Input Details:",
+    :sectionHtml =>
+    renderFrag(@toolIdStr, :wbMultiSelectInputList, { :multiSelectInputHash => inputHash, :label => "Choose tracks to slice", :type => "tracks" } ) + renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs[idx], :label => "Data File" } )
+  })
+
+  %>
+
+  <%# Output resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Output Database:",
+    :sectionHtml =>
+    renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database Of Interest" } )
+  })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+
+  renderFrag(@toolIdStr, :wbToolSettingsUI,
+  {
+    :sectionTitle => "Gene Element Data Slice Tool",
+    :widgets => [
+      { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "GeneElementDataSlice#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+      { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :type => :checkBox, :checked => true}
+    ]
+
+  })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+  {
+    :buttons => [ { :type => :submit }, { :type => :cancel} ]
+  })
+  %>
+  </form>
+  <%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+  <%
+else # user doesn't have access
+  %>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+  { :toolHelpOverview =>
+    "
+    This tool, which will leverage the <a href='http://bioinf.wehi.edu.au/limma/'>LIMMA</a> R package, is currently
+    under development and only available internally and to some collaborators for testing.
+    <br>&nbsp;<br>
+    <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+    <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>
+    <br>
+    <span style='color: red;'>Once development is complete, and testing and review carried out, the tool will be available for all users.</span>
+    "
+  })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+  {
+    :buttons => [ { :type => :cancel} ]
+  })
+  %>
+  <%
+end # if(hasAccess)
+%>

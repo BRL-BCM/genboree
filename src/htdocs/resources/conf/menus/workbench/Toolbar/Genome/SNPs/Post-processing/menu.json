@@ -1,0 +1,30 @@
+[
+  {
+    "text": "SNP Characterization Report",
+    "tooltip": "Generates a summary report indicating how many of your SNPs are found in various categories of genomic features.",
+    "idStr": "snpCharacterizationReport",
+    "disabled": true,
+    "hidden": false
+  },
+  {
+    "text": "Filter: Exclude SNPs",
+    "tooltip": "Use this tool to remove SNPs which are already known and/or which fall within custom regions-of-interest.",
+    "idStr": "filterExcludeSnps",
+    "disabled": true,
+    "hidden": false
+  },
+  {
+    "text": "Filter: Include SNPs",
+    "tooltip": "Use this tool to only keep SNPs which are already known and/or which fall within custom regions-of-interest.",
+    "idStr": "filterIncludeSnps",
+    "disabled": true,
+    "hidden": false
+  },
+  {
+    "text": "Auto-Annotate SNPs",
+    "tooltip": "This tool will automatically annotate your SNPs based on whether they are known SNPs, fall within certain interesting genomic features, and whether they cause a synonymous/non-synonymous change.",
+    "idStr": "autoAnnotateSnps",
+    "disabled": true,
+    "hidden": false
+  }
+]

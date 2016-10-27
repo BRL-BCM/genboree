@@ -1,0 +1,79 @@
+<%
+  @tocFiles.sort { |aa, bb|
+    retVal = (aa[:kind].to_s <=> bb[:kind].to_s)
+    if(retVal == 0)
+      retVal = (aa[:rsrcPath].downcase <=> bb[:rsrcPath].downcase)
+      if(retVal == 0)
+        retVal = (aa[:rsrcPath] <=> bb[:rsrcPath])
+      end
+    end
+    retVal
+  }.each { |item|
+    tr_id = Digest::MD5.hexdigest(item[:rsrcPath])
+    entPath = Redmine::CodesetUtil.replace_invalid_utf8(item[:rsrcPath])
+    entName = (item[:kind] == :'/' ? '. . ' : File.basename(entPath))
+    entIsDir = (item[:kind] == :dir or item[:kind] == :'/')
+    entSize  = item[:size]
+    entMtime = item[:mtime]
+    entLinkPath = rawcontent_link_path( :id => @project, :path => entPath )
+%>
+    <tr id="<%= tr_id %>" class="<%= h params[:parent_id] %> rawcontent <%= item[:kind] %>">
+      <td class="filename entity">
+        <%
+          if(entIsDir)
+            entName = (entName.chomp('/') << '/')
+          end
+        %>
+        <%= link_to(
+              h(entName),
+              entLinkPath,
+              {
+                :class => (entIsDir ? 'icon icon-folder fa fa-folder' : "icon icon-file #{Redmine::MimeType.css_class_of(entPath)}")
+              }
+            )
+        %>
+      </td>
+      <td class="size"><%= (entSize ? number_to_human_size(entSize) : "") %></td>
+      <td class="timestamp"><%= (entMtime.is_a?(Time) ? entMtime.to_s(:db) : "") %></td>
+      <td class="actions"><%=
+        actions = ""
+        if(item[:kind] != :'/')
+          # params[:request_path] is optional in routes
+          current_path = params[:request_path]
+          url = nil
+          if(current_path.nil?)
+            url = ["rawcontent", File.basename(item[:rsrcPath])].join("/")
+          else
+            url = [File.basename(current_path), File.basename(item[:rsrcPath])].join("/")
+          end
+          
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG++++++++++", "'delete' Allowed by user? #{User.current.allowed_to?(:delete_rawcontent_doc, @project).inspect} ; entLinkPath: #{entLinkPath.inspect}")
+          # Add "delete" action if allowed
+          if(User.current.allowed_to?(:gbrc_delete, @project))
+            if(File.directory?(File.join(@diskPath, File.basename(item[:rsrcPath]))))
+              actions << link_to(
+                'Delete',
+                entLinkPath,
+                {
+                  :method => :delete,
+                  :data => { :confirm => "Are you sure you want to delete #{entName.inspect} and ALL OF ITS CONTENTS?" },
+                  :class => 'icon icon-del fa fa-trash'
+                }
+              )
+            else
+              actions << link_to(
+                'Delete',
+                entLinkPath,
+                {
+                  :method => :delete,
+                  :data => { :confirm => "Are you sure you want to delete #{entName.inspect}?" },
+                  :class => 'icon icon-del fa fa-trash'
+                }
+              )
+            end
+          end
+        end
+        actions.html_safe
+      %></td>
+    </tr>
+<% } %>

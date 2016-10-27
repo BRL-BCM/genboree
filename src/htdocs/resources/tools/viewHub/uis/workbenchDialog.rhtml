@@ -1,0 +1,76 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+          This tool can be used to launch the <a href=\"http://genome.ucsc.edu/cgi-bin/hgGateway\" target='_blank'>UCSC</a> and <a href=\"http://epigenomegateway.wustl.edu\" target='_blank'>WashU</a> Genome Browsers for visualizing track hubs that have already been imported in Genboree.
+          <br>&nbsp;<br>
+
+      "
+    })
+%>
+<%
+  grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+  hubUri = @inputs.first
+  genomeArray = []
+  rowKeyArray = []
+  hubUriObj = URI.parse(hubUri)
+  host = hubUriObj.host
+  hubName = File.basename(hubUriObj.path)
+  grp = grpApiHelper.extractName(hubUri)
+  # TO DO get the hubname
+  genomeHash = @settings['genomeHash']
+  genomeHash.each_key { |hubUri|
+    genomes = genomeHash[hubUri.chomp('?')]
+    genomes.each { |genome|
+      genomeArray << [{ 'name' => {:value => hubName, :checkbox => false, :title => "#{host} - #{grp}"}}, { 'genome' => { :value => genome, :checkbox => true } }]
+      rowKeyArray << genome
+    }
+  }
+%>
+
+<%# Input data summary %>
+ <%=
+=begin    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Hub To View:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbHubListSummary, { :hubList => @inputs } )
+    })
+=end
+ %>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Launch UCSC and WashU Genome Browsers",
+      :widgets =>
+        [
+          { :id => "genomeArray", :label => "", :labelWidth => "60px", :rowKeys => rowKeyArray, :type => :tabularCheckboxSection, :rows => genomeArray, :headerRow => ['HubName', 'HubGenome']},
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'genomeArray'}
+        ]
+    })
+
+%>
+
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit}, { :type => :cancel} ]
+    })
+%>
+
+</form>
+<script type="text/javascript">
+</script>

@@ -1,0 +1,157 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  dbUri = dbApiHelper.extractPureUri(@inputs[0])
+  trkHash = @settings['trkHash']
+  trkArray = []
+  editableTrk = false
+  trkList = []
+  rowKeyArray = []
+  trkHash.keys.sort { |aa, bb|
+                      aa.downcase <=> bb.downcase
+                    }.each {|trk|
+    editable = trkHash[trk] ? "Yes" : "No. (Template Track. Protected)"
+    if(editable != "Yes")
+      type = trkHash[trk] ? true : false
+      subtype = trkHash[trk] ? true : false
+      trkArray << [ { 'name' => {:value => trk, :edit => false } }, { 'editable' => { :value => editable, :edit => false } }, { 'type' => { :value => trk.split(":")[0], :edit => type } }, { 'subtype' => { :value => trk.split(":")[1], :edit => subtype } } ]
+      rowKeyArray << trk
+    end
+  }
+  trkHash.keys.sort { |aa, bb|
+                      aa.downcase <=> bb.downcase
+                    }.each {|trk|
+    editable = trkHash[trk] ? "Yes" : "No. (Template Track. Protected)"
+    if(editable == "Yes")
+      editableTrk = true
+      trkList << trk
+      type = trkHash[trk] ? true : false
+      subtype = trkHash[trk] ? true : false
+      trkArray << [ { 'name' => {:value => trk, :edit => false } }, { 'editable' => { :value => editable, :edit => false } }, { 'type' => { :value => trk.split(":")[0], :edit => type } }, { 'subtype' => { :value => trk.split(":")[1], :edit => subtype } } ]
+      rowKeyArray << trk
+    end
+  }
+  width = 700
+  height = (editableTrk ? 550 : 300)
+  height = 450 if(trkList.size < 5)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will allow you to rename existing tracks in Genboree.
+          You can either drag a track class or a database (to rename all tracks within that class/database) or drag tracks individually into &quot;Input Data&quot;.
+          <br>&nbsp;<br>
+          Note that ALL the tracks should come from the same database and the tool cannot be used to rename tracks on another host.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+
+  <%
+    if(editableTrk)
+  %>
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dbUri} )
+      })
+    %>
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Rename Tracks",
+        :widgets =>
+        [
+          { :id => "trkArray", :label => "", :labelWidth => "5px", :rowKeys => rowKeyArray, :type => :tabularSection, :rows => trkArray,
+          :headerRow => ['Original Name', 'Can Rename?', 'Type', 'Subtype'], :fontSize => '10px', :noWrap => true, :paddingTop => "7px", :valign => "middle"},
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'trkArray'}
+        ]
+      })
+
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :submit }, { :type => :cancel} ]
+        })
+    %>
+    </form>
+    <script type="text/javascript">
+    /* This function makes sure that all tracks have unique names. We want to do this here since it may be frustrating for the user to lose the changes. */
+    function checkTrackNames(trkListStr)
+    {
+      var ii ;
+      var trkHash = new Hash() ;
+      var type ;
+      var subtype ;
+      var trkList = trkListStr.split(',') ;
+      alert(trkList.length) ; 
+      for(ii=0; ii<trkList.length; ii++)
+      {
+        type = document.getElementById('trkArray|'+trkList[ii]+'|'+'type') ;
+        subtype = document.getElementById('trkArray|'+trkList[ii]+'|'+'subtype') ;
+        alert(type.value + ':' + subtype.value) ;
+        //if(trkHash.get(type.value+subtype.value))
+        //{
+        //  alert('track exists') ;
+        //  postForm = false ;
+        //  break ;
+        //}
+        //else
+        //{
+        //  trkHash.set(type.value+subtype.value, true) ;
+        //}
+      }
+    }
+    </script>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO TRACKS:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "Your list of selected track(s) does not contain any editable tracks. Please select at least one editable track (non reference track) and launch the tool again."
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+        { :toolHelpOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

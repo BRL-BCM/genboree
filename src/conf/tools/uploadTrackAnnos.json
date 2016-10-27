@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "uploadTrackAnnos",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "cluster": {
+    "ppn": 1,
+    "pvmem": "5gb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Upload Track Annotations",
+    "shortLabel": "Upload Track Annotations"
+  }
+}

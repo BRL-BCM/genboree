@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "createBAI",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Create BAI",
+    "shortLabel": "Create BAI"
+  }
+}

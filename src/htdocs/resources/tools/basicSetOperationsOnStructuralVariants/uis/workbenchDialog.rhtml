@@ -1,0 +1,105 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tools enables a user to perform basic set operations on structural variants determined with the help of the \"Structural Variant Detection\" tool.
+          <br>&nbsp;<br>
+          A user needs to drag a directory corresponding to the result of a breakpoint calling operation into the \"Input Data\" area.
+          The user has the option of specifying one or multiple target breakpoint experiments, by dragging the corresponding directories into the \"Input Data\" area.
+          <br>&nbsp;<br>
+          We recalled breakpoints on a subset of the 1000 genome data corresponding to mate pair experiments, using Breakout.
+          A user has the option to consider the 1000 Genomes breakpoints as another target of the comparison.
+          The basic set operations that can be performed are intersection and difference.
+          <br>&nbsp;<br>
+          A user can specify the minimum number of targets that the input track overlap with/differs from.
+          Finally, a user needs to specify the output database to store the results in.
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileDirOrTrackListSummary, { :fileOrTrackList => @inputs, :label => "Folder/Track:" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Location:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    radius = @settings['maxInsertSize'] ? @settings['maxInsertSize'] : 0
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Intersection-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}" },
+                { :id => 'radius', :label => 'Radius', :type => :text, :size => "25", :value => "#{radius}", :style => 'font-size: 80%'},
+                { :id => 'tgpBreakpoints', :label => 'TGP Breakpoints', :type => :checkbox},
+                { :id => 'setOperation', :label => 'Set Operation', :type => :select, :options =>
+                  {
+                    :intersection => { :label => 'Intersection', :selected => true },
+                    :difference => { :label => 'Difference'}
+                  },
+                },
+                { :id => 'minOperations', :label => 'Minimum Operations', :type => :text, :size => "25", :value => "1", :style => 'font-size: 80%'},
+                { :id => 'uploadLff', :label => 'Upload as track?', :type => :checkbox}
+              ]
+
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

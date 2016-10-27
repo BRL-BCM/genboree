@@ -1,0 +1,25 @@
+# Is it the webserver? (set to false on computation nodes)
+webserver: true
+
+# FQDN of the installation
+webserverFQDN:      localhost
+
+# internal address to reach the webserver (for API calls)
+# for webserver it should be 127.0.0.1
+# for other nodes it should be the fastest address for the webserver (private IP probably)
+webserverAddress:   127.0.0.1
+
+# addresses accepted by the webserver (allowed names of the webserver)
+# only HTTP requests heading these addresses will by processed
+# this parameter is required only on the webserver, must contain at least localhost, 127.0.0.1 and webserverFQDN
+# this parameter is ignored on other nodes (e.g. cluster)
+allowedHostnames:   [localhost, 127.0.0.1]
+
+# e-mail configuration
+adminEmail:         Piotr.Pawliczek@bcm.edu
+smtpHost:           localhost
+smtpPort:           25
+
+# permormance settings for webserver
+thinApiWorkersCount : 2
+tomcatMemorySettings: -Xms1800m -Xmx3800m -Xmn128m

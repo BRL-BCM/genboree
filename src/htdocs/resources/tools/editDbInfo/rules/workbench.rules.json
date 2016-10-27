@@ -1,0 +1,33 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "newName": [
+        "^(?:^.+$)$",
+        "New Database Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

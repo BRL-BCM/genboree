@@ -1,0 +1,23 @@
+<%
+	fourZeroFourHashArr = GenboreeRedmine.getRedminePage(@server, "FOUR_ZERO_FOUR")[0]
+%>
+
+<% if not fourZeroFourHashArr.empty? %>
+	<section id="four-zero-four" class="white-bg">
+		<div class="container">
+			<div class="row">
+ 				<div class="col-sm-5"><img src="<%= @redmineUrl %><%= fourZeroFourHashArr["image_path"] %>" alt="<%= fourZeroFourHashArr["alt_image_text"] %>" class="img-responsive"></div>
+				<div class="col-sm-7">
+					<h1 class="push50"><%= fourZeroFourHashArr["h1"] %></h1>
+					<h2><%= fourZeroFourHashArr["h2"] %></h2>
+					<p><%= fourZeroFourHashArr["p_info"] %></p>
+					<p><a href="<%= fourZeroFourHashArr["link"] %>" target="_blank"><%= fourZeroFourHashArr["link_text"] %></a></p>
+					<p><%= fourZeroFourHashArr["p_email"] %></p>
+					<p><a href="mailto:<%= fourZeroFourHashArr["email"] %>"><%= fourZeroFourHashArr["email_text"] %></a></p>
+
+				</div>
+			</div> 
+			<hr>
+		</div>
+	</section>
+<% end %>

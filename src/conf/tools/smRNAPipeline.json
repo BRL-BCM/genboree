@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "smRNAPipeline",
+    "releaseStatus": "release",
+    "version": "2.2.8"
+  },
+  "cluster": {
+    "ppn": 12,
+    "mem": "94gb",
+    "vmem": "94gb",
+    "walltime": "240:00:00",
+    "queue": "gbRamHeavy"
+  },
+  "ui": {
+    "label": "exceRpt small RNA-seq Pipeline (Stable, sRNAbench-based)",
+    "shortLabel": "exceRpt smallRNA-seq Pipeline (Stable, sRNAbench-based)",
+    "groupAccessUri": null
+  }
+}

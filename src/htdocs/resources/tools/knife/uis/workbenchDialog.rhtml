@@ -1,0 +1,158 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :includeToolVersion => true }) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <p>This tool performs statistically based splicing detection for circular and linear isoforms from RNA-Seq data. The tool's statistical algorithm increases the sensitivity and specificy of circularRNA detection from RNA-Seq data by quantifying circular and linear RNA splicing events at both annotated and un-annotated exon boundaries.</p>
+      "
+    })
+%>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    genomeVersion = @settings['genomeVersion'].decapitalize
+    # Options for ERCC PI
+    erccPI = @settings['piName']
+    erccGrantNumbers = @settings['grantNumbers']
+    erccGrantOptions = {}
+    erccGrantNumbers.each { |currentGrant|
+      currentGrantLabel = currentGrant.clone()
+      currentGrant.insert(0, "0_") if(currentGrant.include?("Primary"))
+      erccGrantOptions[currentGrant] = { :label => currentGrantLabel}   
+    }
+    # Options for anticipated data repository 
+    anticipatedDataRepos = @settings['anticipatedDataRepos'] 
+    anticipatedDataRepoOptions = {}
+    anticipatedDataRepos.each { |currentOption|
+      currentAnticipatedDataRepoLabel = currentOption.clone()
+      currentOption.insert(0, "0_") if(currentOption.include?("None"))
+      anticipatedDataRepoOptions[currentOption] = { :label => currentAnticipatedDataRepoLabel }
+    }
+    # Options for submission categories for data repository submission (DCC or not DCC)
+    submissionCategoryOptions = {}
+    submissionCategoryOptions[:"DCC Submission"] = { :label => "Submission Meant for DCC" }
+    submissionCategoryOptions[:"Samples Not Meant for Submission to DCC"] = { :label => "Submission Not Meant for DCC" }
+    # Options for whether PI has registered project with dbGaP (Yes / No / Not Applicable)
+    dbGaPOptions = {}
+    dbGaPOptions[:"Yes"] = { :label => "Yes - Project Registered with dbGaP"}
+    dbGaPOptions[:"No"] = { :label => "No - Project Not Registered with dbGaP"}
+    dbGaPOptions[:"Not Applicable"] = { :label => "Not Applicable", :selected => true}
+    # Options for remote storage areas
+    remoteStorageAreas = @settings['remoteStorageAreas']
+    remoteStorageOptions = {}
+    remoteStorageAreas.each { |currentOption|
+      remoteStorageOptions[currentOption] = { :label => currentOption }
+    }
+    remoteStorageOptions["None Selected"] = { :label => "None Selected", :selected => true }
+    widgets = []
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "30", :value => "KNIFE-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'KNIFE_v1.2\') used to organize KNIFE results.' },
+                { :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the target database."},
+                { :id => 'erccSubmissionOptions', :toggleText => "ERCC Submission Options", :type => :advancedSection, :startWithExpanded => true, :text => "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter.", :widgets =>
+                  [
+                    { :id => 'piName', :label => 'ERCC PI', :type => :text, :size => "30", :readOnly => true, :value => erccPI, :title => "This box contains the name of your PI."},
+                    { :id => 'grantNumber', :label => 'ERCC Grant Number', :title => 'Choose the appropriate grant number for your submission.', :type => :select, :options => erccGrantOptions },
+                    { :id => 'anticipatedDataRepo', :label => 'Anticipated Data Repository', :title => 'Choose the appropriate option for your anticipated data repository.', :onChange => "showDataRepoOptions(this.value)", :type => :select, :options => anticipatedDataRepoOptions },
+                    { :id => 'otherDataRepo', :label => 'Other Data Repository', :hidden => true, :type => :text, :size => "30", :title => "If you are submitting to a data repository that is not dbGaP / GEO, put that data repository here."},
+                    { :id => 'dataRepoSubmissionCategory', :label => 'Submission Category', :hidden => true, :title => 'Choose the appropriate option to indicate whether your samples are intended for the DCC or not.', :type => :select, :options => submissionCategoryOptions },
+                    { :id => 'dbGaP', :label => 'Project Registered with dbGaP?', :hidden => true, :title => 'Choose the appropriate option to indicate whether this project has been registered with dbGaP by your PI.', :type => :select, :options => dbGaPOptions }
+                  ]
+                },
+                { :id => 'advancedOptions', :toggleText => "Advanced Options", :type => :advancedSection, :startWithExpanded => true, :text => 'Below, you can select your preference for advanced options that don\'t fit into the other categories above. The \'Remote Storage Area\' option will allow you to choose a remote storage (FTP) area where your result files will be uploaded. You can learn more by visiting the <a href=\'http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Using_Remote_%28FTP%29_Storage_for_exceRpt\' target=\'_blank\'>tutorial</a>.', :widgets =>
+                  [
+                    { :id => 'remoteStorageArea', :'label' => 'Remote Storage Area', :type => :select, :options => remoteStorageOptions, :title => "If you've used the 'Create Remote Storage Area' tool to create a remote storage (FTP) area, you can choose an area where your results will be uploaded. Default: 'None Selected'."}                            
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "KNIFE Settings",
+      :widgets => widgets
+    })
+  %>
+  
+ <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+    // Method which is used, much like the method above, to show / hide certain options depending on the user's choice.
+    // Here, we are looking at options related to the anticipated data repository (used in tool usage doc).
+    function showDataRepoOptions(value) {
+      // Grab various widgets related to anticipated data repository
+      var otherDataRepo = Ext.get('otherDataRepo');
+      var otherDataRepoLabel = Ext.get('otherDataRepoLabel');
+      var dataRepoSubmissionCategory = Ext.get('dataRepoSubmissionCategory');
+      var dataRepoSubmissionCategoryLabel = Ext.get('dataRepoSubmissionCategoryLabel');
+      var dbGaP = Ext.get('dbGaP');
+      var dbGaPLabel = Ext.get('dbGaPLabel');
+      // If value is "0_None", then user cannot fill out information.
+      if(value == "0_None") {
+        dataRepoSubmissionCategory.setStyle('display', 'none');
+        dataRepoSubmissionCategoryLabel.setStyle('display', 'none');
+        dbGaP.setStyle('display', 'none');
+        dbGaPLabel.setStyle('display', 'none');
+        otherDataRepo.setStyle('display', 'none');
+        otherDataRepoLabel.setStyle('display', 'none');
+      } else {
+        // We always display data repository submission category (DCC or not DCC?)
+        dataRepoSubmissionCategory.setStyle('display', '');
+        dataRepoSubmissionCategoryLabel.setStyle('display', '');
+        // If user picks GEO, then we don't display dbGap options or Other data repo text box 
+        if(value == "GEO") {
+          dbGaP.setStyle('display', 'none');
+          dbGaPLabel.setStyle('display', 'none');
+          otherDataRepo.setStyle('display', 'none');
+          otherDataRepoLabel.setStyle('display', 'none');
+        // If user picks dbGaP or Both GEO & dbGap, then we display dbGaP options but don't display Other data repo text box
+        } else if(value == "dbGaP" || value == "Both GEO & dbGaP") {
+          dbGaP.setStyle('display', '');
+          dbGaPLabel.setStyle('display', '');
+          otherDataRepo.setStyle('display', 'none');
+          otherDataRepoLabel.setStyle('display', 'none');
+        // If user picks Other, then we display Other data repo text box but don't display dbGaP options
+        } else if(value == "Other") {
+          dbGaP.setStyle('display', 'none');
+          dbGaPLabel.setStyle('display', 'none');
+          otherDataRepo.setStyle('display', '');
+          otherDataRepoLabel.setStyle('display', '');
+        }
+      } 
+    }
+
+</script>

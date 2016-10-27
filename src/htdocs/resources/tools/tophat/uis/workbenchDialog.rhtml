@@ -1,0 +1,181 @@
+<%# RENDER HTML %>
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        TopHat is a fast splice junction mapper for RNA-Seq reads. It aligns RNA-Seq reads to mammalian-sized genomes using the
+        ultra high-throughput short read aligner Bowtie, and then analyzes the mapping results to identify splice junctions between exons.
+        <br>&nbsp;<br>
+        TopHat is a collaborative effort between the <a href='http://genomics.jhu.edu'>Institute of Genetic Medicine</a> at Johns Hopkins University,
+        the <a href='http://math.berkeley.edu'>Departments of Mathematics</a> and <a href='http://www.mcb.berkeley.edu'>Molecular and Cell Biology</a>
+        at the University of California, Berkeley and the Department of Stem Cell and Regenerative Biology at Harvard University.
+        <center><span class='footnote'>[ TopHat is described in <a href='http://bioinformatics.oxfordjournals.org/content/25/9/1105.abstract'>this journal article</a>. ]</span></center>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "TopHat-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder used to organize TopHat results.' },
+                { :id => 'doUploadResults', :label => 'Upload Results ?', :type => :checkbox, :title => 'Check to upload results to Genboree.', :onClick => "displayTrackName(this.checked)" },
+                { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => 'Read', :hideTrackName => true, :defaultSubtype => 'Density', :hidden => true, :title => 'For uploading resulting track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+                { :id => 'autoDetermineMateInnerDist', :label => 'Auto-Determine Mate Inner Dist And Stdev ?', :type => :checkbox, :checked => true, :onClick => "toggleMateInnerDistAndStdev(this.checked)", :title => 'Check this to automatically compute the expected (mean) inner distance between mate pairs. Uncheck to enter custom value. [A BWA-based preprocessing script will be run on the pair of sequence files which will be used to determine the right value.]'},
+                { :id => 'mateInnerDist', :label => 'Mate Inner Dist', :type => :text, :value => "", :hidden => true, :disabled => true},
+                { :id => 'mateStdev', :label => 'Mate Stdev', :type => :text, :value => "", :hidden => true, :disabled => true },
+                { :id => 'minAnchorLength', :label => 'Min Anchor Length', :type => :text, :value => "8", :title => 'The "anchor length". TopHat will report junctions spanned by reads with at least this many bases on each side of the junction. Note that individual spliced alignments may span a junction with fewer than this many bases on one side. However, every junction involved in spliced alignments is supported by at least one read with this many bases on each side [Default: 8].'},
+                { :id => 'spliceMisMatches', :label => 'Splice Mismatches', :type => :text, :value => "0", :title => 'The maximum number of mismatches that may appear in the "anchor" region of a spliced alignment.  [Default: 0].'},
+                { :id => 'minIntronLength', :label => 'Min Intron Length', :type => :text, :value => "70", :title => 'The minimum intron length. TopHat will ignore donor/acceptor pairs closer than this many bases apart.  [Default: 70].'},
+                { :id => 'maxIntronLength', :label => 'Max Intron Length', :type => :text, :value => "70", :title => 'The maximum intron length. When searching for junctions ab initio, TopHat will ignore donor/acceptor pairs farther than this many bases apart, except when such a pair is supported by a split segment alignment of a long read  [Default: 500000].'},
+                { :id => 'maxInsertionLength', :label => 'Max Insertion Length', :type => :text, :value => "3", :title => 'The maximum insertion length. [Default: 3].'},
+                { :id => 'maxDeletionLength', :label => 'Max Deletion Length', :type => :text, :value => "3", :title => 'The maximum deletion length. [Default: 3].'},
+                { :id => 'coverageSearch', :label => 'Coverage Search ?', :type => :checkbox, :title => 'Check to enable coverage search. Enables the coverage based search for junctions. Use when coverage search is disabled by default (such as for reads 75bp or longer), for maximum sensitivity. [Default: disabled]', :onClick => "toggleCoverageOptions(this.checked)" },
+                { :id => 'advancedSettings', :type => :advancedSection,
+                  :width => '450px',
+                  :text => '(The default values for these settings are what will be used if you do not change them.)',
+                  :widgets =>
+                  [
+                    { :id => 'initialReadMismatches', :label => 'Initital Read Mismatches', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "2", :style => 'font-size: 80%', :title => 'Reads are initially mapped, allowing up to this many mismatches in each read alignment. [Default: 2]'},
+                    { :id => 'segmentMismatches', :label => 'Segment Mismatches', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "2", :style => 'font-size: 80%', :title => 'Read segments are mapped independently, allowing up to this many mismatches in each segment alignment. [Default: 2]'},
+                    { :id => 'segmentLength', :label => 'Segment Length', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "25", :style => 'font-size: 80%', :title => 'Each read is cut up into segments, each at least this long. These segments are mapped independently. [Default: 25]'},
+                    { :id => 'minCoverageIntron', :class => "coverage", :label => 'Minimum Coverage Intron', :disabled => true, :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "50", :style => 'font-size: 80%', :title => 'The minimum intron length that may be found during coverage search. [Default: 50]'},
+                    { :id => 'maxCoverageIntron', :class => "coverage", :label => 'Maximum Coverage Intron', :disabled => true, :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "20000", :style => 'font-size: 80%', :title => 'The maximum intron length that may be found during coverage search. [Default: 20000]'},
+                    { :id => 'minSegmentIntron', :label => 'Minimum Segment Intron', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "50", :style => 'font-size: 80%', :title => 'The minimum intron length that may be found during split-segment search. [Default: 50]'},
+                    { :id => 'maxSegmentIntron', :label => 'Maximum Segment Intron', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "500000", :style => 'font-size: 80%', :title => 'The maximum intron length that may be found during split-segment search. [Default: 500000]'},
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Tophat Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+function toggleMateInnerDistAndStdev(checked)
+{
+  var mateInnerDistLabel = Ext.get('mateInnerDistLabel') ;
+  var mateInnerDistDom = Ext.get('mateInnerDist').dom ;
+  var mateInnerDist = Ext.get('mateInnerDist') ;
+  var mateStdevLabel = Ext.get('mateStdevLabel') ;
+  var mateStdevDom = Ext.get('mateStdev').dom ;
+  var mateStdev = Ext.get('mateStdev') ;
+  if(checked)
+  {
+    mateInnerDistLabel.setStyle('display', 'none') ;
+    mateInnerDistDom.disabled = true ;
+    mateInnerDist.style.visibilty = 'hidden' ;
+    mateStdevLabel.setStyle('display', 'none') ;
+    mateStdevDom.disabled = true ;
+    mateStdev.style.visibilty = 'hidden' ;
+  }
+  else
+  {
+    mateInnerDistLabel.setStyle('display', '') ;
+    mateInnerDistDom.disabled = false ;
+    mateInnerDist.setStyle('display', '') ;
+    mateStdevLabel.setStyle('display', '') ;
+    mateStdevDom.disabled = false ;
+    mateStdev.setStyle('display', '') ;
+    mateStdevDom.value = '20' ;
+  }
+
+}
+
+function displayTrackName(checked)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var wigTracklabel = Ext.get("trackNameLabel") ;
+  if(checked)
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    lffType.style.visibility = '' ;
+    lffSubType.style.visibility = '' ;
+    wigTracklabel.setStyle('display', '') ;
+  }
+  else
+  {
+    lffType.style.visibility = 'hidden' ;
+    lffType.disabled = true ;
+    lffSubType.style.visibility = 'hidden' ;
+    lffSubType.disabled = true ;
+    wigTracklabel.setStyle('display', 'none') ;
+  }
+}
+
+function toggleCoverageOptions(checked)
+{
+  var coverageWidgets = document.getElementsByClassName('coverage') ;
+  if(checked)
+  {
+    coverageWidgets[0].disabled = false ;
+    coverageWidgets[1].disabled = false ;
+  }
+  else
+  {
+    coverageWidgets[0].disabled = true ;
+    coverageWidgets[1].disabled = true ;
+  }
+}
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

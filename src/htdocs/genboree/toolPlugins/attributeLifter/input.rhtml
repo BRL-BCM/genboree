@@ -1,0 +1,329 @@
+
+<%
+  # ##############################################################################
+  # LIBRARIES
+  # - The first 3 are standard for all apps.
+  # ##############################################################################
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # ##############################################################################
+  # SETUP / INITIALIZATION
+  # ##############################################################################
+
+  # ---------------------------------------------------------------
+  # STANDARD HELPER METHODS
+  # - these appear in most input.rhtml files
+  # - some customization or additions may be necessary
+  # ---------------------------------------------------------------
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  # ---------------------------------------------------------------
+  # IMPORTANT COMMON VARIABLES
+  # - these and maybe some tool-specific ones are standard
+  # ---------------------------------------------------------------
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  @prepped4output = false
+  genbConf = BRL::Genboree::GenboreeConfig.load()
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # ---------------------------------------------------------------
+  # GET TRACK LIST FOR SELECTED DATABASE
+  # - The refSeqId is provided via from the droplist for you
+  # - Feed it to inner.getTracks() to get a list of tracks for this database
+  #   . tracks is a hash of "type:subtype" => <ftype record as Array>
+  #   . so you have all the info for tracks and displayable names too
+  # ---------------------------------------------------------------
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  userId = cgi['userId'].to_i.untaint
+  tracks = inner.getTracks(refSeqId, userId)
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  # ---------------------------------------------------------------
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  # - You need to have the list of existing job names
+  # - This would be specific for each group, DB, and tool combination)
+  # ---------------------------------------------------------------
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+<% # --------------------------------------------------------------- %>
+<% # DYNAMIC PAGE-SPECIFIC JAVASCRIPT (usually data) %>
+<% # --------------------------------------------------------------- %>
+<% # NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<% # This is needed for validation. %>
+<script type="text/javascript">
+  var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+  var TOOL_PARAM_FORM = 'pdw' ;
+</script>
+
+
+<%# --------------------------------------------------------------- %>
+<%# STYLESHEETS (tool or GUI specific ones, not general Genboree ones %>
+<%# --------------------------------------------------------------- %>
+
+<%# --------------------------------------------------------------- %>
+<%# NEEDED JS FILES (first bunch are standard %>
+<%# --------------------------------------------------------------- %>
+<script type="text/javascript" SRC="/javaScripts/prototype-1.6.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js?jsVer=<%= genbConf.jsVer %>"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/attributeLifter/attributeLifter.js?jsVer=<%= genbConf.jsVer %>"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2" width="100%">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <center><font size="4"><strong>Attribute Lifter</strong></font></center>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+       <p>This tool lifts (copies) attributes from annotations in the second track(s) and adds them
+       to intersecting annotations in the first track. If more than one
+       annotation overlaps, the annotation will be copied as a comma seperated
+       list (for example:  errorValues=0.1, 0.6, 1.0).
+       </p>
+        <UL class="compact4_bigIndent">
+          <LI>&middot; <u>Motivation</u>: useful for giving an annotation attributes based on existing annotations
+                                          it itersects in other tracks.
+          </LI>
+          <LI>&middot; <u>Note</u>: you can increase the 'radius' option to look for nearby annotations
+                                    rather than ones that strictly overlap.
+          </li>
+        </UL>
+    </div>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <a href="mailto:brl_admin@bcm.tmc.edu?subject=Attribute Lifter">brl_admin@bcm.tmc.edu</a>.
+    </font>
+    <p>
+    <%# NEEDED Genboree data to pass to server code that will execute script: %>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER side %>
+    <input type="hidden" id="function" name="function" value="liftAttributes">
+
+    <input id="secondTrackStr" name="secondTrackStr" value="" type="hidden"></input>
+
+    <%# END: TOOL DESCRIPTION %>
+
+    <%# --------------------------------------------------------------- %>
+    <%# TOOL GUI sits in a table %>
+    <%# --------------------------------------------------------------- %>
+    <%# Each <tr> (UI section) has two (2) <td>, don't miss any: %>
+    <%# - section header with class="form_body" %>
+    <%# - UI cell with bgcolor="white" that contains 2 columsn: the UI widgets column plus a help icon %>
+    <table bgcolor="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+      <%# BEGIN: JOB NAME ROW %>
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="expnameLabel"><font size="2"><strong>Job Name:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+            </td>
+            <td width="36" align="right" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('expname');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+      </tr>
+
+      <%# First TRACK SELECTION/Radius ROW %>
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="trackLabel"><font size="2"><strong>First Track:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <%  unless(tracks.empty?) %>
+                    <%# NOTE: Using the suffix _lff for id/name here gets you the file for free on server side %>
+                    <select id="template_lff" name='template_lff' onchange="toggleFirstTrack(this);">
+                      <option value="selectATrack">Select a Track</option>
+<%
+                      sortedTrackNames.each { |trackName|
+%>
+                        <option value="<%= CGI.escape(trackName) %>" ><%=CGI.escapeHTML(trackName)%><br /></option>
+<%
+                      }
+%>
+                    </select>
+              <%  else  %>
+                    <font color="red"><b><span id="noTracks1" name="noTracks1">The database is empty. No tracks present. Plug-in cannot be run.</span></b></font>
+              <%  end %>
+              <br />
+              <span id="radius_lbl" name="radius_lbl">
+                Intersecting annotations must be within <input type="text" id="radius" name="radius" value="0" style="margin-top: 2px; width:40px;"> bp of these annotations.
+              </span>
+            </td>
+            <td bgcolor="white" width="36" align="right" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('first_track');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+      </tr>
+
+      <%# Condition Row %>
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="conditionLabel"><font size="2"><strong>Condition:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <span id="anyOrAll_lbl" name="anyOrAll_lbl">
+                <div style="width:5%; float:left;">
+                  <input type="checkbox" id="requireIntersect" name="requireIntersect" value="true"></input>
+                </div>
+                <div style="width:85%; float:left;">
+                  Only output annotations that intersect 1+ annotations from the following tracks:
+                </div>
+              </span>
+            </td>
+            <td bgcolor="white" width="36" align="right" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('requireIntersect');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+      </tr>
+
+      <%# Second Tracks %>
+      <tr>
+        <td width="25%" class="form_body" align="right" valign="top">
+          <span id="secondTrackLabel"><font size="2"><strong>Second Track(s):</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <%  unless(tracks.empty?) %>
+              <%# NOTE: Using the suffix _lff for id/name here gets you the file for free on server side %>
+                    <span id="secondTrack_lbl" name="secondTrack_lbl">
+<%
+                      sortedTrackNames.each { |trackName|
+                        escTrackName = CGI.escape(trackName)
+%>
+                        <div id="trackDiv<%= escTrackName%>" name="trackDiv<%= escTrackName %>" style="margin:0px;padding:0px">
+                          <input class="2ndTrackChkbx" id="<%= escTrackName %>" value="<%= escTrackName %>" type="checkbox" onclick="attsDisplay(this)"><%= CGI.escapeHTML(trackName) %><br />
+                          <%# Hidden table for display of attributes%>
+                          <table style="display: none;" id="paramsTable<%= escTrackName %>">
+                          <tr>
+                            <td style="width: 5%;">&nbsp;</td>
+                            <td style="width: 94%;" id="paramCell<%= escTrackName %>">
+                              <div id="paramDiv<%= escTrackName %>"></div>
+                            </td>
+                          </tr>
+                          </table>
+                        </div>
+<%
+                      }
+%>
+                    </span>
+              <%  else  %>
+                <font color="red"><b><span id="noTracks2" name="noTracks2">The database is empty. No tracks present. Plug-in cannot be run.</span></b></font>
+              <%  end %>
+            </td>
+            <td bgcolor="white" width="36" align="right" valign="top" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('second_track');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+      </tr>
+
+      <%# Output Tracks %>
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="outputTrack"><font size="2"><strong>Output Track:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <span id="trackClass_lbl" name="trackClass_lbl">Class:</span>&nbsp;
+              <input type="text" id="trackClass" name="trackClass" value="AttrsLifted" class="txt" size="10">
+              &nbsp;&nbsp;&nbsp;
+              <span id="trackType_lbl" name="trackType_lbl">Type:</span>&nbsp;
+              <input type="text" id="trackType" name="trackType" class="txt" size="10">
+              &nbsp;&nbsp;&nbsp;
+              <span id="trackSubtype_lbl" name="trackSubtype_lbl">Subtype:</span>&nbsp;
+              <input type="text" id="trackSubtype" name="trackSubtype" class="txt" size="10">
+            </td>
+            <td bgcolor="white" width="36" align="right" nowrap>
+              <a href="javascript:void(0);" onclick="return overlibHelp('outputTrack');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+      </tr>
+      </table>
+  </td>
+</tr>
+</table>
+<p>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="flanked" id="flanked" class="btn" value="Submit">&nbsp;
+<%# Reset not needed%>
+<%# <input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="toolReset();">&nbsp; %>
+<p>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

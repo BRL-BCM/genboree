@@ -1,0 +1,168 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+<%
+  if(@hasAccess)
+%>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Inputs:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMixedListSummary, { :list => @inputs, :label => "Track Entity Lists/ROI" } )
+    })
+  %>
+
+  <%# Output database summary %>
+  <%= if(@outputs.size == 1)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Outputs:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Outputs:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+      end
+
+  %>
+
+  <%=
+    if(!@settings['roiPresent'] and @settings['roiList'].empty?)
+      renderFrag(@toolIdStr, :wbSpecialInfoSection,
+        {
+          :sectionTitle => "No ROIs for assembly: #{@settings['dbVer']}",
+          :sectionType => :warningInfoSection,
+          :sectionHtml => "Unfortunately, we do not have any Regions-of-Interest tracks for the genome assembly of your interest. Please either drag your own ROI track or use the 'Fixed Resolution' option."
+        })
+    end
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+
+    widgets = [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "", :title => "The output folder for the Random Forest results" },
+                { :id => 'jobId', :label => 'Job Id', :type => :text , :size => "25", :value => "Qiime-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique name" },
+                { :id => 'minValueCount', :label => 'Min Value Count', :type => :text , :size => "20", :value => "2", :title => "" }
+              ]
+
+    roiList = @settings['roiList']
+    roiPresent = @settings['roiPresent']
+    if(!roiPresent) # Add the list of roi tracks if user didn't drag any
+      if(!roiList.empty?)
+        roiOps = Hash.new { |hh,kk|
+          hh[kk] = {}
+        }
+        roiList.each { |trk|
+          roiOps[:"#{trk}"] = { :label => trk, :selected => true }
+        }
+        widgets.push({ :name => 'roi', :label => 'ROI Track', :type => :radio ,:title => "", :value => "roiTrk", :checked => true, :onclick => "toggleROI(this.value)" })
+        widgets.push({ :id => 'roiTrack', :label => '', :type => :select , :size => "5", :options => roiOps, :title => "" })
+        # Also add 'fixed windows' widget
+        widgets.push({ :name => 'roi', :label => 'Fixed Resolution', :type => :radio, :title => "", :value => "fixedWindows", :onclick => "toggleROI(this.value)" })
+        widgets.push({ :id => 'fixedResolution', :type => :select , :label => "",  :options =>
+        {
+          :medium => { :selected => true, :label => "Medium (10,000bp)"},
+          :low => { :label => "Low (100,000bp)"},
+          :high => { :label => "High (1000bp)"}
+        },
+        :title => "" })
+      else # NO ROIs, just present the fixed windows option. (User did not drag an ROI AND we do not have any ROI tracks for genome assembly of interest)
+        widgets.push({ :id => 'fixedResolution', :type => :select , :label => "Fixed Resolution",  :options =>
+        {
+          :medium => { :selected => true, :label => "Medium (10,000bp)"},
+          :low => { :label => "Low (100,000bp)"},
+          :high => { :label => "High (1000bp)"}
+        },
+        :title => "" })
+      end
+    end
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+Ext.onReady(function () {
+  if(Ext.get('fixedResolution') && Ext.get('roiTrack'))
+  {
+    Ext.get('fixedResolution').dom.disabled = true ;
+  }
+});
+
+function toggleROI(value)
+{
+  var roiList = Ext.get('roiTrack').dom ;
+  var fixedWind = Ext.get('fixedResolution').dom ;
+  if(value == 'fixedWindows')
+  {
+    fixedWind.disabled = false ;
+    roiList.disabled = true ;
+  }
+  else
+  {
+    fixedWind.disabled = true ;
+    roiList.disabled = false ;
+  }
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

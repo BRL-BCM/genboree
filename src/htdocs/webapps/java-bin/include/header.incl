@@ -1,0 +1,51 @@
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  <!-- START: Google Analytics -->
+	<script type="text/javascript">
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', 'UA-55303520-1', 'auto');
+	  ga('send', 'pageview');
+
+	</script>
+  <!-- END: Google Analytics -->
+
+<!--
+<table cellpadding="0" cellspacing="0" border="0" bgcolor="white" width="800" class='TOP'>
+<tr>
+  <td width="10"></td>
+  <td height="10"></td>
+  <td width="10"></td>
+  <td width="10" class="bkgd"></td>
+</tr>
+-->
+<tr>
+  <td></td>
+  <td>
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <!-- td width="484">
+        <a href="http://clinicalgenome.org">
+          <img src="http://www.calculator.clinicalgenome.org/redmine/attachments/download/242/clingen_logo_180x138.png" width="120" height="120" border="0" alt="Genboree">
+        </a>
+      </td -->
+      <!-- td align="right">
+        <a href="http://www.calculator.clinicalgenome.org">
+          <img src="http://www.calculator.clinicalgenome.org/redmine/attachments/download/240/ClinGenPagthogenicityCalculator.png" width="60" height="120" alt="BCM" title="BCM" border="0">
+        </a>
+      </td -->
+    </tr>
+    </table>
+  </td>
+  <td width="10"></td>
+  <td class="shadow"></td>
+</tr>
+<tr>
+  <td></td>
+<!--
+  <td id="pageContentTd" name="pageContentTd" >
+-->

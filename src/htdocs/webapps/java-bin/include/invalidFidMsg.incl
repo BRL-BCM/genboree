@@ -1,0 +1,19 @@
+  <%}
+  else {%>
+    <TR align="center">
+        <TD colspan="3">
+            <div class="errorMsg" align="center">
+            <BR>
+            <%=errorFidMessage%>
+            <BR>
+            </div>
+            <div align="center" class="warnMsgSmall">
+             <BR>This window will be closed in <%=timeout/1000%> seconds.<BR> <BR><BR>
+             </div>
+
+        </TD>  <td class="shadow" width="10"></td>
+    </TR>
+   <script>
+  setTimeout('window.close()', <%=timeout%>);
+   </script>
+<%}%>

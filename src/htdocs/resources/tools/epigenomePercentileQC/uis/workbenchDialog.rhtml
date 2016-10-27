@@ -1,0 +1,84 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          Review that the correct BED file with read mappings is selected, and that you've correctly indicated against which genome the read were mapped.
+          <br>&nbsp;<br>
+          In the settings section below, select the type of assay for which you are doing QC.
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input File:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs[0], :label => "BED File" } )
+      })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%= renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "QC Settings",
+        :widgets =>
+        [
+          { :id => 'experimentName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "PercQC-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+          { :id => 'genome', :label => 'Genome', :type => :select, :options =>
+            {
+              :hg18 => { :label => 'Hg18 (NCBI Build 36)', :selected => true},
+              :hg19 => { :label => 'Hg19 (NCBI Build 37)' }
+            }
+          },
+          { :id => 'assay', :label => 'assay', :type => :select, :options =>
+            {
+              :H2AK5ac => { :label => 'H2AK5ac', :selected => true},
+              :H2BK120ac => { :label => 'H2BK120ac' },
+              :H2BK12ac => { :label => 'H2BK12ac' },
+              :H2BK15ac => { :label => 'H2BK15ac' },
+              :H2BK20ac => { :label => 'H2BK20ac' },
+              :H3K14ac => { :label => 'H3K14ac' },
+              :H3K18ac => { :label => 'H3K18ac' },
+              :H3K23ac => { :label => 'H3K23ac' },
+              :H3K27ac => { :label => 'H3K27ac' },
+              :H3K27me3 => { :label => 'H3K27me3' },
+              :H3K36me3 => { :label => 'H3K36me3' },
+              :H3K4ac => { :label => 'H3K4ac' },
+              :H3K4me1 => { :label => 'H3K4me1' },
+              :H3K4me2 => { :label => 'H3K4me2' },
+              :H3K4me3 => { :label => 'H3K4me3' },
+              :H3K56ac => { :label => 'H3K56ac' },
+              :H3K79me1 => { :label => 'H3K79me1' },
+              :H3K79me2 => { :label => 'H3K79me2' },
+              :H3K9ac => { :label => 'H3K9ac' },
+              :H3K9me3 => { :label => 'H3K9me3' },
+              :H4K20me1 => { :label => 'H4K20me1' },
+              :H4K5ac => { :label => 'H4K5ac' },
+              :H4K8ac => { :label => 'H4K8ac' },
+              :H4K91ac => { :label => 'H4K91ac' },
+              :Input => { :label => 'Input' },
+              :Medip => { :label => 'Medip' }
+            }
+          },
+          { :id => 'fdr', :type => :hidden, :value => '0.01' },
+          { :id => 'pvalue', :type => :hidden, :value => '0.05' }
+        ]
+      })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

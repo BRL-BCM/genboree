@@ -1,0 +1,27 @@
+<%
+  @sampleList = [ @sampleList ] unless(@sampleList.is_a?(Array) or @sampleList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@sampleList.nil? or @sampleList.empty?) ? "" : "rowspan='#{@sampleList.size}'") %> ><%= (@label || "Sample") %>:</th>
+<%  if(@sampleList.nil? or @sampleList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @sampleList.each_index { |ii|
+        item = @sampleList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        sample = WorkbenchFormHelper.getNameFromURI(:sample, item, true)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== sample %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

@@ -1,0 +1,76 @@
+<%@ page import="javax.servlet.http.*,
+ java.util.*, java.sql.*,java.io.*, java.net.*,
+ org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*"
+%><%@
+  include file="fwdurl.incl" %><%@
+  include file="userinfo.incl" %><%
+  
+  // NO NEWLINES BETWEEN % >< % in this FILE !!! IMPORTANT.
+  
+    // Manage group context override (matt, 3/9/2006)
+    groupAllowed = currentGroupName ;
+
+    response.addDateHeader( "Expires", 0L );
+    response.addHeader( "Cache-Control", "no-cache, no-store" );
+
+    int i;
+
+    if(grps == null)
+    {
+        Refseq[] rseqs2 = Refseq.fetchAll( db, is_admin ? null : grps );
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) ) return;
+        if( rseqs2 == null ) rseqs2 = new Refseq[0];
+//        mys.setAttribute( "RefSeqs", rseqs2 );
+    }
+
+    if(grps == null || grps.length <= 0)
+    {
+        mys.setAttribute( "warnMsg", "<strong>Sorry, We have detected that you genboree account has some "+
+                "serious problems please contact genboree_admin@genboree.org immediately to fix your account</strong>" );
+        GenboreeUtils.sendRedirect(request,response,  "/java-bin/warn.jsp" );
+        return;
+    }
+
+    boolean hasPermission = false;
+
+    for( i=0; i<grps.length && hasPermission == false; i++ )
+    {
+      if(grps[i] == null)
+      {
+        System.err.println( "The group = " + i + " is null");
+        continue ;
+      }
+      String myGroupName =grps[i].getGroupName();
+      if(myGroupName != null)
+      {
+        if(myGroupName.equalsIgnoreCase(groupAllowed))
+          hasPermission = true;
+      }
+      else
+      {
+        System.err.println("The groupName is null");
+        break;
+      }
+    }
+    
+    if(!hasPermission)
+    {
+      String myUrl = "/java-bin/notifyAdmin.jsp?";
+      if(groupAllowed != null && refSeqId == null)
+          myUrl += "groupAllowed=" + groupAllowed;
+      else if(groupAllowed == null && refSeqId != null)
+          myUrl += "msgRefSeqId=" + refSeqId;
+      else if(groupAllowed != null && refSeqId != null)
+          myUrl += "groupAllowed=" + groupAllowed + "&msgRefSeqId=" + refSeqId;
+      else
+      {
+        mys.setAttribute( "warnMsg", "<strong>Sorry, We have detected that this page has "+
+                "serious problems please contact genboree_admin@genboree.org immediately to fix your account</strong>" );
+        GenboreeUtils.sendRedirect(request,response,  "/java-bin/warn.jsp" );
+        return;
+      }
+      mys.setAttribute("target", GenboreeUtils.getCurrentUrl(request)) ;
+      GenboreeUtils.sendRedirect(request,response,  myUrl );
+      return;
+    }
+%>

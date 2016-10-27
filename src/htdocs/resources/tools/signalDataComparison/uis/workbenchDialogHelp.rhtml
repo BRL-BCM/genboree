@@ -1,0 +1,69 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "This tool compares the signal data in the <i>first</i> (X-axis) score track you drag to the
+          signal data in the <i>second</i> (Y-axis) score track you drag via a linear regression analysis to
+          determine the level of agreement and the sites containing significant differences.
+          <br>&nbsp;<br>
+          This comparison can be done at the level of fixed 100Kbase windows tiling the
+          entire genome, or via a set of regions you provide as a track.
+          <br>&nbsp;<br>
+          In addition to the key linear regression statistics, the result data for
+          the regions or windows will be uploaded to a database you choose, so you
+          can visualize the agreement data in Genboree.
+          <br>&nbsp;<br>"
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>track</u> with the <i>x-axis</i> signal data into &quot;Input Data&quot;.',
+          'Drag the <u>track</u> with the <i>y-axis</i> signal data into &quot;Input Data&quot;.',
+          'Optionally, drag a <u>track</u> with <i>regions of interest (ROIs)</i> for the comparison into &quot;Input Data&quot; (otherwise fixed windows will be used).'
+        ],
+        :types              => [ [ 'Tracks', 'min: 2 ; max: 3' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this analysis job a unique name. This name will be used to store result files within the Output Database.' ],
+          [ 'Fixed/Custom Resolution', ' (Available if no ROI Track is selected) The <i>resolution</i> at which to perform the regression.  Either select from the fixed resolution sizes
+           (High: 1000bp, Medium: 10_000bp, Low: 100_000bp) or enter your own custom resolution(an integer less than or equal to 20_000_000 and larger than 0).
+           Note that higher resolutions will take longer to run, but may provide slightly more accurate results. Default: Medium (10_000bp)' ],
+          [ 'Aggregating Function', 'Choose between: Avg (default), Median, Sum, Max, Min, Count, Standard Deviation and Average By Length for aggregating scores.' ],
+          [ 'Remove No Data Regions?',  "Filter Data by replacing missing values with '0'" ],
+          [ 'Normalization',  "Choose normalization method (Quantile, Gaussian or none)" ],
+          [ 'upload Results File?',  "For uploading results file in Genboree" ],
+          [ 'Output Track Class',  "" ],
+          [ 'Output Track Name',  "Enter track type and subtype" ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed and integrated into the Workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

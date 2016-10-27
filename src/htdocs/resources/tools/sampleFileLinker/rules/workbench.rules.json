@@ -1,0 +1,39 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ],
+      [
+        "/sample/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/sampleSet/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  }
+}

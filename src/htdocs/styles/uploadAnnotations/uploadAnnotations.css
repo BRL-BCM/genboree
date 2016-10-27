@@ -1,0 +1,74 @@
+div#existingTrackOpts div#tracksHolder
+{
+  clear: none ;
+}
+
+li#trackInfo div, li#agilentOpts div
+{
+  clear: left ;
+  float: left ;
+  margin-bottom: 1px ;
+}
+
+li#trackInfo div.param, li#agilentOpts div.param
+{
+  clear: none ;
+  overflow: auto ;
+}
+
+li#trackInfo div.x-form-field-wrap
+{
+  clear: none ;
+  overflow: visible ;
+}
+
+li#trackInfo input, li#agilentOpts input
+{
+  margin: 0 ;
+}
+
+li#agilentOpts div.spinner
+{
+  overflow: visible ;
+  float: left ;
+}
+
+#agilentOpts, #newTrackOpts, #existingTrackOpts
+{
+  border-top: 1px solid #CCC8B7 ;
+  margin-top: 3px ; 
+  padding-top: 5px ; 
+  width: 100% ;
+}
+
+#instructions p
+{
+  font-size: 80% ;
+  font-style: italic ;
+  margin: 0 0 3px 0 ;
+}
+
+#uploadOpts
+{
+  list-style-type: none ;
+  margin: 10px 0 5px 0 ;
+}
+
+#uploadOpts li
+{
+  margin-left: 0 ;
+  overflow: auto ;
+}
+
+#uploadOpts label
+{
+  text-align: left ;
+  /* Need a custom width here for the label to accomadate our size on this UI */
+  width: 18em ;
+}
+
+#uploadOpts select
+{
+  /* Override a masked select Ext rule */
+  visibility: visible ;
+}

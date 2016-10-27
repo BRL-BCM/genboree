@@ -1,0 +1,127 @@
+<%
+  require 'brl/genboree/rest/wrapperApiCaller'
+  hasAccess = true # Give everyone access. This is a utility tool
+  uriObj = URI.parse(@outputs[0])
+  apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/eps?", @context['userId'])
+  apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+  apiCaller.get()
+  resp = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+  epArray = []
+  resp.each { |ep|
+    epArray << ep['name']
+  }
+  height = '500px'
+  if(epArray.size <= 500 and epArray.size > 0)
+    height = '500px'
+  else
+    height = '250px'
+  end
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 600px; height: #{height};\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Delete Entrypoints" } ) %>
+<%
+  if(hasAccess)
+%>
+  <%# Overview text %>
+  <%=
+      renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+            <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+            This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+          </div>
+          This tool allows deleting of <i>Entrypoints/Chromosomes</i> from a target database.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%
+    if(epArray.size <= 500 and epArray.size > 0)
+  %>
+      <%# Output summary %>
+      <%=
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Entrypoints belong to:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs} )
+        })
+      %>
+      <%=
+          # Get the list of eps
+          renderFrag(@toolIdStr, :wbToolSettingsUI,
+          {
+            :sectionTitle => "Delete Entrypoint/Chromosome",
+            :widgets =>
+            [
+              { :id => "epArray", :label => "", :labelWidth => '100px', :type => :tableWithCheckboxSection, :rows => epArray, :headerRow => ['Entrypoint', 'Delete'] },
+              { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'epArray'}
+            ]
+          })
+
+      %>
+
+      <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+            {
+              :buttons => [ { :type => :submit }, { :type => :cancel} ]
+            })
+      %>
+      </form>
+  <%
+    elsif(epArray.size == 0)
+  %>
+      <div align="center">
+        This database has no entrypoints. You may have created a custom database without a template assembly.
+      </div>
+      <br>&nbsp;<br>
+      <%= renderFrag(@toolIdStr, :wbToolButtons,
+          {
+            :buttons => [ { :type => :cancel} ]
+          })
+      %>
+  <%
+    else
+  %>
+      <div align="center">
+        This database has too many entrypoints (>500). Deleting via the workbench is not allowed. Please delete the database and create a new one or contact <%=@genbConf.gbAdminEmail%>
+        for support.
+      </div>
+      <br>&nbsp;<br>
+    <%=
+      renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation by Feb 27th 2012.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

@@ -1,0 +1,73 @@
+
+{
+  "default" :
+  {
+    "bannerIcon" :
+    {
+      "imgSrc" : "/images/genboree.jpg",
+      "height" : 60,
+      "width" : 360,
+      "alt" : "Genboree",
+      "link" : "/site"
+    },
+    "topRightIcon" :
+    {
+      "imgSrc" : "/images/logo_sm.gif",
+      "height" : 60,
+      "width" :  60,
+      "alt" : "BCM",
+      "link" : "http://www.bcm.edu"
+    },
+    "bottomLeftIcon" :
+    {
+      "imgSrc" : "/images/brl50.gif",
+      "height" : 50,
+      "width" : 70,
+      "alt" : "Bioinformatics Research Laboratory",
+      "link" : "http://brl.bcm.tmc.edu"
+    },
+    "bottomCenterHTML" :
+    {
+      "html" :  "Genboree is built &amp; maintained by the <a href=\"http://brl.bcm.tmc.edu\">Bioinformatics&nbsp;Research&nbsp;Laboratory</a><br>at <a href=\"http://www.bcm.edu\">Baylor&nbsp;College&nbsp;of&nbsp;Medicine</a>.<br><br>\nGenboree is a hosted service. Free open source code is available <a href=\"http://genboree.org/site/genboree_server\">here</a>.<br>Genboree version: __GENBOREE_VERSION__"
+    }
+  },
+  "EpigenomeAtlas" :
+  {
+    "bannerIcon" :
+    {
+      "imgSrc" : "/java-bin/EpigenomeAtlas/graphics/EpigenomeAtlas_banner.jpg",
+      "height" : 72,
+      "width" : 416,
+      "alt" : "Genboree - Epigenome Atlas",
+      "link" : "index.jsp"
+    },
+    "topRightIcon" :
+    {
+      "imgSrc" : "/images/logo_sm.gif",
+      "height" : 80,
+      "width" : 151,
+      "alt" : "BCM",
+      "link" : "http://www.bcm.edu"
+    },
+    "bottomLeftIcon" :
+    {
+      "imgSrc" : "/images/brl50.gif",
+      "height" : 50,
+      "width" : 70,
+      "alt" : "Bioinformatics Research Laboratory",
+      "link" : "http://brl.bcm.tmc.edu"
+    },
+    "bottomRightIcon" :
+    {
+      "imgSrc" : "/images/logo_sm_footer.gif",
+      "height" : 50,
+      "width" : 94,
+      "alt" : "BCM",
+      "link" : "http://www.bcm.edu"
+    },
+    "bottomCenterHTML" :
+    {
+      "html" :  "The Epigenome Atlas, EDACC-BCM, and <strong>Genboree<\/strong> are hosted &amp; maintained by the<br><a href=\"http:\/\/brl.bcm.tmc.edu\">Bioinformatics Research Laboratory<\/a> at <a href=\"http:\/\/www.bcm.edu\">Baylor College of Medicine<\/a>.<br><br>\n          Genboree is a hosted service, but code is available\n          <a href=\"http:\/\/www.ipgenesis.com\/contact.php\">free for academic use<\/a>.\n"
+    }
+  }
+}

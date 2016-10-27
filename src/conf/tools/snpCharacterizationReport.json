@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "snpCharacterizationReport",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Snp Characterization Report",
+    "shortLabel": "[NOT SET]"
+  }
+}

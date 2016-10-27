@@ -1,0 +1,359 @@
+<%# RENDER HTML%>
+<%
+require 'brl/genboree/rest/helpers/trackApiUriHelper'
+require 'brl/genboree/rest/helpers/groupApiUriHelper'
+require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+require 'brl/genboree/rest/helpers/trackApiUriHelper'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/rest/apiCaller'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 610px; height: 470px;"  class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will allow you to download a track from a database. If you are downloading data over a specific region/landmark, please enter the
+          landmark as 'chromosome:start-end'. You can also enter a list of comma separated landmarks for downloading multiple landmarks.
+          <br>&nbsp;<br>
+          If you want to download data over entire chromosomes, you can open up the list of available chromosomes by checking the 'Multiple Chromosomes' button
+          which will allow you to select one or more chromosomes.
+          <br>&nbsp;<br>
+          NOTE: Our coordinates are 1-based which means coordinates of chromosomes/entrypoints start from 1 and not 0. However, if you download your track as 'BED' or 'BEDGRAPH',
+          the data will be 0-based according to <a href=\"http://genome.ucsc.edu/FAQ/FAQformat.html#format1\" target=\"_blank\">UCSC</a> specifications.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Download track:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs, :type => "tracks" } )
+    })
+  %>
+  <%
+    grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+    eps = @settings['entrypoints']
+    epList = []
+    eps.each { |ep|
+      epList << ep['name']
+    }
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%
+    if(!epList.empty?)
+  %>
+    <%=
+        renderFrag(@toolIdStr, :wbToolSettingsUI,
+        {
+          :sectionTitle => "Download parameters",
+          :widgets =>
+          [
+            { :name => 'landmarkRadio', :id => "lrSingleChr", :label => 'Single Chromosome', :type => :radio, :value => "singleChr", :labelWidth => "180px", :onclick => "showLandmarks(this.value)" },
+            { :id => 'landmark', :type => :extText, :label => "Location:", :labelWidth => "170px", :regexp => "/^\\s*(?:([^\\-:, ]+)|(?:([^\\-:, ]+):\\s*(\\d*)\\s*-(\\d*)))(?:\\s*,\\s*(?:([^\\-:, ]+)|(?:([^\\-:, ]+):\\s*(\\d*)\\s*-(\\d*))))*\\s*$/" },
+            { :name => 'landmarkRadio', :id => "lrMultiChr", :label => 'Multiple Chromosomes', :labelWidth => "170px", :type => :radio, :value => "multChr", :onclick => "showLandmarks(this.value)" },
+            { :id => 'multipleLandmarks', :type => :extCheckboxGroup, :label => "", :list => epList, :hideBox => true },
+            { :id => 'toggleEpsBtns', :type => :extBtnGroup, :label => "", :btnList => ['Select All', 'Select None', "Select Core Chromosomes"], :hideBtns => true, :btnCols => '3' },
+            { :id => 'outputFormat', :label => 'File Format', :labelWidth => "170px", :type => :select, :onchange => "displayOptions(this.value)", :options =>
+                    {
+                      :lff => { :label => 'LFF', :selected => true },
+                      :fwig => {:label => 'Fixed Step (Wiggle)'},
+                      :vwig => {:label => 'Variable Step (Wiggle)'},
+                      :bedGraph => { :label => "BedGraph" },
+                      :bed => { :label => "Bed" },
+                      :gff3 => { :label => "GFF3" },
+                      :gff => { :label => "GFF" },
+                      :vcf => { :label => "VCF" },
+                      :gtf => { :label => "GTF" }
+                    }, :onchange => "toggleFormatOptions(this.value)"
+            },
+            { :id => 'lffSettings', :type => :extCheckboxGroup, :label => "", :list => ['Include a column header line?', 'Include Chromosome Definitions?', 'UCSC Scaling? (Scores will be scaled between 0 and 1000)'], :hideBox => false, :boxHeight => '75', :cboxScroll => false, :boxWidth => '375' }
+          ]
+        })
+    %>
+  <%
+    else
+  %>
+    <%=
+        renderFrag(@toolIdStr, :wbSpecialInfoSection,
+        {
+          :sectionTitle => "TOO MANY ENTRYPOINTS/CHROMOSOMES:",
+          :sectionType => :warningInfoSection,
+          :sectionHtml => "There are too may entrypoints/chromosomes in the database to which this track belongs. Please enter the exact landmark (or a comma separated list of landmarks) that you want to download."
+        })
+    %>
+    <%=
+        renderFrag(@toolIdStr, :wbToolSettingsUI,
+        {
+          :sectionTitle => "Download parameters",
+          :widgets =>
+          [
+            { :id => 'landmark', :type => :extText, :labelWidth => "170px", :label => "Location/Landmark", :regexp => "/^\\s*(?:([^\\-:, ]+)|(?:([^\\-:, ]+):\\s*(\\d*)\\s*-(\\d*)))(?:\\s*,\\s*(?:([^\\-:, ]+)|(?:([^\\-:, ]+):\\s*(\\d*)\\s*-(\\d*))))*\\s*$/" },
+            { :id => 'outputFormat', :label => 'File Format', :type => :select, :onchange => "displayOptions(this.value)", :options =>
+                    {
+                      :lff => { :label => 'LFF', :selected => true },
+                      :fwig => {:label => 'Fixed Step (Wiggle)'},
+                      :vwig => {:label => 'Variable Step (Wiggle)'},
+                      :bedGraph => { :label => "BedGraph" },
+                      :bed => { :label => "Bed" },
+                      :gff3 => { :label => "GFF3" },
+                      :gff => { :label => "GFF" },
+                      :gtf => { :label => "GTF" }
+                    }, :onchange => "toggleFormatOptions(this.value)"
+            },
+            { :id => 'lffSettings', :type => :extCheckboxGroup, :label => "", :list => ['Include a column header line?', 'Include Chromosome Definitions?', 'UCSC Scaling? (Scores will be scaled between 0 and 1000)'], :hideBox => false, :boxHeight => '75', :cboxScroll => false, :boxWidth => '375' }
+          ]
+        })
+    %>
+  <%
+    end
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit, :value => "Download", :onclick => "return downloadTrack('#{URI.parse(@inputs[0]).host}', '#{CGI.escape(grpApiHelper.extractName(@inputs[0]))}', '#{CGI.escape(dbApiHelper.extractName(@inputs[0]))}', '#{CGI.escape(trkApiHelper.extractName(@inputs[0]))}')" }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+  Ext.QuickTips.init() ;
+
+/* This function constructs the right API call to download the track of interest */
+function downloadTrack(host, grp, db, trk)
+{
+  var format = document.getElementById('outputFormat').value ;
+  var formatSettingsGroup = Ext.ComponentMgr.get('textCheckboxGroup_lffSettings') ;
+  var requestPath = 'http://' + host + '/REST/v1/grp/' + grp + '/db/' + db + '/trk/' + trk + '/annos?format=' + format ;
+  if(format != 'fwig' && format != 'vwig' )
+  {
+    formatSettingsGroup.items.each( function(item){
+      if(item.name == 'Include a column header line?' && item.getValue())
+      {
+        requestPath = requestPath + '&addColHeader=true' ;
+      }
+      else if(item.name == 'Include Chromosome Definitions?' && item.getValue() && format == 'lff') /* chr def only for lff */
+      {
+        requestPath = requestPath + '&addChrInfo=true' ;
+      }
+      else if(item.name == 'UCSC Scaling? (Scores will be scaled between 0 and 1000)')
+      {
+        /* Explicitely set ucsc scaling for bed, gff3, gtf and gff (true/false) since scaling is turned on by default for bed and off for other formats on the API side */
+        if(format != 'lff' && format != 'bedGraph')
+        {
+          if(item.getValue())
+          {
+            requestPath = requestPath + '&ucscScaling=true' ;
+          }
+          else
+          {
+            requestPath = requestPath + '&ucscScaling=false' ;
+          }
+        }
+      }
+    }) ;
+  }
+  /* Add landmark info to the request path */
+  var landmarkRadio = document.getElementsByName('landmarkRadio') ;
+  var landmarkRadioValue ;
+  var ii ;
+  for(ii=0; ii<landmarkRadio.length; ii++)
+  {
+    if(landmarkRadio[ii].checked)
+    {
+      landmarkRadioValue = landmarkRadio[ii].value ;
+    }
+  }
+  var landmarkChosen = true ;
+  if(landmarkRadioValue == 'singleChr')
+  {
+    var singleChrLandmark = document.getElementById('textField_landmark').value ;
+    requestPath = requestPath + '&landmark=' + singleChrLandmark ;
+    if(singleChrLandmark == null || singleChrLandmark == undefined || singleChrLandmark == '' || singleChrLandmark == 'chr:start-end')
+    {
+      landmarkChosen = false ;
+    }
+  }
+  else
+  {
+    var checkedChrs = Ext.ComponentMgr.get('textCheckboxGroup_multipleLandmarks').getValue() ;
+    var chrString = '' ;
+    for(ii=0; ii<checkedChrs.length; ii++)
+    {
+      if(ii == 0)
+      {
+        chrString = checkedChrs[ii].name.toString() ;
+      }
+      else
+      {
+        chrString = chrString +  ',' + checkedChrs[ii].name.toString() ;
+      }
+    }
+    requestPath = requestPath + '&landmark=' + chrString ;
+    if(chrString == '')
+    {
+      landmarkChosen = false ;
+    }
+  }
+  // BED format requires 'track' header according to UCSC standards
+  if(format == 'bed')
+  {
+    requestPath += '&ucscTrackHeader=true' ;
+  }
+  if(landmarkChosen)
+  {
+    /* Use a hidden iframe to initialize the download of the file (track data). */
+    Ext.DomHelper.append(document.body, {
+      tag: 'iframe',
+      frameBorder: 0,
+      width: 0,
+      height: 0,
+      css: 'display:none;visibility:hidden;height:1px;',
+      src: '/java-bin/apiCaller.jsp?trkDownload=true&trkFormat=' + format + '&rsrcPath='+encodeURIComponent(requestPath)
+    });
+  }
+  else
+  {
+    alert('No Landmark(s) selected. Please select one or more landmarks before downloading.') ;
+  }
+  return false;
+}
+
+/* This function will present the user with the right format specific options for downloading annotations. */
+function toggleFormatOptions(format)
+{
+  var formatSettingsGroup = Ext.ComponentMgr.get('textCheckboxGroup_lffSettings') ;
+  if(format == 'bed' || format == 'gff3' || format == 'gtf' || format == 'gff')
+  {
+    formatSettingsGroup.items.each( function(item){
+      if(item.name == 'Include Chromosome Definitions?')
+      {
+        item.hide() ;
+      }
+      else
+      {
+        item.show() ;
+      }
+    }) ;
+  }
+  else if(format == 'vwig' || format == 'fwig' || format == 'vcf') /* Hide all format options */
+  {
+    formatSettingsGroup.items.each( function(item){
+      item.hide() ;
+    }) ;
+  }
+  else if(format == 'bedGraph') /* Only column headers */
+  {
+    formatSettingsGroup.items.each( function(item){
+      if(item.name != 'Include a column header line?')
+      {
+        item.hide() ;
+      }
+      else
+      {
+        item.show() ;
+      }
+    }) ;
+  }
+  else /* lff: revert to defaults */
+  {
+    formatSettingsGroup.items.each( function(item){
+      if(item.name == 'UCSC Scaling? (Scores will be scaled between 0 and 1000)')
+      {
+        item.hide() ;
+      }
+      else
+      {
+        item.show() ;
+      }
+    }) ;
+  }
+}
+
+/* Add event handlers to the buttons in the button group as soon as the page is ready */
+/* This needs to be done here since the events are tool specific and not generic enough */
+Ext.onReady(function () {
+  var selectAllBtn = Ext.ComponentMgr.get('toggleEpsBtns_btn_0') ;
+  var selectNoneBtn = Ext.ComponentMgr.get('toggleEpsBtns_btn_1') ;
+  var selectCoreBtn = Ext.ComponentMgr.get('toggleEpsBtns_btn_2') ;
+  var checkboxGroup = Ext.ComponentMgr.get('textCheckboxGroup_multipleLandmarks') ;
+  var formatSettingsGroup = Ext.ComponentMgr.get('textCheckboxGroup_lffSettings') ;
+  selectAllBtn.on('click', function(){
+    checkboxGroup.items.each( function(item){
+      item.setValue(true) ;
+    }) ;
+  }) ;
+  selectNoneBtn.on('click', function(){
+    checkboxGroup.items.each( function(item){
+      item.setValue(false) ;
+    }) ;
+  }) ;
+  selectCoreBtn.on('click', function(){
+    checkboxGroup.items.each( function(item){
+      if(!(item.name.indexOf('_') > 0)) /* taken from the old UI: download.js */
+      {
+        item.setValue(true) ;
+      }
+      else
+      {
+        item.setValue(false) ;
+      }
+    }) ;
+  }) ;
+  /* The default format is lff, hide the 'UCSC scaling checkbox' */
+  formatSettingsGroup.items.each( function(item){
+    if(item.name == 'UCSC Scaling? (Scores will be scaled between 0 and 1000)')
+    {
+      item.hide() ;
+    }
+  }) ;
+  /* set the value for the chr select radio button to 'Single Chromosome' */
+  var chrRadio = document.getElementsByName('landmarkRadio') ;
+  var ii ;
+  for(ii=0; ii<chrRadio.length; ii++)
+  {
+    if(chrRadio[ii].value == 'singleChr')
+    {
+      chrRadio[ii].checked = true ;
+      break ;
+    }
+  }
+
+});
+
+function showLandmarks(value)
+{
+
+  var singleChrLandmark = Ext.ComponentMgr.get('textField_landmark') ;
+  var checkboxGroup = Ext.ComponentMgr.get('textCheckboxGroup_multipleLandmarks') ;
+  var btnGroup = Ext.ComponentMgr.get('btnGroup_toggleEpsBtns') ;
+  if(value == 'multChr')
+  {
+    if(Ext.isIE) /* Stupid IE needs an onblur to trigger the onchange event */
+    {
+      this.blur() ;
+      this.focus() ;
+    }
+    /* Disable the widget for getting landmark for a single chr */
+    singleChrLandmark.disable() ;
+    /* Show the checkbox group for selecting multiple chrs */
+    checkboxGroup.show() ;
+    /* Show buttons */
+    btnGroup.show() ;
+
+  }
+  else
+  {
+    /* Enable the widget for getting landmark for a single chr */
+    singleChrLandmark.enable() ;
+    /* Hide the checkbox group for selecting multiple chrs */
+    checkboxGroup.hide() ;
+    /* Hide btns */
+    btnGroup.hide() ;
+  }
+}
+</script>

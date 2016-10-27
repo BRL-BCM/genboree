@@ -1,0 +1,50 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "studyName": [
+        "^(?:^.+$)$",
+        "Study Name cannot be left blank"
+      ],
+      "sampleName": [
+        "^(?:^.+$)$",
+        "Sample Name cannot be left blank"
+      ],
+      "jobName": [
+        "^(?:^.+$)$",
+        "Job Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/files/?",
+        0,
+        1
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

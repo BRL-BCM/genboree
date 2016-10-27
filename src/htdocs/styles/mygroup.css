@@ -1,0 +1,21 @@
+
+/* Customize Sortable Tables */
+table.sortable a.sortheader {
+  color: white ;
+  font-weight: bold ;
+  white-space: normal ;
+  display: inline ;
+}
+table.sortable span.sortarrow {
+  color: yellow ;
+  font-weight: bold ;
+  font-size: 17px ;
+  text-decoration: none ;
+}
+.showbox {
+  height: 10px ;
+  width: 10px  ;
+}
+.showboxrow {
+  height: 14px ;
+}

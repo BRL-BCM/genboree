@@ -1,0 +1,34 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/REST/v\\d+/",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "required": [
+
+    ]
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

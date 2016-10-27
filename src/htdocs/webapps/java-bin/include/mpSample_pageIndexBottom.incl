@@ -1,0 +1,52 @@
+<table width="100%"    border="0" cellpadding="0" cellspacing="0"> 
+<TR>
+<TD  align="left" width="43%" colspan="2" align="left" >Page<%
+    ntemp = 0;
+    if (numPages <= maxDisplay )
+    for (int  n=0; n<numPages; n++) {
+    ntemp = n+1;
+    if (currentPageIndex == n) {
+    %>
+    <a href="#" id="ntemp"  onClick="setPageInfo('currentPage', <%=n%>,'navigator', '', 'viewForm');"><font color="green"> <%=ntemp%></font></a>&nbsp;&nbsp;
+    <%} else {%>
+    <a href="#"  id="ntemp"   onClick="setPageInfo('currentPage', <%=n%>,'navigator', '', 'viewForm');"> <font color="black"> <%=ntemp%></font></a>&nbsp;&nbsp;
+    <%}
+    }
+    else{
+    if(endPageNum > (numPages -1))
+    endPageNum = numPages -1;
+    for (int  n=startPageNum; n<=endPageNum; n++) {
+    ntemp = n+1;   
+    if (currentPageIndex == n) {
+    %>
+    <a href="#"  id="ntemp"  onClick="setPageInfo('currentPage', <%=n%>,'navigator', '', 'viewForm');"><font color="green"><%=ntemp%></font></a>&nbsp;&nbsp;
+    <%}else { %>
+    <a href="#"  id="ntemp"  onClick="setPageInfo('currentPage', <%=n%>,'navigator', '', 'viewForm');"> <font color="black"><%=ntemp%></font></a>&nbsp;&nbsp;
+    <%}} 
+       if (endPageNum < numPages-1) {
+    %>
+    <a  href="#"  name="morePages"  id="morePages" onClick="setPageInfo('currentPage',<%=endPageNum%>,'navigator', 'morePages', 'viewForm');"> <font color="black">more</font></a>   
+    <%}}%>
+</TD>
+<TD  align="right" width="43%" colspan="2" >
+<nobr><B> Samples/Page: </B>
+<select  id="pageDisplayNumBot"  name="pageDisplayNumBot"  BGCOLOR="white"  onChange="pageDisplayNum.value=pageDisplayNumBot.value;  this.form.submit(); " >
+<%
+    
+    for (int j=0; j<dispNum.length; j++) {
+           String sel = "";
+    if (dispNum[j]==displayNum)
+    sel = " selected ";  
+ %>
+    <option  value="<%=dispNum[j]%>" <%=sel%>> <%=dispNum[j]%></option>
+    <% } %>
+    </select>&nbsp; &nbsp;
+    <INPUT SIZE="14"  name="home" id="home" TYPE="button"  VALUE="<<"  onclick="setPageInfo('currentPage', <%=currentPageIndex%>,'navigator', 'home', 'viewForm');" >
+    <INPUT SIZE="14"  name="previous" id="previous" TYPE="button"  VALUE="<" onclick="setPageInfo('currentPage', <%=currentPageIndex%>, 'navigator', 'previous', 'viewForm');" >
+    <INPUT SIZE="14"  name="next" id="next" TYPE="button"  VALUE=">" onclick="setPageInfo('currentPage',<%=currentPageIndex %>, 'navigator', 'next', 'viewForm');" >
+    <INPUT SIZE="14"  name="last" id="last" TYPE="button"  VALUE=">>"  onclick="setPageInfo('currentPage',<%=currentPageIndex%>,  'navigator','last', 'viewForm');" >
+    </nobr>
+</TD>
+</tr>
+</table>
+

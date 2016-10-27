@@ -1,0 +1,12 @@
+<%# INIT %>
+<%
+  warningHtml = WorkbenchFormHelper.overflowMsgFromContext(@context)
+  warningHtml << "<div style='width: 50% ; margin-left: auto; margin-right: auto; margin-top: 10px; margin-bottom: 10px; text-align: center; font-weight: bold; color: #C64848;'></div>"
+%>
+
+<%# RENDER HTML %>
+<%= renderFrag(@toolIdStr, :wbJobWarning,
+    {
+      :html  => warningHtml
+    })
+%>

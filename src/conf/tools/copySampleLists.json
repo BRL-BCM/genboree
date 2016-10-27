@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "copySampleLists",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Copy Sample Lists",
+    "shortLabel": "Copy Sample Lists"
+  }
+}

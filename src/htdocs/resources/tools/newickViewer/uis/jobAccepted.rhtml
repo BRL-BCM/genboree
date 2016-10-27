@@ -1,0 +1,112 @@
+<div class="wbDialogAcceptedNewickViewer" id="wbDialogAcceptMsgDiv" >
+<%
+  if(@settings['d3JsCode'].nil? or @settings['d3JsCode'].empty?)
+%>
+      <div class="wbToolTitleInDialog wbSubmitMsg">
+        <%= @context['toolTitle'] %>
+      </div>
+      <div class="wbDialogFeedback wbDialogSuccess">
+        <br/>
+        <br/>
+        No Data Found
+        <br/>
+        <br/>
+        If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+      </div>
+<%
+  else
+    d3type = @settings['dendogram']
+    buff = nil
+    js = @settings['d3JsCode']
+    buff = %Q^<div  id="container" align="center" name='container' style="background-color: white; height:700px; width:950px; "></div>^
+%>
+  
+  <%= buff %>
+  <style type="text/css">
+    <%
+      if(d3type == 'cd' or d3type == 'hd')
+    %>
+        .node circle {
+          fill: #fff;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+        
+        .node {
+          font: 10px sans-serif;
+        }
+        
+        .link {
+          fill: none;
+          stroke: #ccc;
+          stroke-width: 1.5px;
+        }
+    <%
+      elsif(d3type == 'cdr')
+    %>
+        path.arc {
+          cursor: move;
+          fill: #fff;
+        }
+        
+        .node circle {
+          fill: #fff;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+        .node {
+          font-size: 10px;
+          pointer-events: none;
+        }
+        .link {
+          fill: none;
+          stroke: #ccc;
+          stroke-width: 1.5px;
+        }
+    
+    <%
+      elsif(d3type == 'hdc')
+    %>
+      .node circle {
+        cursor: pointer;
+        fill: #fff;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+      }
+      .node text {
+        font-size: 11px;
+      }
+      path.link {
+        fill: none;
+        stroke: #ccc;
+        stroke-width: 1.5px;
+      } 
+    <%
+      end
+    %>
+    .compass{
+      fill:  #fff;
+      stroke:  #000;
+      stroke-width:  1.5;
+    }
+    .svgButton{
+      fill:  #225EA8;
+      stroke:  #0C2C84;
+      stroke-miterlimit:	6;
+      stroke-linecap:  round;
+    }
+    .svgButton:hover{
+      stroke-width:  2;
+    }
+    .svgPlusMinus{
+      fill:  #fff;
+      pointer-events: none;
+    }
+  </style>
+  <script type="text/javascript">
+    <%= js%>
+  </script>
+<%
+  end
+%>
+</div>

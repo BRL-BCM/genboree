@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "deleteEp",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Entrypoints",
+    "shortLabel": "[NOT SET]"
+  }
+}

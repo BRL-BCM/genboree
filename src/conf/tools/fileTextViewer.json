@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "fileTextViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Text File Viewer",
+    "shortLabel": "[NOT SET]"
+  }
+}

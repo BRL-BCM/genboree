@@ -1,0 +1,164 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 500 : 320)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will generate bigwig files for existing tracks in Genboree.
+          You can either drag a track class or a track entity-list or a database (to generate bigwig files for all tracks within that class/entity-list/database) or drag tracks individually into &quot;Input Data&quot;.
+          <br>&nbsp;<br>
+          Each track will be associated with a checkbox which you can check to generate the bigwig file for that track. The value 'no file' will be associated with tracks that do not have bigwig files yet. A timestamp
+          will be present for tracks that have bigwig files indicating the time the file was last generated.
+          <br>&nbsp;<br>
+          Note that ALL the tracks should come from the same database and the tool cannot be used to generate bigWig files for tracks on another host.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%
+    # Get all the tracks (and their attributes) from the selected database. We will need to know which ones already have big wig files
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    dbUri = dbApiHelper.extractPureUri(@inputs[0])
+    uriObj = URI.parse(dbUri)
+    apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/trks?detailed=minDetails", @context['userId'])
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    resp = JSON.parse(apiCaller.respBody)['data']
+    trkArray = []
+    rowKeyArray = []
+    trkHash = @settings['trkHash']
+    urlHash = {}
+    #$stderr.puts "resp:\n\n#{resp.inspect}"
+    resp.each { |trk|
+      if(trkHash.key?(trk['name']))
+        bigWigValue = trk['bigWig'] == 'none' ? 'no file' : trk['bigWig']
+        trkArray << [ { 'name' => {:value => trk['name'], :checkbox => false } }, { 'bigWig' => { :value => bigWigValue, :checkbox => true } }]
+        rowKeyArray << trk['name']
+        urlHash[trk['name']] = trk['refs'][BRL::Genboree::REST::Data::DetailedTrackEntity::REFS_KEY]
+      end
+    }
+    #$stderr.puts "urlHash:\n\n#{urlHash.inspect}"
+  %>
+
+  <%
+    if(trkArray.size > 0)
+  %>
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dbUri} )
+      })
+    %>
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Generate BigWig Files",
+        :widgets =>
+        [
+          { :id => "trkArray", :label => "", :labelWidth => "50px",  :rowKeys => rowKeyArray, :type => :tabularCheckboxSection, :rows => trkArray, :headerRow => ['Track', 'BigWig File'], :urlHash => urlHash, :fontSize => "12px", :addDropList => true,
+            :options => {
+                          :all => { :label => "Select All"},
+                          :clear => { :label => "Clear All", :selected => true },
+                          :trksWithoutFiles => { :label => "Select tracks without BigWig Files" }
+                        }
+          },
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'trkArray'}
+        ]
+      })
+
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :submit }, { :type => :cancel} ]
+        })
+    %>
+    </form>
+    <script type="text/javascript">
+    function changeCheckboxSettingForTabularCheckboxSection(value, baseWidget)
+    {
+      var ii ;
+      var inputList = document.getElementsByClassName(baseWidget) ;
+      if(value == 'all')
+      {
+        for(ii = 0; ii < inputList.length; ii ++)
+        {
+          inputList[ii].checked = 'checked' ;
+        }
+      }
+      else if(value == 'clear')
+      {
+        for(ii = 0; ii < inputList.length; ii ++)
+        {
+          inputList[ii].checked = '' ;
+        }
+      }
+      else
+      {
+        for(ii = 0; ii < inputList.length; ii ++)
+        {
+          if(inputList[ii].value == 'no file')
+          {
+            inputList[ii].checked = 'checked' ;
+          }
+          else
+          {
+            inputList[ii].checked = '' ;
+          }
+        }
+      }
+    }
+    </script>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO TRACKS:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "This database does not have any user uploaded tracks. You can upload tracks to this database using the 'Upload Track Annotations' tool. "
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+        { :toolHelpOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

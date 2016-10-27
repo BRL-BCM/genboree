@@ -1,0 +1,286 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'brl/genboree/abstract/resources/databaseFiles'
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'pp'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+
+  @req = Apache.request
+  cgi = CGI.new()
+  @serverName = cgi.host
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+
+    refSeqId = context.cgi['rseq_id'].to_i
+    groupId = context.cgi['group_id'].to_i
+    userId = context.cgi['userId'].to_i
+    grpChanged = context.cgi['grpChanged'].strip
+    
+    dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil)
+    dbNameRows = dbu.selectRefseqById(refSeqId)
+    databaseName = dbNameRows.first['databaseName'] if(!dbNameRows.empty?)
+    refseqName = dbNameRows.first['refseqName'] if(!dbNameRows.empty?)
+    dbu.setNewDataDb(databaseName)
+
+    grpRows = dbu.selectGroupById(groupId)
+    groupName = grpRows.first['groupName'] if(!grpRows.empty?)
+
+    dbFilesObj = BRL::Genboree::Abstract::Resources::DatabaseFiles.new(groupName, refseqName)
+    # Use the API to load a json object that contains all the file info
+    # apiCaller.jsp handles this
+    
+    # construct resource URI that will be used by Javascript to get the file list using the API
+    filesRsrcUri = "/REST/v1/grp/#{CGI.escape(groupName)}/db/#{CGI.escape(refseqName)}/files"
+    fileRsrcUriBase = "/REST/v1/grp/#{CGI.escape(groupName)}/db/#{CGI.escape(refseqName)}/file/"
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+
+
+  if(grpChanged.to_i == 1 or !(refSeqId > 0)) %>
+    <p>Please select a Database.</p>
+  <% else %>
+
+<script>
+  var rowExpander;
+  filesRsrcUri = '<%= filesRsrcUri %>';
+  var fileRsrcUriBase = '<%= fileRsrcUriBase %>';
+  var escGroupName = '<%= CGI.escape(groupName) %>';
+  var escRefseqName = '<%= CGI.escape(refseqName) %>';
+</script>
+
+<style type="text/css">
+  .x-tree-root-ct {margin:0px; padding:0px;}
+  .x-tree-node-ct {margin:0px; padding:0px;}
+  .x-tree-node {margin:0px; padding:0px;}
+  
+  
+  
+  #leftPane {
+    float:left;
+    display:inline;
+    height:600px;
+    width:250px;
+    border:1px solid #c3daf9;
+    margin:0px;
+    padding:0px;
+  }
+  #resizeBarDiv {
+    float:left;
+    display:inline;
+    height:600px;
+    width:5px;
+    margin:0px;
+    padding:0px;
+    background:url('/javaScripts/ext-2.2/resources/images/default/sizer/e-handle.gif') no-repeat left center;
+    cursor: e-resize; 
+  }
+  
+  #rightPane {
+    float:left;
+    display:inline;
+    height:600px;
+    width:400px;
+    border:1px solid #c3daf9;
+    margin:0px;
+    padding:0px;
+  }
+  
+  #dbFileTreeDiv {
+    display:inline;
+    overflow:auto;
+    height:100%;
+    margin:0px;
+    padding:0px;
+  }
+  #dirContentsDiv {
+    float:left;
+    display:inline;
+    overflow:auto;
+    height:600px;
+    width:100%;
+    margin:0px;
+    padding:0px;
+  }  
+
+</style>
+
+<script type="text/javascript">
+Ext.onReady(function(){
+  // shorthand
+  var Tree = Ext.tree;
+  
+  fileTree = new Tree.TreePanel({
+    useArrows: true,
+    autoScroll: true,
+    animate: true,
+    enableDD:false,
+    lines: true,
+    containerScroll: true,
+    border: true,
+    rootVisible: false,
+    height: 600,
+    root: {
+      nodeType: 'async',
+      text: 'Files',
+      draggable: false,
+      id: 'src',
+      children: []
+    }
+  });
+
+  
+  Ext.QuickTips.init();
+    
+  var xg = Ext.grid;
+
+  // shared reader
+  var reader = new Ext.data.JsonReader({}, [
+    {name: 'label'},
+    {name: 'date', type: 'date', dateFormat: 'U', mapping: 'date.s'},
+    {name: 'description'},
+    {name: 'fileName'}
+  ]);
+
+  rowExpander = new xg.RowExpander({
+    tpl : new Ext.Template(
+      '<p><b>File Name:</b> {fileName}</p>',
+      '<p><b>Actions:</b> <a href="#" onclick="updateDbFile(fileRsrcUriBase+escape(\'{fileName}\'))">Update</a>, Delete</p>',
+      '<p><b>Description:</b> {description}</p>'
+    )
+  });
+  
+
+  
+  
+  fileGrid = new xg.GridPanel({
+    ds: new Ext.data.Store({
+      reader: reader,
+      data: []
+    }),
+    cm: new xg.ColumnModel([
+      rowExpander,
+      { id:'label',
+        header: "Label",
+        width: 270,
+        sortable: true,
+        dataIndex: 'label',
+        renderer: function(value, metaData, record, rowIndex, colIndex, store) {
+          var path = '/' + FILE_DIR + '/grp/' + escGroupName + '/db/' + escRefseqName + '/' + record.data.fileName ; 
+          return '<a href="' + path + '">' + record.data.label + '</a>';
+        }
+      },
+      { header: "Date",
+        width: 100,
+        sortable: true,
+        renderer: Ext.util.Format.dateRenderer('m/d/Y'),
+        dataIndex: 'date'
+      }
+    ]),
+    height:600,
+    plugins: rowExpander,
+    collapsible: true,
+    animCollapse: false,
+    iconCls:'icon-grid',
+    renderTo: 'dirContentsDiv'
+  });
+
+  // render the tree
+  fileTree.render('dbFileTreeDiv');
+//  tree.getRootNode().ownerTree.loadMask.show();
+
+  fileTree.on('click', loadFileListDetail);
+    
+  // Display loading gif
+  retrieveFileList()
+  
+  fileTree.getRootNode().expand();
+  
+
+
+});
+
+
+// function to convert API json object to extjs tree nodes
+// function to display API json object as file resources in right pane
+
+// How do we represent dirs and subdirs in the json index file
+//  Need to consider
+//   Path to get the file
+//   Uploading a file, select a subdir??
+//    All uploads would go to the upload subdir
+//   API representation considering the filename is unique
+//     could use url escaped '/'
+// files/uploaded/text.txt
+// Maybe the subdir has to be specified and is validated against the known subdirs (vgp, circos, upload, etc...)
+
+// Considering the files API resource
+//  Should it return ALL files like ls -R ?
+//  or should you be able to GET /files/upload which lists the files in that dir ?
+
+// Do we want to be able to support multiple levels of subdirs or just 1 level?
+// 
+
+//
+// Dirs could be virtual which would be a parameter in the index file
+//  couldn't have files with the same name,  no good
+//
+// Use actual dirs
+//  filename would contain dir
+//  
+
+// I think they're only exposed as file/<fileName>, but on disk they go into /uploads
+// and in the UI they are shown in /uploads.  UI has upload option, but only into the /uploads dir.
+// Confirm that users won't be able to upload to other dirs.
+
+// Need to adjust json file and files API resource to handle subdirs.  ALL files should be in a subdir of some sort.
+
+
+
+</script>
+<p>Database files are here.</p>
+<div id="filePaneContainer" onmousemove="getPos(event)" onmouseup="mouseStatus='up'">
+  <div id="leftPane" style="width:250px;">
+    <div name="dbFileTreeDiv" id="dbFileTreeDiv"></div>
+  </div>
+  <div name="resizeBarDiv" id="resizeBarDiv" onmousedown="setPos(event)" ></div>  
+  <div id="rightPane" style="width:400px;">
+    <div name="dirContentsDiv" id="dirContentsDiv"></div>
+  </div>
+</div>
+
+<% end %>
+<%
+
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the page.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+  
+
+%>

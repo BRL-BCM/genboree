@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "DESeq2",
+    "releaseStatus": "beta",
+    "version": "1.0.0"
+  },
+  "ui": {
+    "label": "Fold Change Calculation Using DESeq2",
+    "shortLabel": "Fold Change Calculation Using DESeq2",
+    "groupAccessUri": null
+  }
+}

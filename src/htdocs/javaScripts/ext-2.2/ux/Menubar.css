@@ -1,0 +1,46 @@
+div.x-menu.x-menubar {
+    background:#F0F0F0!important;
+    position:relative
+}
+div.x-menu.x-horizontal-menubar {
+    border: 0px none;
+    border-bottom:1px solid #777;
+    overflow:hidden;
+}
+div.x-menu.x-menubar .x-menu-list {
+    border:0px none;
+}
+div.x-menu.x-horizontal-menubar .x-menu-list {
+    margin-left:5px;
+    height:100%;
+}
+div.x-menu.x-horizontal-menubar .x-menu-list .x-menu-list-item {
+    text-decoration: none;
+    padding: 0px 10px;
+    display: block;
+    float: left;
+}
+div.x-menu.x-menubar .x-menu-list .x-menu-list-item {
+    border: 1px solid transparent;
+}
+div.x-menu.x-menubar .x-menu-list .x-menu-list-item.x-menu-item-active {
+    border: 1px solid #AACCF6;
+}
+div.x-menu.x-horizontal-menubar .x-menu-list .x-menu-single-item .x-menu-item {
+    background: transparent;
+    padding-right: 15px;
+}
+div.x-menu.x-horizontal-menubar .x-menu-list .x-menu-list-item .x-menu-item-arrow {
+    background: transparent url() no-repeat scroll right 0.6em;
+}
+div.x-menu.x-menubar .x-menu-list .x-menu-list-item .x-menu-item .x-menu-item-icon {
+    display: none;
+}
+div.x-menu.x-menubar .x-menu-list .x-menu-list-item {
+    background: transparent url() no-repeat scroll right 0.6em;
+}
+.x-menu.x-horizontal-menubar a.x-menu-item {
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    padding-right: 0px !important
+}

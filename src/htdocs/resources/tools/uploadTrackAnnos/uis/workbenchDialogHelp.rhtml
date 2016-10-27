@@ -1,0 +1,111 @@
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool allows uploading of annotations as <i>Tracks</i> into a Genboree database. Currently supported
+          formats include:
+          <ul>
+            <li><a href=\"http://genboree.org/java-bin/showHelp.jsp?topic=lffFileFormat\" target=\"_blank\">LFF</a></li>
+            <li><a href=\"http://genome.ucsc.edu/goldenPath/help/wiggle.html\" target=\"_blank\">Wiggle (fixedStep/variableStep)</a></li>
+            <li><a href=\"https://earray.chem.agilent.com/earray/helppages/index.htm#probe_file_formats_and_requirements_for_uploading.htm\" target=\"_blank\">Agilent Probes</a></li>
+            <li><a href=\"http://genome.ucsc.edu/FAQ/FAQformat.html#format2\" target=\"_blank\">Blat (PSL version 3)</a></li>
+            <li><a href=\"http://perl.4ngs.com/2012/03/parse-blast-output-tabular-format/\" target=\"_blank\">Blast (Tab delimited)</a></li>
+            <li><a href=\"http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41\" target=\"_blank\">VCF</a></li>
+            <li><a href=\"http://genome.ucsc.edu/goldenPath/help/bedgraph.html\" target=\"_blank\">BedGraph</a></li>
+            <li>Pash 2.0.</li>
+            <li><a href=\"http://genome.ucsc.edu/FAQ/FAQformat.html#format1\" target=\"_blank\">Bed</a></li>
+            <li><a href=\"http://genome.ucsc.edu/goldenPath/help/bigBed.html\" target=\"_blank\">BigBed</a></li>
+            <li><a href=\"http://genome.ucsc.edu/goldenPath/help/bigWig.html\" target=\"_blank\">BigWig</a></li>
+            <li><a href=\"http://www.sequenceontology.org/gff3.shtml\" target=\"_blank\">GFF3</a></li>
+          </ul>
+          <br>
+          <b>Additional Info about tracks</b>:</br>
+          A Track can generally be regarded as either a <i>Regions of Interest</i> (ROI) track or a <i>High Density Score</i> track. ROI tracks can be uploaded
+          via heavy weight annotation formats such as LFF, GFF3 or BED which support additional annotation information for each record of data. Score tracks can be uploaded via bedGraph or wig (fwig/vwig) formats. These formats are ideal for uploading high density high volume score tracks since they only
+          contain score information for genomic coordinates.
+          <br>&nbsp;<br>
+          <b>Special Notes</b>:
+          <ul>
+            <li><b>VCF</b>: The track 'type' for VCF will not be solicited from the user. Instead, sample name(s) from the VCF file will be used as track type.</li>
+            <li><b>GFF3</b>: The 'Name' tag in the <i>attributes</i> field will be used to name the annotations. If 'Name' is absent, 'ID' will be used and if 'ID' is absent, 'Alias' will be used.
+            If all three tags are missing, the landmark (chr:start-stop) will be used as name.</li>
+            <li><b>BED/BedGraph/BigBed/BigWig</b>: You can upload files that are 0-based and half-open according to <a href=\"http://genome.ucsc.edu/FAQ/FAQformat.html#format1\" target=\"_blank\">UCSC</a> specifications or use the conventional 1 based and fully closed format like some of the other formats (LFF, GFF3, etc). Advanced users may also force the coordinate system with the provided option. This adjustment is intended to allow unconventional 1-based BED-like formats. BigWig is included in this category because files built with UCSC 'toBigWig' tools may be built from BED-like formats. However, this option will not alter BigWig coordinate systems when the original file is also a Wig.</li>
+            <li><b>Skip non-assembly chromosomes</b>: Check to upload only those annotations that map to chromosomes/entrypoints found in the reference genome assembly (The genome assembly of the target database). If you uncheck this option and a chromosome is found that is not part of the assembly, your upload job will not complete successfully. You can upload custom chromosomes/entrypoints using the 'Upload Entrypoints' tool under Data/Entrypoints.</li>
+            <li><b>Skip out-of-range annotations</b>: Check to upload only those annotations that are within the range of an entrypoint/chromosome. Any annotation that starts after the length of the chromosome or ends before the beginning of the chromosome will be removed.</li>
+          </ul>
+        "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Optionally drag the data <u>file</u> with the annotation data into &quot;Input Data&quot;.',
+          "Otherwise the settings dialog will prompt you to choose a data file on your local computer. "
+        ],
+        :types              => [ [ 'File', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The track will be uploaded in that database' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Input Format',    'Format of the file you wish to upload as annotations. ' ],
+          [ 'Submit', "Once you've reviewed the input tracks and the output destination database, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

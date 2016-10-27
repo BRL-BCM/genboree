@@ -1,0 +1,49 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%=
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  formTag
+%>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Delete Database" } ) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will PERMANENTLY delete a database and all its contents from a group.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+
+<%# Input data summary %>
+ <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Database To Delete:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @inputs } )
+    })
+ %>
+
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit}, { :type => :cancel} ]
+    })
+%>
+
+</form>
+<script type="text/javascript">
+</script>

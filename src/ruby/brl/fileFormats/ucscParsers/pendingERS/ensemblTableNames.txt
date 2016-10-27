@@ -1,0 +1,7 @@
+ccdsInfo.sql
+ensGene.sql
+ensGtp.sql
+ensPep.sql
+knownToEnsembl.sql
+sfDescription.sql
+superfamily.sql

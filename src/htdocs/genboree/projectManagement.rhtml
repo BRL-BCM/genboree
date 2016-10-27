@@ -1,0 +1,521 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'json'
+  require 'net/http'
+  require 'uri'
+  require 'brl/util/util'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/projectManagement/projectManagement'
+  require 'brl/genboree/abstract/resources/group'
+
+  $VERBOSE = true
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+  MODE2NUM = { :'default' => -1, :'create' => 0, :'rename' => 1, :'delete' => 2, :'copy' => 3, :'move' => 4}
+  NUM2MODE = MODE2NUM.invert
+  MODE2ACCESS = { :'default' => nil, :'create' => 'w', :'rename' => 'w', :'delete' => 'o', :'copy' => 'o', :'move' => 'o'}
+
+  # --------------------------------------------------------------------------
+  # METHODS
+  # --------------------------------------------------------------------------
+  def getProjectListForGroup(dbu, context)
+    # Get projects in current group
+    projectRows = dbu.getProjectsByGroupId(context[:groupId])
+    projectRows.sort! { |aa, bb| aa["name"].downcase <=> bb["name"].downcase }
+    return (context[:projectRows] = projectRows)
+  end
+
+  def handleMode(mode, dbu, context)
+    retVal = ''
+    if(mode == :'default')
+      retVal << getForm(mode, context)
+    else
+      # Get access level
+      isModeAllowed = BRL::Genboree::GenboreeDBHelper.checkUserAllowed(context[:userId], context[:groupId], MODE2ACCESS[mode], dbu)
+      feedbackMsg = nil
+      showForm = true
+      unless(isModeAllowed)
+        feedbackMsg = "<div class='error'>ERROR: You do not have permission to #{mode} projects in this group.</div>"
+        showForm = false
+      else
+        if(context[:projectRows].empty? and mode != :'create')
+          feedbackMsg = "<br><i>[ This group does not contain any projects yet. ]</i>"
+          showForm = false
+        else
+          submitted = context[:submitted]
+          if(submitted) # Are we processing a submission?
+            feedbackMsg, showForm = processSubmission(mode, dbu, context)
+          end
+        end
+        # Refresh projectRows
+        getProjectListForGroup(dbu, context)
+      end
+      retVal << feedbackMsg unless(feedbackMsg.nil?)
+      retVal << getForm(mode, context) if(showForm)
+    end
+    return retVal
+  end
+
+  def processSubmission(mode, dbu, context)
+    feedbackMsg = nil
+    showForm = true
+    projName = context.cgi['projectName'].to_s.strip
+    if(projName.empty? and mode != :'move' and mode != :'copy')
+      feedbackMsg = "<div class='error'>ERROR: The project name cannot be empty.</div>"
+    else
+      # --------------------------------------------------------------------------
+      if(mode == :'create') # Process CREATE
+        # Add new project
+        success = BRL::Genboree::ProjectManagement.createNewProject(projName, context)
+        feedbackMsg = if(success == :OK)
+                        "<div class='success'>SUCCESS: The project '#{CGI.escapeHTML(projName)}' was created.</div>"
+                      else # error creating project
+                        if(success == :ALREADY_EXISTS) # then trying to create a top-level project that already exists
+                          "<div class='error'>ERROR: The project name '#{CGI.escapeHTML(projName)}' has already been taken.</div>"
+                        elsif(success == :DOESNT_EXIST) # then trying to create sub-projects (possibly nested ones) under non-existent top-level project
+                          "<div class='error'>ERROR: Cannot created sub-projects under a non-existent top-level project! Please create the main (top-level) project first.</div>"
+                        elsif(success == :USES_RESERVED_WORD or success == :INVALID_NAME) # then project name contains a reserved word
+                          "<div class='error'>ERROR: Your project name contains a reserved word or is otherwise an invalid name. Given the obscurity of the reserved words, this could have been intentional. Please rename your project.</div>"
+                        elsif(success == :ACCESS_DENIED) # then user doesn't have permission to modify projects within the group
+                          "<div class='error'>ERROR: You do not have permission to alter projects within this group.</div>"
+                        elsif(success == :SESS_GROUP_NOT_SYNC) # then groupId in session (context[:groupId] doesn't match the project's group, suggesting dissync)
+                          "<div class='error'>ERROR: You are trying to modify a project that exists in a different group than the currently active one.</div>"
+                        else # :FATAL or unspecified (which is bad)
+                          "<div class='error'>ERROR: A severe error occurred trying to create the project. It may be in an incomplete state. " +
+                          "Please contact <a href='mailto:#{context[:genbConfig].dbAdminEmail}?subject=Project management'>#{context[:genbConfig].gbAdminEmail}</a> about this error.</div>"
+                        end
+                      end
+        showForm = false
+      # --------------------------------------------------------------------------
+      elsif(mode == :'rename') # Process RENAME
+        newProjName = context.cgi['newProjectName'].to_s.strip
+        if(newProjName.empty?)
+          feedbackMsg = "<div class='error'>ERROR: The new project name cannot be empty.</div>"
+        else # Rename project
+          success = BRL::Genboree::ProjectManagement.renameProject(projName, newProjName, context)
+          feedbackMsg = if(success == :OK)
+                          "<div class='success'>SUCCESS: The project '#{CGI.escapeHTML(projName)}' was renamed to '#{CGI.escapeHTML(newProjName)}'.</div>"
+                        elsif(success == :DOESNT_EXIST)
+                          "<div class='error'>ERROR: no such project '#{CGI.escapeHTML(projName)}'. Perhaps it was already renamed?"
+                        elsif(success == :ALREADY_EXISTS)
+                          "<div class='error'>ERROR: The project name '#{CGI.escapeHTML(newProjName)}' has already been taken. Cannot rename.</div>"
+                        elsif(success == :USES_RESERVED_WORD or success == :INVALID_NAME) # then project name contains a reserved word
+                          "<div class='error'>ERROR: Your replacement project name contains a reserved word or is otherwise an invalid project name. Given the obscurity of the reserved words, this could have been intentional. Please rename the project to something else.</div>"
+                        elsif(success == :DEPTH_NOT_SAME) # old project and new project not at same depth
+                          "<div class='error'>ERROR: Your replacement project name is at a different depth than the current name. You cannot change the depth of nested projects via renaming.</div>"
+                        elsif(success == :PATHS_NOT_SAME)
+                          "<div class='error'>ERROR: Your replacement project name is on a different depth than the current name. You cannot change the depth or path to the sub-project va renaming.</div>"
+                        elsif(success == :ACCESS_DENIED) # then user doesn't have permission to modify projects within the group
+                          "<div class='error'>ERROR: You do not have permission to alter projects within this group.</div>"
+                        elsif(success == :SESS_GROUP_NOT_SYNC) # then groupId in session (context[:groupId] doesn't match the project's group, suggesting dissync)
+                          "<div class='error'>ERROR: You are trying to modify a project that exists in a different group than the currently active one.</div>"
+                        else # :FATAL or unspecified (which is bad)
+                          "<div class='error'>ERROR: there was a problem renaming the project. It may be in an incomplete state. " +
+                          "Please contact <a href='mailto:#{context[:genbConfig].dbAdminEmail}?subject=Project management'>#{context[:genbConfig].gbAdminEmail}</a> about this error.</div>"
+                        end
+          showForm = false
+        end
+      # --------------------------------------------------------------------------
+      elsif(mode == :'move') # Process Move
+        # Form input is constructed by JS as payload
+        payloadStr = context.cgi['payload']
+        payload = JSON::parse(context.cgi['payload'])
+        if(payload.empty?)
+          feedbackMsg = "<div class='error'>ERROR: There was an error submitting this form.</div>"
+        else
+          # Get targetGroupId, newGroupName, projects
+          targetGroupId = payload['targetGroupId'].strip
+          newGroupName = payload['newGroupName'].strip
+          projects = payload['projects']
+          validationStatus = :OK
+
+          # Process Group, if new, try to create
+          if(targetGroupId == 'new')
+            validationStatus = BRL::Genboree::Abstract::Resources::Group.validateGroupName(dbu, newGroupName)
+            if (validationStatus == :OK)
+              targetGroupId = BRL::Genboree::Abstract::Resources::Group.createGroupForUser(dbu, newGroupName, context.cgi['userId'])
+              feedbackMsg = "The group #{newGroupName} was created and you have been added as Administrator.<br>"
+              feedbackMsg += "<a href=\"/java-bin/mygroup.jsp?group_id=#{targetGroupId}\">Click here to view the new group: #{newGroupName}.</a><br>"
+            end
+          end
+
+          failStatus = validationStatus
+          projectMsg = '' # will be used in feedbackMsg
+          if (validationStatus == :OK and targetGroupId.to_i > 0)
+            projects.each { |project|
+              status = BRL::Genboree::ProjectManagement.moveProjectById(project['id'], targetGroupId, context)
+              if (status == :OK) # build Feedback message
+                projectMsg += "<li>Project: #{project['name']} was moved successfully</li>"
+              else
+                projectMsg += "<li>Project: #{project['name']} was NOT moved (#{status})</li>"
+                failStatus = status
+              end
+            }
+          end
+
+          feedbackMsg = if(failStatus == :OK)
+                          "<div class='success'>SUCCESS: #{projectMsg}</div>"
+                        elsif(failStatus == :GRP_ALREADY_EXISTS)
+                          "<div class='error'>ERROR: The group name that you have specified is already in use.</div>"
+                        else # :FATAL or unspecified (which is bad)
+                          "<div class='error'>ERROR: A severe error occurred trying to move at least on of the selected projects. #{projectMsg}</div>"
+                        end
+          if(validationStatus == :OK)
+            showForm = false
+          else
+            # reset the payload str because we may have validation error info that should be handled and displayed
+            # Setting it in context because it is passed to getForm
+            context['payloadStr'] = payload.to_json();
+          end
+        end
+      # --------------------------------------------------------------------------
+      elsif(mode == :'copy') # Process Copy
+        payloadStr = context.cgi['payload']
+        payload = JSON::parse(context.cgi['payload'])
+        if(payload.empty?)
+          feedbackMsg = "<div class='error'>ERROR: There was an error submitting this form.</div>"
+        else
+          # Get targetGroupId, newGroupName, projectIds
+          targetGroupId = payload['targetGroupId'].strip
+          newGroupName = payload['newGroupName'].strip
+          projects = payload['projects']
+          validationStatus = :OK
+          # Validate new Project names ensuring that they are all unique
+          projects.each { |project|
+            project['status'] = BRL::Genboree::Abstract::Resources::Project.validateProjectName(dbu, project['newName'])
+            if(project['status'] != :OK)
+              validationStatus = project['status']
+              project['status'] = BRL::Genboree::ProjectManagement.getErrMsg(validationStatus)
+            end
+          }
+
+          # If project validation is OK, process Group, if new, try to create
+          if(validationStatus == :OK and targetGroupId == 'new')
+            validationStatus = BRL::Genboree::Abstract::Resources::Group.validateGroupName(dbu, newGroupName)
+            if (validationStatus == :OK)
+              targetGroupId = BRL::Genboree::Abstract::Resources::Group.createGroupForUser(dbu, newGroupName, context.cgi['userId'])
+              feedbackMsg = "The group #{newGroupName} was created and you have been added as Administrator.<br>"
+              feedbackMsg += "<a href=\"/java-bin/mygroup.jsp?group_id=#{targetGroupId}\">Click here to view the new group: #{newGroupName}.</a><br>"
+            end
+          end
+
+          # If validation is ok, and group is ok, copy the projects
+          status = validationStatus
+          projectMsg = ''
+          if (validationStatus == :OK and targetGroupId.to_i > 0)
+            projects.each { |project|
+              copyStatus = BRL::Genboree::ProjectManagement.copyProject(project['id'], project['newName'], targetGroupId, context)
+              if (copyStatus == :OK) # build Feedback message
+                project['status'] = :PRJ_COPIED
+                projectMsg += "<li>Project: #{project['name']} was copied successfully</li>"
+              else
+                status = copyStatus
+                projectMsg += "<li>Project: #{project['name']} was NOT copied</li>"
+              end
+            }
+          end
+
+          feedbackMsg = if(status == :OK)
+                          "<div class='success'>SUCCESS: #{projectMsg}</div>"
+                        else # error moving project
+                          if(status == :ALREADY_EXISTS)
+                            "<div class='error'>ERROR: The project name that you have specified is already in use.</div>"
+                          elsif(status == :GRP_ALREADY_EXISTS)
+                            "<div class='error'>ERROR: The group name that you have specified is already in use.</div>"
+                          elsif(status == :USES_RESERVED_WORD)
+                            "<div class='error'>ERROR: Your project name contains a reserved word. Given the obscurity of the reserved words, this must have been intentional. Please rename your project.</div>"
+                          elsif(status == :INVALID_NAME)
+                            "<div class='error'>ERROR: One or more of your project names contain characters that are not allowed.  Please rename your project.</div>"
+                          elsif(status == :DOESNT_EXIST)
+                            "<div class='error'>ERROR: Cannot created sub-projects under a non-existent top-level project! Please create the main (top-level) project first.</div>"
+                          elsif(status == :ACCESS_DENIED)
+                            "<div class='error'>ERROR: You do not have permission to alter projects within this group.</div>"
+                          elsif(status == :SESS_GROUP_NOT_SYNC)
+                            "<div class='error'>ERROR: You are trying to modify a project that exists in a different group than the currently active one.</div>"
+                          else # :FATAL or unspecified (which is bad)
+                            "<div class='error'>ERROR: A severe error occurred trying to copy the project (#{status}). It may be in an incomplete state. " +
+                            "Please contact <a href='mailto:#{context[:genbConfig].dbAdminEmail}?subject=Project management'>#{context[:genbConfig].gbAdminEmail}</a> about this error.</div>"
+                          end
+                        end
+          if(validationStatus == :OK)
+            showForm = false
+          else
+            # reset the payload str because we may have validation error info that should be handled and displayed
+            # Setting it in context because it is passed to getForm
+            context['payloadStr'] = payload.to_json();
+          end
+        end
+      # --------------------------------------------------------------------------
+      elsif(mode == :'delete') # Process DELETE
+        success = BRL::Genboree::ProjectManagement.deleteProject(projName, context)
+        feedbackMsg = if(success == :OK)
+                        "<div class='success'>SUCCESS: The project '#{CGI.escapeHTML(projName)}' was deleted.</div>"
+                      elsif(success == :DOESNT_EXIST)
+                        "<div class='error'>ERROR: The project doesn't exist. Maybe it was already deteled?"
+                        elsif(success == :ACCESS_DENIED) # then user doesn't have permission to modify projects within the group
+                          "<div class='error'>ERROR: You do not have permission to alter projects within this group.</div>"
+                        elsif(success == :SESS_GROUP_NOT_SYNC) # then groupId in session (context[:groupId] doesn't match the project's group, suggesting dissync)
+                          "<div class='error'>ERROR: You are trying to modify a project that exists in a different group than the currently active one.</div>"
+                      else # :FATAL or unspecified (which is bad)
+                        "<div class='error'>ERROR: There was a problem deleting the project, It may be in an incomplete state. " +
+                        "Please contact <a href='mailto:#{context[:genbConfig].dbAdminEmail}?subject=Project management'>#{context[:genbConfig].gbAdminEmail}</a> about this error.</div>"
+                      end
+        showForm = false
+      end
+    end
+    return [feedbackMsg, showForm]
+  end
+
+  def getForm(mode, context)
+    # Start of Form
+    retVal = '<table width="100%" cellspacing="2" cellpadding="4" border="0">'
+    # --------------------------------------------------------------------------
+    if(mode == :'default')
+      retVal = %q{ <span style="font-size: 13pt; font-weight: bold;">Projects in this Group:</span><br> }
+      if(context[:projectRows].empty?)
+        retVal << %q{ <br><i>[ This group does not contain any projects yet. ]</i> }
+      else
+        retVal << %q{ <ul class="indent1"> }
+        context[:projectRows].each { |projRow|
+          projName = projRow["name"]
+          retVal << %Q{ <li><a href="/java-bin/project.jsp?projectName=#{CGI.escape(projName)}">#{projName}</a></li> }
+        }
+        retVal << %q{ </ul><br> }
+      end
+    # --------------------------------------------------------------------------
+    elsif(mode == :'create') # CREATE Project Form
+      retVal << %q{
+        <tr>
+          <td class="form_body"><b>New Project Name:</b></td>
+          <td class="form_body">
+            <input id="projectName" name="projectName" class="txt projName" type="text" value="" maxlength="255">
+          </td>
+      }
+    # --------------------------------------------------------------------------
+    elsif(mode == :'rename') # RENAME Project Form
+      retVal << %q{
+        <tr>
+          <td class="form_body"><b>Project:</b></td>
+          <td class="form_body">
+            <select id="projectName" name="projectName" class="txt projName">
+      }
+      context[:projectRows].each { |projRow|
+        projName = projRow["name"]
+        retVal << %Q{ <option value='#{CGI.escapeHTML(projName)}'>#{CGI.escapeHTML(projName)}</option> }
+      }
+      retVal << %q{
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td class="form_body"><b>New Project Name:</b></td>
+          <td class="form_body">
+            <input id="newProjectName" name="newProjectName" class="txt projName" projName type="text" value="" maxlength="255">
+          </td>
+      }
+    # --------------------------------------------------------------------------
+    elsif(mode == :'delete') # DELETE Project Form
+      retVal << %q{
+        <tr>
+          <td class="form_body"><b>Project:</b></td>
+          <td class="form_body">
+            <select id="projectName" name="projectName" class="txt projName">
+      }
+      context[:projectRows].each { |projRow|
+        projName = projRow["name"]
+        retVal << %Q{ <option value='#{CGI.escapeHTML(projName)}'>#{CGI.escapeHTML(projName)}</option> }
+      }
+      retVal << %q{
+            </select>
+          </td>
+      }
+    # --------------------------------------------------------------------------
+    elsif(mode == :'copy' or mode == :'move') # COPY/MOVE Project Form
+      # Javascript code that differs for copy and move
+      toggleJS = helpTextJS = ''
+      if(mode == :copy)
+        toggleJS = 'toggleNewNameDiv(e);'
+        helpTextJS = 'selectProjectsCopy'
+      elsif (mode == :move)
+        helpTextJS = 'selectProjectsMove'
+      end
+      retVal << %Q{
+        <tr>
+          <td class="form_content">
+            <script>
+              var prjNames = [] ;
+              var prjCheckboxes = [] ;
+              var prjNewNameTexts = [] ;
+              var targetGroups = [] ;
+            </script>
+            <fieldset>
+              <legend>
+                Select Projects
+                <a onclick="return displayHelpPopup(this, helpMessages['#{helpTextJS}'].text, helpMessages['targetGroup'].title);" href="javascript:void(0);" id="ext-gen83">
+                  <img width="16" height="16" border="0" style="margin-left: 5px;" src="/images/gHelp1.png"/>
+                </a>
+              </legend>
+              <input type="hidden" name="payload" id="payload" />
+              <div id="selectButtons" style="padding-bottom:6px;">
+                <button class="btn" onclick="prjCheckboxes.each(function(e){ e.checked = 1; #{toggleJS} });return false;">Select All</button>&nbsp;
+                <button class="btn" onclick="prjCheckboxes.each(function(e){ e.checked = 0; #{toggleJS} });return false;">Select None</button>
+              </div>
+      }
+      context[:projectRows].each { |projRow|
+        projName = projRow["name"]
+        projId = projRow["id"]
+        # Explain this
+        onClickFunction = (mode == :copy) ? "toggleNewNameDiv(this);" : ""
+        retVal << %Q{
+              <div style="float:left;width:40%;">
+                <input type="checkbox" id="prjIds[#{projId}]" name="prjIds[#{projId}]" value="#{projId}" onclick="#{onClickFunction}"/>
+                <label for="prjIds[#{projId}]">#{CGI.escapeHTML(projName)}</label>
+                <script>prjCheckboxes.push($('prjIds[#{projId}]'));prjNames.push('#{projName}');</script>
+              </div>
+              <div style="float:left;width:59%;display:none;" id="div_prjIds[#{projId}]">
+                <label><b>New Name:</b></label>&nbsp;
+                <input type="text" id="prjNewName[#{projId}]" name="prjNewName[#{projId}]" />
+                <script>prjNewNameTexts.push($('prjNewName[#{projId}]'))</script>
+              </div>
+              <br clear="all" />
+        }
+      }
+      # Get target groups - must be Admin access level.
+      targetGroups = context[:dbu].getGroupsByUserIdAndAccess(context[:userId], ['o'])
+      retVal << %Q{
+            </fieldset><br />
+            <fieldset>
+              <legend>
+                #{mode.to_s.capitalize} Selected Projects to Group:
+                <a onclick="return displayHelpPopup(this, helpMessages['targetGroup'].text, helpMessages['targetGroup'].title);" href="javascript:void(0);" id="ext-gen83">
+                  <img width="16" height="16" border="0" style="margin-left: 5px;" src="/images/gHelp1.png"/>
+                </a>
+              </legend>
+              <select name="targetGroupId" id="targetGroupId" style="width:150px;max-width:150px;" class="txt" onchange="document.getElementById('newGroupDiv').style.display=(this.value=='new')?'inline':'none'">
+                <option value="">Choose Existing Group</option>
+                <optgroup>
+      }
+      targetGroups.each { |key, name|
+        # Don't display the
+        unless(mode == :'move' and key.to_i == context[:groupId].to_i)
+          retVal << %Q{ <option value="#{key}">#{name}</option><script>targetGroups.push('#{name}')</script> }
+        end
+      }
+      retVal << %q{
+              </optgroup>
+              <option value="new">New Group</option>
+            </select>
+            <div id="newGroupDiv" style="display:none">
+              <b>New Group Name:</b>&nbsp;<input name="newGroupName" id="newGroupName" class="txt" type="text" size="15">
+            </div>
+            </fieldset>
+          </td>
+      }
+      # add values to form if there are validation issues.
+      unless(context['payloadStr'].nil? or context['payloadStr'].empty?)
+        retVal << %Q{
+          <script>
+            var payload = #{context['payloadStr']} ;
+            initFormFromPayload() ;
+          </script>
+      }
+      end
+    end
+    unless(mode == :'default')
+      # End of Form
+      retVal << %Q{
+          </tr>
+          <tr>
+            <td colspan="2">
+              <div id="btnset2" style="display: block;">
+                <input id="submitted" class="btn" type="submit" value="#{mode.to_s.capitalize}" name="submitted">
+                <input id="cancelled" class="btn" type="button" value=" Cancel " name="cancelled" onclick="window.location='/java-bin/projectManagement.jsp' ; return false;">
+              </div>
+            </td>
+          </tr>
+          </table>
+      }
+    end
+    return retVal
+  end
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = dbu = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+    # Context in variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    context[:groupId] = getGroupIdXHeader(context.cgi)
+    context[:userId] = context.cgi['userId']
+    context[:mode] = mode = ((context.cgi['mode'].nil? or context.cgi['mode'].empty?) ? :'default' : NUM2MODE[context.cgi['mode'].to_i])
+    context[:submitted] = ((context.cgi['submitted'].nil? or context.cgi['submitted'].empty?) ? false : true)
+    context[:errCode] = OK
+    context[:err] = nil
+    context[:timer] = timer
+    payloadStr = '' # used for copy/move form
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+    # First, get genboree config and a dbUtil instance
+    context[:genbConfig] = context.genbConf
+    context[:dbu] = dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil, nil)
+%>
+    <link type="text/css" href="/styles/projectManagement.css?jsVer=<%= context.genbConf.jsVer %>" rel="stylesheet"></link>
+    <script type='text/javascript' src='/javaScripts/projectManagement.js?jsVer=<%= context.genbConf.jsVer %>'></script>
+    <form id='projectManage' name='projectManage' method='post' action='projectManagement.jsp' onsubmit='return validateProjForm(this, event) ;'>
+      <input id='mode' name='mode' type='hidden' value='<%= MODE2NUM[mode] %>'>
+<%
+      # Get projects in current group
+      getProjectListForGroup(dbu, context)
+      # Output project list for current group as javascript datastructure
+      projsInGrp = []
+      context[:projectRows].each_index { |ii|
+        projRow = context[:projectRows][ii]
+        projsInGrp << projRow['name']
+      }
+      jsStr = "projectsInGroup = #{projsInGrp.to_json}"
+%>
+      <script type="text/javascript">
+        <%= jsStr %>
+      </script>
+      <!-- mode results -->
+      <%= handleMode(mode, dbu, context) %>
+    </form>
+<%
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating project management page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the main project page for this project.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  ensure
+    dbu.clear() unless(dbu.nil?)
+    context[:projectRows].clear() unless(context[:projectRows].nil?)
+  end # begin
+
+%>

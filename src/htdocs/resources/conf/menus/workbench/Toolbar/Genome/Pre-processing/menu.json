@@ -1,0 +1,8 @@
+[
+  {
+    "text": "Remove Duplicate Mappings",
+    "tooltip": "Remove both clonal duplicates (via Picard) and/or non-unique read mappings from a BAM/SAM file.",
+    "idStr": "removeDuplicates",
+    "hidden": true
+  }
+]

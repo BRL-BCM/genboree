@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "seqImport",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Import 16S rRNA Sequences",
+    "shortLabel": "Import 16S rRNA Sequences"
+  },
+  "cluster": {
+    "walltime": "48:00:00"
+  }
+}

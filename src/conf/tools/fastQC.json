@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "fastQC",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 8,
+    "pvmem": "2929mb",
+    "mem" : null,
+    "vmem" : null,
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "QC Reads by FastQC",
+    "shortLabel": "FastQC",
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/Epigenome%20ToolSet%20Demo%20Input%20Data"
+  }
+}

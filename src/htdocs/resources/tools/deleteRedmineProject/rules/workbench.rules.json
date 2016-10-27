@@ -1,0 +1,28 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/redminePrj/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

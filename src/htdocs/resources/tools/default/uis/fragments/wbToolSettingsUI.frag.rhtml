@@ -1,0 +1,11 @@
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => @sectionTitle,
+      :sectionHtml => renderFrag(@toolIdStr, :wbWidgets,
+        {
+          :widgets => @widgets,
+          :dbu => @dbu
+        }
+      )
+    })
+%>

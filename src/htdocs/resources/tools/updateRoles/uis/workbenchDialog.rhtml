@@ -1,0 +1,118 @@
+<%
+  hasAccess = true
+  width = (hasAccess ? 600 : 320)
+  height = (hasAccess ? 450 : 320)
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Update Roles" } ) %>
+<%
+  if(hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will allow you to update the role of each user in a group to one of the following:
+        <ul>
+          <li>Administrator: Has ownership access to all contents in the group. Can delete, edit and add users to group and upload annotations to any of the databases in the group.</li>
+          <li>Author: Has read/write access to all contents in the group. Cannot delete, edit and add users to group but can upload annotations to any of the databases in the group.</li>
+          <li>Subscriber: Has only read access to contents in the group. Cannot create groups or databases or upload annotations to a database.</li>
+          <li>Revoke: Remove user from the group.</li>
+        </ul>
+        <br>&nbsp;<br>
+        Note that this tool is not multi-host compliant and cannot be used to update roles of users in a group on a different host other than the one pointed to by the URL in your browser.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Update roles in group:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs} )
+  })
+%>
+<%
+    grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+    targetGrp = grpApiHelper.extractName(@outputs[0])
+    grpRecs = @dbu.selectGroupByName(targetGrp)
+    groupId = grpRecs.first['groupId']
+    usersInGroup = @dbu.getUsersWithRolesByGroupId(groupId, orderBy='')
+    userRecs = []
+    rowKeys = []
+    usersInGroup.each { |userRec|
+      if(userRec['userId'].to_i == @context['userId'].to_i)
+        userRecs << [
+                      { :login => { :value => userRec['name'], :dropList => false } },
+                      { :name => { :value => "#{userRec['firstName']} #{userRec['lastName']}", :dropList => false } },
+                      { :role => { :value => "Administrator", :dropList => false } }
+                    ]
+      else
+        subsSelected = userRec['userGroupAccess'] == 'r' ? true : false
+        authorSelected = userRec['userGroupAccess'] == 'w' ? true : false
+        adminSelected = userRec['userGroupAccess'] == 'o' ? true : false
+        userRecs << [
+                      { :login => { :value => userRec['name'], :dropList => false } },
+                      { :name => { :value => "#{userRec['firstName']} #{userRec['lastName']}", :dropList => false } },
+                      { :role => { :value => { :o => {:label => "Administrator", :selected => adminSelected}, :w => {:label => "Author", :selected => authorSelected}, :r => {:label => "Subscriber", :selected => subsSelected }, :x => {:label => "--Revoke--"} }, :dropList => true } }
+                    ]
+      end
+      rowKeys << userRec['userId']
+    }
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => "userRecsList", :label => '', :labelWidth => "50px", :type => :tabularDropListSection, :rows => userRecs, :headerRow => ['LoginName', 'Full Name', 'Role'], :rowKeys => rowKeys },
+        { :id => "baseWidget", :value => "userRecsList", :hidden => true }
+      ]
+    })
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

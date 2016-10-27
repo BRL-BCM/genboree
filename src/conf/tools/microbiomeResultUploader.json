@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "microbiomeResultUploader",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Upload Metagenomic WGS Results",
+    "shortLabel": "Upload Metagenomic WGS Results",
+    "groupAccessUri": null
+  }
+}

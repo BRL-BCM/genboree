@@ -1,0 +1,24 @@
+span.handle {
+  color:#E8A400;
+  cursor: move;
+  padding:2px
+}
+
+div.annoExample {
+  position: relative ;
+  font-family: "courier new", monospace ;
+  font-size: 7pt ;
+  background: #eeeeee ;
+  padding-left: 1em ;
+  padding-right: 1em ;
+  padding-top: 2px ;
+  padding-bottom: 2px ;
+  margin-left: 2em ;
+  margin-top: 1em ;
+  margin-bottom: 1em ;
+  border: 1px solid #000000 ;
+  height: 3.8em ;
+  width: 350px ;
+  overflow: auto ;
+  white-space: nowrap ;
+}

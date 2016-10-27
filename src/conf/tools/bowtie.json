@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "bowtie",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 4,
+    "pvmem": "4gb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Map Reads by Bowtie",
+    "shortLabel": "Bowtie",
+    "groupAccessUri": null
+  }
+}

@@ -1,0 +1,243 @@
+<%
+  ##############################################################################
+  # STANDARD INITIALIZATION
+  ##############################################################################
+  # LOAD LIBRARIES
+  require 'cgi'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # HELPER METHODS
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  # NEEDED COMMON VARIABLES
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # GET TRACK LIST FOR SELECTED DATABASE
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  userId = cgi['userId'].to_i.untaint
+  tracks = inner.getTracks(refSeqId, userId)
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation. %>
+<script type="text/javascript">
+var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+var TOOL_PARAM_FORM = 'pdw' ;
+</script>
+
+<%# NEEDED JS FILES %>
+<script type="text/javascript" SRC="/javaScripts/prototype.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/hgscPrimerDesign/hgscPrimerDesign.js"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <CENTER><FONT SIZE="4"><B>HGSC Primer Design Pipeline</B></FONT></CENTER>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+    This tool runs the HGSC primer design pipeline on a track of templates.
+    <P>
+    <UL class="compact4_bigIndent">
+      <LI>&middot; Motivation: Provide access to the HGSC Primer Design Pipeline.</LI>
+      <LI>&middot; Note: data will be submitted to the remote pipeline at HGSC. You will receive an email when the job is submitted to HGSC and then notified when the results are sent back to Genboree.</LI>
+      <LI>&middot; Output: primers and amplicons will be uploaded into Genboree.</LI>
+    </UL>
+    </div>
+    <P>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <A HREF="mailto:brl_admin@bcm.tmc.edu?subject=HGSC Primer Design Pipeline">brl_admin@bcm.tmc.edu</A>.
+    </font>
+    <P>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER SIZE %>
+    <input type="hidden" id="function" name="function" value="hgscPrimerDesign">
+    <%# END: TOOL DESCRIPTION %>
+
+    <table BGCOLOR="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+    <%# BEGIN: EXPERIMENT NAME ROW %>
+    <TR>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="expnameLabel"><FONT SIZE="2"><B>Job Name:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('expname');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </TR>
+    <%# END: EXPERIMENT NAME ROW %>
+
+    <%# BEGIN: TRACK SELECTION ROW %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="trackLabel"><FONT SIZE="2"><B>Template Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <%# NOTE: Using the suffix _lff for id/name here gets you the file for free on server side %>
+            <select id="template_lff" name='template_lff'>
+              <option value="selectATrack">Select a Track</option>
+<%
+              sortedTrackNames.each { |trackName|
+%>
+                <option value="<%= (track[1] + ':' + track[2]) %>" ><%= track[1] %> : <%= track[2] %><br></option>
+<%
+              }
+%>
+            </select>
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('template_track');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: TRACK SELECTION ROW %>
+
+    <%# BEGIN: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="hgscParams_lbl" name="hgscParams_lbl"><FONT SIZE="2"><B>HGSC Primer Design Parameters</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td nowrap>
+            <span id="hgscProj_lbl" name="hgscProj_lbl">HGSC registered project?</span>&nbsp;
+            <input type="radio" id="hgscProj" name="hgscProj" value="yes" class="txt">yes</input>
+            <input type="radio" id="hgscProj" name="hgscProj" value="no" class="txt" checked>no</input>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('hgscProj');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+
+    <%# BEGIN: GENBOREE TRACK-RELATED ROW(S) %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="primerTrack"><FONT SIZE="2"><B>Primer Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td nowrap>
+            <span id="primerTrackType_lbl" name="primerTrackType_lbl">Track &quot;type&quot;:</span>&nbsp;
+            <input type="text" id="trackType" name="primerTrackType" class="txt" size="7">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span id="primerTrackSubtype_lbl" name="primerTrackSubtype_lbl">Track &quot;subtype&quot;:</span>&nbsp;
+            <input type="text" id="primertrackSubtype" name="primerTrackSubtype" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('primerTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="ampTrack"><FONT SIZE="2"><B>Amplicon Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td nowrap>
+            <span id="ampliconTrackType_lbl" name="trackampliconTrackType_lblType_lbl">Track &quot;type&quot;:</span>&nbsp;
+            <input type="text" id="trackType" name="ampliconTrackType" class="txt" size="7">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span id="ampliconTrackSubtype_lbl" name="ampliconTrackSubtype_lbl">Track &quot;subtype&quot;:</span>&nbsp;
+            <input type="text" id="trackSubtype" name="ampliconTtrackSubtype" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('ampliconTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: GENBOREE TRACK-RELATED ROW(S) %>
+
+    </table>
+  </td>
+</tr>
+</table>
+<P>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="splitAnnos" id="splitAnnos" class="btn" value="Submit Job">&nbsp;
+<input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="splitter_reset();">&nbsp;
+<P>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the split &amp; tile job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

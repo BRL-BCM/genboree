@@ -1,0 +1,150 @@
+/* ---------------------------------------------
+   Redmine OVERRIDES
+   --------------------------------------------- */
+
+div#header select#project_quick_jump_box {
+  max-width: 160px ;
+}
+
+/* ---------------------------------------------
+ * Genboree Customization Settings
+ * --------------------------------------------- */
+table.gb-settings th {
+  vertical-align: top;
+  white-space: nowrap;
+}
+input.gb-settings-main-gb-url {
+  width: 100%;
+}
+input.gb-settings-forgot-pw-url {
+  width: 100%;
+}
+/* ---------------------------------------------
+   Genboree Customization Specific Rules
+   --------------------------------------------- */
+table.list tr .public_project a {
+    color: green;
+}
+
+table.list tr .public_project.listed_project a {
+  color: green ;
+  font-weight: bold ;
+}
+
+div.gbNotificationMsg  {
+  float: right;
+  padding-bottom: 1px;
+  padding-left: 4px;
+  padding-top: 2px;
+  background-color: rgba(255, 0, 0, 0.08);
+  color: red;
+  margin-left: auto;
+  margin-right: 12px;
+  margin-top: -10px;
+  width: 36%;
+}
+
+.gbNotificationMsg .closeBtn {
+  float: right;
+  font-size: 21px;
+  background: transparent;
+  font-weight: bold;
+  line-height: 1;
+  color: #000000;
+  cursor: pointer;
+  opacity: 0.2;
+  border: 0;
+}
+
+div.gbNotificationMsg ul {
+  font-size: 86% ;
+  margin: 0;
+  padding: 0 0 0 24px;
+}
+
+#top-menu ul li a.gb-home {
+  position: relative ;
+  top: -3px ;
+  background-color: #3a9ee0;
+  border: 1px solid #ffffff;
+  border-bottom-width: 1px;
+  border-top-width: 1px;
+  border-radius: 5px;
+  color: #ffffff;
+  font-weight: 300;
+  font-family: "Roboto Condensed","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 1px 8px 1px 20px ;
+  margin-right: 8px;
+  text-decoration: none;
+  line-height: 21px;
+  list-style-type: none;
+  white-space: nowrap;
+  background-image: url("../images/landingHome_16x16.png");
+  background-position: 3px 0;
+  background-repeat: no-repeat;
+  transition: all 0.5s ease-in-out 0s;
+}
+
+.gb-no-icon-button-link {
+  position: relative ;
+  top: -3px ;
+  background-color: #3a9ee0;
+  border-width: 1px ;
+  border-style: solid ;
+  border-color: #3a9ee0;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 300;
+  font-family: "Roboto Condensed","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 1px 8px 1px 8px ;
+  margin-right: 8px;
+  text-decoration: none;
+  line-height: 21px;
+  list-style-type: none;
+  white-space: nowrap;
+  transition: all 0.5s ease-in-out 0s;
+}
+
+a.gb-no-icon-button-link:hover, a.gb-no-icon-button-link:visited, a.gb-no-icon-button-link:link, a.gb-no-icon-button-link:active {
+  color: #ffffff;
+}
+
+pre {
+    white-space: -moz-pre-wrap; /* Mozilla, supported since 1999 */
+    white-space: -pre-wrap; /* Opera */
+    white-space: -o-pre-wrap; /* Opera */
+    white-space: pre-wrap; /* CSS3 - Text module (Candidate Recommendation) http://www.w3.org/TR/css3-text/#white-space */
+    word-wrap: break-word; /* IE 5.5+ */
+}
+
+/* The following rules are required by removing the redmine layout */
+/* They are used if @removeLayout is set to true*/
+.gbRemoveRedmineLayout {
+  
+}
+
+.gbRemoveRedmineLayout #main {
+  padding-top:0px;
+}
+
+
+.gbRemoveRedmineLayout #main #content {
+  padding: 0px 0px 0px 0px !important;
+}
+
+
+.gbRemoveRedmineLayout #top-menu {
+  display: none;
+}
+
+.gbRemoveRedmineLayout #header {
+  display: none;
+}
+
+.gbRemoveRedmineLayout #footer {
+  display: none;
+}

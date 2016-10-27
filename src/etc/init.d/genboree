@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# Starts/Stops/Restarts the genboree processes.
+#
+# chkconfig: 2345 91 11
+# description: Genboree script
+# processname: 
+
+### BEGIN INIT INFO
+# Provides: genboree
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start, stop, and restart genboree
+# Description:  Genboree script to allow easy start/stop/restart
+### END INIT INFO
+
+RETVAL=0
+GENB_INIT_DIR=/usr/local/brl/local/etc/init.d
+
+# $prog must be executable, else error
+[ -x $prog ] || exit 1
+
+start() {
+    ${GENB_INIT_DIR}/configurator_init  start
+    ${GENB_INIT_DIR}/mysqld_init        start
+    ${GENB_INIT_DIR}/thin_init          start
+    ${GENB_INIT_DIR}/tomcat_init        start
+    ${GENB_INIT_DIR}/httpd_init         start
+    ${GENB_INIT_DIR}/redmine_init       start
+    ${GENB_INIT_DIR}/website_init       start
+    ${GENB_INIT_DIR}/nginx_init         start
+    ${GENB_INIT_DIR}/jobsSubmitter_init start
+    ${GENB_INIT_DIR}/mongodb_init       start
+    ${GENB_INIT_DIR}/crontab_init       start
+    RETVAL=$?  # TODO 
+	return $RETVAL
+}
+
+stop() {
+    ${GENB_INIT_DIR}/crontab_init       stop
+    ${GENB_INIT_DIR}/mongodb_init       stop
+    ${GENB_INIT_DIR}/jobsSubmitter_init stop
+    ${GENB_INIT_DIR}/nginx_init         stop
+    ${GENB_INIT_DIR}/website_init       stop
+    ${GENB_INIT_DIR}/redmine_init       stop
+    ${GENB_INIT_DIR}/httpd_init         stop
+    ${GENB_INIT_DIR}/tomcat_init        stop
+    ${GENB_INIT_DIR}/thin_init          stop
+    ${GENB_INIT_DIR}/mysqld_init        stop
+    ${GENB_INIT_DIR}/configurator_init  stop
+	RETVAL=$?
+	return $RETVAL
+}
+
+restart() {
+   stop
+   start
+   RETVAL=$?
+   return $RETVAL
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   RETVAL=$?
+   ;;
+  stop)
+   stop
+   RETVAL=$?
+   ;;
+  restart)
+   restart
+   RETVAL=$?
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac
+
+# TODO
+if [ $RETVAL = 0 ] ; then
+  echo $'\nSUCCESS\n'
+else
+  echo $'\nFAILURE:' $progName '"'$1'" command failed, check logs ( exit code' $RETVAL $')\n'
+fi
+
+exit $RETVAL 

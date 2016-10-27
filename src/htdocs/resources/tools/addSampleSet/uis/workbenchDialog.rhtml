@@ -1,0 +1,55 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%=
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  formTag
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Add Sample Set" } ) %>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will create/add a new Sample Set in the target <u>database</u>. Note that the sample set to be created should NOT already exist in the database.
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        {  :id => 'sampleSet', :label => 'Sample Set Name', :type => :text, :size => "25"}
+      ]
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>

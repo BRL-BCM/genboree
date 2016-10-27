@@ -1,0 +1,125 @@
+.statusTable, .statusList
+{
+  width: 100% ;
+  text-align: left ;
+  margin-top: 10px ;
+  margin-bottom: 5px ;
+  margin-left: 0 ;
+  margin-right: 0 ;
+  border-top: 1px solid #A9A6BF ;
+  border-bottom: 1px solid #A9A6BF ;
+}
+
+.statusList li
+{
+  border: none ;
+  list-style-type: disc ;
+  margin: 2px 2em ;
+}
+
+.statusList li.header
+{
+  list-style-type: none ;
+  margin: 2px ;
+}
+
+.statusTable th, .statusList li.header
+{
+  border: 1px solid #CFC8E1 ;
+  background-color: #EAE6FF ;
+  font-weight: bold ;
+  padding: 1px ;
+}
+
+.feedback
+{
+  margin: 10px 0 ;
+}
+
+.feedback ul
+{
+  padding: 0 ;
+  margin-left: 10px ;
+}
+
+.feedback li
+{
+  border: none ;
+  list-style-type: none ;
+  color: inherit ;
+  background-color: inherit ;
+}
+
+.feedback div
+{
+  padding: 10px ;
+}
+
+.feedback div a, .feedback div a:visited, .feedback div a:active
+{
+  color: inherit ;
+}
+
+.feedback div.success
+{
+  background-image: url(/images/vgpCheckmark.png) ;
+  /*background-color: #EBFEE0 ;*/
+  background-color: #E6FFEA ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #58A263 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+  color: #58A263 ;
+}
+
+.feedback div.failure
+{
+  background-image: url(/images/vgpFailure.png) ;
+  background-color: #FFEFEF ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #C64848 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+  color: #C64848 ;
+}
+
+.feedback div.warning
+{
+  background-image: url(/images/vgpWarning.png) ;
+  background-color: #FBE4D2 ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #DC6709 ;
+  color: #DC6709 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+}
+
+.feedback div.failure li
+{
+  border-left: 2px solid  #D53333 ;
+  padding-top: 0 ;
+  padding-bottom: 0 ;
+}
+
+#errorList li, .errorsExist
+{
+  color: #D53333 ;
+}
+#warningList li, .warningsExist
+{
+  color: #DC6709 ;
+}
+
+#errorList li.header, #warningList li.header
+{
+  color: #403C59 ;
+}

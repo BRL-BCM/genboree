@@ -1,0 +1,611 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH MENU RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+/* Styling for menubar: */
+div#menubar.x-menu.x-horizontal-menubar
+{
+  border-bottom: 1px solid #cccccc ;
+}
+
+div#menubar.x-menu
+{
+  z-index: 0;
+}
+
+.x-toolbar-more .x-btn-small .x-btn-text {
+  background-size : 125% 125% ;
+  height: 16px ;
+  width: 12px ;
+}
+
+/** TOP LEVEL GB Menu */
+.gbGenboreeHomeMenuItem {
+  background-color: #3a9ee0 !important;
+  border: 1px solid #ffffff !important;
+  border-bottom-width: 1px !important;
+  border-top-width: 1px !important;
+  border-radius: 5px !important;
+  color: #ffffff !important;
+  font-weight: 300 !important;
+  font-family: "Roboto Condensed","Helvetica Neue",Helvetica,Arial,sans-serif !important;
+  font-size: 12px !important;
+  padding: 1px 8px 1px 20px  !important;
+  margin-right: 2px !important;
+  margin-left: 10px !important;
+  text-decoration: none !important;
+  height: 20px !important;
+  list-style-type: none !important;
+  white-space: nowrap !important;
+  background-image: url("/images/landingHome_16x16.png") !important;
+  background-position: 3px 2px !important;
+  background-repeat: no-repeat !important;
+  transition: all 0.5s ease-in-out 0s !important;
+}
+
+/* Applies to various menus */
+.wbDeprecated {
+  background-image: url(/images/silk/exclamation.png) !important ;
+}
+
+/** SYSTEM NETWORK */
+.wbSystemNetworkMenu {
+  background-image: url(/images/silk/cog.png) !important ;
+}
+
+/* User */
+.wbUserMenu {
+  background-image: url(/images/silk/user.png) !important ;
+}
+.wbEditProfileMenuItem {
+  background-image: url(/images/silk/user_edit.png) !important ;
+}
+.wbChangePassMenuItem {
+  background-image: url(/images/silk/user_edit.png) !important ;
+}
+
+/* Groups */
+.wbGroupsMenu {
+  background-image: url(/images/silk/group.png) !important ;
+}
+.wbCreateGroupMenuItem {
+  background-image: url(/images/silk/group_add.png) !important ;
+}
+.wbEditGroupInfoMenuItem {
+  background-image: url(/images/silk/group_edit.png) !important ;
+}
+.wbDeleteGroupMenuItem {
+  background-image: url(/images/silk/group_delete.png) !important ;
+}
+.wbAddExistUserMenuItem {
+  background-image: url(/images/silk/user_add.png) !important ;
+}
+.wbAddNewUserMenuItem {
+  background-image: url(/images/silk/user_add.png) !important ;
+}
+.wbUpdateRolesMenuItem {
+  background-image: url(/images/silk/group_gear.png) !important ;
+}
+.wbCopyUsersMenuItem {
+  background-image: url(/images/silk/group.png) !important ;
+}
+.wbMessageGroupMenuItem {
+  background-image: url(/images/silk/email_go.png) !important ;
+}
+
+/* Hosts */
+.wbHostsMenu {
+  background-image: url(/images/silk/computer.png) !important ;
+}
+.wbSetHostAccessMenuItem {
+  background-image: url(/images/silk/computer_add.png) !important ;
+}
+.wbDeleteHostAccessMenuItem {
+  background-image: url(/images/silk/computer_delete.png) !important ;
+}
+
+/* Jobs */
+.wbJobsMenu {
+  background-image: url(/images/silk/cog.png) !important ;
+}
+.wbJobSummaryMenuItem {
+  background-image: url(/images/silk/cog.png) !important ;
+}
+
+/* Request Feature */
+.wbRequestFeatureMenuItem {
+  background-image: url(/images/silk/email.png) !important ;
+}
+
+/* Log Out */
+.wbLogOutMenuItem {
+  background-image: url(/images/silk/disconnect.png) !important ;
+}
+
+/** DATA */
+.wbDataMenu {
+  background-image: url(/images/silk/table.png) !important ;
+}
+.wbFilesMenu {
+  background-image: url(/images/silk/page.png) !important ;
+}
+.wbUploadDbFileMenuItem {
+  background-image: url(/images/silk/page_add.png) !important ;
+}
+.wbFileCopierMenuItem {
+  background-image: url(/images/workbench/tableIcon16.png) !important ;
+}
+.wbRemoveFilesMenuItem {
+  background-image: url(/images/workbench/tableIcon16.png) !important ;
+}
+.wbEditDbFileAttributesMenuItem {
+  background-image: url(/images/silk/page_edit.png) !important ;
+}
+.wbTabbedFileViewerMenuItem {
+  background-image: url(/images/workbench/tableIcon16.png) !important ;
+}
+.wbDatabasesMenu {
+  background-image: url(/images/silk/database.png) !important ;
+}
+
+.wbCreateDbMenuItem {
+  background-image: url(/images/silk/database_add.png) !important ;
+}
+.wbDeleteDbMenuItem {
+  background-image: url(/images/silk/database_delete.png) !important ;
+}
+.wbRenameDbMenuItem {
+  background-image: url(/images/silk/database_edit.png) !important ;
+}
+.wbEditDbInfoMenuItem {
+  background-image: url(/images/silk/database_edit.png) !important ;
+}
+.wbCopyDbMenuItem {
+  background-image: url(/images/silk/database.png) !important ;
+}
+.wbUnlockDbMenuItem {
+  background-image: url(/images/silk/database_key.png) !important ;
+}
+.wbPublishDbMenuItem {
+  background-image: url(/images/silk/database_link.png) !important ;
+}
+.wbProjectsMenu {
+  background-image: url(/images/silk/book.png) !important ;
+}
+.wbCreateProjectMenuItem {
+  background-image: url(/images/silk/book_add.png) !important ;
+
+
+}
+/** Samples & Sample Sets */
+.wbSamplesSampleSetsMenu {
+  background-image: url(/images/workbench/sampleSetIcon16.png) !important ;
+}
+.wbSamplesMenu {
+  background-image: url(/images/workbench/sampleIcon16.png) !important ;
+}
+.wbSampleSetsMenu {
+  background-image: url(/images/workbench/sampleSetIcon16.png) !important ;
+}
+.wbSamplesImporterMenuItem {
+  background-image: url(/images/workbench/sampleAddIcon16.png) !important ;
+}
+.wbEditSamplesMenuItem {
+  background-image: url(/images/workbench/sampleIcon16.png) !important ;
+}
+.wbDeleteSamplesMenuItem {
+  background-image: url(/images/workbench/sampleIcon16_delete.png) !important ;
+}
+.wbSampleFileLinkerMenuItem {
+  background-image: url(/images/workbench/sampleIcon16_link.png) !important ;
+}
+.wbAddSampleSetMenuItem {
+  background-image: url(/images/workbench/sampleSetIcon16_add.png) !important ;
+}
+.wbDeleteSampleSetsMenuItem {
+  background-image: url(/images/workbench/sampleSetIcon16_delete.png) !important ;
+}
+.wbAddSamplesToSampleSetsMenuItem {
+  background-image: url(/images/workbench/sampleAddIcon16.png) !important ;
+}
+.wbRemoveSamplesFromSampleSetsMenuItem {
+  background-image: url(/images/workbench/sampleIcon16_delete.png) !important ;
+}
+/** Entity Lists */
+.wbEntityListsMenu {
+  background-image: url(/images/silk/text_list_bullets.png) !important ;
+}
+.wbTrackEntityListMenu {
+  background-image: url(/images/silk/text_list_bullets.png) !important ;
+}
+.wbFileEntityListMenu {
+  background-image: url(/images/silk/text_list_bullets.png) !important ;
+}
+.wbSampleEntityListMenu {
+  background-image: url(/images/silk/text_list_bullets.png) !important ;
+}
+.wbCreateTrackListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbCopyTrackListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_go.png) !important ;
+}
+.wbDeleteTrackListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+.wbRenameTrackListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_edit.png) !important ;
+}
+.wbAddTracksToEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbRemoveTracksFromEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+.wbCreateFileListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbCopyFileListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_go.png) !important ;
+}
+.wbDeleteFileListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+.wbRenameFileListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_edit.png) !important ;
+}
+.wbAddFilesToEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbRemoveFilesFromEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+.wbCreateSampleListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbCopySampleListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_go.png) !important ;
+}
+.wbDeleteSampleListsMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+.wbRenameSampleListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_edit.png) !important ;
+}
+.wbAddSamplesToEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_add.png) !important ;
+}
+.wbRemoveSamplesFromEntityListMenuItem {
+  background-image: url(/images/workbench/text_list_bullets_delete.png) !important ;
+}
+/** Tracks */
+.wbTracksMenu {
+  background-image: url(/images/workbench/tracks.png) !important ;
+}
+.wbImportMenu {
+  background-image: url(/images/workbench/tracks_add.png) !important ;
+}
+.wbArrayDataImporterMenuItem {
+  background-image: url(/images/silk/table_add.png) !important ;
+}
+.wbSetTrackMetaDataMenuItem {
+  background-image: url(/images/silk/page_edit.png) !important ;
+}
+.wbUploadTrackAnnosMenuItem {
+  background-image: url(/images/workbench/tracks_add.png) !important ;
+}
+.wbUtilitiesMenu {
+  background-image: url(/images/workbench/tracks_cog.png) !important ;
+}
+.wbTrackCopierMenuItem {
+  background-image: url(/images/workbench/tracks_go.png) !important ;
+}
+.wbUploadAnnotationsMenuItem {
+  background-image: url(/images/silk/cog_go.png) !important ;
+}
+.wbeditTrkAttributesMenuItem {
+  background-image: url(/images/silk/table_edit.png) !important ;
+}
+.wbBigFilesMenuItem {
+  background-image: url(/images/workbench/tracks_star.png) !important ;
+}
+.wbBigBedFilesMenuItem {
+  background-image: url(/images/workbench/tracks_star.png) !important ;
+}
+.wbUcscBrowserMenuItem {
+  background-image: url(/images/workbench/coverage.png) !important ;
+}
+.wbTabularTrackViewerMenuItem {
+  background-image: url(/images/workbench/tableIcon16.png) !important ;
+}
+.wbTrkIntersectMenuItem {
+  background-image: url(/images/workbench/trackIntersectButton16.png) !important ;
+}
+.wbTrkNonIntersectMenuItem {
+  background-image: url(/images/workbench/trackIntersectButton16.png) !important ;
+}
+.wbTrkCombineMenuItem {
+  background-image: url(/images/workbench/trackCombine.png) !important ;
+}
+.wbTrkSegmentMenuItem {
+  background-image: url(/images/workbench/trackIntersectButton16.png) !important ;
+}
+.wbAnalysisMenu {
+  background-image: url(/images/workbench/compareButton16.png) !important ;
+}
+.wbVisualizationMenu {
+  background-image: url(/images/silk/eye.png) !important ;
+}
+.wbGridViewerMenuItem {
+  background-image: url(/images/silk/table_go.png) !important ;
+}
+.wbSampleGridViewerMenuItem {
+  background-image: url(/images/silk/table_go.png) !important ;
+}
+.wbEpigenomicsMenu {
+  background-image: url(/images/workbench/epigenomeAtlas16.png) !important ;
+}
+.wbEpigenomeAtlas-AwareToolsMenu {
+  background-image: url(/images/workbench/epigenomeAtlas16.png) !important ;
+}
+.wbSmallRNAMenu {
+  background-image: url(/images/workbench/smallRNA.png) !important ;
+}
+.wbMicrobiomeWorkbenchMenu {
+  background-image: url(/images/workbench/microbiomeWorkbench.png) !important ;
+}
+.wbMBWSeqExtractMenuItem {
+  background-image: url(/images/workbench/seqExtract_16x16.png) !important ;
+}
+.wbSeqImportMenuItem {
+  background-image: url(/images/workbench/seqExtract_16x16.png) !important ;
+}
+.wbMicrobiomeResultUploaderMenuItem {
+  background-image: url(/images/workbench/seqExtract_16x16.png) !important ;
+}
+.wbMicrobiomeSampleGridViewerMenuItem {
+  background-image: url(/images/silk/table_go.png) !important ;
+}
+.wbMachineLearningMenu {
+  background-image: url(/images/workbench/machineLearning_16x16.png) !important ;
+}
+.wbMachineLearningMenuItem {
+  background-image: url(/images/workbench/machineLearning_16x16.png) !important ;
+}
+.wbLimmaMenuItem {
+  background-image: url(/images/workbench/limma.ico) !important ;
+}
+.wbEpigenomicsHeatmapMenuItem {
+  background-image: url(/images/workbench/heatmap16.png) !important ;
+}
+.wbLimmaSignalComparisonMenuItem {
+  background-image: url(/images/workbench/limma.ico) !important ;
+}
+.wbSampleCentricLimmaMenuItem {
+  background-image: url(/images/workbench/limma.ico) !important ;
+}
+.wbMachineLearningManualMenuItem {
+  background-image: url(/images/workbench/machineLearning_16x16.png) !important ;
+}
+.wbAlphaDiversityMenuItem {
+  background-image: url(/images/workbench/alphaDiv_16x16.png) !important ;
+}
+.wbRdpMenuItem {
+  background-image: url(/images/workbench/rdp_16x16.png) !important ;
+}
+.wbWgsMicrobiomePipelineMenuItem {
+  background-image: url(/images/workbench/arrow_divide_right.png) !important ;
+}
+.wbQiimeMenuItem {
+  background-image: url(/images/workbench/qiime_16x16.png) !important ;
+}
+.wbEpigenomePercentileQCMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbEpigenomeAtlasSimilaritySearchMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbSignalSimilaritySearchMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbComparativeEpigenomeAtlasSimilaritySearchMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbEpigenomeAtlasSimilaritySearchMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbComparativeSignalSimilaritySearchMenuItem {
+  background-image: url(/images/workbench/findScores.png) !important ;
+}
+.wbSignalDataComparisonMenuItem {
+  background-image: url(/images/workbench/compareButton16.png) !important ;
+}
+.wbSignalDataComparisonAtlasMenuItem {
+  background-image: url(/images/workbench/compareButton16.png) !important ;
+}
+.wbComparativeSignalDataComparisonMenuItem {
+  background-image: url(/images/workbench/compareButton16.png) !important ;
+}
+.wbComparativeSignalDataComparisonAtlasMenuItem {
+  background-image: url(/images/workbench/compareButton16.png) !important ;
+}
+.wbCoverageMenuItem {
+  background-image: url(/images/workbench/coverage.png) !important ;
+}
+.wbFilterReadsMenuItem {
+  background-image: url(/images/workbench/filter.png) !important ;
+}
+.wbSmallRNAPashMapperMenuItem {
+  background-image: url(/images/workbench/filter.png) !important ;
+}
+.wbCombinedCoverageMenuItem {
+  background-image: url(/images/workbench/filter.png) !important ;
+}
+.wbMirbaseProfileGenerationMenuItem {
+  background-image: url(/images/workbench/filter.png) !important ;
+}
+.wbNovelMiRNADetectionMenuItem {
+  background-image: url(/images/workbench/filter.png) !important ;
+}
+.wbSparkMenuItem {
+  background-image: url(/images/silk/star.png) !important ;
+}
+.wbSparkEpigenomeAtlasMenuItem {
+  background-image: url(/images/silk/star.png) !important ;
+}
+.wbCompEpigenomicsROILifterMenuItem {
+  background-image: url(/images/workbench/roiLifter16.png) !important ;
+}
+.wbCompEpigenomicsROILifterMenuItem {
+  background-image: url(/images/workbench/roiLifter16.png) !important ;
+}
+.wbSvdMenuItem {
+  background-image: url(/images/workbench/svd16.png) !important ;
+}
+.wbEpigenomicSliceMenuItem{
+  background-image: url(/images/workbench/svd16.png) !important ;
+}
+.wbGeneElementDataSliceMenuItem {
+  background-image: url(/images/workbench/svd16.png) !important ;
+}
+
+.wbQuerySearchMenu {
+  background-image: url(/images/silk/find.png) !important ;
+}
+.wbBooleanQueryingMenu {
+  background-image: url(/images/silk/find.png) !important ;
+}
+.wbCreateQueryMenuItem {
+  background-image: url(/images/silk/cog_add.png) !important ;
+}
+.wbManageQueryMenuItem {
+  background-image: url(/images/silk/cog_edit.png) !important ;
+}
+.wbApplyQueryMenuItem {
+  background-image: url(/images/silk/cog_go.png) !important ;
+}
+
+.wbTrackManipulationMenu {
+  background-image: url(/images/workbench/tracks.png) !important ;
+}
+.wbTrackToolsMenu {
+  background-image: url(/images/workbench/tracks.png) !important ;
+}
+.wbTrackCombineMenuItem {
+  background-image: url(/images/workbench/trackCombine.png) !important ;
+}
+.wbSNPsMenu {
+  background-image: url(/images/workbench/snps.png) !important ;
+}
+.wbAtlasSNP2MenuItem {
+  background-image: url(/images/workbench/Atlas-SNP2Logotype16Wide.png) !important ;
+}
+.wbAtlasSNP2GenotyperMenuItem {
+  background-image: url(/images/workbench/Atlas-SNP2Logotype16Wide.png) !important ;
+}
+.wbAtlasIndel2MenuItem {
+  background-image: url(/images/workbench/Atlas-Indel2Logotype16Wide.png) !important ;
+}
+.wbVgpToolMenuItem {
+  background-image: url(/images/workbench/vgpButton16.png) !important ;
+}
+.wbCircosToolMenuItem {
+  background-image: url(/images/workbench/circosButton16.png) !important ;
+}
+.wbGenbBrowserMenuItem {
+  background-image: url(/images/workbench/circosButton16.png) !important ;
+}
+
+/** Help **/
+
+.wbHelpMenu {
+  background-image: url(/images/silk/help.png) !important ;
+}
+.wbWhatsNewMenuItem {
+  background-image: url(/images/silk/new.png) !important ;
+}
+.wbGettingStartedMenuItem {
+  background-image: url(/images/silk/help.png) !important ;
+}
+.wbToolUsecasesMenuItem {
+  background-image: url(/images/silk/wrench.png) !important ;
+}
+.wbLegendMenuItem {
+  background-image: url(/images/silk/help.png) !important ;
+}
+.wbCitingMenuItem {
+ background-image: url(/images/silk/book_open.png) !important ;
+}
+.wbToolMapMenuItem {
+  background-image: url(/images/silk/map_magnify.png) !important ;
+}
+
+
+/** Tool Map */
+ul.wbToolMapMenu {
+  list-style-type: none;
+  margin: 5px;
+}
+li.wbToolMapMenu {
+  list-style-image: url('/images/silk/folder_magnify.png') !important ;
+  font-family: tahoma,arial,verdana,sans-serif ;
+  font-size: 14px ;
+  font-size-adjust: none ;
+  font-stretch: normal ;
+  font-style: normal ;
+  font-variant: normal ;
+  font-weight: bold ;
+  line-height: normal ;
+  padding-bottom: 5px ;
+
+}
+
+li.wbToolMapTool {
+  list-style-image: url('/images/silk/bullet_wrench.png') !important ;
+}
+
+.wbToolMapDir{
+  background: #D6E3F2 none repeat scroll 0 0 ;
+  border-color: #DAE6F4 #99BBE8 #99BBE8 #DAE6F4 ;
+  border-style: solid ;
+  border-width: 1px ;
+}
+
+span.wbToolMapToolTitle {
+  font-family: tahoma,arial,verdana,sans-serif ;
+  font-size: 13px ;
+  font-size-adjust: none ;
+  font-stretch: normal ;
+  font-style: normal ;
+  font-variant: normal ;
+  font-weight: bold ;
+  line-height: normal ;
+  padding-bottom: 5px ;
+}
+
+.wbToolMapToolDesc {
+  font-weight: normal;
+  padding-bottom: 5px ;
+}
+
+/** End Tool Map */
+
+.menu-title {
+  background: #D6E3F2 none repeat scroll 0 0 ;
+  border-color: #DAE6F4 #99BBE8 #99BBE8 #DAE6F4 ;
+  border-style: solid ;
+  border-width: 1px ;
+  color: #15428B ;
+  display: block ;
+  font-family: tahoma,arial,verdana,sans-serif ;
+  font-size: 10px ;
+  font-size-adjust: none ;
+  font-stretch: normal ;
+  font-style: normal ;
+  font-variant: normal ;
+  font-weight: bold ;
+  line-height: normal ;
+  margin: -2px -2px 0 ;
+  padding: 3px ;
+}

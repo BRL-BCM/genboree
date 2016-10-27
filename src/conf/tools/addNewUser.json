@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addNewUser",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add New User To Group",
+    "shortLabel": "[NOT SET]"
+  }
+}

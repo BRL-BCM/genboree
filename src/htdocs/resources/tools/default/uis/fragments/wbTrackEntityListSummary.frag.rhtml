@@ -1,0 +1,28 @@
+<%
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+%>
+<%
+  @trackEntityList = [ @trackEntityList ] unless(@trackEntityList.is_a?(Array) or @trackEntityList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@trackEntityList.nil? or @trackEntityList.empty?) ? "" : "rowspan='#{@trackEntityList.size}'") %> ><%= (@label || "Track Entity List(s)") %>:</th>
+<%  if(@trackEntityList.nil? or @trackEntityList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      trkEntityListApiHelper = BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper.new()
+      @trackEntityList.each_index { |ii|
+        item = @trackEntityList[ii]
+        trkEntityList = trkEntityListApiHelper.extractName(item)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== trkEntityList %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

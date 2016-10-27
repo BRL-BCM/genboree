@@ -1,0 +1,89 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1200px;
+  background-image: url("/resources/conf/gridViewer/default/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("/resources/conf/gridViewer/default/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeaderContainer {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  width: 1200px;
+  height: 140px;
+}
+
+#dataFreezeHeaderLeft{
+  background-image: url("/resources/conf/gridViewer/default/images/headerSliver.png");
+  background-repeat: repeat;
+  width: 900px; /*dfHeaderContainer.width - 260(width of bcm logo image border figure)*/
+  height: 140px;
+  float:left;
+}
+
+#centerLogo{
+  width: 640px; /*(910 - 260)* */
+  height:100px;
+  margin-top:30px;
+  float:right;
+}
+
+#dataFreezeHeaderRight{
+  background-image: url("/resources/conf/gridViewer/default/images/curveSliver.png");
+  background-repeat: repeat;
+  float:right;
+  height: 140px;
+  width: 300px;
+}
+
+#dataFreezeHeaderCurve{
+  background-image: url("/resources/conf/gridViewer/default/images/curve.png");
+  background-repeat: no-repeat;
+  float:left;
+  height: 140px;
+  width: 40px;
+}
+
+
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  height: 130px;
+  width: 220px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  height: 90px;
+  width: 240px;
+  float: right;
+  margin-top:45px;
+  margin-right:10px;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}

@@ -1,0 +1,25 @@
+<%@ page import="org.genboree.util.GenboreeUtils"%>
+ <%
+     String upfid22 = (String)mys.getAttribute("lastTextID") ;
+      String cancelState = request.getParameter("cancelState") ;
+      int intState  = -1;
+       if (cancelState != null) {
+           intState = Integer.parseInt(cancelState);
+       }
+
+    if (intState>0 ) {
+          if (upfid22!=null) {
+              GenboreeUtils.sendRedirect(request, response, "/java-bin/annotationEditorMenu.jsp?upfid="+ upfid22) ;
+               return;
+          }
+          else {
+              out.println ("<script> window.close(); </script>");
+          }
+      }
+     else {
+      //  out.println ("<script> window.close(); </script>");
+    }
+
+
+
+     %>

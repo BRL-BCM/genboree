@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "arrayDataImporter",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "1953mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "36:00:00"
+  },
+  "ui": {
+    "label": "Array Data Importer",
+    "shortLabel": "Array Data Importer"
+  }
+}

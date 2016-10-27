@@ -1,0 +1,47 @@
+<table class="gb-settings">
+  <tbody>
+    <tr>
+      <th><%= l(:setting_gb_main_gb_url) %></th>
+      <td>
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['forgot_pw_url']. -->
+        <input id="main_gb_url" name="settings[main_gb_url]" class="gb-settings-main-gb-url" value="<%= settings['main_gb_url'] %>"></input>
+      </td>
+    </tr>
+    <tr>
+      <th><%= l(:setting_gb_forgot_pw_url) %></th>
+      <td>
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['forgot_pw_url']. -->
+        <input id="forgot_pw_url" name="settings[forgot_pw_url]" class="gb-settings-forgot-pw-url" value="<%= settings['forgot_pw_url'] %>"></input>
+      </td>
+    </tr>
+    <tr>
+      <th title="<%= l(:setting_gb_no_stats_hosts_tooltip)%>" ><%= l(:setting_gb_no_stats_hosts) %></th>
+      <td title="<%= l(:setting_gb_no_stats_hosts_tooltip)%>">
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['no_stats_hosts']. -->
+        <input id="no_stats_hosts" name="settings[no_stats_hosts]" class="gb-settings-no-stats-hosts" value="<%= settings['no_stats_hosts'] %>"></input>
+      </td>
+    </tr>
+    <tr>
+      <th title="<%= l(:setting_gb_allow_non_uniq_emails_tooltip)%>" ><%= l(:setting_gb_allow_non_uniq_emails) %></th>
+      <td title="<%= l(:setting_gb_allow_non_uniq_emails_tooltip)%>">
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['no_stats_hosts']. -->
+        <input id="allow_dup_emails" name="settings[allow_non_uniq_emails]" type="checkbox" class="gb-settings-allow-non-uniq-emails" value="true" <%= "checked=\"checked\"" if(settings['allow_non_uniq_emails'] == 'true') %> ></input>
+      </td>
+    </tr>
+
+    <tr>
+      <th title="<%= l(:setting_gb_signin_msg_tooltip)%>"><%= l(:setting_gb_signin_msg) %></th>
+      <td>
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['yourKeyHere']. -->
+        <textarea rows="8" cols="120" id="signin_msg" name="settings[signin_msg]" class='gb-settings-signin-msg'><%= settings['signin_msg'] %></textarea>
+      </td>
+    </tr>
+    <tr>
+      <th title="<%= l(:setting_gb_register_msg_tooltip)%>"><%= l(:setting_gb_register_msg) %></th>
+      <td>
+        <!-- Can be input or something too. Value will be available via Setting.plugin_genboree_customizations['yourKeyHere']. -->
+        <textarea rows="8" cols="120" id="register_msg" name="settings[register_msg]" class='gb-settings-register-msg'><%= settings['register_msg'] %></textarea>
+      </td>
+    </tr>
+  </tbody>
+</table>

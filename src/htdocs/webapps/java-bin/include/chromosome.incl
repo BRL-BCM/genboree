@@ -1,0 +1,78 @@
+<%@ page import="org.genboree.tabular.LayoutHelper" %>
+<% String sessionRest = null;
+	String chrName = null;
+	Chromosome chromosome = null; 
+	chrName = request.getParameter("chrName");
+	if (chrName != null && chrName.indexOf("All Chromosome") < 0) {
+		restrictRegion = true;
+		mys.setAttribute("restrictRegion", "true");
+	}
+	else if (chrName != null && chrName.indexOf("All Chromosome") >= 0) {
+
+		mys.setAttribute("restrictRegion", "false");
+	}
+
+	if (chrName == null) {
+		if (mys.getAttribute("restrictRegion") != null)
+			sessionRest = (String) mys.getAttribute("restrictRegion");
+
+		if (sessionRest != null && sessionRest.equals("true"))
+			restrictRegion = true;
+	}
+
+	String ridString = request.getParameter("rid");
+	String startString = request.getParameter("chrStart");
+	String stopString = request.getParameter("chrStop");
+
+	if (ridString != null) {
+		rid = Integer.parseInt(ridString);
+		//mys.removeAttribute("displayChromosome")  ;
+		//return; 
+	}
+	if (startString != null) {
+		startString = startString.trim();
+		startString = startString.replaceAll(",", "");
+		if (startString.length() > 0)
+			chrStart = Long.parseLong(startString);
+		//return; 
+	}
+
+
+	if (stopString != null) {
+		stopString = stopString.trim();
+
+		stopString = stopString.replaceAll(",", "");
+		if (stopString.length() > 0)
+			chrStop = Long.parseLong(stopString);
+	}
+
+
+	if (chrName != null && restrictRegion) {
+		chromosome = new Chromosome(rid);
+		chromosome.setStart(chrStart);
+		chromosome.setStop(chrStop);
+		chromosome.setRefname(chrName);
+		mys.setAttribute("displayChromosome", chromosome);
+		//return;
+	}
+	else {
+		if (initPage) {
+			mys.removeAttribute("displayChromosome");
+		}
+		else {
+			 chromosome = null;
+			if (mys.getAttribute("displayChromosome") != null) {
+				chromosome = (Chromosome) mys.getAttribute("displayChromosome");
+				if (chromosome != null) {
+
+					rid = chromosome.getId();
+					chrStart = chromosome.getStart();
+					chrStop = chromosome.getStop();
+
+				}
+
+			}
+
+		}
+
+	} %>

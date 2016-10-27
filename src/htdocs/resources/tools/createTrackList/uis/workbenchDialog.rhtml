@@ -1,0 +1,85 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 400 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will create/add a new <i>Track Entity List</i> in the target <u>database</u>. Note that if the <i>Track Entity List</i> to be created already exists, the selected tracks will be added to the existing list.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Input summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Tracks of Interest:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs } )
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        {  :id => 'trackEntityListName', :label => 'Entity List Name', :type => :text, :size => "25", :title => "Name of the track entity list you want to add."}
+      ]
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

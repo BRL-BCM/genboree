@@ -1,0 +1,72 @@
+<%
+
+	int toolMode = -1;
+	String[] toolLabels =
+	{
+		"Workbench", "VGPaint", "VGPResults",  "Track Operations", "Plug-ins",  "Plug-in Results"
+	};
+	String[] toolsIds  =
+	{
+		"workbench.jsp", "vgpConfig.jsp", "vgpResults.jsp", "trackOps.jsp", "toolPluginsWrapper.jsp",  "toolPluginsResults.jsp"
+	};
+
+  response.addDateHeader( "Expires", 0L ) ;
+  response.addHeader( "Cache-Control", "no-cache, no-store" ) ;
+
+
+	String toolSessionMode = request.getParameter("mode") ;
+	if( toolSessionMode != null )
+  {
+    for(int cc = 0; cc < toolsIds.length; cc++ )
+    {
+      if( toolSessionMode.equals(toolsIds[cc]) )
+      {
+      	toolMode = cc ;
+      	break;
+      }
+    }
+  }
+
+  if( userInfo == null )
+  {
+    String qs = request.getQueryString();
+    if( qs == null )
+    {
+      qs = "" ;
+    }
+    else
+    {
+      qs = "?"+qs ;
+    }
+    mys.setAttribute( "target", request.getRequestURL().toString()+qs ) ;
+    GenboreeUtils.sendRedirect(request,response,  "/java-bin/login.jsp" ) ;
+    return;
+  }
+
+	String destback = "tools.jsp";
+	mys.setAttribute( "destback", destback );
+
+%>
+<% if( !is_public ) { %>
+<table border="0" cellspacing="4" cellpadding="2">
+<tr>
+<%
+	for(int cc= 0; cc < toolsIds.length; cc++ )
+	{
+		String cls = "nav";
+		String a1 = "<a href=\"" + toolsIds[cc] +"\">";
+		String a2 = "</a>";
+		if( cc == toolMode )
+		{
+			cls = "nav_selected";
+			a1 = a1 + "<font color=white>";
+			a2 = "</font>" + a2;
+		}
+%><td class="<%=cls%>"><%=a1%><%=toolLabels[cc]%><%=a2%></td>
+<%
+	}
+%>
+
+</tr>
+</table>
+<% } // !is_public %>

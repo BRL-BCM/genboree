@@ -1,0 +1,151 @@
+<%@ page import="javax.servlet.http.*, java.net.*, org.genboree.util.*, org.genboree.dbaccess.*, java.util.*, java.text.*, org.apache.commons.fileupload.*, org.apache.commons.fileupload.disk.DiskFileItemFactory, org.apache.commons.fileupload.servlet.ServletFileUpload" %><%
+
+  // NO NEWLINES BETWEEN % >< % in this FILE !!! IMPORTANT.
+
+  DBAgent db = DBAgent.getInstance() ;
+  HttpSession mys = request.getSession() ;
+
+  Calendar commNowCal = Calendar.getInstance() ;
+  SimpleDateFormat commDateFormat = new SimpleDateFormat("yyyy/MM/dd H:m:s");
+  /** ------------------------------------------------------------------
+     DONE.
+     - POSSIBLY USEFUL DEBUG INFO FOLLOWS IF UNCOMMENTED.
+      ------------------------------------------------------------------
+  */
+  /* DEBUG SECTION STARTS: HTTP Request Info
+  //System.err.println("\n==================================================================================" +
+  //                   "\n======BEGIN: common.incl (" + commDateFormat.format(commNowCal.getTime()) + ")=======================================");
+  // 0) CURRENT SESSION:
+  //System.err.println("CURRENT SESSION ID: " + mys.getId() );
+  // 1) HTTP REQUEST INFO:
+  Enumeration headerNames = request.getHeaderNames() ;
+  String headerName ;
+  String headerValue ;
+  //System.err.println("HTTP METHOD: " + request.getMethod() +
+  //                   "\nHTTP REQUEST URI: " + request.getRequestURI() +
+  //                   "\nHTTP CONTEXT PATH: " + request.getContextPath() +
+  //                   "\nHTTP PATH INFO: " + request.getPathInfo() +
+  //                   "\nHTTP QUERY STRING: " + request.getQueryString() ) ;
+  //while(headerNames.hasMoreElements())
+  //{
+  //  headerName = (String)headerNames.nextElement() ;
+  //  headerValue = (String)request.getHeader(headerName) ;
+  //  System.err.println("HTTP HEADER: '" + headerName + "' => '" + headerValue + "'") ;
+  //}
+  //System.err.println("--------------------------------") ;
+  DEBUG SECTION ENDS */
+
+  // 1.5) FORM PARAMETERS
+  /* DEBUG SECTION STARTS: Form Parameters
+  Enumeration paramNames = request.getParameterNames() ;
+  while(paramNames.hasMoreElements())
+  {
+    String paramName = (String)paramNames.nextElement() ;
+    String paramValue = request.getParameter(paramName) ;
+    System.err.println("FORM PARAMETER: '" + paramName + "' => '" + paramValue + "'") ;
+  }
+  System.err.println("--------------------------------") ;
+  DEBUG SECTION ENDS */
+
+  // 1.7 MULTIPART FORM PARAMETERS
+  // WARNING: The request object cannot be parsed more than once, so it you uncomment this, you may have unexpected results
+  /* DEBUG SECTION STARTS: Multipart Form Parameters
+  boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+  if(isMultipart) {
+    // Create a factory for disk-based file items
+    FileItemFactory mutiFormFileItemFactory = new DiskFileItemFactory();
+    // Create a new file upload handler
+    ServletFileUpload mutiFormUpload = new ServletFileUpload(mutiFormFileItemFactory);
+    // Parse the request
+    List multiFormItems = mutiFormUpload.parseRequest(request);
+    // Process the uploaded items
+
+    Iterator multiFormIter = multiFormItems.iterator();
+    while (multiFormIter.hasNext()) {
+      FileItem item = (FileItem) multiFormIter.next();
+      if (item.isFormField()) {
+        String name = item.getFieldName();
+        String value = item.getString();
+        System.err.println("MULTIPART FORM PARAM: " + name + " => " + value) ;
+      } else {
+        String fieldName = item.getFieldName();
+        String fileName = item.getName();
+        String contentType = item.getContentType();
+        boolean isInMemory = item.isInMemory();
+        long sizeInBytes = item.getSize();
+        System.err.println("MULTIPART FORM FILE: " + fieldName + " => " + fileName + " => " + contentType + " => " + isInMemory + " => " + sizeInBytes) ;
+      }
+    }
+  }
+  System.err.println("--------------------------------") ;
+  DEBUG SECTION ENDS */
+
+  // 2) INCOMING COOKIES:
+  /* DEBUG SECTION STARTS: Cookie Info
+
+  Cookie[] cookies = request.getCookies() ;
+
+  //if(cookies != null)
+  //{
+  //  for(int ii=0; ii<cookies.length; ii++)
+  //  {
+  //    Cookie cookie = cookies[ii] ;
+  //    System.err.println("INCOMING COOKIE:\n" +
+  //                       "\n    - Name: " + cookie.getName() +
+  //                       "\n    - Domain: " + cookie.getDomain() +
+  //                       "\n    - Path: " + cookie.getPath() +
+  //                       "\n    - MaxAge: " + cookie.getMaxAge() +
+  //                       "\n    - Value: " + cookie.getValue() ) ;
+  //  }
+  //}
+
+  // Firefox and Opera now require the leading "." for the cookie domains
+  // in order for the cookies to apply at that domain and all sub-domains.
+  // By default tomcat is too stupid to figure out that www.genboree.org and genboree.org
+  // should both have the cookie registered to .genboree.org so it's valid for both. Ok, in
+  // many cases (multi-hosting) this is not desirable...but there's no way to fix it within Tomcat
+  // configs. So we hack it by finding the cookie here, add the generic domain and add it back in.
+  // Another solution would use Apache/nginx or whatever the front-end server is to fix Tomcat response cookie headers.
+  // Fix/help JSESSION cookie?
+  // Check each cookie...if it has a name of JSESSION, then try to set the domain to something more generic, if possible
+  if(cookies != null)
+  {
+    for(int ii = 0; ii < cookies.length; ii++)
+    {
+      String ckName = cookies[ii].getName() ;
+      if(ckName.equals("JSESSIONID"))
+      {
+        String ckValue = cookies[ii].getValue() ;
+        String ckPath = cookies[ii].getPath() ;
+        String ckDomain = cookies[ii].getDomain() ;
+        // Adjust domain
+        if(ckDomain == null)
+        {
+          ckDomain = request.getServerName() ;
+        }
+        String adjDomain = ckDomain.trim() ;
+        if( !adjDomain.matches("localhost") && !adjDomain.matches("^[0-9.]+\\d+$") && !adjDomain.matches("^[^.]+$") && adjDomain.indexOf(".") != 0)
+        {
+          adjDomain = adjDomain.replaceFirst("^www\\.", "") ;
+          adjDomain = "." + adjDomain ;
+          cookies[ii].setDomain(adjDomain) ;
+        }
+        response.addCookie(cookies[ii]) ; // send the cookie back with immediate expiration
+      }
+    }
+  }
+
+  // CHECK IF IN A BROWSER APP
+  // -- this works around App-based browser library code, such as MSIE within Excel.
+  // -- forces the page to load in an environment where the GB_INBROWSER cookie is set (by javascript)
+  // -- otherwise goes to a redirect script...which is what Excel will send to the browser, causing a reload when it does.
+  if(!GenboreeUtils.isBrowserAppCookieSet(request, response))
+  {
+    System.err.println("  ==> no GB_INBROWSER cookie ; redirect to a page that will try to set one and then load the real page") ;
+    GenboreeUtils.goToRedirector(request, response) ;
+    return ;
+  }
+  //  System.err.println("======END: common.incl=============================================================" +
+  //                     "\n===================================================================================\n") ;
+  DEBUG SECTION ENDS */
+%>

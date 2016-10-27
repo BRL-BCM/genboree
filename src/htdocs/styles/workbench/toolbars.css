@@ -1,0 +1,256 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH TOOLBAR RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+/* Styling for the toolbar of tools. */
+div#wbToolbar .x-toolbar
+{
+  background: #eeeeee none repeat-x ;
+  border-top: 1px solid #ffffff ;
+  border-bottom: 1px solid #bbbbbb ;
+}
+
+div#gbMenubar .x-btn-tr i, div#gbMenubar .x-btn-tc i, div#gbMenubar .x-btn-tl i, div#gbMenubar .x-btn-br i, div#gbMenubar .x-btn-bc i, div#gbMenubar .x-btn-bl i {
+  font: 1px arial,tahoma,helvetica,sans-serif ;
+  height: 0 ;
+}
+div#gbMenubar .x-btn-tr,div#gbMenubar .x-btn-tc,div#gbMenubar .x-btn-tl,div#gbMenubar .x-btn-br,div#gbMenubar .x-btn-bc,div#gbMenubar .x-btn-bl {
+  font: 1px arial,tahoma,helvetica,sans-serif ;
+  height: 0 ;
+}
+
+/* IE8 WORKAROUNDS */
+/** Fix toolbar button heights & padding that let you see
+ * inappropriate background sprite repeated under the button:
+ */
+.wbToolbarBtn .x-btn-text-icon .x-btn-text {
+  height: 20px !important ;
+  padding-top: 1px ;
+}
+/** Fix transparent/gray line in top of tooltip when there is no title text. */
+.ext-ie8 .x-tip .x-tip-header
+{
+  height:100% !important ;
+}
+
+/* Change toolbar separator appearance */
+#wbToolbar .x-toolbar .ytb-sep {
+  background: url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/gridBlackSplit.gif) no-repeat center center ;
+}
+
+/* Normal appearance of toolbar buttons. Not satisfied by inputs/outputs. */
+#wbToolbar .wbToolbarBtn td.x-btn-left {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) no-repeat scroll 0 0 ;
+}
+#wbToolbar .wbToolbarBtn td.x-btn-center {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) repeat-x scroll 0 -42px ;
+}
+#wbToolbar .wbToolbarBtn td.x-btn-right {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) no-repeat scroll 0 -21px ;
+}
+
+/* Appearance of a toolbar button that is not satisfied by inputs/outputs when the mouse is over the button. */
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-left {
+  background:  url(/javaScripts/ext-2.2/resources/images/default/toolbar/tb-btn-sprite.gif) no-repeat 0 0 ;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-center {
+  background: url(/javaScripts/ext-2.2/resources/images/default/toolbar/tb-btn-sprite.gif) repeat-x 0 -42px ;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-right {
+  background:  url(/javaScripts/ext-2.2/resources/images/default/toolbar/tb-btn-sprite.gif) no-repeat 0 -21px ;
+}
+
+/* Appearance of toolbar buttons when the tool is satisfied by inputs/outputs and ready to click.
+  Upon mouse-over, javascript will remove the .wbBtnReady class while the mouse is over. This allows the above
+  appearance to be seen rather than this one. */
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-left {
+  background:  url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) no-repeat 0 0 ;
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-center {
+  background: url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) repeat-x 0 -42px ;
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-right {
+  background:  url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) no-repeat 0 -21px ;
+}
+
+.wbToolReady_menuItem {
+  background-color: #B7EBCC ;
+}
+
+
+/* Styles for ExtJS 3.2.1, (the td classes and layout are different from 2.2) */
+/* These styles use the background image (/javaScripts/ext-3.2.1/resources/images/default/button/btn.gif) */
+/* The button is made up of a 3x3 table */
+/* There are 3 different button styles in the image which are defined below, 2 should be commented for each cell */
+/* The first is a light-gray button, second is light-blue and third is dark-blue */
+#wbToolbar .wbToolbarBtn td.x-btn-tl {
+  background-position: -0px 0px;
+/*  background-position: -6px 0px;*/
+/*  background-position: -12px 0px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-tc {
+  background-position: 0px -6px;
+/*  background-position: 0px -9px;*/
+/*  background-position: 0px -12px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-tr {
+  background-position: -3px 0px;
+/*  background-position: -9px 0px;*/
+/*  background-position: -15px 0px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-ml {
+  background-position: -0px -24px;
+/*  background-position: -6px -24px;*/
+/*  background-position: -12px -24px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-mc {
+  background-position: 0px -1096px;
+/*  background-position: 0px -2168px;*/
+/*  background-position: 0px -3240px; */
+}
+#wbToolbar .wbToolbarBtn td.x-btn-mr {
+  background-position: -3px -24px;
+/*  background-position: -9px -24px;*/
+/*  background-position: -15px -24px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-bl {
+  background-position: -0px -3px;
+/*  background-position: -6px -3px;*/
+/*  background-position: -12px -3px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-bc {
+  background-position: 0px -15px;
+/*  background-position: 0px -18px;*/
+/*  background-position: 0px -21px;*/
+}
+#wbToolbar .wbToolbarBtn td.x-btn-br {
+  background-position: -3px -3px;
+/*  background-position: -9px -3px;*/
+/*  background-position: -15px -3px;*/
+}
+
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-tl {
+  background-position: -6px 0px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-tc {
+  background-position: 0px -9px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-tr {
+  background-position: -9px 0px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-ml {
+  background-position: -6px -24px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-mc {
+  background-position: 0px -2168px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-mr {
+  background-position: -9px -24px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-bl {
+  background-position: -6px -3px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-bc {
+  background-position: 0px -18px;
+}
+#wbToolbar .wbToolbarBtn .x-btn-over td.x-btn-br {
+  background-position: -9px -3px;
+}
+
+
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-tl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px 0px;
+/*  background-position: -12px 0px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-tc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -9px;
+/*  background-position: 0px -12px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-tr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px 0px;
+/*  background-position: -15px 0px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-ml {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -24px;
+/*  background-position: -12px -24px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-mc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -2168px;
+/*  background-position: 0px -3240px; */
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-mr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -24px;
+/*  background-position: -15px -24px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-bl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -3px;
+/*  background-position: -12px -3px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-bc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -18px;
+/*  background-position: 0px -21px;*/
+}
+#wbToolbar .wbToolbarBtn .wbBtnReady td.x-btn-br {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -3px;
+/*  background-position: -15px -3px;*/
+}
+
+/* define green background for the "more" arrows associated with the enableOverflow config of the Ext.Toolbar */
+.x-toolbar-extras-row .wbBtnReady td.x-btn-tl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px 0px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-tc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -9px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-tr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px 0px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-ml {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -24px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-mc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -2168px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-mr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -24px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-bl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -3px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-bc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -18px;
+}
+.x-toolbar-extras-row .wbBtnReady td.x-btn-br {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -3px;
+}
+
+/* define the green background for the items in the "moreMenu" */
+.x-menu-floating .x-menu-list .wbToolbarBtn .wbBtnReady {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -2168px;
+}
+
+
+/* Use the class 'wbBtnGreen' to make green buttons */
+.wbBtnGreen .x-btn-tl, .wbBtnGreen .x-btn-tr, .wbBtnGreen .x-btn-tc, .wbBtnGreen .x-btn-ml, .wbBtnGreen .x-btn-mr, .wbBtnGreen .x-btn-mc, .wbBtnGreen .x-btn-bl, .wbBtnGreen .x-btn-br, .wbBtnGreen .x-btn-bc {
+  background-image:url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif);
+}

@@ -1,0 +1,62 @@
+<%# THIS FILE USES erubis %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'json'
+require 'brl/genboree/genboreeUtil'
+require 'brl/activeSupport/activeSupport'
+
+BRL::ActiveSupport.restoreJsonMethods()
+
+$VERBOSE = false
+@cgi = CGI.new()
+@req = Apache.request
+@serverName = @cgi.host
+
+# Get config to read location of JSON menu config file
+gbConfig = BRL::Genboree::GenboreeConfig.load()
+
+exception = nil
+addMenuItems = ""
+# ---------------------------------------------------------------------------
+
+begin
+  # Tell Apache we're going to make a javascript file
+  @req.content_type = "text/javascript"
+  @req.status = 200
+  @req.send_http_header()
+
+  # Read in JSON config
+  jsonMenuObj = JSON.parse(IO.read(gbConfig.gbMenuJsonConfig).gsub("\n", ""))
+
+  jsonMenuObj.each { |menuItem|
+    addMenuItems << "FullMenuBar.add(new Ext.menu.Item(#{menuItem.to_json})) ;\n"
+  }
+rescue => e
+  exception = e
+  $stderr.puts "ERROR: exception caught trying to read menubar config.\nError message: #{e.message}\nError backtrace:\n" + e.backtrace.join("\n")
+ensure
+  # Do not output anything if the menu was improperly constructed
+  if(exception.nil?)
+%>
+    Ext.QuickTips.init();
+    Ext.BLANK_IMAGE_URL = "/javaScripts/ext-2.2/resources/images/default/s.gif"
+
+    Ext.onReady(function()
+    {
+      FullMenuBar = new Ext.ux.Menubar(
+      {
+        orientation: "horizontal"
+      }) ;
+
+      <%= # DISABLED BECAUSE ITS BROKEN WITH EXTJS 3.2.1 ### addMenuItems %>
+      FullMenuBar.show(Ext.get("menubar"), "bl-bl") ;
+    }) ;
+<%
+  end
+end
+%>

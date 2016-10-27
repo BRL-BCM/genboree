@@ -1,0 +1,20 @@
+@CHARSET "ISO-8859-1";
+
+#releasesTable {
+  width: 800px;
+  padding: 0px;
+  border: 1px black solid;
+}
+
+#releasesTable th {
+  margin: 0px;
+  padding: 5px;
+  border: 1px black solid;
+}
+
+#releasesTable td {
+  margin: 0px;
+  padding: 5px;
+  border: 1px black solid;
+}
+

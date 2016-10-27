@@ -1,0 +1,12 @@
+--- ../redmine_genbKB_ORIG/lib/redmine.rb	2013-12-13 10:20:54.699810114 -0600
++++ ./lib/redmine.rb	2014-04-08 17:06:56.696124430 -0500
+@@ -87,7 +87,8 @@
+ 
+ # Permissions
+ Redmine::AccessControl.map do |map|
+-  map.permission :view_project, {:projects => [:show], :activities => [:index]}, :public => true, :read => true
++  map.permission :view_project, {:projects => [:show]}, :public => true, :read => true
++  map.permission :view_activity, {:projects => [:activity]}
+   map.permission :search_project, {:search => :index}, :public => true, :read => true
+   map.permission :add_project, {:projects => [:new, :create]}, :require => :loggedin
+   map.permission :edit_project, {:projects => [:settings, :edit, :update]}, :require => :member

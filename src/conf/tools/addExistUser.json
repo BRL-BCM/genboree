@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addExistUser",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Existing User To Group",
+    "shortLabel": "[NOT SET]"
+  }
+}

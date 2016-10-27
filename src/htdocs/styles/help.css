@@ -1,0 +1,731 @@
+
+/* ************************************************************************/
+/* GLOBAL SETTINGS                                                        */
+/* ************************************************************************/
+/* Zero the padding and margin for best IE/FF compatibility. Then set manually where needed. */
+
+* {
+	padding: 0px;
+	margin: 0px;
+}
+
+img {
+	border: 0px ;
+	margin-top: 5px ;
+	margin-bottom: 5px ;
+}
+
+p.body {
+	padding-top: 8px ;
+	padding-bottom: 5px ;
+	width: 98% ;
+}
+
+p.indentBody {
+	padding-top: 8px ;
+	padding-bottom: 5px ;
+	width: 90% ;
+	padding-left: 2em ;
+}
+
+ol {
+	padding-left: 30px ;
+}
+
+
+hr {
+	margin: 1 auto 1 auto ;
+}
+
+hr.sep {
+	margin: 10 auto 10 auto ;
+	width: 66% ;
+}
+
+/* Use this to debug any style problems: *
+/*  border: 1px solid red; */
+
+/* ************************************************************************/
+/* PAGE TITLE / HOME LINK                                                 */
+/* ************************************************************************/
+table.pageTitle {
+	padding-bottom: 10px ;
+}
+
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* ON THIS PAGE / SEE ALSO                                                */
+/* ************************************************************************/
+div.tocRight {
+  float: left ;
+  position: relative ;
+  width: 48% ;
+  padding-top: 5px ;
+  padding-bottom: 5px ;
+}
+div.tocLeft {
+  float: left ;
+  position: relative ;
+  width: 51% ;
+  padding-top: 5px ;
+  padding-bottom: 5px ;
+}
+div.tocLast {
+  float: left ;
+  clear: right ;
+  width: 53% ;
+  padding-top: 5px ;
+  padding-bottom: 5px ;
+}
+span.genbLabel {
+  font-size: 8pt ;
+  font-family: "courier new", monospace ;
+  background-color: #f0eafB ;
+}
+span.genbField {
+	font-weight: bold ;
+	color: #009900 ;
+  font-family: "courier new", monospace ;
+}
+span.genbRepLabel {
+  color: maroon ;
+  font-family: monospace, "courier new", "courier", sans-serif ;
+}
+.genbFixed {
+	font-family: "courier new", monospace, sans-serif ;
+}
+span.genbParam {
+  color: #3300CC ;
+  font-family: "courier new", monospace, sans-serif ;
+  font-weight: bold ;
+}
+dl.indentedDL {
+  margin-left: 20px ;
+}
+dl.indentedDL dd {
+  margin-left: 20px ;
+}
+div.genbParamDef {
+  margin-left: 0 ;
+  padding-left: 2em ;
+  text-indent: -1em ;
+}
+div.genbMethodDesc {
+  margin-left: 0 ;
+  padding-left: 3.2em ;
+  text-indent: -3.2em ;
+}
+ol.procedure li {
+  margin-bottom: 8px ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* Topic Title / Top of Page Link                                         */
+/* ************************************************************************/
+div.topLabel {
+  width: 97% ;
+	margin-top: -5px ;
+  padding-bottom: 10px ;
+  float: left ;
+}
+div.topLink {
+  float: right ;
+  width: 3% ;
+  padding-top: 5px ;
+  padding-bottom: 15px ;
+	margin-top: -5px ;
+  white-space: nowrap ;
+}
+div.topLink a {
+  text-decoration: none ;
+	float: right ;
+  width: 14px ;
+  height: 14px ;
+  background: transparent url(/images/topArr_both.gif) no-repeat ;
+}
+div.topLink a:hover {
+  background-position: -14px 0 ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* FULL T.O.C. List                                                       */
+/* ************************************************************************/
+/* TOC Level 1 */
+ul.compact1_toc_level1 {
+	list-style: none ;
+	padding-left: 1em ;
+}
+ul.compact1_toc_level1 a {
+	text-decoration: none ;
+	font-weight: bold ;
+	color: #403c80 ;
+}
+ul.compact1_toc_level1 li {
+	font-weight: bold ;
+	white-space: nowrap ;
+	margin-bottom: 1em ;
+	padding-left: 2em ;
+	color: #403c80 ;
+}
+ul.compact1_toc_level1 a:hover {
+  font-weight: bold ;
+  text-decoration: none ;
+}
+
+/* TOC Level 2 */
+ul.compact1_toc_level2 {
+	list-style: none ;
+}
+ul.compact1_toc_level2 a {
+	font-weight: normal ;
+}
+ul.compact1_toc_level2 li {
+	font-weight: bold ;
+	white-space: nowrap ;
+	margin-bottom: 0.1em ;
+	color: #403c80 ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* CONTENT TITLES / LAYOUTS                                               */
+/* ************************************************************************/
+font.topicText {
+  font-weight: bold ;
+  font-size: 13pt ;
+}
+
+font.topicTitle {
+  font-weight: bold ;
+  font-size: 13pt ;
+  color: #666699 ;
+  white-space: nowrap ;
+}
+
+span.helpTopic {
+  font-weight: bold ;
+	color: #666699 ;
+  border-bottom-style: dashed ;
+  border-bottom-width: 1px ;
+  border-bottom-color: #BBBBBB ;
+}
+
+span.subtopicHeader {
+  font-weight: bold ;
+  font-size: 11pt ;
+}
+
+div.subsubtopicHeader {
+  font-weight: bold ;
+  padding-bottom: 5px ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* EXAMPLE BLOCKS                                                         */
+/* ************************************************************************/
+div.uploadExample {
+  font-family: "courier new", monospace ;
+  font-size: 7pt ;
+  background: #eeeeee ;
+  padding-left: 1em ;
+  padding-right: 1em ;
+  padding-top: 2px ;
+  padding-bottom: 2px ;
+  margin-left: 2em ;
+  margin-top: -1em ;
+  margin-bottom: 1em ;
+  border: 1px solid #000000 ;
+  width: 80% ;
+}
+div.annoExample {
+  position: relative ;
+  font-family: "courier new", monospace ;
+  font-size: 7pt ;
+  background: #eeeeee ;
+  padding-left: 1em ;
+  padding-right: 1em ;
+  padding-top: 2px ;
+  padding-bottom: 2px ;
+  margin-left: 2em ;
+  margin-top: 1em ;
+  margin-bottom: 1em ;
+  border: 1px solid #000000 ;
+  height: 3.8em ;
+  width: 350px ;
+  overflow: auto ;
+  white-space: nowrap ;
+}
+div#colHeaders {
+  margin-left: 2em ;
+}
+div#annoExample1 {
+  width: 425px ;
+  height: auto ;
+  padding-bottom: 20px ;
+  overflow: auto ;
+}
+div#annoExample2 {
+  width: 425px ;
+  height: auto ;
+  padding-bottom: 20px ;
+  overflow: auto ;
+}
+div#annoExample3 {
+  width: 425px ;
+  height: auto ;
+  padding-bottom: 20px ;
+  overflow: auto ;
+}
+div.linkExample {
+  font-size: 7pt ;
+  background: #eeeeee ;
+  padding-left: 5px ;
+  padding-right: 5px ;
+  padding-top: 2px ;
+  padding-bottom: 2px ;
+  margin-top: -1em ;
+  margin-bottom: 1em ;
+  border: 1px solid #000000 ;
+  width: 480px ;
+  height: 3.8em ;
+  white-space: nowrap ;
+  overflow: auto
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* HIDABLE DIV                                                            */
+/* ************************************************************************/
+div.egDiv {
+  position: relative ;
+  background-color: #ffffe2 ;
+  margin-top: 5px ;
+  margin-left: auto ;
+  margin-right: auto ;
+  margin-bottom: 15px ;
+  text-align: left ;
+  border-top-style: dashed ;
+  border-top-width: 1px ;
+  border-top-color: #403c80 ;
+  border-bottom-style: dashed ;
+  border-bottom-width: 1px ;
+  border-bottom-color: #403c80 ;
+  padding: 5px 8px 8px 8px ;
+  z-index: 99 ;
+  display: block ;
+  width: 84% ;
+}
+
+div.egDiv2 {
+  position: relative ;
+  background-color: #ffffe2 ;
+  margin-top: 5px ;
+  margin-left: auto ;
+  margin-right: auto ;
+  margin-bottom: 15px ;
+  text-align: left ;
+  border-top-style: dashed ;
+  border-top-width: 1px ;
+  border-top-color: #403c80 ;
+  border-bottom-style: dashed ;
+  border-bottom-width: 1px ;
+  border-bottom-color: #403c80 ;
+  padding: 5px 8px 8px 8px ;
+  z-index: 99 ;
+  display: block ;
+  width: 90% ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* LFF COLUMN DIVS                                                        */
+/* ************************************************************************/
+div.colNum {
+  float: left ;
+  width: 15% ;
+  font-size: 10pt ;
+  margin-top: 10px ;
+  vertical-align: bottom ;
+}
+div.colName {
+  float: left ;
+  width: 17% ;
+  font-size: 9pt ;
+  font-family: "courier new", monospace ;
+  font-weight: bold ;
+  margin-top: 10px ;
+  vertical-align: bottom ;
+}
+div.colDesc {
+  float: left ;
+  width: 68% ;
+  clear: right ;
+  margin-top: 10px ;
+  margin-bottom: 2px ;
+
+}
+span.redFont {
+  color: red ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* SPECIAL AVP DIVS                                                       */
+/* ************************************************************************/
+div.attrName {
+  float: left ;
+  width: 24% ;
+  font-family: "courier new", monospace ;
+  font-weight: bold ;
+  margin-top: 10px ;
+  vertical-align: bottom ;
+}
+div.attrDesc {
+  float: left ;
+  width: 76% ;
+  clear: right ;
+  margin-top: 10px ;
+  margin-bottom: 2px ;
+
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* LINK SETUP STYLES                                                      */
+/* ************************************************************************/
+div.defTerm {
+  width: 20% ;
+  float: left ;
+  text-align: right ;
+  margin-right: 10px ;
+}
+div.defDef {
+  width: 75% ;
+  float: right ;
+  text-indent: 0px ;
+}
+span.exampleURL {
+  font-size: 7pt ;
+  color: blue ;
+}
+a.genbSubLink {
+	font-size: 7pt ;
+	color: blue ;
+}
+/* ************************************************************************/
+
+/* ************************************************************************/
+/* TABLES                                                                 */
+/* ************************************************************************/
+table.sections {
+	padding: 2px 1px 2px 1px ;
+	border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+}
+table.sections th {
+	padding: 2px 1px 2px 1px ;
+	text-align: center ;
+	font-weight: bold ;
+	border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+}
+table.sections td {
+	padding: 2px 1px 2px 1px ;
+	text-align: center ;
+	border: 1px solid black ;
+	border-spacing: 0px ;
+	background-color: #F0EAFB ;
+  border-collapse: collapse ;
+}
+table.resources {
+  padding: 2px ;
+  border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse;
+}
+table.resources td.category {
+  padding: 2px ;
+  border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+  color: white ;
+  font-weight: bold ;
+  font-size: 9pt ;
+  text-align: center ;
+	background-color: navy ;
+}
+table.resources td.colHeader {
+  padding: 2px ;
+  border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+  color: black ;
+  font-weight: bold ;
+  text-align: center ;
+	background-color: silver ;
+  font-size: 8pt ;
+}
+table.resources td {
+  padding: 1px ;
+  border: 1px solid black ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+  color: black ;
+  font-size: 7pt ;
+}
+table.resources td.topAligned {
+  vertical-align: top ;
+  padding: 1px ;
+	border-spacing: 0px ;
+  border-collapse: collapse ;
+  color: black ;
+  font-size: 7pt ;
+  font-family: monospace, "courier new", "courier", sans-serif ;
+}
+tr.halfRowTop {
+  border-bottom: 1px dotted black ;
+}
+tr.halfRowTop td {
+  border-bottom: 1px dotted black ;
+}
+tr.halfRowBottom {
+  border-top: 1px dotted black ;
+}
+tr.halfRowBottom td {
+  border-top: 1px dotted black ;
+}
+tr.halfRowMiddle {
+  border-top: 1px dotted black ;
+  border-bottom: 1px dotted black ;
+}
+tr.halfRowMiddle td {
+  border-top: 1px dotted black ;
+  border-bottom: 1px dotted black ;
+}
+
+/* ************************************************************************/
+
+div.sectionHeader {
+  text-align: center ;
+  font-size: 10pt ;
+  font-weight: bold ;
+  text-decoration: underline ;
+}
+
+ul.indent1 {
+  margin-left: 4em ;
+  margin-right: 4em ;
+  margin-top: 5px ;
+  margin-bottom: 0px ;
+  padding-bottom: 8px ;
+  padding-left: 1em ;
+}
+
+font.errorTxt {
+  color: #DD0000 ;
+  font-weight: bold ;
+  font-size: 11pt ;
+}
+
+
+a.invisiLink {
+  text-decoration: none ;
+  font-weight: normal ;
+  border-bottom-style: dashed ;
+  border-bottom-width: 1px ;
+  border-bottom-color: #BBBBBB ;
+}
+a:hover.invisiLink {
+  font-weight: bold ;
+  text-decoration: none ;
+}
+
+ul.compact1_toc {
+  list-style: none ;
+  margin-left: 10px ;
+  margin-top: 0px ;
+  margin-bottom: 0px ;
+  padding-left: 1em ;
+  text-indent: -1em ;
+}
+
+font.tocText {
+  font-weight: bold ;
+  color: black ;
+  font-size: 10pt ;
+}
+
+font.tocSmall {
+  font-size: 7pt ;
+}
+
+
+
+td.menuItem {
+  text-align: center ;
+  border: 1px solid #000000 ;
+  border-width: 0px 1px 0px 0px ;
+  padding-top: 1px ;
+  padding-bottom: 2px ;
+}
+
+td.lastMenuItem {
+  text-align: center ;
+  border: 1px solid ;
+  border-width: 0px 0px 0px 0px ;
+  padding-top: 1px ;
+  padding-bottom: 2px ;
+}
+
+table.keyLinks {
+  border: 0px none white ;
+  border-collapse: collapse ;
+}
+
+ul.indent10 {
+  padding-left: 10px ;
+  margin-left: 10px ;
+}
+
+ul.compact1 {
+  list-style: none ;
+  margin-left: 0px ;
+  margin-top: 0px ;
+  margin-bottom: 0px ;
+  padding-left: 1em ;
+  text-indent: -1em ;
+}
+ul.compact1 li {
+  padding-bottom: 1px ;
+}
+
+ul.compact1_small {
+  list-style: none ;
+  margin-left: 0px ;
+  margin-top: 0px ;
+  margin-bottom: 0px ;
+  padding-left: 1em ;
+  text-indent: -1em ;
+}
+
+ul.compact1_small li {
+  font-size: 7pt ;
+}
+
+li.spacedListItem {
+	padding-bottom: 5px ;
+}
+
+ul.compact1_10 {
+  list-style: none ;
+  margin-left: 10px ;
+  margin-top: 0px ;
+  margin-bottom: 0px ;
+  padding-left: 1em ;
+  text-indent: -1em ;
+}
+ul.compact1_10 li.compact1_10 {
+	white-space: nowrap ;
+	margin-bottom: 3px ;
+}
+
+ol.compact2 {
+	width: 86% ;
+}
+
+ul.compact2 {
+	width: 86% ;
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 0px ;
+  text-indent: -1em ;
+  padding-left: 3em ;
+}
+
+ul.compact3 {
+	width: 86% ;
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 0px ;
+  text-indent: -3px ;
+  padding-left: 1em ;
+  font-size: 7pt ;
+}
+
+ul.compact3_b {
+	width: 86% ;
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 0px ;
+  text-indent: -1em ;
+  padding-left: 1em ;
+  font-size: 7pt ;
+}
+
+
+ol.compact3_a {
+	width: 86% ;
+  list-style: lower-alpha ;
+  margin-bottom: 0px ;
+  text-indent: -1px ;
+  font-size: 7pt ;
+}
+
+ul.compact4 {
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 0px ;
+  text-indent: -10px ;
+  padding-left: 10px ;
+}
+ul.compact4 li {
+  margin-bottom: 2px ;
+}
+
+ul.compact4_bigIndent {
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 6em ;
+  text-indent: -10px ;
+  padding-left: 5px ;
+}
+ul.compact4_bigIndent li {
+  margin-bottom: 2px ;
+}
+
+p.indent10 {
+  padding-left: 10px ;
+  margin-left: 10px ;
+  margin-top: 0px ;
+  padding-top: 0px ;
+}
+
+p {
+  padding-bottom: 0px ;
+  margin-bottom: 0px ;
+}
+
+table.figLink td {
+  height: 16px ;
+}
+
+table.figLink {
+  margin-left: 20px ;
+  margin-bottom: 30px ;
+}
+
+span.font10pt {
+  font-size: 10pt ;
+}
+
+img.helpHome {
+	vertical-align: baseline ;
+	margin-top: 0px ;
+	margin-bottom: 0px ;
+}

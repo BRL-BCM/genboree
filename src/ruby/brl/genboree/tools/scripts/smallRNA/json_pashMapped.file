@@ -1,0 +1,41 @@
+{
+  "input" :
+  [
+    "/home/tandon/smallRNA_test/s_7_run71_sequence_test.txt.gz_WithoutAdaptors.fa.fastq"
+  ],
+  "output" :
+  [
+    "http://genboree.brl.bcmd.bcm.edu/REST/v1/grp/arpit_group/db/test/file"
+  ],
+  "settings" :
+  {
+    "kWeight" : 11,
+    "maxMappings" : 100,
+    "diagonals" : 100,
+    "gap": 2,
+    "topPercent" : 1,
+    "kSpan" : 11,
+    "scratch" :".",
+    "targetGenomeVerison" : "hg18",
+    "refGenome" :"/cluster.shared/local/apps/smallRNA/hg18/hg18.off",
+    "targetGenome" : "/cluster.shared/local/apps/smallRNA/hg18/sorted.ref.hg18.fa",
+    "lffFile" : "/cluster.shared/local/apps/smallRNA/hg18/targets.kg.gr.mirbase16.sno.sca.cpg.piclus.hg18.lff",
+    "ROITrack" : ["3UTR:Gene__RefSeq","3UTR:Known__Gene","5UTR:Gene__RefSeq","5UTR:Known__Gene","Intron:Gene__RefSeq","Intron:Known__Gene",
+             "Mirna:Promoters", "Promoter:Gene__RefSeq", "Promoter:Known__Gene", "Repeat:DNA", "Repeat:LINE", "Repeat:LowComplex",
+             "Repeat:LTR", "Repeat:Other", "Repeat:RNA", "Repeat:Satellite", "Repeat:Simple", "Repeat:SINE", "Repeat:Unknown",
+             "RNA:miRNA", "RNA:piRNA.Clusters", "RNA:scaRNA", "RNA:snoRNA","GC:CpgIslands","Gene:RefSeq","Known:Gene"]
+  },
+  "context" :
+  {
+    "jobId": "1234",
+    "runName"  : "test13" ,
+    "toolTitle": " Small RNA",
+    "userEmail" :"tandon@bcm.edu",
+    "userFirstName" :"arpit",
+    "userLastName" : "tandon",
+    "gbConfFile": "/cluster.shared/local/conf/genboree/genboree.config.properties",
+    "apiDbrcKey" : "prolineApi",
+    "userLogin" : "arpit"
+  }
+  
+}

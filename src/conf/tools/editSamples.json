@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "editSamples",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Edit Samples",
+    "shortLabel": "[NOT SET]"
+  }
+}

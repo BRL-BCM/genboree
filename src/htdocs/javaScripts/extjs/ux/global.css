@@ -1,0 +1,84 @@
+body {
+    border:0pt none;
+    color:#444444;
+    font-family:"Verdana","Tahoma","Helvetica","Arial",sans-serif;
+    font-size:13px;
+    line-height:110%;
+    margin:0pt;
+    padding:0pt;
+}
+
+h1 {
+    color: #393939;
+    font-size: 16px;
+    margin-bottom: 5px;
+    margin-top: 20px; 
+}
+p {
+    margin: 10px 0px;
+    color: #393939;
+    font-size: 12px;
+}
+
+dt {
+    font-weight: bold;
+    color: #393939;
+    font-size: 12px;
+}
+
+dd {
+    color: #393939;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+
+
+.summary {
+    background-color:#F9F9F9;
+    border:1px solid #AAAAAA;
+    margin:0pt 0pt 1em 1em;
+    padding:5px 10px;
+    float: right;
+    width: 300px
+}
+
+.summary h1 {
+    color: #393939;
+    font-size: 14px;
+    margin-top: 0px;
+    margin-bottom: 10px;    
+}
+
+.summary .link {
+    padding-left: 20px;
+    line-height: 17px;
+}
+
+.summary .wiki {
+    background: transparent url(../manager/house_link.png) no-repeat left center
+}
+.summary .download {
+    background: transparent url(../manager/attach.png) no-repeat left center;
+    
+}
+
+
+.summary .source {
+    background: transparent url(../manager/page_white.png) no-repeat left center;
+}
+
+
+.summary .css {
+    background: transparent url(../manager/page_white_code.png) no-repeat left center;
+}
+.summary .js {
+    background: transparent url(../manager/page_white_code_red.png) no-repeat left center;
+}
+.summary .php {
+    background: transparent url(../manager/page_white_php.png) no-repeat left center;
+}
+
+.container {
+    margin: 30px;
+}

@@ -1,0 +1,188 @@
+<% # THIS IS AN ERUBY FILE
+########################################################################################
+# Project: VGP UI Integration
+#   This project creates a new User Interface (UI) to assist users in
+#   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a VGP job with the Genboree environment
+#   and then package the VGP output files and notify the user of job completion.
+#
+# vgpuiRequestHandler.rhtml - This file receives the request from the client UI to start a run of VGP.
+#   Here we ensure that the data is properly formatted, do some basic validation
+#   and start off the run of VGP (via forking the vgpCoordinator.rb). After starting the
+#   VGP process, we return a message to the user alerting them they will be notified
+#   via email when the process is complete and the results are read, MFS (BNI)
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2008 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+require 'json'
+require 'cgi'
+require 'uri'
+require 'brl/genboree/genboreeUtil'
+require 'brl/cluster/clusterJob'
+require 'brl/cluster/clusterJobManager'
+require 'brl/genboree/lockFiles/genericDbLockFile'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+# Local variables
+cgi = CGI.new()
+jsonData = cgi["options"]
+genbConf = BRL::Genboree::GenboreeConfig.load()
+vgpScratchBase = genbConf.vgpScratchBase
+debugLogPath = ""
+
+begin
+  # Parse the JSON options,
+
+  
+  options = JSON.parse(jsonData)
+  
+  # The UI should ensure we get all the required options, but for safety, check to make sure they exist
+  if(options["config"].nil? ||
+     options["config"]["userId"].nil? ||
+     options["config"]["groupId"].nil? ||
+     options["config"]["rseqId"].nil? ||
+     options["config"]["userLogin"].nil?)
+
+    raise ArgumentError
+  end
+
+  # Our JSON object was formatted properly, we have our required options, start the job
+  jobId = Time.now.to_i.to_s + "_#{rand(65525)}"
+  if(vgpScratchBase.nil? || vgpScratchBase.empty?)
+    debugLogPath = File.join("usr", "local", "brl", "data", "genboree", "temp", "vgp", "vgpCoordinator.debug")
+  else
+    debugLogPath = File.join(vgpScratchBase, options["config"]["groupId"].to_s.strip, options["config"]["rseqId"].to_s.strip,
+      options["config"]["userLogin"].to_s.strip, options["config"]["userId"].to_s.strip + "_" + jobId + ".vgpCoordinator.debug")
+  end
+
+  
+  vgpCoordCmd = "vgpCoordinator.rb"
+  
+  
+  # Should VGP jobs run on the cluster?
+  if(genbConf.useClusterForVGP == "true" or genbConf.useClusterForVGP == "yes") then
+    debugLogPath = "/usr/local/brl/data/genboree/temp/vgp/vgpCoordinator.debug"
+    vgpCoordArgs = ["-o", CGI.escape(JSON.generate(options)), "-j", jobId, "-l", debugLogPath, "-r", ".", "-s ", "."]
+    hostname = ENV["HTTP_HOST"] || genbConf.machineName
+    # Who gets notified about cluster job completion?
+    clusterAdminEmail = 'raghuram@bcm.edu'
+    # Cluster job Id is same as VGP job id
+    # hostname:genbConf.vgpResultsBase is the output directory for the cluster job to move files to from the temporary working directory on the node after it is done executing
+    # Supply job name, output dir, notification email and a flag to specify whether to retain temp. working dir.
+    clusterJob = BRL::Cluster::ClusterJob.new("job-#{jobId}", hostname.strip.to_s + ":" + genbConf.vgpResultsBase.to_s, clusterAdminEmail, "false")
+    # Suitably modified 'main' command for the cluster job to execute on the node
+    clusterJob.commands << CGI.escape(vgpCoordCmd + " " + vgpCoordArgs.join(" "))
+    # Which resources will this job utilize on the node/ what type of node does it need?
+    clusterJob.resources << genbConf.clusterVGPResourceFlag+"=1"
+    # Should the temporary working directory of the cluster job be retained on the node?
+    if(genbConf.retainClusterVGPDir=="true" or genbConf.retainClusterVGPDir=="yes")
+      clusterJob.removeDirectory = "false"
+    else
+      clusterJob.removeDirectory = "true"
+    end
+    # Output files requiring special handling that need to be moved to a different place; the 'rest' of the output files go to the default output dir. The default output dir is specified
+    # during creation of the cluster job object
+    outputListHash = Hash.new
+    # All files that end in .tar.bz2 should 
+    outputListHash['srcrexp'] = "\\.tar\\.bz2$"
+    #.be renamed to (nothing in this case)
+    outputListHash['destrexp'] = ""
+    # and moved to a different output dir hostname:genbConf.vgpScratchBase
+    outputListHash['outputDir'] = hostname.strip.to_s + ":" + genbConf.vgpScratchBase.to_s+"/"
+    # Let the cluster job know that there are files that need to be handled differently
+    clusterJob.outputFileList<<outputListHash
+    # Create a resource identifier string for this job which can be used to track resource usage
+    # Format is /REST/v1/grp/{grp}/db/{db}/VGP/{vgpJobId}
+    @dbu = BRL::Genboree::DBUtil.new(genbConf.dbrcKey, nil, nil)
+    groupName = @dbu.selectGroupById(options["config"]["groupId"])[0]["groupName"]
+    refSeqName = @dbu.selectRefseqById(options["config"]["rseqId"])[0]["refseqName"]
+    apiCaller = ApiCaller.new("proline.brl.bcm.tmc.edu", "/REST/v1/grp/{grp}/db/{db}/VGP/{vgpJobId}")
+    rsrcId = apiCaller.fillApiUriTemplate( { :grp => groupName, :db => refSeqName, :vgpJobId => jobId} )
+    uri = URI.parse(rsrcId)
+    resourceIdentifier = uri.path
+    clusterJob.resourcePaths << resourceIdentifier
+  begin
+    # Get a lock in order to submit the job to the scheduler
+    @dbLock = BRL::Genboree::LockFiles::GenericDbLockFile.new(:clusterJobDb)
+    @dbLock.getPermission()
+    clusterJobManager = BRL::Cluster::ClusterJobManager.new(genbConf.schedulerDbrcKey,genbConf.schedulerTable)
+    # Put the job in the scheduler table
+    schedJobId = clusterJobManager.insertJob(clusterJob)
+  rescue Exception => err 
+   $stderr.puts "#{Time.now.to_s} ERROR: Inserting job into scheduler table"
+   $stderr.puts err.to_s
+   $stderr.puts err.backtrace.join("\n")
+  ensure
+    begin
+      # Release lock
+      @dbLock.releasePermission() unless(@dbLock.nil?)
+    rescue Exception => err1
+      $stderr.puts "#{Time.now.to_s} ERROR: Releasing lock on lock file #{@dbLock.lockFileName}"
+      $stderr.puts err1.to_s
+      $stderr.puts err1.backtrace.join("\n")
+    end
+  end
+    
+    
+    if(schedJobId.nil?) then
+      $stderr.puts("Error submitting job to the scheduler")
+    else
+      $stderr.puts("Your Job Id is #{schedJobId}")
+    end    
+  else
+    vgpCoordArgs = ["-d", "-o", JSON.generate(options), "-j", jobId, "-l", debugLogPath]
+    $stderr.puts "VGP Job Id #{jobId}: Executing command '#{vgpCoordCmd}' with these (non-shell expanded) arguments:\n    " + vgpCoordArgs.join('  ')
+    vgpCoordReturn = system(vgpCoordCmd, *vgpCoordArgs)
+    $stderr.puts "VGP Job Id #{jobId}: command successful?  #{vgpCoordReturn}\n"
+  end
+
+
+  # Inform the user the job has been queued
+  output = "<div class='success'>"
+  output << "Your VGP job has been queued! You will be emailed a link to view your results when they are ready. "
+  output << "The job ID for this VGP run is: <em>#{jobId}</em><br><br>If you have questions, please contact "
+  output << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance. "
+  output << "Plase include the job ID in any inquiries so we can better assist you.<br>\n"
+  output << "</div>"
+  print output
+rescue JSON::ParserError => e
+  # If there was an error with the JSON, alert the user
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "<em>ERROR:</em> The received JSON data was malformed!<br>"
+  err << "</div>"
+  print err
+  
+  exit
+rescue ArgumentError => e
+  missingParams = Array.new
+  missingParmas << "userId" if options["config"]["userId"].nil?
+  missingParams << "groupId" if options["config"]["groupId"].nil?
+  missingParams << "rseqId" if options["config"]["rseqId"].nil?
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "ERROR: Required parameters were missing!<br>\n#{missingParams.join("<br>\n")}<br>\n"
+  err << "</div>"
+  print err
+
+  exit
+rescue Exception => e
+  # Failsafe, if any other error occurs (perhaps with the fork?), alert the user
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "<em>ERROR:</em> An unknown error has occurred!<br>"
+  err << "</div>"
+  print err
+
+  exit
+end
+%>

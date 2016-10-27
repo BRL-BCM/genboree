@@ -1,0 +1,41 @@
+<%@ page import="java.util.HashMap"%>
+<%
+    boolean initPage = false;
+    int numPages = 1;
+    HashMap page2Annotations = null;
+    int currentPageIndex = 0;
+    String currentPage = "0";
+    boolean paging = false;
+    boolean doPaging = false;
+    int displayNum = 5;
+    int modNum = 0; 
+    if (mys.getAttribute("displayNum") != null) {
+       String  displayNums =  (String )mys.getAttribute("displayNum");
+        displayNum = Integer.parseInt(displayNums);
+
+    }
+     int [] dispNum = new int []{  5, 10, 15, 20, 25, 30, 50, 100};
+     String  sstartPageNum = null;
+    String  sstopPageNum = null;
+    int lastTotalNum= 0;
+    int startPageNum = 0;
+    int endPageNum = 0;
+    int ntemp=0;
+    // maximum number of pages displayed
+    int maxDisplay = 10;
+
+
+   if (request.getParameter("upfid")!= null) {
+         currentPageIndex = 0;
+         currentPage = "0";
+         mys.setAttribute("lastPageIndex", "0");
+         mys.removeAttribute("lastStartPageNum");
+         mys.removeAttribute("lastEndPageNum");
+         mys.setAttribute("lastStartPageNum", "" +  0);
+        
+     }
+
+
+
+
+%>

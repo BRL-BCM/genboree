@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "filterReads",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "walltime": "12:00:00"
+  },
+  "ui": {
+    "label": "Filter Reads",
+    "shortLabel": "Filter Reads",
+    "groupAccessUri": null
+  }
+}

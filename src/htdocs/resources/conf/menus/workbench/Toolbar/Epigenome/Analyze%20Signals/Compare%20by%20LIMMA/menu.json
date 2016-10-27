@@ -1,0 +1,17 @@
+[
+  {
+    "text": "User Supplied Data Matrix",
+    "tooltip": "Assess differential expression.",
+    "idStr": "limma"
+  },
+  {
+    "text": "Tracks",
+    "tooltip": "Compare two sets of epigenomic signals across sets of genomic annotations.",
+    "idStr": "limmaSignalComparison"
+  },
+  {
+    "text": "Track with Sample Metadata",
+    "tooltip": "Compare epigenomic samples across selected sample attributes.",
+    "idStr": "sampleCentricLimma"
+  }
+]

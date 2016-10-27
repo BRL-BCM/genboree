@@ -1,0 +1,170 @@
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper' 
+%>
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool compares the signal data in the <i>first</i> (X-axis) score track you drag to the
+          signal data in the <i>second</i> (Y-axis) score track you drag via a linear regression analysis to
+          determine the level of agreement and the sites containing significant differences.
+          <br>&nbsp;<br>
+          This comparison can be done at the level of fixed 100Kbase windows tiling the
+          entire genome, or via a set of regions you provide as a track.
+          <br>&nbsp;<br>
+          In addition to the key linear regression statistics, the result data for
+          the regions or windows will be uploaded to a database you choose, so you
+          can visualize the agreement data in Genboree.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+      if(@inputs.size == 2)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs, :label => "X/Y Tracks" } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs, :label => "X/Y/ROI Tracks" } )
+        })
+      end
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      widgets =   [
+                    { :id => 'analysisName', :label => 'Analysis Name', :labelWidth => "200px", :type => :text , :size => "25", :value => "SigComp-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" }
+                  ]
+      # Prepare the select list for selecting the query track
+      trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+      xSelectList = {}
+      ySelectList = {}
+      roiSelectList = {}
+      idx = 0
+      @inputs.each { |trkUri|
+        if(idx == 0)
+          xSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri), :selected => true}
+          ySelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+          roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+        elsif(idx == 1)
+          xSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+          ySelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri), :selected => true}
+          roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+        else
+          xSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+          ySelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+          roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri), :selected => true}
+        end
+        idx += 1
+      }
+      if(@inputs.size == 2) # No ROIs, present the user with the 'windows' option
+        widgets.push(
+                      { :id => 'xAxisTrk', :label => "X-axis Track", :type => :select, :options => xSelectList },
+                      { :id => 'yAxisTrk', :label => "Y-axis Track", :type => :select, :options => ySelectList },
+                      { :name => 'res', :label => 'Fixed Resolution', :type => :radio , :onClick => "showRadioText('fixedResolution', 'customResolution')", :value => "fixRes" },
+                      { :id => 'fixedResolution', :label => "Resolution", :type => :select, :hidden => true, :options =>
+                        {
+                          :high   => { :label => 'High' },
+                          :medium => { :label => 'Medium', :selected => true },
+                          :low    => { :label => 'Low'}
+                        }
+                      },
+                      { :name => 'res', :label => 'Custom Resolution', :type => :radio , :onClick => "showRadioText('customResolution', 'fixedResolution')", :value => "cusRes" },
+                      { :id => 'customResolution', :label => 'Resolution', :type => :text , :hidden => true, :size => "10", :value => "" }
+                    )
+      else
+        widgets.push(
+                      { :id => 'xAxisTrk', :label => "X-axis Track", :type => :select, :options => xSelectList },
+                      { :id => 'yAxisTrk', :label => "Y-axis Track", :type => :select, :options => ySelectList },
+                      { :id => 'roiTrack', :label => "ROI Track", :type => :select, :options => roiSelectList }
+                    )
+      end
+
+      widgets.push(
+                    { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :type => :checkBox, :checked => true},
+                    { :id => 'normalization', :label => 'Normalization', :type => :select, :options =>
+                      {
+                        :quant   => { :label => 'Quantile', :selected => true },
+                        :none => { :label => 'None'},
+                        :gauss  => { :label => 'Gaussian'},        
+                      }
+                    },
+                    { :id => 'uploadFile', :label => 'Upload Result as track?', :type => :checkBox},
+                    { :id => 'spanAggFunction', :label => 'Aggregating Function', :type => :select, :options =>
+                      {
+                        :avg   => { :label => 'Avg', :selected => true },
+                        :med => { :label => 'Median'},
+                        :sum  => { :label => 'Sum'},
+                        :count    => { :label => 'Count'},
+                        :max    => { :label => 'Max'},
+                        :min    => { :label => 'Min'},
+                        :stdev    => { :label => 'Standard Deviation'},
+                        :avgByLength  => { :label => 'Avg By Length'}
+                      }
+                    },
+                    { :id => 'lffClass', :label => 'Output Track Class', :type => :text , :value => 'Tool Results' },
+                    { :id => 'lffTrackName', :label => 'Output Track Name', :type => :gbTrackName, :defaultType => 'Comp.', :defaultSubtype => 'Results' }
+                  )
+                  
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Signal Comparison Settings",
+        :widgets => widgets,
+        :dbu => @dbu
+      })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+  function showRadioText(idToShow, idToHide)
+  {
+    // For label of text to show
+    var label = Ext.get(idToShow + "Label") ;
+    label.setStyle('display', '') ;
+    // For text to show
+    var style = Ext.get(idToShow) ;
+    style.setStyle('display', 'block') ;
+    // For label of text to hide
+    var label = Ext.get(idToHide + "Label") ;
+    label.setStyle('display', 'none') ;
+    // For text to hide
+    var style = Ext.get(idToHide) ;
+    style.setStyle('display', 'none') ;
+
+    // Set value for custom resolution to nothing if show id is fixedResolution
+    var showId = document.getElementById(idToShow) ;
+    if(showId.id == "fixedResolution")
+    {
+      var hideId = document.getElementById(idToHide) ;
+      //document.write(hideId.value) ;
+      hideId.value = '' ;
+    }
+  }
+
+
+
+</script>

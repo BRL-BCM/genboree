@@ -1,0 +1,290 @@
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+  # Provide feedback regarding which Atlas Freeze will be searched. Currently, no choice:
+  # - Input is hg18 => freeze 1
+  # - Input is hg19 => latest freeze
+  @dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new(@dbu, @genbConf)
+  inputDbVersion = @dbApiHelper.dbVersion(@inputs.first).downcase
+  if(inputDbVersion == 'hg18')
+    targetFreezeFeedback = "<b>NOTE:</b> You can compare against tracks within <i><b>Data Release-#{@genbConf.atlasSimilaritySearchReleaseNum_hg18}</b></i> of the Epigenome Atlas, because your input data is on genome assembly version <i><b>Hg18 (NCBI Build 36)</b></i>.<br>&nbsp;<br>(<i>Release-#{@genbConf.atlasSimilaritySearchReleaseNum_hg19}</i> (the latest release) of the Epigenome Atlas is on Hg19 (NCBI Build 37), so to search it your input data also needs to be on Hg19.)"
+  else # inputDbVersion == 'hg19'
+    targetFreezeFeedback = "<b>NOTE:</b> You can compare against tracks within <i><b>Data Release-#{@genbConf.atlasSimilaritySearchReleaseNum_hg19}</b></i> (the latest release) of the Epigenome Atlas, because your input data is also on genome assembly version <i><b>Hg19 (NCBI Build 37)</b></i>."
+  end
+%>
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          Review that the correct tracks are assigned as the x-axis &amp; y-axis data sources, and
+          that your region-of-interest (if any) track is correct.
+          <br>&nbsp;<br>
+          In the settings section below, choose the resolution at which to carry out the analysis (higher
+          will mean it takes longer but may provide slighly more accuracy).
+          <br>&nbsp;<br>
+          Also review the name of the track to which the resulting output annotations from the analysis
+          will be uploaded.
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+      # Get the db uri for selecting the list of tracks
+      rcscUri = nil
+      dbApiHelperObj =  BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+      trkApiHelper =  BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+      dbVer = dbApiHelperObj.dbVersion(@outputs[0]).downcase
+      genbConf = BRL::Genboree::GenboreeConfig.load()
+      if(dbVer == "hg18")
+        rcscUri = genbConf.atlasSimilaritySearchDbUri_hg18 # the repo is the same for all tools
+      else
+        rcscUri = genbConf.atlasSimilaritySearchDbUri_hg19
+      end
+      roiUri = "#{@genbConf.roiRepositoryGrp}#{dbVer}"
+      atlasTracksKey = genbConf.atlasSimilaritySearchDBRCKey
+      roiRepoKey = @genbConf.roiRepositoryDBRCKey
+      if(@inputs.size == 2)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList =>  @inputs, :label => "X-axis/ROI" } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs, :label => "X-Axis" } )
+        })
+      end
+  %>
+  <%# Special info message %>
+  <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "Please Note:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => targetFreezeFeedback
+      })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      widgets = []
+      widgets =   [
+                    { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "SigComp-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+                    { :id => "epiAtlasScrTracks", :label =>'Atlas Score Tracks', :type => :selectOnAttribute, :userId => @context['userId'],
+                      :rackEnv => @rackEnv,:size => '10', :text => 'Select the tracks you wish to run the tool on', :rcscUri => "#{rcscUri}",
+                    :attributeName => 'gbTrackRecordType', :attributeValue => 'floatScore', :selectByDefault => :first, :multiSelect => false, :toggleAllButton => false, :trkListDBRCKey => "#{atlasTracksKey}"},
+                    { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :type => :checkBox, :checked => true},
+                    { :id => 'normalization', :label => 'Normalization', :type => :select, :options =>
+                      {
+                        :quant   => { :label => 'Quantile', :selected => true },
+                        :none => { :label => 'None'},
+                        :gauss  => { :label => 'Gaussian'},        
+                      }
+                    },
+                    { :id => 'uploadFile', :label => 'Upload Results File to Genboree?', :type => :checkBox}
+                  ]
+
+      widgets <<  { :id => 'spanAggFunction', :label => 'Aggregating Function', :type => :select, :options =>
+                    {
+                      :avg   => { :label => 'Avg', :selected => true },
+                      :med => { :label => 'Median'},
+                      :sum  => { :label => 'Sum'},
+                      :count    => { :label => 'Count'},
+                      :max    => { :label => 'Max'},
+                      :min    => { :label => 'Min'},
+                      :stdev    => { :label => 'Standard Deviation'},
+                      :avgByLength  => { :label => 'Avg By Length'}
+                    }
+                  }
+      widgets << { :id => 'lffClass', :label => 'Output Track Class', :type => :text , :value => 'Tool Results' }
+      widgets << { :id => 'lffTrackName', :label => 'Output Track Name', :type => :gbTrackName, :defaultType => 'sigComp.', :defaultSubtype => 'Results' }
+       if(@inputs.size == 1)
+        widgets.push(
+                      { :id => "regionsAdvSec", :type => :advancedSection, :toggleText => "Select Regions", :startWithExpanded => true, :widgets =>
+                        [
+                          { :name => "coordSystem", :type => :radio, :label => "ROI Tracks", :checked => true, :value => "roi", :onchange => "toggleRegions(this.value)" },
+                          { :id => 'roiSection', :type => :indentedSection, :indentWidth => '20px', :border => '', :label => '', :startsHidden => false,
+                            :widgets =>
+                            [
+                              { :id => "roiTrack", :label =>'', :type => :selectOnAttribute, :userId => @context['userId'], :rackEnv => @rackEnv, :size => '10', :text => 'Select the track you wish to use as a Regions Of Interest track', :rcscUri => "#{roiUri}",
+                              :attributeName => 'gbROITrack', :attributeValue => 'true', :selectByDefault => :none, :multiSelect => false, :trkListDBRCKey => "#{roiRepoKey}"},
+                            ]
+                          },
+                          { :name => "coordSystem", :type => :radio, :label => "Genomic Windows", :value => "genomicWindows",  :onchange => "toggleRegions(this.value)" },
+                          { :id => 'windowSection', :type => :indentedSection, :indentWidth => '20px', :border => '', :label => '', :startsHidden => false,
+                            :widgets =>
+                            [
+                              { :name => "windows", :type => :radio, :disabled => true, :label => "Fixed", :checked => true, :value => "fixed",  :onchange => "toggleWindows(this.value)" },
+                              { :id => 'fixedResolution', :label => "", :type => :select, :options =>
+                                {
+                                  :high   => { :label => '1000bp' },
+                                  :medium => { :label => '10,000bp', :selected => true },
+                                  :low    => { :label => '100,000bp'}
+                                }, :disabled => true
+                              },
+                              { :name => "windows", :type => :radio, :label => "Custom", :value => "custom",  :onchange => "toggleWindows(this.value)", :disabled => true },
+                              { :id => 'customResolution', :label => '', :type => :text , :size => "10", :value => "", :disabled => true}
+                            ]
+                          }
+                        ]
+                      }
+                    )
+      else
+        trk0 = trkApiHelper.extractName(@inputs[0])
+        trk1 = trkApiHelper.extractName(@inputs[1])
+        widgets.push({ :id => 'roiTrack', :label => 'ROI Track', :type => :select, :onchange => "toggleDisplayQTrackVal(this.value)", :options =>
+                      {
+                        :"#{@inputs[0]}"   => { :label => trk0 },
+                        :"#{@inputs[1]}"  => { :label => trk1, :selected => true }        
+                      }
+                  })
+        widgets.push(:id => 'displayQTrack', :label => 'X-axis Track', :type => :text , :size => "20", :value => "#{trk0}", :disabled => true)
+      end
+
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+        {
+          :sectionTitle => "Signal Comparison - Epigenome Atlas Settings",
+          :widgets => widgets,
+          :dbu => @dbu
+        }
+      )
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+  function toggleDisplayQTrackVal(value)
+  {
+    var re = /\?$/ ;
+    var roiTrack = value.replace(re, '').split('/') ;
+    roiTrack = unescape(roiTrack[roiTrack.length - 1]) ;
+    var qTrackVal = document.getElementById('displayQTrack') ;
+    var roiTrackSelect = document.getElementById('roiTrack') ;
+    var ii ;
+    for (ii=0; ii<roiTrackSelect.length; ii++)
+    {
+      if (roiTrackSelect.options[ii].text != roiTrack)
+      {
+        qTrackVal.value = roiTrackSelect.options[ii].text ;
+        break ;
+      }
+    }
+  }
+  // For toggling between the 'genomic windows' section and the 'Regions of Interest' section
+  function toggleRegions(value)
+  {
+    var ii ;
+    if(value == 'genomicWindows')
+    {
+      Ext.get('roiTrack').dom.disabled = true ;
+      Ext.get('fixedResolution').dom.disabled = false ;
+      var windows = document.getElementsByName('windows') ;
+      for(ii=0; ii<windows.length;ii++)
+      {
+        windows[ii].disabled = false ;
+      }
+    }
+    else
+    {
+      Ext.get('roiTrack').dom.disabled = false ;
+      Ext.get('fixedResolution').dom.disabled = true ;
+      Ext.get('customResolution').dom.disabled = true ;
+      var windows = document.getElementsByName('windows') ;
+      for(ii=0; ii<windows.length;ii++)
+      {
+        windows[ii].disabled = true ;
+      }
+    }
+  }
+  
+
+  function toggleWindows(value)
+  {
+    if(value == 'custom')
+    {
+      Ext.get('fixedResolution').dom.disabled = true ;
+      Ext.get('customResolution').dom.disabled = false ;
+    }
+    else
+    {
+      Ext.get('fixedResolution').dom.disabled = false ;
+      Ext.get('customResolution').dom.disabled = true ;
+    }
+  }
+
+  function showRadioText(idToShow, idToHide)
+  {
+    // For label of text to show
+    var label = Ext.get(idToShow + "Label") ;
+    label.setStyle('display', '') ;
+    // For text to show
+    var style = Ext.get(idToShow) ;
+    style.setStyle('display', 'block') ;
+    // For label of text to hide
+    var label = Ext.get(idToHide + "Label") ;
+    label.setStyle('display', 'none') ;
+    // For text to hide
+    var style = Ext.get(idToHide) ;
+    style.setStyle('display', 'none') ;
+
+    // Set value for custom resolution to nothing if show id is fixedResolution
+    var showId = document.getElementById(idToShow) ;
+    if(showId.id == "fixedResolution")
+    {
+      var hideId = document.getElementById(idToHide) ;
+      hideId.value = '' ;
+    }
+  }
+
+
+  function hideROI()
+  {
+    var roiTracks = Ext.get('tracksSection').dom ;
+    roiTracks.style.visibility = 'collapse' ;
+    var res = Ext.get('resSection').dom ;
+    res.style.visibility = '' ;
+    // Enable the resolution settings
+    fixedRes = Ext.get('fixedResolution').dom ;
+    fixedRes.disabled = false ;
+    customRes = Ext.get('customResolution').dom ;
+    customRes.disabled = false ;
+    // Disable the track list
+    var roiTracks = Ext.get('roiTrack').dom ;
+    roiTracks.disabled = true ;
+  }
+
+  function hideWindows()
+  {
+    var tracksSection = Ext.get('tracksSection').dom ;
+    tracksSection.style.visibility = '' ;
+    var res = Ext.get('resSection').dom ;
+    res.style.visibility = 'collapse' ;
+    // Disable the resolution settings
+    fixedRes = Ext.get('fixedResolution').dom ;
+    fixedRes.disabled = true ;
+    customRes = Ext.get('customResolution').dom ;
+    customRes.disabled = true ;
+    // Enable the track list
+    var roiTracks = Ext.get('roiTrack').dom ;
+    roiTracks.disabled = false ;
+  }
+</script>
+</form>

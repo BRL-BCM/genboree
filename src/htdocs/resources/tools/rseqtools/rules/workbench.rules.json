@@ -1,0 +1,57 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+	"/files/entityList/",
+        0,
+        1
+      ],
+      [
+        "/file/",
+        0,
+        null
+      ],
+      [
+        "/files/",
+        0,
+        null
+      ],
+      [
+        "^file://",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Study Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ],
+      [
+        "/redminePrj/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 2
+  }
+}

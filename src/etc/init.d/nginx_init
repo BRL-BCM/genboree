@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# #########################
+# ENVIRONMENT
+# #########################
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+# #########################
+# MAIN
+# #########################
+
+conf="${DIR_TARGET}/etc/nginx.conf"
+
+RETVAL=0
+
+start() {
+    echo -n $"Starting NGINX:" $'\n'
+    ${DIR_TARGET}/nginx/sbin/nginx -c $conf
+    RETVAL=$?
+}
+
+stop() {
+    echo -n $"Shutting down NGINX:" $'\n'
+    ${DIR_TARGET}/nginx/sbin/nginx -c $conf -s stop
+    RETVAL=$?
+}
+
+restart() {
+    stop
+    start
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac
+
+if [ $RETVAL = 0 ] ; then
+    echo "**SUCCESS**"
+else
+    echo "FAILURE: '$0 $1' command failed, check logs ( exit code $RETVAL )"
+fi
+
+exit $RETVAL 

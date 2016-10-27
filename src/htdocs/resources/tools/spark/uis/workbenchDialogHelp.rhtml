@@ -1,0 +1,129 @@
+<%# RENDER HTML %>
+<%
+  # Using the UIAccessGroup config setting, determine if the user can see the whole UI or just an inprogress message.
+  width = (@hasAccess ? 620 : 380)
+  height = (@hasAccess ? 550 : 320)
+%>
+<div style="height: <%= height %>px; width: <%= width %>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg'] and @hasAccess) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <p>Spark is a visualization tool that employs clustering (<em>k</em>-means) of epigenomic data, such as chromatin marks from Chip-Seq experiments.  The visualizations, for example, provide a genomewide perspective of putative binding sites regulated by transcription factors, while also enabling drill-down to supporting data at the level of individual loci.  Spark clusters are generated across a set of user-specified input regions (cis regulatory regions), which may be from public sources, such as the Epigenome Atlas and ENCODE.  Users direct sub-clustering to identify interesting subsets of data in a way that allows them to incorporate their domain-specific knowledge, without being limited by default clustering parameters and the same end <em>k</em> value.</p>
+
+
+          <p>To set up a Spark visualization:</p>
+
+
+          <p>Select the tracks of interest from the Epigenome Atlas:</p>
+
+
+        Populate <strong>Input Data</strong>
+          <ul>
+          <li>Drag the data tracks of interest (up to 20) or entity lists (unlimited) into <strong>Input Data</strong></li>
+            <li>Drag the regions of interest (ROIs) into <strong>Input Data</strong></li>
+          </ul>
+
+
+        Populate <strong>Output Targets</strong>
+          <ul>
+          <li>Drag a destination database into <strong>Output Targets</strong> (the Spark results will be deposited into this database)</li>
+          </ul>
+
+
+        Configure &#38; Submit the Spark Job
+          <ul>
+          <li>Select: <code>Epigenome</code> &raquo; <code>Analyze signals</code> &raquo; <code>Cluster by Spark</code>           </li>
+            <li>Use default settings, or select new Spark settings</li>
+            <li>Note that you must specify different colors for different tracks to facilitate visualization (i.e. you may, for example, choose chromatin modification to be 'blue', and DNA methylation to be 'green').</li>
+            <li>Submit Spark job</li>
+          </ul>
+
+
+          <p>Spark will output results in the Data Selector under Files, in the database designated in <strong>Output Targets</strong>):</p>
+
+
+          <p>Spark will generate a histogram that indicates the number of regions in each cluster.   <br />To view your results in the Spark GUI, download and unzip them and then launch Spark via Java Web Start and open the analysis folder (the job completion email will have links to guide you)</p>
+
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          "Drag up to 20 data Tracks (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>)<br>and/or Track Entity Lists (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>) into &quot;Input Data&quot;.",
+          "Drag your regions-of-interest (ROI) Track (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>) into &quot;Input Data&quot;."
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: any' ], [ 'Track Entity List', 'min: 0 ; max: any'] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       =>
+        [
+          "Drag 1 destination Database (<img class='entityIcon' src='/images/workbench/dbTreeNode.png'>) into &quot;Output Targets&quot;.",
+          "In the Files (<img class='entityIcon' src='/images/silk/folder_table.png'>) area of that database, the folder called &quot;Spark - Results&quot; contain the results of your various Spark analyses. Your <code>Analysis Name</code> for this Spark run will determine the sub-folder where the specific results will be placed."
+        ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ "Analysis Name", "Give this analysis job a unique name. This name will be used to store result files within the <code>Output Database</code>." ],
+          [ "Region Label", "[optional] Default is based on the ROI track name. But you can provide your own label for the regions." ],
+          [ "Statistics Type",  "Should the median and standard deviation be calculated specifically for each region (&quot;regional&quot;), and values be normalized only within a given region? Or should the global median and standard deviation be estimated through random sampling (&quot;global&quot;), but values are normalized inter-regionally across the whole genome?"],
+          [ "# of Clusters",  "The number of clusters (k) to generate. A good rule of thumb is something like <code># of regions / 3000</code>, so that on average each cluster would have ~3000 regions in it. The default of 3 is based on using ~15,000 transcription start sites as the regions. You will want to adjust this if you have many many more regions (or far fewer)." ],
+          [ "# of Bins",  "Divide each region into this number of equal-sized bins. Thus, bin size will vary, depending on each region's size. The default of 20 bins per region is a reasonable setting." ],
+          [ "Data Colors",  "For each track/file listed, choose a color. The order is the same as the order you gave in the &quot;Input Data&quot; section. Currently, Spark supports these colors for tracks: <span style='color:blue; font-weight:bold;'>blue</span>, <span style='color:green; font-weight:bold;'>green</span>, <span style='color:orange; font-weight:bold;'>orange</span>, <span style='color:pink; font-weight:bold;'>pink</span>, <span style='color:purple; font-weight:bold;'>purple</span>" ],
+          [ "Submit", "Once you've reviewed the input data, the output destination database, and your settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references =>  [
+                          [
+                            '<a href="http://www.bcgsc.ca/platform/bioinfo/software/spark">Spark</a> was developed by Cydney Nielsen. A manuscript has been submitted:',
+                            "Nielsen CB, O'Geen H, Xu X, Wang T, Costello JF, Hirst M, Farnham PJ, Jones SJ. <i>Spark: A Tool for Interactive Visual Exploration of Genome-Scale Data</i> In Submission. <b>2011</b> Jan 14."
+                          ],
+                          [ 'The data preprocessing and clustering steps performed by Genboree use Spark 1.1.2', nil ]
+                        ]
+      })
+  %>
+<%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks you provide.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>A manuscript for this tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <span style='color: red;'>Once the paper is published, the tool will be available for all users.</span>
+          <br>&nbsp;<br>
+          <span style='color: red;'>At that time, the <b>Help</b> information for using the Spark UI will be available as well.</span>
+        "
+      })
+  %>
+<%
+  end
+%>
+</div>

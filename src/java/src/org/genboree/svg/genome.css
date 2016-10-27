@@ -1,0 +1,81 @@
+/* the curely brackets next to the annotations */
+.curelyBracket{
+   stroke: black;
+	stroke-width: 1px;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+	fill: none;
+}
+
+/* root <svg> tag */
+.rootSvg{
+}
+
+/* chromosome <svg> tag. "cs" stands for "ChromoSome" */
+.csSvg{
+}
+
+/* the template svg element */
+.templateImage{
+
+}
+
+/* the annotation title text */
+.annotationTitle{
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 18px;
+	fill: black;
+	stroke: none;
+	text-shadow: Gray;
+}
+
+/* color legend css classes. "cl" stands for "Color Lengend" */
+/* color legend title area */
+.clTitleArea{
+	stroke: black;
+	stroke-width: 0.3px;
+	fill-opacity: 0.6;
+}
+
+/* color legend title text */
+.clTitleText{
+	fill: #e6e6e6;
+	stroke:none;
+	font-size:15px;
+}
+
+/* color legend legendbox area (the area that contains all color boxes) */
+.clLegendboxArea{
+	stroke: black;
+	stoke-width: 0.3px;
+	fill:white;
+}
+
+/* color legend colorbox */
+.clColorbox{
+	stroke: black;
+	stroke-width:0.3px;
+}
+
+/* color legend colorbox label */
+.clColorboxLabel{
+	font-size: 10px;
+}
+
+/* cover boxes that is toggled between visible and hidden when the user
+   is in the global zooming and chromosome zooming  */
+.coverVisible{
+	display: "";
+}
+
+.coverHidden{
+	display: none;
+}
+
+/* the big labels of the chromosomes displayed at the global zooming */
+.csBigLabel{
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 54px;
+	fill: maroon;
+	stroke: none;
+}

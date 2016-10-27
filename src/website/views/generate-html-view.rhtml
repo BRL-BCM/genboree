@@ -1,0 +1,2293 @@
+<%
+
+require 'time'
+
+class GenerateHTML
+
+
+	def self.genericSectionGenerateHTML(contentArr, block_id, block_type, publicationsArrHash, memberArrHash, redmineUrl, server)
+		html = ""
+
+		#get hash for given block by looking up the specified ID and returning the hash associated with that one ID
+		blockHash = ""
+		blockHash = GenboreeRedmine.getRedminePageSubset(contentArr, block_id)
+
+		#if block_type != "stacked_column"
+		if block_type != "about"
+			#return ""
+		end
+
+		#also, check to see if we need to get a collection of items for subsections, denoted by having a value in the collection key
+		collection_val = ""
+		collection_val = blockHash["collection"]
+		collectionBlockArrayHash = []
+
+		if collection_val != nil
+			collectionBlockArrayHash = GenboreeRedmine.getRedminePageCollectionViaPattern(contentArr, collection_val)
+		end
+
+		#add a second collection block for cases we need multiple collections obtained
+		# we only need a second collection a single time thus far, but if it goes to 3+, code it up a better way
+		#also, check to see if we need to get a collection of items for subsections, denoted by having a value in the collection key
+		collection_val_2 = ""
+		collection_val_2 = blockHash["collection_2"]
+		collectionBlockArrayHash_2 = []
+
+		if collection_val_2 != nil
+			collectionBlockArrayHash_2 = GenboreeRedmine.getRedminePageCollectionViaPattern(contentArr, collection_val_2)
+		end
+
+
+		section_tag_open = ""
+		section_tag_close = ""
+
+		#we may or may not want to use separate section tags (i.e. splash we want separate sections, tool pages we dont)
+		#get section class and section ID if they exist
+		if blockHash["section_class"] != nil
+			#check to see if we also have section id here, sometimes need both
+			if blockHash["section_id"] != nil
+				section_tag_open = "<section class=\"#{blockHash["section_class"]}\" id=\"#{blockHash["section_id"]}\">" 
+				section_tag_close = "</section>"
+			else
+				section_tag_open = "<section class=\"#{blockHash["section_class"]}\">" 
+				section_tag_close = "</section>"
+			end
+		elsif blockHash["section_id"] != nil
+			section_tag_open = "<section id=\"#{blockHash["section_id"]}\">" 
+			section_tag_close = "</section>"
+		end
+
+		#also need to occassionally have special ID and CLASS for other content contents
+		content_tag_open = "<section>"
+		content_tag_close = "</section>"
+
+		#we may or may not want to use separate content tags (i.e. splash we want separate contents, tool pages we dont)
+		#get content class and content ID if they exist
+		if blockHash["content_class"] != nil
+			#check to see if we also have content id here, sometimes need both
+			if blockHash["content_id"] != nil
+				content_tag_open = "<section class=\"#{blockHash["content_class"]}\" id=\"#{blockHash["content_id"]}\">" 
+				content_tag_close = "</section>"
+			else
+				content_tag_open = "<section class=\"#{blockHash["content_class"]}\">" 
+				content_tag_close = "</section>"
+			end
+		elsif blockHash["content_id"] != nil
+			content_tag_open = "<section id=\"#{blockHash["content_id"]}\">" 
+			content_tag_close = "</section>"
+		end
+
+
+		#get background color class for each row at the beginning if it exists
+		row_bg = ""
+		row_bg = " #{blockHash["row_bg"]}" if blockHash["row_bg"] != nil
+
+		#set h1 class if it exists
+		h1_class = ""
+		h1_class = " class=\"#{blockHash["h1_class"]}\"" if blockHash["h1_class"] != nil
+
+
+		if block_type == "call_to_action"
+			#set default orientation to detemine if text goes on left or right
+			orientation = "text_left"
+			orientation = blockHash["orientation"] if blockHash["orientation"] != nil
+
+
+			#use default column settings if they are not provided in settings
+			col_left = "col-sm-8"
+			col_right = "col-sm-4"
+			button_class = "btn btn-primary"
+			img_class = "img-responsive hidden-xs"
+			h1_class = ""
+
+			if orientation == "text_left"
+				col_left = "col-sm-8"
+				col_right = "col-sm-4"
+			elsif orientation == "text_right"
+				col_left = "col-sm-4"
+				col_right = "col-sm-8"
+			end
+
+			col_left = blockHash["col_left"] if blockHash["col_left"] != nil
+			col_right = blockHash["col_right"] if blockHash["col_right"] != nil
+			button_class = blockHash["button_class"] if blockHash["button_class"] != nil
+			img_class = blockHash["img_class"] if blockHash["img_class"] != nil
+
+
+			if orientation == "text_right"
+				html = <<-HTML
+					<div id="#{block_id}">
+						#{section_tag_open}
+							<div class="container">
+								<div class="row#{row_bg}">
+									
+				HTML
+
+				if blockHash["image_path"] != nil
+					html += <<-HTML
+									<div class="#{col_left}">
+										<img class="#{img_class}" alt="#{blockHash["alt_image_text"]}" src="#{redmineUrl}#{blockHash["image_path"]}">
+					HTML
+				elsif blockHash["html_entity"] != nil
+					html += <<-HTML
+									<div class="#{col_left} hidden-xs">
+										<div id="custom_html_entity_class">
+											#{blockHash["html_entity"]}
+										</div>
+					HTML
+				else
+					html += <<-HTML
+									<div class="#{col_left}">
+					HTML
+				end
+
+				html += <<-HTML
+									</div>
+									<div class="#{col_right}">
+				
+										<h1#{h1_class}>#{blockHash["h1"]}</h1>
+										<h2>#{blockHash["h2"]}</h2>
+										<p>#{blockHash["p"]}</p>
+							
+				HTML
+
+				if blockHash["link"] != nil and blockHash["link_text"] != nil
+					html += <<-HTML
+										<a href="#{blockHash["link"]}" class="btn btn-primary" target="_blank"> #{blockHash["link_text"]} </a>
+					HTML
+				end
+			
+
+			else
+				html = <<-HTML
+					<div id="#{block_id}">
+						#{section_tag_open}
+							<div class="container">
+								<div class="row#{row_bg}">
+									<div class="#{col_left}">
+										<h1#{h1_class}>#{blockHash["h1"]}</h1>
+										<h2>#{blockHash["h2"]}</h2>
+										<p>#{blockHash["p"]}</p>
+				HTML
+										
+				if blockHash["link"] != nil and blockHash["link_text"] != nil
+					html += <<-HTML
+										<a href="#{blockHash["link"]}" class="btn btn-primary" target="_blank"> #{blockHash["link_text"]} </a>
+					HTML
+				end
+
+				html += <<-HTML
+									</div>
+									<div class="#{col_right}">
+				HTML
+
+				if blockHash["image_path"] != nil
+					html += <<-HTML
+										<img class="#{img_class}" alt="#{blockHash["alt_image_text"]}" src="#{redmineUrl}#{blockHash["image_path"]}">
+					HTML
+				elsif blockHash["html_entity"] != nil
+					html += <<-HTML
+										<div id="custom_html_entity_class">
+											#{blockHash["html_entity"]}
+										</div>
+					HTML
+				end
+			end
+
+
+
+
+			html += <<-HTML
+								</div>
+							</div>
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+
+		elsif block_type == "event_listing"
+
+			html = <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+								</div>
+							</div>
+
+							
+
+			HTML
+
+			#keep track of the number of potential maps so we can render multiple maps per page
+			mapUpperCount = 0
+
+			#loop through each event
+			collectionBlockArrayHash.each_with_index{ |collectionBlockHash, featureCount|
+				if featureCount == 0
+					html += <<-HTML
+						<input type="hidden" id="latitude" value="#{collectionBlockHash["GOOGLE_API_MAP_LATITUDE"]}">
+						<input type="hidden" id="longitude" value="#{collectionBlockHash["GOOGLE_API_MAP_LONGITUDE"]}">
+					HTML
+				end
+
+				mapUpperCount += 1
+
+				lat = collectionBlockHash["GOOGLE_API_MAP_LATITUDE"]
+				lon = collectionBlockHash["GOOGLE_API_MAP_LONGITUDE"]
+
+
+				if lat != nil and lon != nil
+					html += <<-HTML
+						<input type="hidden" id="latitude_#{featureCount}" value="#{collectionBlockHash["GOOGLE_API_MAP_LATITUDE"]}">
+						<input type="hidden" id="longitude_#{featureCount}" value="#{collectionBlockHash["GOOGLE_API_MAP_LONGITUDE"]}">
+					HTML
+				end
+
+				
+				start_date = collectionBlockHash["start_date"]
+				end_date = collectionBlockHash["end_date"]
+
+				#build date range based on presence of values
+				date = ""
+				date = start_date
+				date += " - #{end_date}" if end_date != nil
+
+				#get current date and figure out if event has already passed
+				panel_class = "panel-primary"
+				panel_class = "panel-default"
+
+				t = Time.now()
+
+				#check for end date first and if it exists, check against current date
+				if end_date != nil
+					panel_class = "panel-primary" if Time.parse(end_date) > t
+
+				#otherwise check for begin date if it exists
+				elsif start_date != nil
+					panel_class = "panel-primary" if Time.parse(start_date) > t
+				end
+
+				#get time in a similar way
+				start_time = collectionBlockHash["start_time"]
+				end_time = collectionBlockHash["end_time"]
+
+				#build time range based on presence of values
+				time = ""
+				time = start_time
+				time += " - #{end_time}" if end_time != nil
+
+				
+
+				html += <<-HTML
+					<a name="#{collectionBlockHash["anchor_name"]}"></a>
+					<div class="row push50">
+						<div class="panel #{panel_class}">
+							<div class="panel-heading">
+								<div class="row">
+									<div class="col-md-8">
+										<h2>#{collectionBlockHash["title"]}</h2>
+									</div>
+									<div class="col-md-4">
+										<h3 class="pull-right">#{date}</h3>
+									</div>
+								</div>
+							</div>
+				HTML
+
+				if collectionBlockHash["text"] != nil
+					html += <<-HTML
+							<div class="panel-body">
+								<p>#{collectionBlockHash["text"]}</p>
+								<hr>
+							</div>
+					HTML
+				end
+
+
+				html += <<-HTML
+							<div class="panel-body">
+								<!--div class="row"-->
+									<div class="col-md-4">
+										<div class="row">
+											<h2>Event Details</h2>
+										</div>
+										<div class="row">
+											Date: #{date}
+										</div>
+										<div class="row">
+											Time: #{time}
+										</div>
+										<div class="row">
+											Website: <a href="#{collectionBlockHash["event_website"]}" target="_blank"> #{collectionBlockHash["event_website_text"]}</a>
+										</div>
+										<div class="row">
+											<br>
+										</div>
+										<div class="row bay-logo">
+				HTML
+
+				if collectionBlockHash["logo_path_1"] != nil
+					html += <<-HTML
+											<div class="col-md-5">
+												<img src="#{redmineUrl}#{collectionBlockHash["logo_path_1"]}" alt="#{collectionBlockHash["logo_alt_text_1"]}" class="img-responsive">
+											</div>
+					HTML
+				end
+
+				if collectionBlockHash["logo_path_2"] != nil
+					html += <<-HTML
+											<div class="col-md-5">
+												<img src="#{redmineUrl}#{collectionBlockHash["logo_path_2"]}" alt="#{collectionBlockHash["lgo_alt_text_2"]}" class="img-responsive">
+											</div>
+					HTML
+				end
+
+				html += <<-HTML
+
+										</div>
+
+									</div>
+									<div class="col-md-4">
+										<div class="row">
+											<h2>Venue Details</h2>
+										</div>
+
+										<div class="row">
+											<div class="well">
+												<div itemscope itemtype="http://schema.org/Organization">
+													<div itemprop="name" style="display:none">#{collectionBlockHash["name"]}</div>
+													<div itemprop="description">
+														<h4>#{collectionBlockHash["h4"]}</h4>
+														<p>#{collectionBlockHash["p"]}</p>
+													</div>
+													<div itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
+														<span itemprop="streetAddress"><p>#{collectionBlockHash["streetAddress"]}</p> <p>#{collectionBlockHash["roomLocation"]}</p></span>
+														<p><span itemprop="addressLocality">#{collectionBlockHash["addressLocality"]}</span> <span itemprop="addressRegion">#{collectionBlockHash["addressRegion"]}</span> <span itemprop="postalCode">#{collectionBlockHash["postalCode"]}</span></p>
+													</div>
+												</div>
+											</div>
+											
+										</div>
+										<div class="row">
+											<a href="tel:#{collectionBlockHash["venue_phone"]}">#{collectionBlockHash["venue_phone"]}</a>
+										</div>
+										<div class="row">
+											Website: <a href="#{collectionBlockHash["venue_website"]}" target="_blank"> #{collectionBlockHash["venue_website_text"]}</a>
+										</div>
+
+									</div>
+									<div class="col-md-4">
+				HTML
+
+				#if featureCount == 1
+				#	html += <<-HTML
+				#					<div id="map-container" class="map"></div>
+				#	HTML
+				#end
+
+
+
+				html += <<-HTML
+										<div id="map-container_#{featureCount}" class="map"></div>
+
+
+									<!--input type="hidden" id="latitude" value="#{collectionBlockHash["GOOGLE_API_MAP_LATITUDE"]}">
+									<input type="hidden" id="longitude" value="#{collectionBlockHash["GOOGLE_API_MAP_LONGITUDE"]}"-->
+
+									
+									</div>
+				HTML
+
+=begin
+				#if we have some other text to insert, insert it at bottom in new, full column
+				if collectionBlockHash["text"] != nil
+					html += <<-HTML
+
+						<div class="panel panel-primary">
+							<div class="panel-heading">
+								blah
+							</div>
+							<div class="panel-body">
+								<div class="row">
+									<div class="col-md-12">
+									
+										body text
+
+									</div>								
+								</div>
+							</div>
+						</div>
+
+
+
+						
+					HTML
+				end
+=end
+
+
+
+				html += <<-HTML
+								</div>
+				HTML
+
+
+
+				html += <<-HTML
+							<!--/div-->
+						</div>
+				HTML
+
+
+
+
+
+
+				html += <<-HTML
+					</div>
+				HTML
+			}
+
+			#store hidden value for map upper count so we can loop through in javascript
+			html += <<-HTML
+				<input type="hidden" id="mapUpperCount" value="#{mapUpperCount}">
+			HTML
+
+
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+
+
+		elsif block_type == "news_listing"
+
+			html = <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+								</div>
+							</div>
+
+			HTML
+
+			#keep track of the number of potential maps so we can render multiple maps per page
+			mapUpperCount = 0
+
+			#loop through each event
+			collectionBlockArrayHash.each_with_index{ |collectionBlockHash, featureCount|
+				
+				start_date = collectionBlockHash["start_date"]
+				end_date = collectionBlockHash["end_date"]
+
+				#build date range based on presence of values
+				date = ""
+				date = start_date
+				date += " - #{end_date}" if end_date != nil
+
+				#get current date and figure out if event has already passed
+				panel_class = "panel-primary"
+				panel_class = "panel-default"
+
+				t = Time.now()
+
+				#check for end date first and if it exists, check against current date
+				if end_date != nil
+					if Time.parse(end_date) > t
+						panel_class = "panel-primary" 
+					elsif Time.parse(end_date) == t
+						panel_class = "panel-danger" 
+					end
+				#otherwise check for begin date if it exists
+				elsif start_date != nil
+					if Time.parse(start_date) > t
+						panel_class = "panel-primary" 
+					elsif Time.parse(start_date) == t
+						panel_class = "panel-danger" 
+					end
+				end
+
+
+				html += <<-HTML
+					<a name="#{collectionBlockHash["anchor_name"]}"></a>
+					<div class="row push50">
+						<div class="panel #{panel_class}">
+							<div class="panel-heading">
+								<div class="row">
+									<div class="col-md-8">
+										<h2>#{collectionBlockHash["title"]}</h2>
+									</div>
+									<div class="col-md-4">
+										<h3 class="pull-right">#{date}</h3>
+									</div>
+								</div>
+							</div>
+				HTML
+
+				#next determine if we have subcollection linked to by this hash
+				# obtain collection if one exists, start with a non-blank default
+				collection_loop_val = "NO_COLLECTION_SPECIFIED"
+				collection_loop_val = collectionBlockHash["collection"]
+
+				collectionInternalLoopBlockArrayHash = nil
+
+				#next we need to get the collections associated with this current item
+				collectionInternalLoopBlockArrayHash = GenboreeRedmine.getRedminePageCollectionViaPattern(contentArr, collection_loop_val)
+				#loop through each collection and render the correct html
+				linked_html = ""
+				id = ""
+				type = ""
+				
+
+=begin
+				collectionInternalLoopBlockArrayHash.each{ |collectionInternalLoopHash|
+					if collectionInternalLoopHash["nested_type"] != nil
+						arr = []
+						arr.push(collectionInternalLoopHash)
+
+						id = collectionInternalLoopHash["ID"]
+						type = collectionInternalLoopHash["nested_type"]
+						#linked_html += genericSectionGenerateHTML(contentArr, id, type, nil, nil, redmineUrl, nil)
+						#linked_html += genericSectionGenerateHTML(arr, id, type, nil, nil, redmineUrl, nil)
+					end
+				}
+=end				
+
+
+				if collectionInternalLoopBlockArrayHash.first["nested_type"] != nil
+				#if collectionInternalLoopBlockArrayHash["nested_type"] != nil
+					id = collectionInternalLoopBlockArrayHash.first["ID"]
+					type = collectionInternalLoopBlockArrayHash.first["nested_type"]
+
+					#if we have publications type of block, get the data here if it's nil
+					if type =~ /publications/
+						if publicationsArrHash == nil
+							publicationsArrHash = GenboreeRedmine.getRedminePage(server, "ALL_PUBLICATIONS")
+						end
+					end
+
+					#get linked content block and insert it in the news item
+					linked_html += genericSectionGenerateHTML(contentArr, id, type, publicationsArrHash, nil, redmineUrl, nil)
+				end
+			
+
+				html += <<-HTML
+							<div class="panel-body">
+								<p>#{collectionBlockHash["text"]}</p>
+								#{linked_html}
+							</div>
+						</div>
+					</div>
+				HTML
+
+
+			}
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+
+
+
+		elsif block_type == "multi_rows_columns"
+			#set default num of columns to 3 if not specified by user
+			num_cols = 3
+			#get number of columns if it is present
+			num_cols = blockHash["num_columns"].to_i if blockHash["num_columns"] != nil
+
+			#first need to figure out how many entries we have
+			current_pos = 1
+			while blockHash["h3_#{current_pos}"] != nil && blockHash["p_#{current_pos}"] != nil
+				current_pos += 1
+			end
+
+			#set number of entries based on how many h3 + p 
+			num_entries = current_pos - 1
+
+			#need to determine how to structure each column based on number of desired columns and remaining entries
+			col_size_arrs = getColumnSizesBasedOnColumnNumberAndEntries(num_cols, num_entries, 1)
+
+			current_pos = 1
+			#then loop through entries and decide what column size should be
+
+			html = <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+								</div>
+							</div>
+
+			HTML
+
+			#keep track of loop position count for pulling content
+			loop_count = 1
+
+			#loop through arrays that contain column sizes for each row (each array = each row column sizes)
+			col_size_arrs.each_with_index{ |col_size_arr, col_size_arr_count|
+				tempHtml = ""
+
+				html += <<-HTML
+							<div class="row push50">
+				HTML
+
+				#loop through each column and output content as well as col_size
+				col_size_arr.each{ |col_size| 
+
+					tempHtml += <<-HTML
+								<div class="col-md-#{col_size}">
+					HTML
+
+					if blockHash["image_path"] != nil
+						html += <<-HTML
+									<img class="img-responsive" alt="#{blockHash["alt_image_text_#{loop_count}"]}" src="#{redmineUrl}#{blockHash["image_path_#{loop_count}"]}">
+						HTML
+					end
+
+					html += <<-HTML
+									<h3>#{blockHash["h3_#{loop_count}"]}</h3>
+									<p>#{blockHash["p_#{loop_count}"]}</p>
+									<p><a href="#{blockHash["link_#{loop_count}"]}">#{blockHash["link_text_#{loop_count}"]}</a></p>
+								</div>
+					HTML
+
+					#increment loop count
+					loop_count += 1
+				}
+
+				html += tempHtml
+
+				html += <<-HTML
+							</div>
+				HTML
+			}
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+		elsif block_type == "code_snippet"
+			#start coding for table with div and optional section tag
+			html += <<-HTML
+				
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+									<p>#{blockHash["p"]}</p>
+								</div>
+							</div>
+							<div class="row push50">
+								<div class="col-xs-11">
+									
+			HTML
+
+			current_pos = 0
+
+			#get number of code lines
+			code_block_lines = blockHash["code_block_count"].to_i
+
+			for i in (0..code_block_lines)
+				value = "#{blockHash["code_block_#{i}"]}\n"
+
+				#see if we're at first position and use google's prettify if we have <pre> tags
+				if i == 0 and value =~ /pre/
+					#only make substitution if we have specified class
+					if blockHash["code_class"] != nil
+						value.gsub!(/pre/, "pre class=\"#{blockHash["code_class"]}\"")
+					end
+				end
+
+				html += value
+			end
+
+
+			html += <<-HTML
+										
+								</div>
+							</div>
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+
+
+		elsif block_type == "style"
+			current_pos = 0
+
+			#get number of code lines
+			code_block_lines = blockHash["code_block_count"].to_i
+
+			for i in (0..code_block_lines)
+				value = "#{blockHash["code_block_#{i}"]}\n"
+
+				html += <<-HTML
+						#{value}
+				HTML
+			end
+
+		elsif block_type == "wiki_style_table"
+			#start coding for table with div and optional section tag
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+								</div>
+							</div>
+							<div class="row push50">
+								<div class="col-xs-12">
+									<table class="table">
+										<thead>
+											<tr>
+			HTML
+
+			current_pos = 0
+
+			#loop through first table position to get header
+			blockHash["t_#{current_pos}"].split("|").each{ |table_cell_val| 
+				table_cell_val_formatted = GenerateHTML.formatTableValues(table_cell_val, blockHash["font_icon_text"])
+				html += <<-HTML
+												<th>#{table_cell_val_formatted}</th>
+				HTML
+			}
+
+			#then apply closing tags for header section and open up table body
+			html += <<-HTML				
+											</tr>
+										</thead>
+										<tbody>
+			HTML
+
+			#get number of table rows
+			table_rows = blockHash["table_row_count"].to_i
+
+			#loop through rest of table entries
+			for table_row_pos in (1...table_rows)
+				#open row
+				html += <<-HTML 
+											<tr>
+				HTML
+
+
+				blockHash["t_#{table_row_pos}"].split("|").each{ |table_cell_val| 
+					table_cell_val_formatted = GenerateHTML.formatTableValues(table_cell_val, blockHash["font_icon_text"])
+					html += <<-HTML
+												<td>#{table_cell_val_formatted}</td>
+					HTML
+				}
+
+				#open row
+				html += <<-HTML 
+											<tr>
+				HTML
+
+			end
+
+
+			html += <<-HTML
+										</tbody>
+									</table>
+								</div>
+							</div>
+			HTML
+
+			#now check to see if we have table legend to insert
+			legend_pos = 1
+
+			#check to see if we have any legend entries first to get outer html
+			if blockHash["legend_#{legend_pos}"] != nil
+				html += <<-HTML
+							<div class="row push50">
+								<div class="panel panel-default">
+									<div class="panel-body">
+				HTML
+
+				while blockHash["legend_#{legend_pos}"] != nil
+					tempHtml = ""
+					tempHtml = <<-HTML
+								<div class="col-xs-3">
+									 #{GenerateHTML.formatTableValues("#{blockHash["legend_#{legend_pos}"]}", "#{blockHash["font_icon_text"]}")}
+								</div>
+					HTML
+
+					#append tempHtml to html
+					html += tempHtml
+
+					legend_pos += 1
+				end
+
+				html += <<-HTML
+									</div>
+								</div>
+							</div>
+				HTML
+			end
+
+								
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+
+			HTML
+
+		elsif block_type == "publications_via_tag"
+			#in case we didn't already get the publications list, do it now
+			if publicationsArrHash == nil
+				publicationsArrHash = GenboreeRedmine.getRedminePage(server, "ALL_PUBLICATIONS")
+			end
+
+			#get all tags desired for publications
+			tags = blockHash["tags"].split(",")
+
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+								</div>
+							</div>
+						</div>
+					#{section_tag_close}
+
+					#{content_tag_open}					
+						<div class="container">
+							<div class="row ">
+								<div class="col-xs-12">
+									<ul class="publications list-unstyled">
+			HTML
+
+			publicationsArrHash.each{ |pubHash|
+				#obtain tags for each publication
+				publication_tags = pubHash["tags"].split(",")
+
+				tag_match = 0
+				tags.each{ |user_tag|
+					tag = user_tag.strip
+					#$stderr.puts "TAG:\t:#{user_tag}:\t#{pubHash["tags"]}"
+					
+					#now loop through publications tabs to see if we have match
+					publication_tags.each{ |publication_tag| 
+						publication_tag = publication_tag.strip
+
+
+						#if tag is 'ALL' or actual match, make it a match for display
+						if user_tag == "ALL" or user_tag == publication_tag
+							tag_match = 1
+							break
+						end
+
+
+					}
+
+					if tag_match == 1
+							authors = pubHash["authors"]
+							journal = pubHash["journal"]
+							pmid = pubHash["pmid"]
+							title = pubHash["title"]
+							title.gsub!(/\.$/,"") if title != nil
+						
+
+							html += <<-HTML
+											<li>
+							HTML
+
+							if title != nil
+								if pmid == nil
+									html += <<-HTML
+												<p class="title">#{title}</p>
+									HTML
+								else
+									html += <<-HTML
+												<p class="title"><a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=#{pmid}" target="_blank">#{title}</a></p>
+									HTML
+								end
+							end
+
+							if authors != nil
+
+								html += <<-HTML
+												<p class="authors">#{authors}</p><br>
+								HTML
+							end
+												
+
+							if journal != nil
+								if pmid == nil
+									html += <<-HTML
+												<p class="journal"><i class="fa fa-book"></i> #{journal}</p>
+									HTML
+								else
+									html += <<-HTML
+												<p class="journal"><i class="fa fa-book"></i> #{journal}</p> <p class="pubmed"><i class="fa fa-archive"></i> PMID: <a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=#{pmid}" target="_blank">#{pmid}</a></i></p>	
+									HTML
+								end
+							end
+												
+
+							html += <<-HTML
+											</li>
+
+							HTML
+					end
+
+				}
+			}
+
+				
+			html += <<-HTML
+									</ul>
+								</div>
+							</div>
+			
+						</div>
+					#{content_tag_close}
+				</div>
+
+			HTML
+
+		elsif block_type == "contact_us"
+			
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row ">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+								</div>
+							</div>
+			HTML
+
+			closeDivFlag = 0 
+
+			#get list of members to render from CMS
+			member_include_pos = 1
+
+			include_these_members = []
+
+			#see if we have any members listed before embarking on this check
+			while blockHash["contact_name_#{member_include_pos}"] != nil
+				include_these_members.push(blockHash["contact_name_#{member_include_pos}"])
+				member_include_pos += 1
+			end
+
+			#need to have an iterator count for counting members displayed thus far because we're adding members based on names, not always all of them
+			included_members_sum = 0
+
+			include_these_members.each{ |cmsMemberName| 
+				#next loop through all members to get only the matched names from the above collected include_these_members array
+				memberArrHash.each_with_index{ |memberHash, memberCount| 
+
+					member_name = memberHash["name"]
+
+					next if cmsMemberName != "ALL" and member_name != cmsMemberName
+
+					closeDivFlag = 0 
+					img_class = "img-rounded" 
+
+					if included_members_sum == 0 || included_members_sum % 4 == 0 
+						html += <<-HTML
+								<div class="row">
+						HTML
+					end 
+
+					html += <<-HTML
+									<div class="col-sm-3 text-center">
+					HTML
+
+					if memberHash["image_path"] != nil 
+						html += <<-HTML
+										<img src="#{redmineUrl}#{memberHash["image_path"]}" alt="#{memberHash["image_alt_text"]}" class="img-responsive  img_class ">
+						HTML
+					else 
+						html += <<-HTML
+										<img src="http://placehold.it/350x350" alt="#{memberHash["image_alt_text"]}" class="img-responsive  img_class ">
+						HTML
+					end  
+
+					html += <<-HTML
+						 				
+					HTML
+
+					if memberHash["degree_suffix"] != nil 
+						html += <<-HTML
+										<name>#{memberHash["name"]}</name>, 
+										<suffix>#{memberHash["degree_suffix"]}</suffix> 
+
+						HTML
+					else
+						html += <<-HTML
+										<name>#{memberHash["name"]}</name>
+
+						HTML
+					end 
+								
+					html += <<-HTML
+										<p>#{memberHash["job_title_1"]}</p>
+										<p>#{memberHash["job_title_2"]}</p>
+										<p>
+					HTML
+
+
+					if memberHash["email"] != nil
+						html += <<-HTML
+											<a href="mailto:#{memberHash["email"]}"><i class="fa fa-envelope-o"></i></a>
+						HTML
+
+					end
+
+					if memberHash["pubmed"] != nil 
+						html += <<-HTML
+											<a href="#{memberHash["pubmed"]}" target="_blank"><i class="fa fa-book"></i></a>
+						HTML
+					end 
+
+					html += <<-HTML
+										</p>
+					HTML
+
+									
+					if memberHash["tel"] != nil 
+						html += <<-HTML
+										<p>
+											<a href="tel:#{memberHash["tel"]}">#{memberHash["tel_display"]}</a>
+										</p>
+						HTML
+					end 
+
+					if memberHash["website"] != nil 
+						html += <<-HTML
+										<p>
+											<a href="#{memberHash["website"]}" target="_blank"> #{memberHash["website_text"]}</a>
+										</p>
+						HTML
+					end 
+
+					html += <<-HTML
+										<br>
+									</div>
+					HTML
+
+					#check to see if we need to close the row
+					if (memberCount + 1) % 4 == 0 
+						html += <<-HTML
+							</div>
+						HTML
+						closeDivFlag = 1 
+					end 
+				
+					#increment included member sum
+					included_members_sum += 1
+
+				} 
+
+				
+			}
+
+			#if we didn't close row div in above loop (aka having all rows n = 3) do it here 
+			if closeDivFlag == 0 
+				html += <<-HTML
+							</div>
+				HTML
+			end 
+
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+
+			HTML
+
+		elsif block_type == "team_member_page"
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row ">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+								</div>
+							</div>
+
+
+						</div>
+					#{section_tag_close}
+				</div>							
+			HTML
+
+
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{content_tag_open}
+						<div class="container">
+			HTML
+
+			closeDivFlag = 0 
+
+			# #need to have an iterator count for counting members displayed thus far
+			included_members_sum = 0
+
+			memberArrHash.each_with_index{ |memberHash, memberCount| 
+
+				member_name = memberHash["name"]
+
+				#next if cmsMemberName != "ALL" and member_name != cmsMemberName
+
+				closeDivFlag = 0 
+				img_class = "img-rounded" 
+
+				#$stderr.puts memberCount
+
+				if included_members_sum == 0 || included_members_sum % 4 == 0 
+					html += <<-HTML
+							<div class="row">
+					HTML
+				end 
+
+
+
+				html += <<-HTML
+								<div class="col-sm-3 text-center">
+				HTML
+
+				if memberHash["image_path"] != nil 
+					html += <<-HTML
+									<img src="#{redmineUrl}#{memberHash["image_path"]}" alt="#{memberHash["image_alt_text"]}" class="img-responsive  #{img_class} ">
+					HTML
+				else 
+					html += <<-HTML
+									<img src="http://placehold.it/350x350" alt="#{memberHash["image_alt_text"]}" class="img-responsive  #{img_class} ">
+					HTML
+				end  
+
+
+
+
+				html += <<-HTML
+					 				
+				HTML
+
+				if memberHash["degree_suffix"] != nil 
+					html += <<-HTML
+									<name>#{memberHash["name"]}</name>, 
+									<suffix>#{memberHash["degree_suffix"]}</suffix> 
+
+					HTML
+				else
+					html += <<-HTML
+									<name>#{memberHash["name"]}</name>
+
+					HTML
+				end 
+							
+				html += <<-HTML
+									<p>#{memberHash["job_title_1"]}</p>
+									<p>#{memberHash["job_title_2"]}</p>
+									<p>
+				HTML
+
+
+				if memberHash["email"] != nil
+					html += <<-HTML
+										<a href="mailto:#{memberHash["email"]}"><i class="fa fa-envelope-o"></i></a>
+					HTML
+
+				end
+
+				if memberHash["pubmed"] != nil 
+					html += <<-HTML
+										<a href="#{memberHash["pubmed"]}" target="_blank"><i class="fa fa-book"></i></a>
+					HTML
+				end 
+
+				html += <<-HTML
+									</p>
+				HTML
+
+								
+				if memberHash["tel"] != nil 
+					html += <<-HTML
+									<p>
+										<a href="tel:#{memberHash["tel"]}">#{memberHash["tel_display"]}</a>
+									</p>
+					HTML
+				end 
+
+				if memberHash["website"] != nil 
+					html += <<-HTML
+									<p>
+										<a href="#{memberHash["website"]}" target="_blank"> #{memberHash["website_text"]}</a>
+									</p>
+					HTML
+				end 
+
+				html += <<-HTML
+									<br>
+								</div>
+				HTML
+
+
+								
+
+				#check to see if we need to close the row
+				if (memberCount + 1) % 4 == 0 
+					html += <<-HTML
+						</div>
+					HTML
+					closeDivFlag = 1 
+				end 
+			
+				#increment included member sum
+				included_members_sum += 1
+
+			} 
+
+			#if we didn't close row div in above loop (aka having all rows n = 3) do it here 
+			if closeDivFlag == 0 
+				html += <<-HTML
+							</div>
+				HTML
+			end 				
+			
+			html += <<-HTML
+						</div>
+					#{content_tag_close}
+				</div>
+
+			HTML
+
+		elsif block_type == "list"
+
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+								<div class="col-xs-12">
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+								</div>
+							</div>
+						</div>
+					
+
+			HTML
+
+
+			html += <<-HTML
+						<div class="container">
+			HTML
+
+			if blockHash["p"] != nil
+				html += <<-HTML
+							<div class="row push50">
+								<div class="col-xs-12">
+									<p>#{blockHash["p"]}</p>
+								</div>
+							</div>
+				HTML
+			end
+
+			html += <<-HTML
+							<div class="row push50">
+								<div class="col-xs-12">
+									<!--ul class="publications list-unstyled"-->
+									<ul>
+			HTML
+
+
+			current_pos = 1
+			while blockHash["l_#{current_pos}"] != nil
+
+				html += <<-HTML
+										<li>
+											<p class="title">#{GenerateHTML.formatTableValues(blockHash["l_#{current_pos}"], blockHash["font_icon_text"])}</p>
+										</li>
+				HTML
+
+				current_pos += 1
+			end
+
+			html += <<-HTML
+									</ul>
+								</div>
+							</div>
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+
+		elsif block_type == "break"
+
+			#have slightly modified version of this code copied from above to add the 'hr' class to the section
+			if blockHash["section_class"] != nil
+				#check to see if we also have section id here, sometimes need both
+				if blockHash["section_id"] != nil
+					section_tag_open = "<section class=\"#{blockHash["section_class"]}\" id=\"#{blockHash["section_id"]} hr\">" 
+					section_tag_close = "</section>"
+				else
+					section_tag_open = "<section class=\"#{blockHash["section_class"]} hr\">" 
+					section_tag_close = "</section>"
+				end
+			elsif blockHash["section_id"] != nil
+				section_tag_open = "<section id=\"#{blockHash["section_id"]} hr\">" 
+				section_tag_close = "</section>"
+			else
+				section_tag_open = "<section hr>" 
+				section_tag_close = "</section>"
+			end
+
+			html += <<-HTML
+				#{section_tag_open}
+					<div class="container">
+						<hr>
+					</div>
+				#{section_tag_close}
+			HTML
+
+		elsif block_type == "full_width_break"
+			#have slightly modified version of this code copied from above to add the 'hr' class to the section
+			if blockHash["section_class"] != nil
+				#check to see if we also have section id here, sometimes need both
+				if blockHash["section_id"] != nil
+					section_tag_open = "<section class=\"#{blockHash["section_class"]}\" id=\"#{blockHash["section_id"]} hr\">" 
+					section_tag_close = "</section>"
+				else
+					section_tag_open = "<section class=\"#{blockHash["section_class"]} hr\">" 
+					section_tag_close = "</section>"
+				end
+			elsif blockHash["section_id"] != nil
+				section_tag_open = "<section id=\"#{blockHash["section_id"]} hr\">" 
+				section_tag_close = "</section>"
+			else
+				section_tag_open = "<section hr>" 
+				section_tag_close = "</section>"
+			end
+
+			html += <<-HTML
+				#{section_tag_open}
+						<hr>
+				#{section_tag_close}
+			HTML
+				
+		elsif block_type == "text_and_image"
+			#set default orientation to detemine if text goes on left or right
+			orientation = "text_left"
+			orientation = blockHash["orientation"] if blockHash["orientation"] != nil
+
+			#use default column settings if they are not provided in settings
+			col_left = "col-sm-7"
+			col_right = "col-sm-5"
+
+			if orientation == "text_left"
+				col_left = "col-sm-7"
+				col_right = "col-sm-5"
+			elsif orientation == "text_right"
+				col_left = "col-sm-5"
+				col_right = "col-sm-7"
+			end
+
+			button_class = ""
+			#img_class = "img-responsive hidden-xs"
+			img_class = "img-responsive"
+			h1_class = ""
+
+			#check hash to see if we have any specifics to override the defaults
+			col_left = blockHash["col_left"] if blockHash["col_left"] != nil
+			col_right = blockHash["col_right"] if blockHash["col_right"] != nil
+			button_class = blockHash["button_class"] if blockHash["button_class"] != nil
+			img_class = blockHash["img_class"] if blockHash["img_class"] != nil
+
+			html = <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+			HTML
+
+			#if we have text left
+			if orientation == "text_left"
+
+				html += <<-HTML
+									<div class="#{col_left}">
+										<p class="tag"> #{blockHash["tag_text"]} </p>
+										<h1#{h1_class}>#{blockHash["h1"]}</h1>
+										<h2>#{blockHash["h2"]}</h2>
+										<h3>#{blockHash["h3"]}</h3>
+										<p>#{blockHash["p"]}</p>
+										<p><a href="#{blockHash["link"]}" class="#{button_class}" target="_blank"> #{blockHash["link_text"]} </a></p>
+									</div>
+									
+				HTML
+
+				if blockHash["image_path"] != nil
+					html += <<-HTML
+									<div class="#{col_right}">
+										<img class="#{img_class}" alt="#{blockHash["alt_image_text"]}" src="#{redmineUrl}#{blockHash["image_path"]}">
+					HTML
+				elsif blockHash["html_entity"] != nil
+					html += <<-HTML
+									<div class="#{col_right} hidden-xs">
+										<div id="custom_html_entity_class">
+											#{blockHash["html_entity"]}
+										</div>
+					HTML
+				else
+					html += <<-HTML
+									<div class="#{col_right}">
+					HTML
+				end
+
+				html += <<-HTML
+									</div>
+
+				HTML
+
+			#otherwise if we have text right
+			elsif orientation == "text_right"
+				
+				if blockHash["image_path"] != nil
+					html += <<-HTML
+									<div class="#{col_left}">
+										<img class="#{img_class}" alt="#{blockHash["alt_image_text"]}" src="#{redmineUrl}#{blockHash["image_path"]}">
+					HTML
+				elsif blockHash["html_entity"] != nil
+					html += <<-HTML
+									<div class="#{col_left} hidden-xs">
+										<div id="custom_html_entity_class">
+											#{blockHash["html_entity"]}
+										</div>
+					HTML
+				else
+					html += <<-HTML
+									<div class="#{col_left}">
+					HTML
+				end
+
+				html += <<-HTML
+									</div>
+									<div class="#{col_right}">
+										<p class="tag"> #{blockHash["tag_text"]} </p>
+										<h1#{h1_class}>#{blockHash["h1"]}</h1>
+										<h2>#{blockHash["h2"]}</h2>
+										<h3>#{blockHash["h3"]}</h3>
+										<p>#{blockHash["p"]}</p>
+										<p><a href="#{blockHash["link"]}" class="#{button_class}" target="_blank"> #{blockHash["link_text"]} </a></p>
+									</div>
+
+				HTML
+
+
+			end
+
+			html += <<-HTML
+							</div>
+						</div>
+					#{section_tag_close}
+				</div>				
+			HTML
+
+
+		elsif block_type == "about"
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="about-bg">
+			HTML
+
+			if blockHash["image_path"] != nil
+				html += <<-HTML
+							<img src="#{redmineUrl}#{blockHash["image_path"]}" alt="#{blockHash["alt_image_text"]}" class="img-responsive about-img">
+				HTML
+			end
+		
+			html += <<-HTML
+						</div>
+			
+						<div class="container">
+							<div class="row push50">
+								<div class="col-xs-12 col-sm-8 col-md-8 col-lg-7">
+									<h1>#{blockHash["h1"]}</h1>
+									<p>#{GenerateHTML.formatTableValues(blockHash["p"], blockHash["font_icon_text"])}</p>
+									<p><a href="#{blockHash["link"]}">#{blockHash["link_text"]}</a></p>
+								</div>
+							</div>
+			HTML
+
+			#the funding is relatively hard coded for now, so just take the first array... spend more time on this later if it's necessary
+			fundingHash = nil
+			fundingHash = collectionBlockArrayHash_2[0]
+
+			#if collection block is empty AND funding hash is nil SKIP
+			if not collectionBlockArrayHash.empty? or not fundingHash == nil
+
+				html += <<-HTML
+								<div class="row">
+									<div class="col-sm-12">
+										<div class="about-sub">
+				HTML
+										
+				collectionBlockArrayHash.each_with_index{ |collectionBlockHash, featureCount|
+
+					html += <<-HTML
+												<div class="row">
+													<div class="col-sm-2">
+					HTML
+
+					if collectionBlockHash["font_icon"] != nil
+						if collectionBlockHash["font_icon"] =~ /^icon/
+							html += <<-HTML
+														<i class="#{collectionBlockHash["font_icon"]}"></i>
+							HTML
+
+						elsif collectionBlockHash["font_icon"] =~ /^fa/
+							if collectionBlockHash["font_icon_text"] == nil
+								html += <<-HTML
+														<i class="fa #{collectionBlockHash["font_icon"]}"></i>
+								HTML
+							else
+
+								html += <<-HTML
+														<fatext><i class="fa #{collectionBlockHash["font_icon"]}">#{collectionBlockHash["font_icon_text"]}</i></fatext>
+								HTML
+							end
+						end
+					end
+				
+					html += <<-HTML
+													</div>
+													<div class="col-xs-9">
+														<h3>#{collectionBlockHash["h3"]}</h3>
+														<p>#{collectionBlockHash["p"]}<a href="#{collectionBlockHash["link"]}">#{collectionBlockHash["link_text"]}</a></p>
+													</div>
+												</div>
+					HTML
+				}
+
+
+				
+
+				if fundingHash != nil
+
+					html += <<-HTML
+												<div class="row">
+													<div class="col-sm-12">
+														<div class="push50">
+					HTML
+
+					if fundingHash["h3"] != nil
+						html += <<-HTML
+															<h3 class="text-center">#{fundingHash["h3"]}</h3>
+						HTML
+
+					end
+
+					html += <<-HTML
+														</div>
+													</div>
+												</div>
+												<div class="row">
+													<div class="funding center-block">
+					HTML
+
+
+					if fundingHash["image_path_row1_left"] != nil && fundingHash["image_path_row1_left"] != ""
+						html += <<-HTML
+															<a href="#{fundingHash["link_left"]}" target="_blank">
+																<img src="#{redmineUrl}#{fundingHash["image_path_row1_left"]}" alt="#{fundingHash["alt_image_text_row1_left"]}" class="img-responsive">
+															</a>
+						HTML
+					end
+
+					if fundingHash["image_path_row1_right"] != nil && fundingHash["image_path_row1_right"] != ""
+						html += <<-HTML
+															<a href="#{fundingHash["link_right"]}" target="_blank">
+																<img src="#{redmineUrl}#{fundingHash["image_path_row1_right"]}" alt="#{fundingHash["alt_image_text_row1_right"]}" class="nih-nhgri img-responsive ">
+															</a>
+						HTML
+					end
+												
+					html += <<-HTML
+													</div>
+												</div>
+												<div class="row push30">
+													<div class="col-md-12 nih-logo">
+					HTML
+						
+					if fundingHash["link_middle"] != nil && fundingHash["link_middle"] != ""
+						html += <<-HTML
+														<a href="#{fundingHash["link_middle"]}" target="_blank">
+															<img src="#{redmineUrl}#{fundingHash["image_path_row2_middle"]}" alt="#{fundingHash["alt_image_text_row2_middle"]}" class="img-responsive">
+														</a>
+						HTML
+					end
+
+					html += <<-HTML
+													</div>
+												</div>
+					HTML
+
+				end
+
+				html += <<-HTML
+
+										</div>
+									</div>
+								</div>
+				HTML
+
+			end
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>
+			HTML
+			
+
+		elsif block_type == "stacked_column"
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row">
+									<div class="col-xs-12">
+										<h1>#{blockHash["h1"]}</h1>
+										<p>#{blockHash["p"]}</p>
+									</div>
+								</div>
+			HTML
+
+
+			#Determine # of entities in array hash based on header to know how to format column size 
+			entities = 0
+			#set default column size
+			colSize = 0
+			num_cols = 3
+			#num_cols = 4
+
+			entities = collectionBlockArrayHash.size
+			
+			if not collectionBlockArrayHash.empty?
+				#colSize = 12 / entities  
+				#colSize = 4 if colSize < 4
+				#colSize = 10 if colSize == 12
+
+				
+				if blockHash["number_columns"] != nil
+					num_cols = blockHash["number_columns"].to_i
+				end
+
+				#####hard code the ability to have 2, 3, or 4 columns
+				#colSize = 12 / entities
+				#colSize = 4 if colSize < 4
+				colSize = 12 / num_cols
+				colSize = 10 if colSize == 12
+
+				#keep track of loop count aka. current count in given row
+				loopCount = 0 
+				#keep track of overall count so we can offset non-full rows
+				column_sum_count = 1
+			
+				column_offset_val = ""
+				 
+				collectionBlockArrayHash.each_with_index{ |colHash, colHashCount| 
+					image_path = colHash["image_path"]
+					alt_image_text = colHash["alt_image_text"]
+					h3 = colHash["h3"]
+					p = colHash["p"]
+					link = colHash["link"]
+					link_text = colHash["link_text"]
+					em = colHash["em"]
+				
+
+					if h3 != nil or p != nil or image_path != nil
+						#if we're at beginning of row, open a new div
+						if loopCount == 0
+							#<div class="row push50 ">
+							#<div class="row push50 row-centered">
+							html += <<-HTML
+								<div class="row push50">
+							HTML
+						end 
+
+
+						if loopCount == 0
+							html += <<-HTML
+								<div class="col-md-#{colSize} #{column_offset_val}">
+							HTML
+						else
+							html += <<-HTML
+								<div class="col-md-#{colSize}">
+							HTML
+						end
+
+						#<div class="col-md-#{colSize} col-centered">
+						
+						if image_path != nil
+							html += <<-HTML
+								<img src="#{redmineUrl}#{image_path}" alt="#{alt_image_text}" class="img-responsive">
+							HTML
+						end
+
+						
+						html += <<-HTML
+										<em>#{em}</em>
+										<h3>#{h3}</h3>
+										<p>#{p}</p>
+										<p><a href="#{link}" target="_blank">#{link_text}</a></p>
+									</div>
+						HTML
+
+						#if loopCount == 2
+						#if we filled up entire row, close div
+						if loopCount == (num_cols - 1)
+							html += <<-HTML
+								</div>
+							HTML
+
+							#check to see if the next row is going to be full or not
+							#if next row is not going to be full, we need to set offset flag
+							remaining_entities = entities - column_sum_count
+							if remaining_entities < num_cols
+
+								#to get offset we can
+								# (12 - (column size * remaining entities)) / 2
+								offset_val = (12 - (colSize.to_i * remaining_entities)) / 2
+								column_offset_val = "col-md-offset-#{offset_val}"
+							end
+						end 
+
+						column_sum_count += 1
+					end
+						
+					loopCount += 1
+					#loopCount = 0 if loopCount == 3
+					loopCount = 0 if loopCount == num_cols
+				}
+
+
+	
+			end
+
+
+			html += <<-HTML
+							</div>
+						</div>
+					#{section_tag_close}
+				</div>				
+			HTML
+
+		elsif block_type == "text_and_search"
+			#use default column settings if they are not provided in settings
+			col_left = "col-sm-12"
+			col_right = "col-sm-0"
+
+			button_class = ""
+			#img_class = "img-responsive hidden-xs"
+			img_class = "img-responsive"
+			h1_class = ""
+
+			#check hash to see if we have any specifics to override the defaults
+			col_left = blockHash["col_left"] if blockHash["col_left"] != nil
+			col_right = blockHash["col_right"] if blockHash["col_right"] != nil
+			button_class = blockHash["button_class"] if blockHash["button_class"] != nil
+			img_class = blockHash["img_class"] if blockHash["img_class"] != nil
+
+			html = <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="container">
+							<div class="row#{row_bg}">
+			HTML
+
+
+			html += <<-HTML
+								<div class="#{col_left}">
+									<p class="tag"> #{blockHash["tag_text"]} </p>
+									<h1#{h1_class}>#{blockHash["h1"]}</h1>
+									<h2>#{blockHash["h2"]}</h2>
+									<h3>#{blockHash["h3"]}</h3>
+									<p>#{blockHash["p"]}</p>
+									<p><a href="#{blockHash["link"]}" class="#{button_class}" target="_blank"> #{blockHash["link_text"]} </a></p>
+								</div>
+								
+			HTML
+
+			if blockHash["image_path"] != nil
+				html += <<-HTML
+								<div class="#{col_right}">
+									<img class="#{img_class}" alt="#{blockHash["alt_image_text"]}" src="#{redmineUrl}#{blockHash["image_path"]}">
+				HTML
+			elsif blockHash["html_entity"] != nil
+				html += <<-HTML
+									<div class="#{col_right} hidden-xs">
+										<div id="custom_html_entity_class">
+											#{blockHash["html_entity"]}
+										</div>
+									</div>
+								</div>
+							</div>
+				HTML
+			end
+
+			#check to see if we have search URL before displaying it
+			if blockHash["url_stub"] != nil
+				html += <<-HTML
+							<div class="row#{row_bg}">
+								<div class="#{blockHash["col_search_total_width"]}">
+									<div class="container">
+										<form class="form-horizontal" role="form">
+											<div class="form-group">
+												<div class="#{blockHash["col_search_width"]}">          
+													<input type="text" class="form-control" id="allele_search_name" placeholder="#{blockHash["text_placeholder"]}">
+												</div>
+											</div>
+											<div class="form-group">        
+												<div class="#{blockHash["col_search_submit_width"]}">
+													<a href="" onclick="window.open('#{blockHash["url_stub"]}' + allele_search_name.value, 'windowName' ); return false" target="_blank">
+														<button type="submit" class="btn btn-primary">#{blockHash["submit_button_text"]}</button>
+													</a>
+												</div>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+				HTML
+			end
+
+			html += <<-HTML
+						</div>
+					#{section_tag_close}
+				</div>				
+			HTML
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		elsif block_type == "platform"
+			#set flag if video exists, we'll have to include modal HTML code with params from CMS
+			videoFlag = 0
+
+			html += <<-HTML
+				<div id="#{block_id}">
+					#{section_tag_open}
+						<div class="#{blockHash["right_background_image_div_class"]}">
+			HTML
+
+			if blockHash["image_path"] != nil
+				html += <<-HTML
+							<img src="#{redmineUrl}#{ blockHash["image_path"] }" alt="" class="img-responsive hidden-xs">
+				HTML
+			end
+
+			html += <<-HTML
+						</div>
+						<div class="container">
+							<div class="row">
+								<div class="col-xs-12 col-sm-12 col-md-7">
+									<p class="tag"> #{ blockHash["tag_text"] } </p>
+									<div class="platform">
+										<h1#{h1_class}> #{ blockHash["h1"] } </h1>
+			HTML
+
+			#check to see if we have video to display, otherwise don't show link
+			if blockHash["video_path"] != nil
+				html += <<-HTML
+										<a href="#" class="hidden-xs hidden-md hidden-lg nounder" data-toggle="modal" data-target="#vidmodal">
+											<button class="pull-right btn btn-orange-round-square">
+												<i class="icon-video-01"></i>
+												<p> #{ blockHash["p"] } </p>
+											</button>
+										</a>
+
+				HTML
+			end
+
+			html += <<-HTML
+										<h2 class="main-cta"> #{ blockHash["h2"] } </h2> 
+										<p class="main-cta"><a href="#{ blockHash["link"] }" target="_blank"> #{ blockHash["link_text"] } </a></p>
+									</div>
+
+								</div>
+								<div class="col-sm-5">
+			HTML
+
+
+			if blockHash["video_path"] != nil
+				#set video flag if we have video CMS
+				videoFlag = 1
+
+				html += <<-HTML
+									<!-- Video Modal -->
+									<a href="#" class="hidden-xs hidden-sm nounder" data-toggle="modal" data-target="#vidmodal">
+										<button class="pull-right btn btn-orange-round-square">
+											<i class="icon-video-01"></i>
+											<p> #{ blockHash["video_text"] } </p>
+										</button>
+									</a>
+				HTML
+			end
+
+			html += <<-HTML
+								</div>
+
+							</div>
+							<div class="row visible-xs">
+								<div class="col-xs-12 push30">
+								<!-- Video Direct to Youtube for Mobile -->
+			HTML
+
+			if blockHash["video_path"] != nil
+				html += <<-HTML
+									<a href="#{ blockHash["video_path"] }" class=" nounder">
+										<button class="btn btn-orange-round-square center-block">
+											<i class="icon-video-01"></i>
+											<p> #{ blockHash["video_text"] } </p>
+										</button>
+									</a>
+				HTML
+			end
+
+			html += <<-HTML
+								</div>
+							</div>
+			HTML
+
+
+			#collectionBlockArrayHash.inspect
+			html += <<-HTML
+							<div id="tools" class="row">
+								<div class="col-sm-10 col-sm-offset-1">
+									<!-- Nav tabs -->
+									<ul class="nav nav-tabs" role="tablist">
+										<!-- set up the navigation based on array of tool hashes -->
+			HTML
+										collectionBlockArrayHash.each_with_index{ |toolHash, toolHashCount| 
+												tag_text = toolHash["tag_text"]
+
+												#substiture _ for spaces
+												# not going to get any other circumstance other than the most popular
+												if tag_text != nil
+													tag_text.gsub!(/\ /, "_")
+												end
+
+												if toolHashCount == 0 
+			html += <<-HTML
+													<li class="active"><a href="##{ tag_text }" role="tab" data-toggle="tab">#{ tag_text }</a></li>
+			HTML
+												else 
+			html += <<-HTML
+													<li><a href="##{ tag_text }" role="tab" data-toggle="tab">#{ tag_text }</a></li>
+			HTML
+												end
+										}
+			html += <<-HTML
+										
+									</ul>
+
+									<!-- Tab panes -->
+									<div class="tab-content push30">
+			HTML
+											collectionBlockArrayHash.each_with_index{ |toolHash, toolHashCount|
+												#obtain collection if one exists, start with a non-blank default
+												collection_loop_val = "NO_COLLECTION_SPECIFIED"
+												collection_loop_val = toolHash["collection"]
+
+												if toolHashCount == 0
+			html += <<-HTML
+													<div class="tab-pane fade in active" id="#{ toolHash["tag_text"] }">
+			HTML
+												else
+			html += <<-HTML
+													<div class="tab-pane fade" id="#{ toolHash["tag_text"] }">
+			HTML
+												end
+
+			html += <<-HTML
+										  				<div class="row">
+															<div class="col-xs-12">
+																<h4> #{ toolHash["h4"] } </h4>
+			HTML
+														if toolHash["read_more_link"] == nil
+			html += <<-HTML
+																<p> #{ toolHash["p"] } #{ toolHash["read_more_link_text"] }</p>
+			HTML
+														else
+			html += <<-HTML
+																<p> #{ toolHash["p"] } <a href="#{ toolHash["read_more_link"] }">#{ toolHash["read_more_link_text"] }</a></p>
+			HTML
+														end
+			html += <<-HTML
+															</div>
+														</div> 
+			HTML
+
+												#next we need to get the collections associated with this current item
+												collectionInternalLoopBlockArrayHash = GenboreeRedmine.getRedminePageCollectionViaPattern(contentArr, collection_loop_val)
+												#loop through each collection and render the correct html
+												collectionInternalLoopBlockArrayHash.each{ |collectionInternalLoopHash|
+
+													p = collectionInternalLoopHash["p"]
+													image_path = collectionInternalLoopHash["image_path"]
+													alt_image_text = collectionInternalLoopHash["alt_image_text"]
+													tool_name = collectionInternalLoopHash["tool_name"]
+														
+													if tool_name != nil && tool_name != ""
+			html += <<-HTML
+														<div class="row push30">
+															<div class="col-sm-2">
+			HTML
+
+														if image_path != nil
+															html += <<-HTML
+																<img src="#{redmineUrl}#{image_path} " alt="#{alt_image_text}" class="img-responsive">
+															HTML
+														end
+			html += <<-HTML
+																</div>
+																<div class="col-sm-10">
+																	<p class="orange"><i class="fa fa-wrench"></i> #{ tool_name } </p>
+																	<p>#{ p }</p>
+																</div>
+															</div>
+			HTML
+													end
+												}
+
+
+			html += <<-HTML
+													</div>							
+			HTML
+											}
+			
+										
+			html += <<-HTML
+									</div><!-- /Tab Panes -->
+								</div><!-- /col-sm-10 -->
+							</div><!-- /#tools -->
+						</div>
+					</section>
+				</div>
+
+			HTML
+
+
+		end
+
+		#also add video flag modal if video exists
+		if videoFlag == 1
+			html += <<-HTML
+				<!-- VIDEO Modal -->
+				<div class="modal fade" id="vidmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+					<div class="modal-dialog">
+						<div id="login" class="modal-content">
+							<div class="modal-header">
+								<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+								<h4 class="modal-title" id="myModalLabel">#{blockHash["video_title"]}</h4>
+							</div>
+							<div class="modal-body">
+								<div class="embed-responsive embed-responsive-4by3 vidmodal">
+									<iframe class="embed-responsive-item" src="#{blockHash["video_path"]}"></iframe>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- /VIDEO Modal -->
+
+
+			HTML
+
+		end
+
+
+		return html
+	end
+
+
+
+	def self.formatTableValues(value, text_value)
+		returnVal = value
+
+		#check for font awesome code
+		#  only 1 font awesome icon can be used per cell with this code
+		if returnVal =~ /\<FA\>/
+			#$stderr.puts returnVal
+			returnVal.gsub!(/\<FA\>/, "<i class=\"fa ")
+			#$stderr.puts returnVal
+			returnVal.gsub!(/\<\/FA\>/, "\"></i>")
+			#$stderr.puts returnVal
+
+			#then check to see if we have text we need to add in <i> tags
+			if text_value != nil
+				returnVal.gsub!(/\<\/i\>/, "#{text_value}</i>")
+			end
+		end
+
+		#check for wiki formatted link
+		#  only 1 link (nothing else) will be allowed in this cell
+		if returnVal =~ /\":/
+			#$stderr.puts "found:\t#{returnVal}"
+			#remove opening quotes
+			
+			returnVal.gsub!(/^\"/, "")
+			returnVal.gsub!(/^\ \"/, "")
+			
+			linkSplit = returnVal.split("\":")
+			
+			link_text = linkSplit[0].gsub(/\"/, "")
+			link = linkSplit[1].gsub(/\"/, "").strip
+
+			returnVal = <<-HTML
+				 <a href="#{link}" target="_blank">#{link_text}</a>
+			HTML
+
+		end
+
+
+		return returnVal
+	end
+
+	def self.getColumnSizesBasedOnColumnNumberAndEntries(cols, entries, fill_out_last_array_width_flag)
+		returnArr = []
+		#idea here is to determine the column sizes before loop so that we can apply them as necessary
+		# last consideration is to decrease the number of columns for non-full rows so the section fills out the page
+
+		#this function outputs an array of arrays that allow us to loop through the column structure in a logical manner
+		# - each array indicates a new row
+		# - values in each array indicate the column width to use in the bootstrap grid / column size
+
+		#boostrap column size = 12
+		full_col_size = 12
+
+		#let's stick with a max of 4 columns for the time being
+		cols = 4 if cols > 4
+		
+		col_width = (full_col_size / cols).to_i
+
+		current_col_sum = 0
+		currentArr = []
+
+		#loop through number of entries until we get to non-full row sum
+		for i in (0...entries)
+			if current_col_sum < full_col_size
+				current_col_sum += col_width
+				currentArr.push(col_width)
+			else
+				current_col_sum = 0
+				current_col_sum += col_width
+				returnArr << currentArr
+				currentArr = []
+				currentArr.push(col_width)
+			end
+
+		end
+
+		#then also push last array onto returnArr
+		returnArr << currentArr
+
+		#final step is to inspect the last array to see if we can fill out the content a little more than left padded IF FLAG PRESENT
+		if fill_out_last_array_width_flag == 1
+			finalArrSpot = returnArr.size
+			finalArr = returnArr.last
+
+			#get size for first array to compare it to last array
+			firstArraySize = returnArr.first.size
+
+			col_width_shrink = (full_col_size  / finalArr.size).to_i
+
+			#if we have full column = 12, set it to 8 so it doesn't get stretched too much
+			col_width_shrink = 8 if col_width_shrink == 12
+
+			lastArrayAdjusted = []
+			finalArr.each{ |val|
+				lastArrayAdjusted.push(col_width_shrink)
+			}
+
+			#now delete last array and add new array
+			returnArr.delete_at(finalArrSpot-1)
+			returnArr << lastArrayAdjusted
+
+		end
+
+		return returnArr
+
+	end
+
+end
+
+
+%>
+

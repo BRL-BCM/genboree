@@ -1,0 +1,22 @@
+
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <b>Job Id</b>: <i><%= @context['jobId'] %></i>
+    <br/>
+    <br/>Your password has been successfully updated. Please log out and log back in using the new password.
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>
+
+<script type="text/javascript">
+  /* Override global wbAcceptOkCallback to force logout when the job is accepted */
+  wbAcceptOkCallback = function() {
+    window.location = "/java-bin/login.jsp?rm=logout" ;
+  } ;
+  wbAcceptCloseCallback = wbAcceptOkCallback ;
+</script>

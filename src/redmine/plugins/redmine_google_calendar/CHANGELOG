@@ -1,0 +1,24 @@
+0.1.2 (29-06-2009):
+    * Enhancement: Add copyright-file
+    * Enhancement: Bring README.rdoc up-to-date and in-sync with the updated wiki-page on redmine.org (reflect move of the plugins' SCM-repo)
+
+0.1.1 (14-06-2009):
+    * Defect: Fix compatibility with Redmine trunk while keeping it compatible with Redmine 0.8.x
+    * Defect: Fix development-mode compatibility with Redmine trunk while keeping it compatible with Redmine 0.8.x in development-mode
+    * Defect: Currently selected project custom field for the iframe-source is not reflected in the view
+    * Enhancement: Remove obsolete "net/imap"-requirement
+    * Enhancement: Carry-out the plugin name consequently through all code(-comments)
+    * Enhancement: Rename the "settings"-partial to prevent collision with other plugins
+    * Enhancement: Structurize the code-layout (indention, spaces etc.) and remove obsolete code-comments
+    * Enhancement: Update and improve the delivered documentation
+    * Enhancement: More verbose logging while starting the plugin
+    * Enhancement: Update and structurize the licensing documentation
+    * Enhancement: Add license-file
+    * Enhancement: Remove obsolete files and directories
+    * Enhancement: Add changelog-file
+
+0.1.0 (26-03-2008):
+    * Feature: Added project-menu item (tab) highlighting
+
+0.1.0 (12-03-2008):
+    - Initial public release

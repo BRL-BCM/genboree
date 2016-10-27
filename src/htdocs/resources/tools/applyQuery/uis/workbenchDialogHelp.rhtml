@@ -1,0 +1,43 @@
+<%# RENDER HTML %>
+<div style="height: 400px;" class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>  'This tool allows you to apply a query to the specified resource.' })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       => [ 'Drag 1 Query resource and 1 resource list into the <u>Input Data</u> box. A resource list refers to any resource that references multiple entities ("All Tracks", et al). This resource list needs to be a queryable resource.' ],
+        :types              =>
+        [
+          [ 'Query', 'min: 1 ; max: 1' ],
+          [ 'Resource list', 'min: 1 ; max: 1' ]
+        ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     => [ [ 'Apply', "Review the query you have selected and the output database to ensure you have selected the appropriate database. If these settings are accurate, click &quot;Apply Query&quot; to begin the query job. An email will be sent to your account confirming that the job has been started."] ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed by Bio:Neos for <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

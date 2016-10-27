@@ -1,0 +1,19 @@
+<p><label><%= l(:gbrc_settings_label_dir) %></label>
+<%= text_field_tag 'settings[path]', @settings['path'], :size => 80 %>
+<br /><em>Use {PROJECT} to include the project identifier in the path.</em></p>
+
+<p><label><%= l(:gbrc_settings_label_index_files) %></label>
+<%= text_area_tag 'settings[index]', @settings['index'], :cols => 60, :rows => 3 %>
+<br /><em>Space separated list of index files by priority.</em></p>
+
+<p><label><%= l(:gbrc_settings_label_valid_exts) %></label>
+<%= text_area_tag 'settings[extensions]', @settings['extensions'], :cols => 60, :rows => 3 %>
+<br /><em>Regexp matching valid file extensions (will match case-insensitively).</em></p>
+
+<p><label><%= l(:gbrc_settings_label_max_size) %></label>
+<%= text_field_tag 'settings[maxEmbedFileSize]', @settings['maxEmbedFileSize'], :size => 10 %>
+<br /><em>Maximum size, in bytes, of files to embed within the Redmine page (this future functionality may move to own plugin).</em></p>
+
+<p><label><%= l(:gbrc_settings_label_caption) %></label>
+<%= text_field_tag 'settings[menu]', @settings['menu'], :size => 30 %>
+<br /><em>Clear this field if you don't want to add a tab to the project menu.</em></p>

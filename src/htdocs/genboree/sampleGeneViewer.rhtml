@@ -1,0 +1,608 @@
+<%#
+
+
+THIS FILE USES eruby %>
+
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require "timeout"
+require "cgi"
+require "json"
+require "net/http"
+require "uri"
+require "brl/util/util"
+require "brl/genboree/genboreeUtil"
+require "brl/genboree/genboreeContext"
+require "brl/genboree/rest/apiCaller"
+require "brl/genboree/rest/helpers/trackApiUriHelper"
+require 'brl/genboree/abstract/resources/user'
+require "brl/genboree/rest/helpers/databaseApiUriHelper"
+require "brl/genboree/geneViewer/gbTrackUtilNew"
+#require "brl/genboree/pathways/gbTrackUtil"
+#require "brl/genboree/pathways/metadataUtil"
+
+
+begin
+
+  exptArray = Array.new()
+  sampleArray = Array.new()
+  exptHash = Hash.new
+  sampleHash = Hash.new
+
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  self.extend(BRL::Genboree)
+  @errorMsg = ""
+  @errorState = false
+  apiHost = ENV["HTTP_HOST"]
+  chromosomeLengths = File.read("../epigenomeatlas/hg19Lengths.json")
+  inGenbSession = true
+  if(@context.cgi["genbSession"].nil? or @context.cgi["genbSession"].empty?) then inGenbSession = false end
+  @hostAuthMap = nil
+  userId = @context.cgi["userId"].strip
+  if(!(userId.nil? or userId.empty?)) then
+    userId = userId.to_i
+    @hostAuthMap = Abstraction::User.getHostAuthMapForUserId(nil, userId)
+  end
+  gbTrackUtil = BRL::Genboree::GeneViewer::GBTrackUtil.new(@hostAuthMap)
+  digestKey = @context.cgi["digestKey"].strip
+  dbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc()
+  dbrc.user = dbrc.user.dup.untaint
+  dbrc.password = dbrc.password.dup.untaint
+  xattr=nil;yattr=nil;xattrVals=nil;yattrVals=nil;trackdbList=""; sampledbList="";trackAttr = nil;mbwAnnotationType=nil;
+  #roiTrack = nil;
+  if(inGenbSession and !(digestKey.nil? or digestKey.empty?)) then
+      apiCaller = BRL::Genboree::REST::ApiCaller.new(apiHost,"/REST/v1/digest/{digest}",dbrc.user,dbrc.password)
+      hr = apiCaller.get({ :digest => digestKey})
+      apiCaller.parseRespBody
+      jsonHash = JSON.parse(apiCaller.apiDataObj["text"])
+      xattr = jsonHash["gbGridXAttr"]
+      yattr = jsonHash["gbGridYAttr"]
+      xattrVals = jsonHash["xattrVals"]
+      yattrVals = jsonHash["yattrVals"]
+      trackAttr = jsonHash["trackAttr"]
+      trackdbList = jsonHash["trackdbList"]
+      sampledbList = jsonHash["sampledbList"]
+      mbwAnnotationType = jsonHash["mbwAnnotationType"]
+      #roiTrack = jsonHash["roiTrack"]
+  else
+    yattrVals = @context.cgi["yattrVals"]
+    xattrVals = @context.cgi["xattrVals"]
+    trackdbList = @context.cgi["trackdbList"]
+    sampledbList = @context.cgi["sampledbList"]
+    xattr = gbTrackUtil.cgiVarValue(@context.cgi,"gbGridXAttr","eaAssayType")
+    yattr = gbTrackUtil.cgiVarValue(@context.cgi,"gbGridYAttr","eaSampleType")
+    trackAttr = @context.cgi["trackAttr"]
+    mbwAnnotationType = @context.cgi["mbwAnnotationType"]
+  end
+  grpDefault = "Epigenomics Roadmap Repository"
+  dbDefault = "Release 5 Repository"
+  defaultGbKey = gbTrackUtil.getGbKey(apiHost,grpDefault,dbDefault)
+  defaultdbList = "http://#{apiHost}/REST/v1/grp/#{CGI.escape(grpDefault)}/db/#{CGI.escape(dbDefault)}?gbKey=#{defaultGbKey}"
+  if(sampledbList.nil? or sampledbList.empty?) then
+    sampledbList = [defaultdbList]
+  else
+    sampledbList = sampledbList.strip.split(/,/);
+  end
+
+  if(trackdbList.nil? or trackdbList.empty?) then
+    trackdbList = sampledbList
+  else
+    trackdbList = trackdbList.strip.split(/,/);
+  end
+
+  if(mbwAnnotationType.nil? or mbwAnnotationType.empty?) then
+    mbwAnnotationType = "Gene"
+  else
+    mbwAnnotationType.strip!
+  end
+
+  dbROI = @context.genbConf.microbiomeDataViewerDbUri
+  trkHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new("")
+  dbROIGbKey = gbTrackUtil.getGbKey(trkHelper.extractHost(dbROI),trkHelper.grpApiUriHelper.extractName(dbROI),trkHelper.dbApiUriHelper.extractName(dbROI))
+  roiTrack = gbTrackUtil.getEntityByAttrValueFromDB(:trk,"#{@context.genbConf.microbiomeDataViewerDbUri.strip}?gbKey=#{dbROIGbKey}","mbwAnnotationType",mbwAnnotationType)[0]
+  $stderr.puts "rt #{roiTrack.inspect}"
+  if(roiTrack.nil? or roiTrack.empty?) then    
+    roiDefault = "http://#{@context.genbConf.eaRoiTrackHost}#{@context.genbConf.eaRoiTrackPath}"
+    roiGbKey = gbTrackUtil.getGbKey(trkHelper.extractHost(roiDefault),trkHelper.grpApiUriHelper.extractName(roiDefault),trkHelper.dbApiUriHelper.extractName(roiDefault))
+    roiTrack = "#{roiDefault}?gbKey=#{roiGbKey}"
+  end
+  comboPrefix = trkHelper.extractPureUri(roiTrack)
+ comboPrefix.gsub!(/valine\.brl\.bcmd\.bcm\.edu/,"genboree.org")
+  comboSuffix = URI.parse(roiTrack).query
+
+  if(yattrVals.nil? or yattrVals.empty?) then
+    yattrVals = ["Adult Liver","H1 Cell Line"]
+  else
+    yattrVals = yattrVals.strip.split(/,/).map{|yy| CGI.unescape(yy)};
+  end
+  if(xattrVals.nil? or xattrVals.empty?) then
+    xattrVals = ["Histone H3K27me3","RRBS"]
+  else
+    xattrVals = xattrVals.strip.split(/,/).map{|xx| CGI.unescape(xx)};
+  end
+
+  if(trackAttr.nil? or trackAttr.empty?) then
+    trackAttr = "sampleName"
+  else
+    trackAttr.strip!
+  end
+  dbHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new("")
+
+  if(yattrVals.length != xattrVals.length) then
+    @errorState = true
+    @errorMsg = "Unequal number of x and y attributes"
+  elsif(xattrVals.member?(nil) or xattrVals.member?(""))
+    @errorState = true
+    @errorMsg = "Null or empty x attribute value"
+  elsif(yattrVals.member?(nil) or yattrVals.member?(""))
+    @errorState = true
+    @errorMsg = "Null or empty y attribute value"
+  end
+
+
+
+  if(!@errorState) then
+    pairedVals = []
+    yattrVals.each_index{|ii|
+      pairVal = "#{yattrVals[ii]}||#{xattrVals[ii]}"
+      if(!pairedVals.member?(pairVal)) then pairedVals << pairVal end
+    }
+
+    yattrVals = []
+    xattrVals = []
+    pairedVals.each{|pv|
+      (yy,xx) = pv.split(/\|\|/)
+      yattrVals << yy
+      xattrVals << xx
+      }
+
+    dbURIs = {}
+    dbGbKeys ={}
+    trackdbList.each{|db|
+      dbURIs[db] = dbHelper.extractPureUri(db)
+      dbgb = dbHelper.extractGbKey(db)
+      if !(dbgb.nil? or dbgb.empty?) then
+        dbGbKeys[db]="?gbKey=#{dbgb}"
+    else
+      dbGbKeys[db]=""
+    end
+    }
+
+
+
+    pageTitle = CGI.unescape(@context.cgi["pageTitle"]);if(pageTitle.nil? or pageTitle.empty?) then pageTitle="#{mbwAnnotationType} Viewer" end
+    gridLeftTitle = CGI.unescape(@context.cgi["gridLeftTitle"]);if(gridLeftTitle.nil? or gridLeftTitle.empty?) then gridLeftTitle="Sample Selections" end
+    gridRightTitle = CGI.unescape(@context.cgi["gridRightTitle"]);if(gridRightTitle.nil? or gridRightTitle.empty?) then gridRightTitle="#{mbwAnnotationType} Selections" end
+    geneNames = [0]
+    geneDetails = nil
+    addGenes = false
+    useJSON = false
+    postScriptBuff = StringIO.new
+    errMsgBuff = StringIO.new
+    entityHash = {}
+    # JS for state maintenance
+    scriptOutput = StringIO.new
+    postScriptBuff << "chromosomeLengths =  Ext.util.JSON.decode('#{chromosomeLengths.strip}');"
+    if(!(@context.cgi["geneNames"].nil? or @context.cgi["geneNames"].empty?)) then
+      geneNames = @context.cgi["geneNames"].split(/,/).map{|xx| CGI.unescape(xx)}
+      addGenes = true;
+    end
+    attrList = [yattr,xattr]
+    attrValues = []
+    yassays = Hash.new{|h,k|h[k]=[]}
+    yorder = []
+    yattrVals.each_with_index{|yy,ii|
+      attrValues << [yy,xattrVals[ii]]
+      yassays[yy] << xattrVals[ii]
+      if(!yorder.member?(yy)) then yorder << yy end
+    }
+
+    attrDetails = gbTrackUtil.getAllEntitiesAndValuesMulti(:sample,sampledbList,attrList, attrValues)
+    if(attrDetails.nil?) then
+      @errorState = true;
+      @errorMsg = "Could not retrieve samples with xattr=#{xattr} and yattr=#{yattr}"
+    end
+    if(!@errorState) then
+      entityVals = []
+      attrDetails.each_key{|db|
+        attrDetails[db].each_key{|entity|
+          xval = attrDetails[db][entity][xattr]
+          yval = attrDetails[db][entity][yattr]
+          entityHash[yval] = Hash.new unless entityHash.has_key?(yval)
+          entityHash[yval][xval] = Array.new unless entityHash[yval].has_key?(xval)
+          entityHash[yval][xval] << [entity, db]
+          entityVals << entity unless entityVals.member?(entityHash)
+        }
+      }
+
+      sampleTracks = gbTrackUtil.getTracksForSamples(entityVals,trackdbList,trackAttr)
+
+      extEscape = CGI.escape(".bw")
+      # List of tracks to be sent to ucsc via url
+      ucscTrackStringBuf = StringIO.new
+      roiTrackEscape = CGI.escape(roiTrack)
+
+      avgImgUrlSuffix = "&format=SAMPLE_AVG_BAR_GRAPH&scrTracks="
+      imgUrlSuffix = "&format=SAMPLE_BAR_GRAPH&scrTracks="
+      idCount = 0
+      treeStringBuff = StringIO.new
+      storeStringBuff = StringIO.new
+      custArrayStringBuff = StringIO.new
+      storeStringBuff <<  "storeData = ["
+      treeStringBuff <<  ",children:["
+      visible = []
+      children = []
+      parent = nil; parent1 = nil;
+
+      #sh.each_key{|yy|
+      yorder.each{|yy|
+        treeStringBuff << ",{id:'trow_#{idCount}', text:'#{yy}',type:'sample',cls:'initHeight',expanded: true"
+        storeStringBuff << ",['grow_#{idCount}','','sample','','']"
+        visible << "true"
+        children[idCount] = Array.new
+        parent = idCount
+        idCount += 1
+        treeStringBuff << ",children:["
+        yassays[yy].each{|xx|
+          entityString = entityHash[yy][xx].map{|tt| CGI.escape(sampleTracks[tt[0]]) }.join(",")
+          #trackHash[yy][xx].each{|tt|
+          #ucscTrackStringBuff <<  ",#{CGI.escape(tt)}#{extEscape}"
+          #trackVals << tt
+          #}
+          treeStringBuff << ",{ id:'trow_#{idCount}',text:'#{xx} (#{entityHash[yy][xx].length})',type:'expt',cls:'initHeight',expanded: false"
+          #trackString = trackHash[yy][xx].map{|aa| "#{dbHelper.extractPureUri(aa[1])}/#{CGI.escape(aa[0])}?#{URI.parse(aa[1]).query}"}.join(",")
+          #puts trackString
+          roiPrefix = "#{trkHelper.extractPureUri(roiTrack)}/image?#{URI.parse(roiTrack).query}"
+          avgImgUrl = "#{roiPrefix}&roiAnnoName=#{avgImgUrlSuffix}#{entityString}"
+          if(inGenbSession) then avgImgUrl = "/java-bin/apiCaller.jsp?apiMethod=GET&binMode=true&rsrcPath=#{CGI.escape(avgImgUrl)}" end
+          storeStringBuff << ",['grow_#{idCount}','#{avgImgUrl}','expt','#{yy}|#{xx}','']"
+          visible << "true"
+          children[idCount] = Array.new
+          children[parent] << idCount
+          parent1 = idCount
+          idCount += 1
+          treeStringBuff << ",children:["
+          entityHash[yy][xx].each{|tt|
+            imgUrl = "#{roiPrefix}&roiAnnoName=#{imgUrlSuffix}#{CGI.escape(sampleTracks[tt[0]])}"
+            if(inGenbSession) then imgUrl = "/java-bin/apiCaller.jsp?apiMethod=GET&binMode=true&rsrcPath=#{CGI.escape(imgUrl)}" end
+            #imgUrl = "#{dbHelper.extractPureUri(tt[1])}/trk/#{CGI.escape(tt[0])}/image?#{URI.parse(tt[1]).query}&roiAnnoName=#{imgUrlSuffix}"
+            #ucscTrackStringBuf << ",#{CGI.escape(trackName)}#{extEscape}"
+            treeStringBuff << ",{ id:'trow_#{idCount}',text:'#{tt[0]}',type:'track',cls:'initHeight',leaf:true}"
+            storeStringBuff << ",['grow_#{idCount}','#{imgUrl}','track','','']"
+            visible << "false"
+            children[parent1] << idCount
+            idCount += 1
+          }
+          treeStringBuff << "]}"
+        }
+        treeStringBuff << "]}"
+      }
+      treeStringBuff << "]"
+      treeString =
+      treeStringBuff.string.gsub(/\[,/,"[")
+      storeStringBuff << "];"
+      storeString = storeStringBuff.string.gsub(/\[,/,"[")
+      custArrayStringBuff <<  "visible = ["
+      custArrayStringBuff << visible.join(',')
+      custArrayStringBuff <<  "];"
+      custArrayStringBuff <<  "children = ["
+      children.each{|nn|
+        if(nn.nil?) then
+          custArrayStringBuff << ",''"
+        else
+          custArrayStringBuff << ",["
+          nn.each{|cc|
+            custArrayStringBuff << ",#{cc}"
+          }
+          custArrayStringBuff << "]"
+        end
+      }
+      custArrayStringBuff <<  "];"
+      custArrayString = custArrayStringBuff.string.gsub(/\[,/,"[")
+      #ucscTrackString = ucscTrackStringBuf.string
+      #ucscTrackString.gsub!(/^,/,"")
+      #ucscTrackStringEscape = ucscTrackString
+      jsonHash = {}
+      jsonHash["xattr"] = xattr
+      jsonHash["yattr"] = yattr
+      jsonHash["xattrVals"] = xattrVals
+      jsonHash["yattrVals"] = yattrVals
+      jsonHash["trackdbList"] = trackdbList
+      jsonHash["userId"] = @context.cgi["userId"].strip
+
+
+      #genbUrl = "http://#{apiHost}/REST/v1/grp/#{CGI.escape(grpName)}/db/#{CGI.escape(dbName)}/trks?gbKey=#{CGI.escape(gbKey)}&format=ucsc_browser&ucscTracks=#{ucscTrackStringEscape}"
+      #### Use Genboree's 'short url' facility to overcome any url length restrictions at UCSC
+      apiCaller = BRL::Genboree::REST::ApiCaller.new(apiHost,"/REST/v1/digests",dbrc.user,dbrc.password)
+      payload = { "data" => { "text" => jsonHash.to_json } }
+      hr = apiCaller.put( {}, payload.to_json)
+      apiCaller.parseRespBody
+      digest=CGI.escape(apiCaller.apiDataObj["url"].gsub(/.+\//,""))
+      shortUrl = CGI.escape("http://#{apiHost}/epigenomeatlas/ucscForwarderMulti.rhtml?digest=#{digest}")
+      ####. genbUrl in, shortUrl out. Use shortUrl going forward
+      #shortUrl = CGI.escape("#{apiCaller.apiDataObj["url"]}?format=urlcontent&gbKey=xng7hi")
+      postScriptBuff <<  "shortURL =\"#{shortUrl}\";"
+      postScriptBuff <<  "idCount = #{idCount};"
+      #postScriptBuff << "trackVals = #{trackVals.to_json};"
+      #postScriptBuff << "trackNames = #{trackNames.to_json};"
+      #postScriptBuff << "grpName = '#{CGI.escape(grpName)}';"
+      #postScriptBuff << "dbName = '#{CGI.escape(dbName)}';"
+      postScriptBuff << "apiHost = '#{apiHost}';"
+      postScriptBuff << "yattr = '#{yattr}';"
+      postScriptBuff << "xattr = '#{xattr}';"
+      postScriptBuff << "trackdbList = #{trackdbList.to_json};"
+      postScriptBuff << "yattrVals = #{yattrVals.to_json};"
+      postScriptBuff << "xattrVals = #{xattrVals.to_json};"
+      postScriptBuff << "roiTrack = '#{roiTrack}';"
+      postScriptBuff << "inGenbSession = #{inGenbSession.to_s};"
+      postScriptBuff << "userId = '#{@context.cgi["userId"].strip}';"
+      scriptOutput << "mbwAnnotationType = '#{mbwAnnotationType}';"
+      #postScriptBuff << "edaccAttr = #{edaccAttr};"
+
+      #
+      if(useJSON) then
+        postScriptBuff << "geneDetails =  Ext.util.JSON.decode('#{geneDetails}');"
+        postScriptBuff << "templateGeneInfo =  Ext.util.JSON.decode('#{templateGeneInfo}');" unless(templateGeneInfo.nil? or templateGeneInfo.empty?)
+        postScriptBuff << "fillImage(\"#{geneNames[0]}\",0,writeOutJSON(0));"
+        postScriptBuff << "geneNames = [\"#{geneNames[0]}\"];"
+        if(geneNames.length > 1) then
+          postScriptBuff << "addGenesFromArray(#{geneNames[1 .. -1].to_json},true);"
+        end
+      elsif(addGenes) then
+        postScriptBuff << "updateFirstGene('#{geneNames[0]}');"
+        if(geneNames.length > 1) then
+          postScriptBuff << "addGenesFromArray(#{geneNames[1 .. -1].to_json},true);"
+        end
+      end
+    end
+  end
+  %>
+  <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+  <html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <meta http-equiv= content=>
+  <title><%= pageTitle %></title>
+  <link rel="stylesheet" type="text/css" href="/javaScripts/ext-3.2.1/resources/css/ext-all.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link href="/styles/message.css?jsVer=<%= @context.genbConf.jsVer %>" type="text/css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/misc.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/layouts.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/toolbars.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/panels.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/dialogs.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/styles/workbench/menubar.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/pathway.css?jsVer=<%= @context.genbConf.jsVer %>">
+  <link type="text/css" href="/epigenomeatlas/style/eaBase.css?jsVer=<%= @context.genbConf.jsVer %>" rel="stylesheet"></link>
+  <link type="text/css" href="/epigenomeatlas/style/topNavigation.css?jsVer=<%= @context.genbConf.jsVer %>" rel="stylesheet"></link>
+  <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/geneViewer.css?jsVer=<%= @context.genbConf.jsVer%>" />
+  <script type="text/javascript" src="/javaScripts/ext-3.2.1/adapter/ext/ext-base-debug.js"></script>
+  <script type="text/javascript" src="/javaScripts/prototype-1.6.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/javaScripts/ext-3.2.1/adapter/prototype/scriptaculous.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/javaScripts/ext-3.2.1/adapter/prototype/ext-prototype-adapter.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/javaScripts/ext-3.2.1/adapter/ext/ext-base-debug.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+
+  <script type="text/javascript" src="/javaScripts/ext-3.2.1/ext-all-debug.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/epigenomeatlas/scripts/pathwayNew.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/epigenomeatlas/scripts/topNavigation.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/epigenomeatlas/scripts/geneViewer.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/javaScripts/sampleGeneViewerUtils.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/epigenomeatlas/scripts/commonFunctions.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/epigenomeatlas/scripts/gridUtil.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <script type="text/javascript" src="/javaScripts/util.js?jsVer=<%= @context.genbConf.jsVer %>""></script>
+
+
+  <script type="text/javascript">
+  <% if(!@errorState) then %>
+    Ext.QuickTips.init();
+    <%= scriptOutput.string %>
+    Ext.onReady(function(){
+      store = new Ext.data.ArrayStore({
+        fields: [
+          {name:'id', type:'string'},
+          {name:'url', type:'string'},
+          {name:'type', type:'string'},
+          {name:'path', type:'string'},
+          {name:'img_0', type:'string'}
+        ],
+        idIndex:0
+      });
+      <%= storeString %>
+      store.loadData(storeData);
+
+
+      ds = new Ext.data.Store({
+        //proxy: new Ext.data.HttpProxy({ url: 'http://' + window.location.hostname + '/REST/v1/resources/plainTexts/epigenomeAtlas/genesDataFreeze2.txt?connect=no&maxNumRecords=20&gbKey=TNkdABu0', method: 'GET' })
+        proxy: new Ext.data.HttpProxy({ url: '<%=comboPrefix%>/annos/names?<%=comboSuffix%>&connect=no&maxNumRecords=20', method: 'GET' })
+        ,reader: new Ext.data.JsonReader({root:'data'},[{name:'text', type:'string'}])
+      }
+      )
+
+      <%= custArrayString %>
+
+      var dwnldStore = new Ext.data.ArrayStore({
+        fields: ['format'],
+        data : ["a","b","c"]
+      });
+      var mainToolbar = new Ext.Toolbar({
+        height:30,
+        items:[
+          //dwnldCombo,
+          {
+            text:'Add <%=mbwAnnotationType%>',
+            cls: 'x-btn-text-icon',
+            icon: "/images/silk/add.png",
+            handler: addGeneColumn
+          },
+          {
+            text:'Delete <%=mbwAnnotationType%>',
+            cls: 'x-btn-text-icon',
+            icon:"/images/silk/delete.png",
+            handler:deleteGeneColumn
+          }
+        ]
+      });
+
+      tree = new Ext.tree.TreePanel({
+        stripeRows: true,
+        height: 350,
+        width: 300,
+        title:'<%= gridLeftTitle %>',
+        useArrows: true,
+        autoScroll: false,
+        autoHeight:true,
+        animate: true,
+        containerScroll: false,
+        rootVisible:false,
+        //headerConfig:{bodyCssClass:'treeHeight'},
+        tbar:mainToolbar,
+        root:new Ext.tree.AsyncTreeNode({
+          text: 'Root',
+          expanded: true
+          <%= treeString %>
+        })
+        ,listeners:{expandNode:hexpand,collapseNode:hcollapse}
+      });
+
+      // Custom rendering Template
+      resultTpl = new Ext.XTemplate(
+      '<tpl for="."><div class="x-combo-list-item">{column_1}</div></tpl>'
+      );
+
+
+
+      grid = new Ext.grid.GridPanel({
+        store: store,
+        columns: [
+          {
+            width    : 150,
+
+            sortable : true,
+            dataIndex: 'img_0',
+            header: createHeaderString(0),
+            menuDisabled:true,
+            sortable:false
+            //,tdCls:'noBorder'
+            //header: '<div id="search_0" style="width:150px;"></div>'
+            //,renderer:imageRenderer
+          }],
+
+          height: 360,
+          columnLines:true,
+          autoHeight:true,
+          width: 700,
+          title: '<%= gridRightTitle %>',
+          viewConfig:{
+            markDirty:false
+            ,getRowClass: function(record, rowIndex, rp, ds){return 'initHeight';}
+          }
+        });
+
+
+        grid.render('gridDiv');
+        //grid.render(Ext.getBody());
+        // render the tree
+        tree.render('treeDiv');
+        tree.getRootNode().expand();
+
+        combos.push(createComboBox(0));
+        combos[0].render('search_0');
+        grid.on('viewready',copyRowHeights);
+        store.on('datachanged',copyRowHeights);
+        mainToolbar.getEl().dom.style.background = '#F9F9F9';
+
+
+        <%= postScriptBuff.string %>
+      });
+      <% end %>
+      </script>
+      </head>
+      <body >
+      <div  id="allBody" >  <!-- needed for extjs page masking to work -->
+      <div id="dataFreezeHeader">
+      <div id="dataFreezeEaLogo">
+      <a href="/epigenomeatlas/index.rhtml">
+        <img border="0" style="float:left;height:100px;width:235px;margin-top:30px;" src="/images/BRL_logo.png" alt="Bioinformatics Reasearch Laboratory"><!--
+      <img border="0" alt="Human Epigenome Atlas" src="/epigenomeatlas/images/Epigenome.png" style="float:left;height:160px">-->
+      </a>
+      </div>
+      
+      <div id="dataFreezeTopRightNavigation">
+      <a href="/epigenomeatlas/index.rhtml">Home</a>
+      </div> <!-- End topRightNavigation -->
+      <br/><br/>
+      <div id="dataFreezeHeaderImage">
+      <a href="http://www.bcm.edu">
+      <img border="0" alt="Baylor College of Medicine" src="/epigenomeatlas/images/bcm_logo.gif" style="float:right;">
+      </a>
+      </div>
+      </div> <!-- End header -->
+      <div id="dataFreezeTopNavigation">
+      <ul>
+      </ul>
+      </div> <!-- End topNavigation -->
+      <%if (!@errorState) then %>
+        <div style="background-color:White;margin:0 auto;width:1150px;">
+        <div style="display:table-row;">
+        <div class="legendBold12" style="float:left;margin-left:30px;"></div>
+        <div style="float:left;margin-left:30px;display:table-row;width:1100px;">
+        <div style="display:table-cell;vertical-align:middle;width:600px;">
+        <div><ul class="pageList">
+        <li><div class="introText">Start typing a <%=mbwAnnotationType%> name in the box below and select a <%=mbwAnnotationType%> from the pulldown list</div></li>
+        <li><div class="introText">Use the scrollbar at the bottom of the table to see the <%=mbwAnnotationType%> on the right</div></li>
+        </ul></div>
+        </div>
+        <div style="display:table-cell;">
+        <div style="height:30px;">
+        <!--<img style="vertical-align:middle;cursor:pointer;" src="/images/share.png" onclick="generateURL();" alt="Generate URL" title="Generate URL">
+        <input type="text" style="width:475px;font:12px verdana;cursor:text;float:Right;" readonly="1" value="Click on this icon to generate a shareable link to this session" id="urlText">-->
+        </div>
+        <div style="margin-bottom:10px; margin-left:20px;"><img src="/images/sampleLegend.png"></div>
+        </div>
+        </div>
+
+        </div>
+        <div id="tableGrid" style="margin:0 auto;width:1100px;overflow:auto;border-top:1px solid #d0d0d0; padding-top:10px;display:table-row;">
+        <div style="margin:0 auto;width:1100px;height:650px; overflow:auto;">
+        <div id="treeDiv" style="width:30%;display:table-cell;"></div>
+        <div id="gridDiv" style="width:700px;display:table-cell;overflow:auto;"></div>
+        <!--<div id="treeDiv"></div><div id="gridDiv"></div>-->
+        </div>
+        <p></p>
+        <div style="text-align:center;font-size:7pt;width:200px;margin:0 auto;"><a href="mailto:genboree_admin@genboree.org">Questions or comments?</a></div>
+
+        <p></p>
+        </div>
+        <div id="footerHold" style="width: 1150px; background-color: white; margin: 0 auto;">
+        <%= Erubis::Eruby.load_file( "includes/eaFooter.incl" ).result ; %>
+        </div>
+        <%end%>
+        <%
+      rescue => err
+        $stderr.puts "-"*50
+        $stderr.puts  "ERROR:Problem generating sample images.\n" +
+        "- Exception: #{err.message}\n" +
+        err.backtrace.join("\n")
+        $stderr.puts "-"*50
+        @errorMsg += "ERROR:Problem generating sample images.\n" +"- Exception: #{err.message}\n" + err.backtrace.join("\n")
+        @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+        @errorState = true
+        %>
+
+
+        <%
+        # --------------------------------------------------------------------------
+        # WRAP UP
+        # --------------------------------------------------------------------------
+      ensure
+        if(@errorState) then %> <div style="background-color:white;font:bold 15px  tahoma,helvetica,verdana;text-align:center;margin:0 auto;width:800px;"><%= @errorMsg %></div>
+          <%end
+        end # begin  %>
+        </div>
+        </body>
+        </html>

@@ -1,0 +1,149 @@
+a.wiki_extensions_fn{
+    vertical-align:super;
+    font-size:x-small;
+}
+
+div.wiki_extensions_fnlist ul li span.wiki_extensions_fn{
+    vertical-align:super;
+    font-size:x-small;
+}
+
+.wiki_extensions_fnlist{
+    /*
+    font-size:10px;
+    */
+}
+
+div.wiki_extensions_fnlist ul li {
+list-style-type: none;
+list-style-image: none;
+}
+
+div.wiki_extensions_fnlist ul {
+    padding-left:0;
+
+}
+
+.wiki_ext_new_date {
+    font-weight: bold;
+}
+
+.wiki_ext_new_mark {
+    font-style: italic;
+    color: #ff0000;
+}
+
+#wiki_extensions_tag_form .tag_field {
+    margin-right: 1em;
+}
+
+.tag_level5{
+    font-size:xx-large;
+}
+
+.tag_level4{
+    font-size:x-large;
+}
+
+.tag_level3{
+    font-size:large;
+}
+
+.tag_level2{
+    font-size:small;
+}
+
+.tag_level1{
+    font-size:x-small;
+}
+
+#wikiext_taglist_complete {
+    background-color: #E6E6FA;
+    padding: 0;
+}
+
+#wikiext_taglist_complete ul {
+    padding-left: 1em;
+    margin: 0;
+}
+
+#wikiext_taglist_complete li{
+    list-style-type: none;
+    margin: 0;
+}
+
+#sidebar ol.wikiext-popularity {
+    padding-left: 20px;
+}
+ul.wikiext-tags, ul.wikiext-tags li{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+ul.wikiext-tags li{
+	display: inline;
+}
+ul.wikiext-tags li{
+	margin-right: 4px;
+}
+ul.wikiext-tags:before{
+	content: 'Tags: ';
+	display: block;
+	float: left;
+}
+ul.wikiext-tags:after{
+	content: ".";
+	height: 0;
+	display: block;
+	clear: left;
+	visibility: hidden;
+}
+
+
+.Expand { float: left; height:9px; width:9px; margin-top:5px; }
+
+.ExpandLeaf .Expand {
+	background-image: none;
+	cursor: auto;
+}
+.ExpandOpen .Expand {
+	 background-image: url(../images/minus.gif);
+}
+	 
+.ExpandClosed .Expand {
+    background-image: url(../images/plus.gif);
+}
+
+.ExpandClosed .Expand, .ExpandOpen .Expand {
+	cursor:pointer;
+}
+.ExpandOpen .list {
+	display: block;	
+}
+
+.ExpandClosed .list {
+	display: none;	
+}
+
+.wiki_left{
+	margin-left:15px;
+}
+
+li.ExpandOpen {list-style-type: none;}
+
+li.ExpandClosed {list-style-type: none;}
+
+li.list_item {list-style-type: none;}
+
+ul.list {display:block;list-style-type: none;list-style-image: none;}
+ul.IsRoot { margin-left:0px; list-style-type:none;}
+
+/**
+ * Styles for page_break macro
+ */
+.wiki .wikiext-page-break {
+  height: 1px;
+  width: 95%;
+  border-top: 1px dashed #ccc;
+  margin: 3em auto;
+}

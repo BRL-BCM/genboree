@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "basicSetOperationsOnStructuralVariants",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Insert SVs",
+    "shortLabel": "Insert SVs"
+  }
+}

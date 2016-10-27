@@ -1,0 +1,13 @@
+{
+   "ui" :
+   {
+     "label" : "[Not Set]",
+     "shortLabel" : "[Not Set]"
+   },
+   "info" :
+   {
+     "idStr" : "uploadAnnotations",    
+     "releaseStatus" : "release",
+     "version" : "0.1"
+   }
+}

@@ -1,0 +1,46 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ],
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "lffSubType": [
+        "^(?![:\t \n])[^:]*[^:\t \n]$",
+        "The Output Track Name can not be blank, cannot contain ':', and cannot begin or end with whitespace."
+      ],
+      "lffType": [
+        "^(?![:\t \n])[^:]*[^:\t \n]$",
+        "The Output Track Name can not be blank, cannot contain ':', and cannot begin or end with whitespace."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

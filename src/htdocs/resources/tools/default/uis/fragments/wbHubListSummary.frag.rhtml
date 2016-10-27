@@ -1,0 +1,26 @@
+<%
+  @hubList = [ @hubList ] unless(@hubList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@hubList.empty?) %>
+      <tr>
+        <th><%=(@label || "Hub")%>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @hubList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        hub = WorkbenchFormHelper.getNameFromURI(:hub, item, true)
+%>
+        <tr>
+          <th><%=(@label || "Hub")%>:</th>
+          <td><i><%=hub%></i></td>
+          <td class="explain">Group: <i><%=grp%></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

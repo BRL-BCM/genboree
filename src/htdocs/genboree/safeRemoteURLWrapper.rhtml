@@ -1,0 +1,235 @@
+<%# THIS FILE USES eruby %>
+
+<%
+	# ---------------------------------------------------------------------------
+	# SETUP CONVENIENT ENVIRONMENT
+	# ---------------------------------------------------------------------------
+  require 'cgi'
+  require 'net/http'
+	require 'uri'
+
+  $VERBOSE = false
+  @cgi = CGI.new()
+	@req = Apache.request
+	@serverName = @req.server_name
+	#@serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+	# ---------------------------------------------------------------------------
+%>
+
+<%
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	# Constants
+	EXCEPT_OK = HTTP_OK = PARAM_OK = 0
+	PARAM_MISSING, BAD_NAME_PARAM, HTTP_BAD, EXCEPT_BAD = 1,2,3,4
+	SERVICE_NAME = 'Service Name'
+	REMOTE_URL = 'Remote URL'
+	ALT_URL = 'Alt URL'
+
+	# Resource Definitions
+	@remoteService = 	{
+											'SNPRC' =>	{
+																		SERVICE_NAME	=>	'SNPRC Marker Info Webpage',
+																		REMOTE_URL		=>	'http://www.snprc.org?marker=%MARKER_NAME%',
+																		ALT_URL				=>  nil
+																	}
+										}
+	# globals
+	exceptionStatus = EXCEPT_OK
+	httpStatus = HTTP_OK
+	err = nil
+
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	def prepForHtml()	# Tell apache we're going to make some html
+		@req.content_type = "text/html"
+		@req.status = 200
+		@req.send_http_header
+	end
+
+	def doRelocate(url)	# Tell apache we want to redirect to a different url
+		@req.content_type = 'text/html'
+		@req.headers_out['Location'] = url
+		@req.status = 302
+		@req.send_http_header
+		exit(Apache::HTTP_MOVED_TEMPORARILY)
+	end
+
+	def paramCheck()
+		@rawRemoteURL = nil
+  	# Check that correct params were provided
+  	if(	@cgi.params['remoteURL'][0].to_s.empty? or
+  			@cgi.params['resName'][0].to_s.empty?)
+  		return PARAM_MISSING
+  	else
+  		@rawRemoteURL = @cgi.params['remoteURL'][0]
+  		@rawRemoteURL.untaint
+ 			@resName = @cgi.params['resName'][0]
+ 			# Check that resName is one of the official values
+  		unless(@remoteService.key?(@resName))
+  			return BAD_NAME_PARAM
+  		else
+  			@resName.untaint	# It's ok
+  		end
+  		# Ok so far
+  		return PARAM_OK
+  	end
+  end
+
+  def doHttp()
+  	@err = nil
+		@resp = Net::HTTP.get_response(@unescRemoteURI)
+		case @resp
+	  	when Net::HTTPSuccess, Net::HTTPRedirection
+	  		doRelocate(@unescRemoteURL)
+	  	else
+	   		return HTTP_BAD
+	  end
+	end
+
+begin
+
+	# ---------------------------------------------------------------------------
+	# INITIALIZATION
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# DO CHECK/LOAD/CHECK (hierarchical checking)
+	# ---------------------------------------------------------------------------
+	# 1) Grab Params
+	paramStatus = paramCheck()						# Check. Security hole 1 plugged.
+	if(paramStatus == PARAM_OK)
+		# ---------------------------------------------------------------------------
+
+		# 2) Unescape remoteURL
+		@unescRemoteURL = CGI.unescape(@rawRemoteURL)
+		@unescRemoteURI = URI.parse(@unescRemoteURL)
+		# 3) Connect to remoteURL
+		httpStatus = doHttp()
+	end
+rescue => @err
+	exceptionStatus = EXCEPT_BAD
+end
+
+# ERROR OR "SORRY" IF HERE...NO RELOCATION
+prepForHtml()
+
+%>
+
+<!-- BEGIN: COMMON HTML -->
+<HTML><HEAD>
+<TITLE>Bioinformatics Research Laboratory - Safe Remote URL Relocator</TITLE>
+<LINK REL="stylesheet" HREF="/style_brl.css" TYPE="text/css">
+</HEAD>
+<BODY BGCOLOR="white">
+<TABLE WIDTH="650" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+		<TR>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="graphics/brl_logo60.gif" WIDTH="60" HEIGHT="60" ALT="BRL" BORDER="0"></A>
+			</TD>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="/graphics/brl_type60.gif" WIDTH="120" HEIGHT="60" ALT="" BORDER="0"></A>
+				</TD>
+			<TD><IMG SRC="/graphics/spacer.gif" WIDTH="20" HEIGHT="1" ALT="" BORDER="0"></TD>
+			<TD VALIGN="bottom" ALIGN="right">
+				<TABLE CELLSPACING="0" CELLPADDING="0" BORDER="0" WIDTH="450">
+				<TR>
+					<TD COLSPAN="4" BACKGROUND="http://<%= @serverName %>/graphics/bluemed1px.gif">
+						<IMG SRC="/graphics/spacer.gif" WIDTH="1" HEIGHT="1" ALT="" BORDER="0">
+					</TD>
+				</TR>
+				</TABLE>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+		<TR>
+			<TD VALIGN="top" WIDTH="30">
+				<IMG SRC="/graphics/bluemed1px.gif" HEIGHT="30" WIDTH="30" ALT="" BORDER="0">
+			</TD>
+			<TD WIDTH="10">
+				<IMG SRC="/graphics/spacer.gif" HEIGHT="1" WIDTH="10" ALT="" BORDER="0">
+			</TD>
+			<TD>
+				<BR>
+<!-- END: COMMON HTML -->
+
+				<SPAN CLASS="hdr">
+			<%
+				if(	exceptionStatus != EXCEPT_OK or
+						paramStatus != PARAM_OK or
+						httpStatus == HTTP_BAD)
+			%>
+					RESOURCE LOCATION ERROR</SPAN>
+					<P>
+					We encountered a <B>problem</B> trying to relocate to the <B>Remote Web Resource</B> you requested:
+					<P>
+					(<%= @rawRemoteURL.nil? ? 'No Remote URL Provided' : @req.escape_html(@rawRemoteURL.to_s)  %>)
+					<P>
+					<%
+						if(	exceptionStatus != EXCEPT_OK or
+								paramStatus != PARAM_OK)
+					%>
+							Please contact <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">our admin (brl_admin@brl.bcm.tmc.edu)</A>
+							with the following information (you can copy and paste):
+					<%
+						end
+					%>
+					<UL>
+						<LI>
+						<% if(exceptionStatus != EXCEPT_OK) %>
+							Exception/error thrown. <BR>
+							<% if(@err.type == SocketError) %>
+								<FONT COLOR='red'>The domain &quot;<%= @unescRemoteURI.host %>&quot; doesn't exist.</FONT>
+							<% else %>
+								(<%= @req.escape_html(@err.message) %>)<P><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %><P>
+							<% end %>
+						<% elsif(httpStatus == HTTP_BAD) %>
+							<FONT COLOR='red'>Sorry, the requested resource (&quot;<%= @unescRemoteURI.path %><%= @unescRemoteURI.query.nil? ? '' : ('?'+@unescRemoteURI.query)  %>&quot;) doesn't exist at
+							&quot;<%= @unescRemoteURI.scheme %>://<%= @unescRemoteURI.host %>&quot;.</FONT><BR></LI>
+							<LI>(Maybe they don't have any information about that annotation.)</LI>
+						<% elsif(paramStatus == PARAM_MISSING) %>
+							Insufficient parameters provided. (<%= paramStatus %>)
+						<% elsif(paramStatus == BAD_NAME_PARAM) %>
+							The resource name &quot;<%= @resName %>&quot; isn't one of the configured remote resources.
+						<% else %>
+							Unknown Error (?)
+						<% end %>
+						</LI>
+						<%
+						if(	exceptionStatus != EXCEPT_OK or
+								paramStatus != PARAM_OK)
+						%>
+							<LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+						<%
+							end
+						%>
+					</UL>
+			<% end %>
+<!-- BEGIN: COMMON HTML -->
+				<BR>&nbsp;<BR>
+				<A HREF="http://www.bcm.tmc.edu">
+				<IMG SRC="/graphics/bcm_logo_for_brl.gif" WIDTH="54" HEIGHT="60" ALT="" BORDER="0"
+					ALIGN="right" VALIGN="top"></A>
+				<CENTER><IMG SRC="/graphics/bluemed1px.gif" WIDTH="350" HEIGHT="1" ALT="" BORDER="0"></CENTER>
+				<BR><BR>
+				<SPAN CLASS="footer">&copy;2003 Bioinformatics Research Laboratory</SPAN>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+</TABLE>
+</BODY></HTML>
+<!-- END: COMMON HTML -->

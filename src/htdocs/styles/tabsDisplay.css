@@ -1,0 +1,81 @@
+#main
+{
+  margin-top: 15px ;
+  margin-bottom: 10px ;
+}
+
+#container
+{
+  padding: 6px ;
+  margin: 0px ;
+  border: 1px solid #CBC8E1 ;
+  background-color: #EAE6FF ;
+  clear: left ;
+}
+
+#content
+{
+  background-color: #FFF ;
+  padding: 5px ;
+  border: 1px solid #CCC ;
+}
+
+#tabs
+{
+  margin: 0 ;
+  margin-bottom: 0px ;
+  padding: 0 ;
+  width: 100% ;
+  list-style-type: none ;
+  list-style-image: none ;
+  list-style-position: outside ;
+}
+
+#tabs li
+{
+  text-align: center ;
+  margin: 0 ;
+  margin-right: 5px ;
+  float: left ;
+  padding: 0px ;
+  border: 0px ;
+}
+
+#tabs li a
+{
+  width: auto ;
+  min-height: 1.4em !important ;
+  display: block ;
+  padding: 2px 5px 0 5px ;
+  margin-bottom: 0px ;
+  background-color: #CBC8E1 ;
+  border: 1px solid #A9A6B8 ;
+  text-decoration: none ;
+  position: relative ;
+  top: 1px ;
+}
+
+#tabs li a.active
+{
+  min-height: 1.9em !important ;
+  z-index: 1000 ;
+  border: 1px solid #CBC8E1 ;
+  border-bottom: 0px ;
+  background-color: #EAE6FF ;
+  position: relative ;
+  bottom: -1px ;
+  outline: none ;
+}
+
+#tabs li a:visited
+{
+  color: #403C80 ;
+  outline: none ;
+}
+
+#tabs li a:hover
+{
+  color: #403C80 ;
+  background-color: #EAE6FF ;
+  outline: none ;
+}

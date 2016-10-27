@@ -1,0 +1,4 @@
+#biomaterialState	age	sex	isSick
+frozen	36	M	TRUE
+frozen	46	M	TRUE
+solution	56	F	TRUE

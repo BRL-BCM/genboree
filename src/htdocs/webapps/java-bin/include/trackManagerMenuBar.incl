@@ -1,0 +1,45 @@
+<%@ page import="javax.servlet.http.*, java.util.*, java.sql.*,java.io.*, java.net.*" %>
+<%@ page import="org.genboree.util.*, org.genboree.dbaccess.*, org.genboree.dbaccess.util.*, org.genboree.message.*, org.genboree.manager.tracks.*" %>
+
+<%
+  String [] modeids =  TrackMgrConstants.modeIds ;
+  String [] modeLabels =  TrackMgrConstants.modeLabs ;
+  String hrefStart = "trackmgr.jsp" ;
+  String labelNameStart = "Track&nbsp;Manager" ;
+  String href =  "linkmgr.jsp" ;
+  String labelName ="Link&nbsp;Setup" ;
+  String mgrMode = request.getParameter("mode") ;
+%>
+  <table border="0" cellspacing="4" cellpadding="2">
+  <tr>
+    <td class="nav_selected">
+      <a href=<%= hrefStart %>>
+        <font color='white'><%= labelNameStart %></font>
+      </a>
+    </td>
+    <td>:&nbsp;</td>
+<%
+    int idlength = modeids.length ;
+    for( int ii=0 ; ii<idlength ; ii++ )
+    {
+      String cls = "nav" ;
+      String a1 = "<a href=\"trackmgr.jsp?mode=" + modeids[ii] + "\">" ;
+      String a2 = "</a>" ;
+      if( modeids[ii].equals(mgrMode) )
+      {
+        cls = "nav_selected" ;
+        a1 = a1 + "<font color='white'>" ;
+        a2 = "</font>" + a2 ;
+      }
+%>
+      <td class="<%=cls%>">
+        <%=a1%><%=modeLabels[ii]%><%=a2%>
+      </td>
+<%
+    }
+%>
+    <td class="nav"><a href=<%=href%>>
+      <%=labelName%></a>
+    </td>
+  </tr>
+  </table>

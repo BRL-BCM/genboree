@@ -1,0 +1,30 @@
+<%
+  releaseStatus = @toolConf.getSetting('info', 'releaseStatus')
+  advisoryHtmlSetting = @toolConf.getSetting('ui', 'advisoryHtml')
+  advisoryHtml = advisoryHtmlSetting[releaseStatus]
+%>
+<div id="wbToolDialogInfoSpanDiv" style="margin-bottom: 25px;">
+<span id="wbToolDialogInfoSpan" class="advancedImgToggle" onclick="toggleHelpSection()">&nbsp;</span><span id="wbToolDialogInfoSpanTextSpan" class="advancedTextToggle" style="color:#CC6633;" onclick="toggleHelpSection();">Tool Overview</span>
+</div>
+<div id="wbToolDialogInfoDiv" class='wbToolDialogInfo' style="display: none;" >
+    <%= advisoryHtml %>
+    <%= @toolOverview %>
+  <br>
+</div>
+<script type="text/javascript">
+  function toggleHelpSection()
+  {
+    var toolDialogInfoDiv = document.getElementById('wbToolDialogInfoDiv') ;
+    var spanElem = Ext.get('wbToolDialogInfoSpan') ;
+    if(toolDialogInfoDiv.style.display == 'block')
+    {
+      spanElem.setStyle("background-image", "url('/images/bullet_toggle_plus.png')") ;
+      toolDialogInfoDiv.style.display = 'none' ;
+    }
+    else
+    {
+      spanElem.setStyle("background-image", "url('/images/bullet_toggle_minus.png')") ;
+      toolDialogInfoDiv.style.display = 'block' ;
+    }
+  }
+</script>

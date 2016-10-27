@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "structuralVariantDetection",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Breakpoint Detection by Breakout",
+    "shortLabel": "Structural Variant Detection"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "ppn": 4,
+    "pvmem": "5858mb"
+  }
+}

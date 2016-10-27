@@ -1,0 +1,88 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/genboreeUtil'
+  # Using the atlasToolsUIAccessGroup config setting, determine if the user can see the whole UI
+  # or just an in progress message.
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 250)
+%>
+<%# RENDER HTML %>
+<div style="height: <%= height %>px; width: <%= width %>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool extracts epigenomic data in a TAB delimited format suitable for viewing using Microsoft Excel and for use in further off-line
+          analysis by a user. The tool has the following inputs:
+          To set up the analysis,
+          <br>&nbsp;<br>
+          <ul>
+            <li>One or more epigenomic experiments sets (as track entity lists) selected by a user using an Epigenomic Grid view</li>
+            <li>a track of regions of interest (ROI)</li>
+          </ul>
+          <p></p>
+          The tools projects each of the epigenomic experiments score tracks over the ROIs. Next, it collates the scores for each experiment into one data
+          matrix, having the experiments as column headers and the particular ROIs as rows. A user will be able to download this matrix as a TAB-delimited file
+
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag 1+ <u>track entity list(s)</u> into &quot;Input Data&quot;',
+          'Drag a <u>track</u> with <i>regions-of-interest</i> into &quot;Input Data&quot; after database.'
+        ],
+        :types              => [ [ 'Track Entity List', 'min: 1 ; max: unlimited' ] , [ 'Track', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag a destination <u>database</u> into &quot;Output Targets&quot;. The result data will end up in that database under the Files area.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "Give this job a unique analysis name."],
+          [ 'Remove No Data Regions?',  "Filter Data by replacing missing values with '0'" ],
+          [ 'Submit', "Once you've reviewed the input files, the output destination database, and the settings, click &quot;Submit&quot;." ]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+ <%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool, which will leverage the <a href='http://bioinf.wehi.edu.au/limma/'>LIMMA</a> R package, is currently
+          under development and only available internally and to some collaborators for testing.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>
+          <br>
+          <span style='color: red;'>Once development is complete, and testing and review carried out, the tool will be available for all users.</span>
+        "
+      })
+  %>
+<%
+  end
+%>
+</div>

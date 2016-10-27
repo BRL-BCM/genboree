@@ -1,0 +1,22 @@
+<div class="wbDialog" style="height:auto; width: auto; max-height: 500px;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialog" style="height:auto; width: auto; max-height: 400px; overflow-y:auto; overflow-x:auto; background-color: #FFFFFF; border: 2px solid; padding: 25px;">
+    <br/>
+    <br/>
+    <% if(@settings['imgResponse'].nil? or @settings['imgResponse'].empty?)
+        msg = @context['wbErrorMsg']
+    else
+        msg = @settings['imgResponse'] 
+    end
+    %>
+    <b>Your image is:</b>
+    <br/>
+    <br/>
+    <%= msg %>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= "paithank@bcm.edu" %>"><%= "paithank@bcm.edu" %></a> for assistance.
+  </div>
+</div>

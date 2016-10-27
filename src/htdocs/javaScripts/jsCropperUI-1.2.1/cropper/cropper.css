@@ -1,0 +1,237 @@
+.imgCrop_wrap {
+	position: relative;
+	cursor: crosshair;
+}
+
+/* an extra classname is applied for Opera < 9.0 to fix it's lack of opacity support */
+.imgCrop_wrap.opera8 .imgCrop_overlay,
+.imgCrop_wrap.opera8 .imgCrop_clickArea {
+	background-color: transparent;
+}
+
+/* fix for IE displaying all boxes at line-height by default, although they are still 1 pixel high until we combine them with the pointless span */
+.imgCrop_wrap,
+.imgCrop_wrap * {
+	font-size: 0;
+	line-height: 0;
+  white-space: nowrap ;
+	/* opacity: 1; */
+	/* filter:alpha(opacity=100); */
+}
+
+.imgCrop_overlay {
+	background-color: #000;
+	opacity: 0.5;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	filter:alpha(opacity=50);
+}
+
+/*  ARJ : Style for the optional text that appears in the overlays.
+          That text is provided by the user but is mostly useful when
+          overlays are used as click-to-cancel. */
+.imgCrop_overlayText {
+  font-size: small ;
+  font-weight: bold ;
+  color: white ;
+  line-height: 1em ;
+	opacity: 1 ;
+	filter:alpha(opacity=100) ;
+}
+
+/*  ARJ : Style for the container wrapping the optional overlay text.
+          Need some specific styles to vertically and horizontally center it. */
+div.imgCrop_overlayText {
+  position: relative ;
+  top: 50% ;
+  width: 100% ;
+  height: 10% ;
+  margin-top: -2em ;
+  margin-left: auto ;
+}
+
+.imgCrop_selArea {
+	position: absolute;
+	cursor: move;
+	z-index: 2;
+}
+
+/* clickArea is all a fix for IE 5.5 & 6 to allow the user to click on the given area */
+.imgCrop_clickArea {
+	background-color: #FFF;
+	opacity: 0.01;
+	filter:alpha(opacity=1);
+}
+
+.imgCrop_marqueeHoriz {
+	position: absolute;
+	width: 100%;
+	height: 1px;
+	background: transparent url(marqueeHoriz.gif) repeat-x 0 0;
+	z-index: 3;
+}
+
+.imgCrop_marqueeVert {
+	position: absolute;
+	height: 100%;
+	width: 1px;
+	background: transparent url(marqueeVert.gif) repeat-y 0 0;
+	z-index: 3;
+}
+
+/*
+ *  FIX MARCHING ANTS IN IE
+ *	As IE <6 tries to load background images we can uncomment the follwoing hack
+ *  to remove that issue, not as pretty - but is anything in IE?
+ *  And yes I do know that 'filter' is evil, but it will make it look semi decent in IE
+ *
+* html .imgCrop_marqueeHoriz,
+* html .imgCrop_marqueeVert {
+	background: transparent;
+	filter: Invert;
+}
+* html .imgCrop_marqueeNorth { border-top: 1px dashed #000; }
+* html .imgCrop_marqueeEast  { border-right: 1px dashed #000; }
+* html .imgCrop_marqueeSouth { border-bottom: 1px dashed #000; }
+* html .imgCrop_marqueeWest  { border-left: 1px dashed #000; }
+*/
+
+.imgCrop_marqueeNorth { top: 0; left: 0; }
+.imgCrop_marqueeEast  { top: 0; right: 0; }
+.imgCrop_marqueeSouth { bottom: 0px; left: 0; }
+.imgCrop_marqueeWest  { top: 0; left: 0; }
+
+/* Common handle styles: */
+
+.imgCrop_handle {
+	position: absolute ;
+	z-index: 4;
+}
+
+/* fix IE 5 box model */
+* html .imgCrop_handle {
+	width: 8px;
+	height: 8px;
+	wid\th: 6px;
+	hei\ght: 6px;
+}
+
+/* Styles for "square" style handles: */
+
+/* Config (can be overridden by code) */
+.imgCrop_handle_square {
+	border: 1px solid #333 ;
+	width: 6px ;
+	height: 6px ;
+	background: #FFF ;
+	opacity: 0.5 ;
+	filter:alpha(opacity=50) ;
+}
+
+/* Location classes */
+.imgCrop_handle_square_N {
+	top: -3px;
+	left: 0;
+	cursor: n-resize;
+}
+
+.imgCrop_handle_square_NE {
+	top: -3px;
+	right: -3px;
+	cursor: ne-resize;
+}
+
+.imgCrop_handle_square_E {
+	top: 0;
+	right: -3px;
+	cursor: e-resize;
+}
+
+.imgCrop_handle_square_SE {
+	right: -3px;
+	bottom: -3px;
+	cursor: se-resize;
+}
+
+.imgCrop_handle_square_S {
+	right: 0;
+	bottom: -3px;
+	cursor: s-resize;
+}
+
+.imgCrop_handle_square_SW {
+	left: -3px;
+	bottom: -3px;
+	cursor: sw-resize;
+}
+
+.imgCrop_handle_square_W {
+	top: 0;
+	left: -3px;
+	cursor: w-resize;
+}
+
+.imgCrop_handle_square_NW {
+	top: -3px;
+	left: -3px;
+	cursor: nw-resize;
+}
+
+/* Styles for "square" style handles: */
+
+/* Config (can be overridden by code) */
+.imgCrop_handle_full {
+	border: 1px solid #333 ;
+	width: 4px ;
+	height: 4px ;
+	background: #FFF ;
+	opacity: 0.5 ;
+	filter:alpha(opacity=50) ;
+}
+
+/* Location classes (only N,E,S,W needed)*/
+.imgCrop_handle_full_N {
+	top: -2px;
+	left: 2px;
+	cursor: n-resize;
+}
+
+.imgCrop_handle_full_E {
+	top: 2px;
+	right: -2px;
+	cursor: e-resize;
+}
+
+.imgCrop_handle_full_S {
+	right: -2px;
+	bottom: -2px;
+	cursor: s-resize;
+}
+
+.imgCrop_handle_full_W {
+	top: 2px ;
+	left: -2px;
+	cursor: w-resize;
+}
+
+/**
+ * Create an area to click & drag around on as the default browser behaviour is to let you drag the image
+ */
+.imgCrop_dragArea {
+	width: 100%;
+	height: 100%;
+	z-index: 200;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.imgCrop_previewWrap {
+	overflow: hidden;
+	position: relative;
+}
+
+.imgCrop_previewWrap img {
+	position: absolute;
+}

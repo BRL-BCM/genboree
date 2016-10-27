@@ -1,0 +1,31 @@
+<%
+require 'cgi'
+require 'brl/util/util'
+
+cgi = CGI.new
+%>
+<html>
+<head></head>
+<body>
+<hr>
+<table border="2" cellpadding="5">
+<tr>
+  <td>
+    <img src="http://<%= ENV["HTTP_HOST"] %>/REST/v1/epigenomeAtlas/graphics/geneName/APOE?format=SCORE_CHART_PNG&scrTrack=BI%3ACD15%20H3K27me3%203&remc=broad&sample=CD15_Primary_Cells&experiment=H3K27me3&gbKey=9JwN9">
+  </td>
+  <td>
+    <img src="http://valine.brl.bcmd.bcm.edu/REST/v1/epigenomeAtlas/graphics/geneName/BRCA1?format=SCORE_CHART_PNG&scrTrack=BI%3ACD15%20H3K27me3%203&remc=broad&sample=CD15_Primary_Cells&experiment=H3K27me3&gbKey=9JwN9">
+  </td>
+  <td>
+    <img src="http://genboree.org/REST/v1/epigenomeAtlas/graphics/geneName/BRCA1?format=SCORE_CHART_PNG&scrTrack=BI%3ACD15%20H3K27me3%203&remc=broad&sample=CD15_Primary_Cells&experiment=H3K27me3&gbKey=9JwN9">
+  </td>
+  <td>
+    <img src="http://proline.brl.bcmd.bcm.edu/REST/v1/epigenomeAtlas/graphics/geneName/BRCA2?format=SCORE_CHART_PNG&scrTrack=BI%3ACD15%20H3K27me3%203&remc=broad&sample=CD15_Primary_Cells&experiment=H3K27me3&gbKey=9JwN9">
+  </td>
+  <td>
+    <img src="http://proline.brl.bcmd.bcm.edu/REST/v1/epigenomeAtlas/graphics/geneName/PROS1?format=SCORE_CHART_PNG&scrTrack=BI%3ACD15%20H3K27me3%203&remc=broad&sample=CD15_Primary_Cells&experiment=H3K27me3&gbKey=9JwN9">
+  </td>
+</tr>
+</table>
+</body>
+</html>

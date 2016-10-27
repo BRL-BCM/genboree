@@ -1,0 +1,374 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 700 : 320)
+  height = (@hasAccess ? 600 : 320)
+  minConditions = @settings.key?('noTrks') ? false : true
+  height = minConditions ? height : 130
+  grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+%>
+<style type="text/css">
+  .selectImg {
+    background-image: url('/images/silk/add.png') ;
+    background-repeat: no-repeat ;
+  }
+</style>
+
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows you to set the sort order for the tracks in a database. This order is used when drawing tracks in the Genome Browser.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%
+    showSetDefBtn = @settings['showSetDefBtn']
+    buff = ""
+  %>
+
+  <%
+    if(minConditions)
+  %>
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @inputs} )
+      })
+    %>
+    
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Drag-and-drop the tracks listed below to get the order you desire",
+        :widgets =>
+        [
+        ]
+      })
+      
+      
+    %>
+    
+    <%
+      buff << "<div align=\"center\" id=\"orderDiv\" style=\"height:auto;\" > </div>"
+    %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "Set Order:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => buff
+      })
+    %>
+    <%
+      btns = []
+      btns << { :type => :submit, :value => "Save", :onClick => "setBtnType(this.value)", :title => "Set your personal settings" }
+      btns << { :type => :submit, :value => "Set As Default", :onClick => "setBtnType(this.value)", :title => "Set default settings" } if(showSetDefBtn)
+      btns << { :type => :submit, :value => "Reset to default" , :onClick => "setBtnType(this.value)", :title => "Delete your personal settings" }
+      btns << { :type => :cancel}
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => btns
+        })
+    %>
+    </form>
+    <script type="text/javascript">
+    function setBtnType(btnValue)
+    {
+      wbFormSettings.set('btnType', btnValue) ;
+    }
+    function createDropTarget(grid, mstore)
+    {
+      var ddrow = new Ext.dd.DropTarget(grid.getEl(), {
+        ddGroup : 'mygridDD',
+        copy:false,
+        notifyDrop : function(dd, e, data)
+        {
+          var ds = grid.store;
+          var sm = grid.getSelectionModel();
+          var rows = sm.getSelections();
+          var ii = 0 ;
+          if(dd.getDragData(e)) {
+            var cindex = dd.getDragData(e).rowIndex;
+            if(typeof(cindex) != "undefined") {
+                for(ii = 0; ii < rows.length; ii++) {
+                  ds.remove(ds.getById(rows[ii].id));
+                }
+                ds.insert(cindex,data.selections);
+                sm.clearSelections();
+            }
+            var cc = 1 ;
+            grid.store.each(function(record){
+              wbFormSettings.get('trkOrderHash').set(record.get('track'), cc) ;
+              cc += 1 ;
+            }) ;
+          }
+          
+          grid.getView().refresh() ;
+          return true ;
+        }
+      }) ; 
+    }
+    function createGrid(gridRecs)
+    {
+      var list = JSON.parse(gridRecs) ;
+      var ii ;
+      var data = [] ;
+      var limit = 15 ; // Set this to whatever number of tracks can be displayed without scrolling.
+      var trk ;
+      wbFormSettings.set('trkOrderHash', new Hash()) ; 
+      if(list.length < limit)
+      {
+        for(ii = 0; ii < list.length; ii++)
+        {
+          trk = unescape(list[ii][1]) ;
+          data.push([list[ii][0], trk, '']) ;
+          wbFormSettings.get('trkOrderHash').set(trk, list[ii][0]) ;
+        }
+      }
+      else
+      {
+        for(ii = 0; ii < list.length; ii++)
+        {
+          trk = unescape(list[ii][1]) ;
+          data.push([list[ii][0], trk, list[ii][0]]) ;
+          wbFormSettings.get('trkOrderHash').set(trk, list[ii][0]) ;
+        }
+      }
+      var mstore ;
+      var gridcolumns ;
+      if(list.length < limit)
+      {
+        mstore = new Ext.data.SimpleStore(
+        {
+          id: 'orderStore',
+          fields: [
+            {name: 'orderRank'},
+            {name: 'track'},
+            {name: 'img'}
+          ],
+          data: data
+        });
+        
+        gridcolumns = [
+                          {header: 'Current Order Rank', dataIndex: 'orderRank', width: 50},
+                          {header: 'Track', dataIndex: 'track', width: 130},
+                          {dataIndex: 'img', width: 20, renderer: function()
+                            {
+                              return "<img src='/images/Up-down.png'>"
+                            }
+                          }
+                      ] ;
+      }
+      else
+      {
+        mstore = new Ext.data.SimpleStore(
+        {
+          id: 'orderStore',
+          fields: [
+            {name: 'orderRank'},
+            {name: 'track'},
+            {name: 'newOrder'}
+          ],
+          data: data
+        });
+        gridcolumns = [
+                          {header: 'Current Order Rank', dataIndex: 'orderRank', width: 50, editable: false},
+                          {header: 'Track', dataIndex: 'track', width: 130, editable: false},
+                          {header: "New Order Rank", dataIndex: 'newOrder', width: 50, editable: true,
+                          tooltip: 'Double-click any of the cells under this column to enter new rank',
+                          editor: new Ext.form.TextField({ allowBlank: false}),
+                          renderer: function(v,p)
+                          {
+                            p.attr = "ext:qtip='Double-click to edit cell.'" ;
+                            return v + "<img src='/images/silk/pencil_add.png' style='padding-left:4px;'>";
+                          }}
+                      ] ;
+      }
+      var grid ;
+      if(list.length < limit)
+      {
+        grid = new Ext.grid.GridPanel({
+          id: 'mygrid',
+          title: 'Drag row to reorder',
+          store: mstore,
+          height: 400,
+          width: 300,
+          columns: gridcolumns,
+          loadMask: true,
+          stateful: false,
+          ddGroup:'mygridDD',
+          viewConfig: {
+            emptyText: 'No pages found',
+            sm: new Ext.grid.RowSelectionModel({singleSelect:true}),
+            forceFit: true
+          },
+          stripeRows: true
+        }) ;
+      }
+      else
+      {
+        grid = new Ext.grid.EditorGridPanel({
+          id: 'mygrid',
+          title: 'Enter new order rank',
+          store: mstore,
+          height: 400,
+          width: 300,
+          columns: gridcolumns,
+          loadMask: true,
+          stateful: false,
+          viewConfig: {
+            emptyText: 'No pages found',
+            sm: new Ext.grid.RowSelectionModel({singleSelect:true}),
+            forceFit: true
+          },
+          stripeRows: true
+        }) ;
+        grid.on('validateedit', function(eObj)
+                {
+                  var re = /^\d+$/ ;
+                  var value = eObj.value ;
+                  if(!value.match(re))
+                  {
+                    eObj.cancel = true ;
+                    alert('Only integer values are allowed') ;
+                  }
+                  else
+                  {
+                    if(value < 1)
+                    {
+                      eObj.cancel = true ;
+                      alert('Rank cannot be smaller than 1') ;
+                    }
+                  }
+                  if(eObj.value > list.length)
+                  {
+                    eObj.cancel = true ;
+                    alert('Entered value cannot be larger than: ' + list.length) ;
+                  }
+                }  
+                ) ;
+        grid.on('afteredit',
+        function(eObj)
+        {
+          var newVal = eObj.value ;
+          var origVal = eObj.originalValue ;
+          var recToShuffle ;
+          recToShuffle = mstore.getAt(eObj.row) ;
+          mstore.remove(mstore.getAt(eObj.row)) ;
+          mstore.insert(newVal-1, [recToShuffle]) ;
+          var cc = 1 ;
+          var data = [] ;
+          // UPdate the entire store. Somehow this is much faster than updating just the 'newOrder' column
+          mstore.each(function(record){
+            data.push([record.get('orderRank'), record.get('track'), cc]) ;
+            wbFormSettings.get('trkOrderHash').set(record.get('track'), cc) ;
+            cc += 1 ;
+          }) ;
+          mstore.loadData(data) ;
+          Ext.getCmp('mygrid').getView().refresh() ;
+        }) ;
+      }
+      var gridContainer = new Ext.Container(
+      {
+        id: "gridContainer",
+        layout: 'fit',
+        renderTo: 'orderDiv',
+        monitorResize: true,
+        items: [
+          grid
+        ]
+      }) ;
+      if(list.length < limit)
+      {
+        createDropTarget(grid, mstore) ;
+        var gdz = new Ext.grid.GridDragZone(grid, {
+          containerScroll: true,
+          ddGroup: 'mygridDD'
+        }) ;
+        Ext.dd.ScrollManager.register(Ext.get(gdz.id)) ;
+        grid.getView().refresh() ;
+      }
+    }
+    createGrid('<%=@settings['gridRecs']%>') ;
+    function afterEdit(eObj)
+    {
+      var newVal = eObj.value ;
+      var origVal = eObj.originalValue ;
+      var store = Ext.get('orderStore') ;
+      var recsToShuffle ;
+      var startIndex ;
+      var ii ;
+      var records = [] ;
+      var tmpRec ;
+      if(newVal > origVal)
+      {
+        recsToShuffle = newVal - eObj.row ;
+        startIndex = eObj.row + 1 ;
+        for(ii=startIndex; ii<(recsToShuffle-1); ii ++)
+        {
+          tmpRec = store.getAt(startIndex) ;
+          tmpRec.set('newOrder', ii) ;
+          records.push(tmpRec) ;
+        }
+        tmpRec = store.getAt(eObj.row) ;
+        tmpRec.set('newOrder', newVal) ;
+        records.push(tmpRec) ;
+        store.insert(eObj.row, records) ;
+      }
+      Ext.getCmp('mygrid').getView().refresh() ;
+    }
+    </script>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO Tracks:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "There are no tracks in your selected list of input(s)."
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+        { :toolHelpOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

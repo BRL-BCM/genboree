@@ -1,0 +1,21 @@
+[
+  {
+    "text": "Call SNPs by Atlas-SNP2",
+    "tooltip": "Run Atlas-SNP2 on a SAM or BAM file to detect SNPs from whole genome resequencing data.",
+    "idStr": "atlasSNP2"
+  },
+  {
+    "text": "Call Indels by Atlas-Indel2",
+    "tooltip": "Run the Atlas-Indel2 suite of tools on a SAM or BAM file to detect indels from whole genome sequencing data (current version optimized for Illumina exome capture data).",
+    "idStr": "atlasIndel2"
+  },
+  {
+    "text": "Genotype SNPs by Atlas-SNP2 Re-Genotyper",
+    "tooltip": "Re-genotype data produced from an Atlas-SNP2 run or a custom .snp file. This reruns Atlas-SNP2 with different parameters.",
+    "idStr": "atlasSNP2Genotyper"
+  },
+  {
+    "text" : "Post-processing",
+    "hidden" : true
+  }
+]

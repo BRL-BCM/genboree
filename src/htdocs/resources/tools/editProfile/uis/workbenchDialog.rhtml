@@ -1,0 +1,77 @@
+<%
+  hasAccess = true
+  width = (hasAccess ? 500 : 320)
+  height = (hasAccess ? 370 : 320)
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Edit Profile",  :excludeHelpIcon => true  } ) %>
+<%
+  if(hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will allow you to update/edit your user profile.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%=
+    userRecs = @dbu.getUserByUserId(@context['userId'])
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Edit Profile",
+      :widgets =>
+      [
+        { :id => "login", :label => 'User Name', :type => :text, :value => @context['userLogin'], :size => "30" },
+        { :id => "fName", :label => 'First Name', :type => :text, :value => @context['userFirstName'], :size => "30" },
+        { :id => "lName", :label => 'Last Name', :type => :text, :value => @context['userLastName'], :size => "30" },
+        { :id => "inst", :label => 'Institution', :type => :text, :value => userRecs.first['institution'], :size => "30" },
+        { :id => "email", :label => 'Email', :type => :text, :value => @context['userEmail'], :size => "30" },
+        { :id => "phone", :label => 'Telephone', :type => :text, :value => userRecs.first['phone'], :size => "30" }
+      ]
+    })
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

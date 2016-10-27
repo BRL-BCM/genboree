@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "exRNAMetadataUpload",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "exRNA Metadata Upload to GenboreeKB",
+    "shortLabel": "exRNA Metadata Upload",
+    "groupAccessUri": null
+  }
+}
+

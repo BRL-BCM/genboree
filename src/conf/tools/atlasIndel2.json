@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "atlasIndel2",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Call Indels By Atlas-Indel2",
+    "shortLabel": "Atlas-Indel2"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "walltime": "12:00:00",
+    "pvmem": "5858mb"
+  }
+}

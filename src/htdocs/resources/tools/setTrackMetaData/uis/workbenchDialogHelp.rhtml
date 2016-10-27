@@ -1,0 +1,78 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will import Track metadata into a target <u>Database</u>. Note that in order for the file(s) to be imported
+          successfully, the file(s) need to be in a specific <i>tab-delimited</i> format:
+          <ul>
+            <li>The first line of the file contains the column headers, as a comment-line. It must start with a '<b>#</b>'.</li>
+            <li>One of the fields MUST be 'name' which should be unique for all Track records.</li>
+            <li>All records MUST have the same number of fields/columns.</li>
+          </ul>
+          Review that the correct track metadata file is going to be imported.
+          <br>&nbsp;<br>
+          Note that the <b>Create New Tracks</b> checkbox gives you the option of creating new tracks (without any annotations) in cases where the track is not already present
+          in the target database.
+          <br>&nbsp;<br>
+          <b>Warning</b>: Changing some of the internally used metadata fields for tracks is prohibited and will be skipped if present in the input file.
+          These fields include:
+          <ul style='font-size:80%;width:80%;'>
+            <li >gbTrackBpSpan</li>
+            <li>gbTrackBpStep</li> 
+            <li>gbTrackUseLog</li> 
+            <li>gbTrackDataMax</li> 
+            <li>gbTrackDataMin</li> 
+            <li>gbTrackRecordType</li>
+            <li>gbTrackDataSpan</li> 
+            <li>gbTrackHasNullRecords</li> 
+          </ul>
+        "
+      })
+  %>
+  
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Either Drag the <u>File(s)</u> into &quot;Input Data&quot;, or select a file to be imported from your machine',
+        ],
+        :types              => [ [ 'Files', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. ' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Create New Tracks?', "New Tracks (without any annotations) will be created if not present in the target database."],
+          [ 'Submit', "Once you've reviewed the name of the input metadata file to be used, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+
+</div>

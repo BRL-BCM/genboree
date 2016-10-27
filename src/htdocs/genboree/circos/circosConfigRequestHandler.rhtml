@@ -1,0 +1,105 @@
+<% # THIS IS AN ERUBY FILE
+########################################################################################
+# Project: Circos UI Integration
+#   This project creates a User Interface (UI) to assist users in
+#   creating parameter files for Circos (v0.49), a data visualization tool.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a Circos job with the Genboree environment
+#   and then package the Circos output files and notify the user of job completion.
+#
+# circosuiRequestHandler.rhtml - This file receives the request from the client UI to start a run of Circos.
+#   Here we ensure that the data is properly formatted, do some basic validation
+#   and start off the run of Circos (via forking the circosCoordinator.rb). After starting the
+#   Circos process, we return a message to the user alerting them they will be notified
+#   via email when the process is complete and the results are read, MFS (BNI)
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2009 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+require 'json'
+require 'cgi'
+require 'brl/genboree/genboreeUtil'
+
+# Local variables
+cgi = CGI.new()
+jsonData = cgi["options"]
+genbConf = BRL::Genboree::GenboreeConfig.load()
+circosScratchBase = genbConf.circosScratchBase
+debugLogPath = ""
+
+begin
+  # Parse the JSON options,
+  options = JSON.parse(jsonData)
+
+  # The UI should ensure we get all the required options, but for safety, check to make sure they exist
+  if(options["config"].nil? ||
+     options["config"]["userId"].nil? ||
+     options["config"]["groupId"].nil? ||
+     options["config"]["rseqId"].nil? ||
+     options["config"]["userLogin"].nil?)
+
+    raise ArgumentError
+  end
+
+  # Our JSON object was formatted properly, we have our required options, start the job
+  jobId = Time.now.to_i.to_s + "_#{rand(65525)}"
+  if(circosScratchBase.nil? || circosScratchBase.empty?)
+    debugLogPath = File.join("usr", "local", "brl", "data", "genboree", "temp", "circos", "circosCoordinator.debug")
+  else
+    debugLogPath = File.join(circosScratchBase, options["config"]["groupId"].to_s.strip, options["config"]["rseqId"].to_s.strip,
+      options["config"]["userLogin"].to_s.strip, options["config"]["userId"].to_s.strip + "_" + jobId + ".circosCoordinator.debug")
+  end
+
+  circosCoordCmd = "circosCoordinator.rb"
+  circosCoordArgs = ["-d", "-o", JSON.generate(options), "-j", jobId, "-l", debugLogPath]
+  $stderr.puts "Circo Job Id #{jobId}: Executing command '#{circosCoordCmd}' with these (non-shell expanded) arguments:\n    " + circosCoordArgs.join('  ')
+  circosCoordReturn = system(circosCoordCmd, *circosCoordArgs)
+  $stderr.puts "Circos Job Id #{jobId}: command successful?  #{circosCoordReturn}\n"
+
+  # Inform the user the job has been queued
+  output = "<div class='success'>"
+  output << "Your Circos job has been queued! You will be emailed a link to view your results when they are ready. "
+  output << "The job ID for this Circos run is: <em>#{jobId}</em><br><br>If you have questions, please contact "
+  output << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance. "
+  output << "Plase include the job ID in any inquiries so we can better assist you.<br>\n"
+  output << "</div>"
+  print output
+rescue JSON::ParserError => e
+  # If there was an error with the JSON, alert the user
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "<em>ERROR:</em> The received JSON data was malformed!<br>#{e}"
+  err << "</div>"
+  print err
+
+  exit
+rescue ArgumentError => e
+  missingParams = Array.new
+  missingParmas << "userId" if options["config"]["userId"].nil?
+  missingParams << "groupId" if options["config"]["groupId"].nil?
+  missingParams << "rseqId" if options["config"]["rseqId"].nil?
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "ERROR: Required parameters were missing!<br>\n#{missingParams.join("<br>\n")}<br>\n"
+  err << "</div>"
+  print err
+
+  exit
+rescue Exception => e
+  # Failsafe, if any other error occurs (perhaps with the fork?), alert the user
+  err = "<div class='failure'>"
+  err << "An internal system error has occurred, please contact "
+  err << "<a href='mailto:#{genbConf.gbTechEmail}'>#{genbConf.gbTechEmail}</a> for assistance.<br>\n"
+  err << "<em>ERROR:</em> An unknown error has occurred!<br>"
+  err << "</div>"
+  print err
+
+  exit
+end
+%>

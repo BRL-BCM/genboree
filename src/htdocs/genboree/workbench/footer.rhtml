@@ -1,0 +1,47 @@
+<%# Uses erubis %>
+<%# - assumes the binding it is evaluated in includes a 'context' variable that is an ErubisContext %>
+<%# - the ErubisContext.includeFile(<path>) function does this automatically %>
+
+  <!-- BEGIN: COMMON HTML FOOTER -->
+  <%# THIS COMES RIGHT AFTER PAGE content. It will close the page content <tc> and
+      the open <tables>, <body>, <head>, <html> that you and the header.rhtml opened %>
+<%
+  require 'brl/genboree/genboreeUtil'
+  gbConfig = BRL::Genboree::GenboreeConfig.load()
+  # For less typing below:
+  hostedSite = context['hostedSite']
+  hdrFtrConf = context['hdrFtrConf']
+  siteHdrFtrConf = hdrFtrConf[hostedSite] || hdrFtrConf['default']
+%>
+      </div>
+      <div id="footer" class="footer">
+        <div style="float: left">
+          <%= hdrFtrConf.makeAnchorOpen(hostedSite, 'bottomLeftIcon') %>
+            <img <%= hdrFtrConf.makeImgAttributes(hostedSite, 'bottomLeftIcon') %> >
+          </a>
+        </div>
+        <div style="float: right">
+          <%= hdrFtrConf.makeAnchorOpen(hostedSite, 'bottomRightIcon') %>
+            <img <%= hdrFtrConf.makeImgAttributes(hostedSite, 'bottomRightIcon') %> >
+          </a>
+        </div>
+        <div class="credits">
+          <%= siteHdrFtrConf['bottomCenterHTML']['html'] %>
+        </div>
+        <div style="clear: both;"></div>
+        <div class="address">
+          &copy; 2001-<%=Time.now.year%><br>
+          <a href="http://brl.bcm.tmc.edu">Bioinformatics Research Laboratory</a><br>
+          400D Jewish Wing, MS:BCM225<br>
+          1 Baylor Plaza<br>
+          Houston, TX 77030<br>
+          713-798-5433
+        </div>
+        <div class="comments">
+          <a href="mailto:<%= gbConfig.gbAdminEmail %>">Questions or comments?</a>
+        </div>
+        <div style="clear: both;"></div>
+      </div>
+    </div>
+  </body>
+</html>

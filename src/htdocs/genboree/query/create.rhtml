@@ -1,0 +1,317 @@
+<%# THIS FILE USES erubis %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/conf/headerFooterConfig.rb'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+$VERBOSE = false
+@cgi = CGI.new()
+@req = Apache.request
+@serverName = @cgi.host
+@context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+@context.title = "Boolean Queries"
+outputGrp = ""
+outputDb = ""
+template = ""
+
+########################################################################################
+# Utility method to easily make an inquiry to the REST API
+# This method will either return the apiData structure or exit in failure mode
+# * Arguments :
+#  - +String+ -> The REST URI to query
+########################################################################################
+def getRestData(uri)
+  apiCaller = ApiCaller.new(@context.genbConf.apiHost || "localhost", uri, @cgi["userLogin"].strip(), @cgi["passwd"].strip())
+
+  httpResp = apiCaller.get()
+  if(apiCaller.failed?)
+    errorText = ""
+    if(httpResp.nil?)
+      # Exception happened
+      errorText << "<div class=\"feedback\"><div class=\"failure\">ERROR: The REST resource that is required is currently unavailable. "
+      errorText << "Please try again later or contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+      errorText << "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>"
+      errorText << "Detailed Error Information: #{apiCaller.error.inspect}</div></div>"
+    else
+      # An API related error
+      apiCaller.parseRespBody()
+      errorText << "<div class=\"feedback\"><div class=\"failure\">An error has occurred while attempting to process your request.<br>"
+      errorText << "Please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">#{@context.genbConf.gbTechEmail}</a> for assistance."
+      errorText << "<br><br>"
+      errorText << "<em>REST API Error</em>: An error occurred while communicating with the REST interface!<br>"
+      errorText << "<em>Status Code</em>: #{apiCaller.apiStatusObj["statusCode"]}<br><em>Message</em>: #{apiCaller.apiStatusObj["msg"]}"
+      errorText << "</div></div>"
+    end
+
+    puts errorText
+    exit
+  end
+
+  apiCaller.parseRespBody()
+  return apiCaller.apiDataObj
+end
+
+# Basic error checking for required params, should never happen but if so, this error messages is better than HTTP 500
+unless(@cgi.has_key?("userPwdDigest") && @cgi.has_key?("userLogin") && @cgi.has_key?("userId"))
+  # Login & password digest are required components, if we don't get these from the JSP, internal error occurred
+  err = "<div class=\"feedback\"><div class=\"failure\">An internal system error has occurred, please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+  err += "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>\nERROR: A required parameter was missing!</div></div>\n"
+  puts err
+
+  exit
+end
+
+# Priming - Check if we were passed any values to preload, if so hold them in javascript so we can select them on create
+if(@cgi.has_key?('databaseUri'))
+  captures = @cgi['databaseUri'].match(%r{^/REST/v\d/grp/([^/\?]+)/db/([^/\?]+)(?:/([^/\?]+))?}).captures()
+  
+  # Database URI should have only been sent to us if it matches, but for safety, check
+  if(captures.length() >= 2)
+    outputGrp = captures[0]
+    outputDb = captures[1]
+  end
+end
+
+# Priming - Check to see if a template was provided
+if(@cgi.has_key?('nonQueryUri'))
+  # If so, we need to determine what resource is our template, so look at all our REST builders to pattern match
+  # First, require all available resource builders
+  begin
+    # Needed for the hdhv.rb resource
+    ENV['INLINEDIR'] = "/usr/local/brl/data/rubyinline"
+    $LOAD_PATH.each { |topLevel|
+      rsrcFiles = Dir.glob("#{topLevel}/brl/genboree/rest/data/builders/*.rb")
+      rsrcFiles.each { |rsrcFile|
+        begin
+          require rsrcFile
+        rescue
+          # At this point, we will just do nothing with our exception
+        end
+      }
+    }
+  rescue
+    # At this point, we will just do nothing with our exception
+  end
+
+  # Next, check through the builders, trying to match our passed URI to a known REST pattern
+  BRL::Genboree::REST::Data::Builders.constants.each { |constName|
+    # Retrieve the Constant object
+    const = BRL::Genboree::REST::Data::Builders.const_get(constName.to_sym)
+    # The Constant object must be a Class and that Class must inherit
+    # [ultimately] from BRL::REST::Resources::Resource
+    next unless(const.is_a?(Class) and const.ancestors.include?(BRL::Genboree::REST::Data::Builders::Builder))
+
+    # Test this resource using pattern() to determine if it can handle
+    # this request or not.
+    next if(const.pattern().nil?)
+
+    if(const.pattern().match(@cgi['nonQueryUri'].strip()) and constName.match(/^(\w+)Builder/))
+      template = constName.match(/^(\S+)Builder/).captures().first
+      break
+    end
+  }
+end
+
+# Get a list of groups, dbs, tracks, the initial user access for the selected group/db and our available templates
+groups = getRestData("/REST/v1/usr/#{CGI.escape(@cgi["userLogin"])}/grps").map { |grp| grp["text"] }
+outputGrp = groups[0] if(outputGrp.empty?)
+dbs = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/dbs").map { |db| db["text"] }
+outputDb = dbs[0] if(outputDb.empty?)
+tracks = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/db/#{CGI.escape(outputDb)}/trks").map { |track| track["text"] }
+initialAccess = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/usr/#{CGI.escape(@cgi["userLogin"])}/role")["role"]
+templates = getRestData("/REST/v1/queryable").map { |tmpl| JSON.generate(tmpl) }
+
+# Map over our arrays to easily write them out to our javascript
+groups.map! { |grp| "'" + grp.gsub("'", "\\\\'") + "'"} 
+dbs.map! { |db| "'" + db.gsub("'", "\\\\'") + "'"}
+tracks.map! { |track| "'" + track.gsub("'", "\\\\'") + "'"}
+
+# Add some head data that is specific to this create page
+@context.addHeadData = "<script type=\"text/javascript\" src=\"/javaScripts/query/BooleanQueryUI.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/create.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/help.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/ext-2.2/ux/RemoteValidator.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script>\n"
+@context.addHeadData << "  BHI = new BooleanQueryUI() ;\n"
+@context.addHeadData << "  BHI.setGroups([#{groups.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setDbs([#{dbs.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setTracks([#{tracks.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setGroup('#{outputGrp.gsub("'", "\\\\'")}') ;\n"
+@context.addHeadData << "  BHI.setDb('#{outputDb.gsub("'", "\\\\'")}') ;\n"
+@context.addHeadData << "  BHI.setQueryMode('create') ;\n"
+@context.addHeadData << "  BHI.setQueryUserId('#{@cgi["userId"]}') ;\n"
+@context.addHeadData << "  BHI.setUserLogin('#{@cgi["userLogin"]}') ;\n"
+@context.addHeadData << "  BHI.setUserId('#{@cgi["userId"]}') ;\n"
+@context.addHeadData << "  BHI.setUserEmail('#{@cgi["userEmail"]}') ;\n"
+@context.addHeadData << "  BHI.setUserAccess('#{initialAccess}') ;\n"
+@context.addHeadData << "  BHI.setTemplates([#{templates.join(',')}]) ; \n"
+@context.addHeadData << "  BHI.setTemplate('#{template.gsub("'", "\\\\'")}') ;\n"
+@context.addHeadData << "</script>\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/statusInfo.css?#{@context.jsVerStr}\">\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/query.css?#{@context.jsVerStr}\">\n"
+# ---------------------------------------------------------------------------
+
+begin
+  @context['hostedSite'] = hostedSite = @cgi['hostedSite'] or "default"
+  @context['hdrFtrConf'] = hdrFtrConf = BRL::Genboree::Conf::HeaderFooterConfig.load()
+  @context.prepForHtml()
+
+%>
+<!-- Header -->
+<%= @context.includeFile("/genboree/workbench/header.rhtml") %>
+<div id="toolbar"></div>
+<div id="content">
+  <fieldset>
+    <legend>
+      Query Properties
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.queryProps.text, helpMessages.queryProps.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction" style="margin-bottom: 10px ;">
+      Specify attributes about the new query and where the query should be saved. Note that you must have write permission 
+      in the group to save a query to it
+    </div>
+    <ul id="queryOpts" class="options">
+      <li>
+        <label for="qName">Query Name:</label>
+        <input type="text" id="qName" style="width: 205px ;" />
+      </li>
+      <li>
+        <label for="templateCombo">Query Template:</label>
+        <div id="tmpls"></div>
+      </li>
+      <li>
+        <div id="sharedEdit">
+          <label for="qShared">Share this query:</label>
+          <div id="qShared"></div>
+        </div>
+      </li>
+      <li>
+        <ul id="savedLocEdit">
+          <li class="header">
+            Save this query to:
+          </li>
+          <li>
+            <label for="grpCombo">Group:</label>
+            <div id="grps"></div>
+            <div id="grpAccess" class="accessError" <%= 'style="display: none ;"' if(initialAccess.downcase() != "subscriber") %>>You do not have access to write to this Group</div>
+          </li>
+          <li>
+            <label for="dbCombo">Database:</label>
+            <div id="dbs"></div>
+            <img id="dbLoading" src="/images/ajaxLoader.gif" alt="Loading DBs..." style="display: none ;" />
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </fieldset>
+  <fieldset>
+    <legend>
+      Query
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.defineQuery.text, helpMessages.defineQuery.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction" style="margin-bottom: 10px ;">
+      Create boolean clauses for the query
+    </div>
+    <div id="queryCode">
+      &lt;No clauses specified&gt;
+    </div>
+    <ul id="clauseList">
+      <li id="clause1" class="clauseContainer">
+        <div id="clause1Tools" class="clauseTools">
+          <a href="#" onclick="BHI.nestClause('clause1') ; return false ;" class="nestButton" title="Nest Clause">N</a>
+          <a href="#" onclick="BHI.unnestClause('clause1') ; return false ;" class="unnestButton" title="Unnest Clause">U</a>
+          <a href="#" onclick="BHI.insertClause('clause1') ; return false ;" class="addClauseButton" title="Add Clause">A</a>
+          <a href="#" onclick="BHI.deleteClause('clause1') ; return false ;" class="deleteClauseButton" title="Delete Clause">D</a>
+        </div>
+        <div id="clause1Specs" class="clauseSpecs">
+          <div id="clause1Attr"></div>
+          <a id="clause1Not" href="#" onclick="Ext.get(this).toggleClass('selected') ; return false ;" class="not" title="Inverse the operator">NOT</a>
+          <div id="clause1Op"></div> 
+          <input type="text" id="clause1Val" size="21" />
+          <div id="clause1Contains" class="contains" style="display: none ;">
+            <a id="clause1Left" href="#" class="lBrace" onclick="BHI.toggleBrace(Ext.get(this)); return false;" >[</a>
+            <input type="text" id="clause1Start" size="5" style="margin-right:5px" />
+            <span id="clause1Comma" style="line-height:24px; margin-right:3px;">,</span>
+            <input type="text" id="clause1Stop" size="5" />
+            <a id="clause1Right" href="#" class="rBrace" onclick="BHI.toggleBrace(Ext.get(this)); return false;">]</a>
+          </div>
+          <div id="clause1Case" class="checkbox"></div>
+        </div>
+        <div id="clause1Bool" class="boolOps">
+          <div id="clause1BoolDyn" style="display: none ;">
+            <a href="#" style="margin-right: 0 ;" id="clause1And" class="and selected" onclick="BHI.setBoolOp('clause1') ; return false ;">AND</a>
+            <a href="#" id="clause1Or" class="or" onclick="BHI.setBoolOp('clause1') ; return false ;">OR</a>
+          </div>
+          <img id="clause1BoolStat" src="/images/query/and_disabled.png" alt="AND" style="display: none ;">
+        </div>
+      </li>
+    </ul>
+    <a href="#" class="appendClauseButton" onclick="BHI.appendClause('clauseList') ; return false ;">+ Append Clause</a>
+  </fieldset>
+  <fieldset>
+    <legend>
+      Apply Created Query
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.applyQuery.text, helpMessages.applyQuery.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction">
+      <div>
+        A query can be applied to a Resource within a particular Group and Database. To apply the above specificed query, first select a 
+        Group and Database then the desired Resource to query on. 
+      </div>
+      <div>
+        If the selected resource is "Annotation in a Track", you will also have to specify the track.
+      </div>
+    </div>
+    <ul class="options" id="applyOpts">
+      <li class="header">
+        Select the group and database:
+      </li>
+      <li>
+        <label for="applyGrpsCombo">Group:</label>
+        <div id="applyGrps"></div>
+      </li>
+      <li>
+        <label for="applyDbsCombo">Database:</label>
+        <div id="applyDbs"></div>
+        <img id="applyDbLoading" src="/images/ajaxLoader.gif" alt="Loading DBs..." style="display: none ; " />
+      </li>
+      <li class="header">
+        Select the resource:
+      </li>
+      <li>
+        <label for="rsrcCombo">Resource: </label>
+        <div id="rsrc"></div>
+      </li>
+      <li id="trackInfo" style="visibility: hidden ;">
+        <label for="trackCombo">Track: </label>
+        <div id="tracks"></div>
+        <img id="trackLoading" src="/images/ajaxLoader.gif" alt="Loading Tracks..." style="display: none ; " />
+      </li>
+    </ul>
+  </fieldset>
+  <div id="buttons">
+    <input id="createButton" type="button" value="Create" <%= 'disabled="disabled"' if(initialAccess.downcase == 'subscriber') %> onclick="BHI.createQuery(false) ;"/>
+    <input id="createAndApplyButton" type="button" value="Create and Apply" <%= 'disabled="disabled"' if(initialAccess.downcase == 'subscriber') %> onclick="BHI.createQuery(true) ;"/>
+    <img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- Footer -->
+<%= @context.includeFile("/genboree/workbench/footer.rhtml") %>
+<%
+end # begin-rescue-ensure
+%>

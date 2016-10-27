@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "chromHMMBinarizeSignal",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "queue": "gbMultiCore",
+    "ppn": 4,
+    "pvmem": "10gb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "ChromHMM - BinarizeSignal",
+    "shortLabel": "ChromHMM - BinarizeSignal"
+  }
+}

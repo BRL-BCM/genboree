@@ -1,0 +1,105 @@
+<%@ page import="org.genboree.editor.AnnotationDetail,
+java.util.ArrayList"%>
+<%
+if (request.getParameter("upfid") != null) {
+    groupSelectedFidList = new ArrayList();
+    mys.removeAttribute ("selectedFidList");
+}
+if (request.getParameter("btnSelectAll") != null)
+    updateAll = true;
+if (updateAll) {
+    if (totalAnnotations != null && totalAnnotations.length >0) {
+    fids = new String [totalAnnotations.length];
+    for (i=0; i<fids.length; i++) {
+    fids[i] = "" + totalAnnotations[i].getFid();
+    if (! groupSelectedFidList.contains( fids[i]))
+    groupSelectedFidList.add( fids[i]);
+    }   
+    
+    selectedAnnotations = totalAnnotations;
+    mys.setAttribute("selectedFidList",groupSelectedFidList);
+    doPaging = true;
+    }
+}
+boolean unselectAll = false;
+if (request.getParameter("btnUnselectAll") != null)
+    unselectAll = true;
+if (unselectAll) {
+    groupSelectedFidList = new ArrayList();
+    if (totalAnnotations != null && totalAnnotations.length >0) {
+    fids = new String [0];
+    selectedAnnotations = new AnnotationDetail[0];
+    mys.setAttribute("selectedFidList",groupSelectedFidList);
+// doPaging = true;
+    }
+}
+boolean unselectAllInPage = false;
+if (request.getParameter("btnUnAllInPage") != null)
+    unselectAllInPage = true;
+if ( unselectAllInPage){
+    if (annotations != null && annotations.length >0) {
+    for (i=0; i<annotations.length; i++) {
+        groupSelectedFidList.remove("" +  annotations[i].getFid());
+        }
+        
+        if ( groupSelectedFidList != null &&  groupSelectedFidList.size() >0) {
+            selectedAnnotations = new AnnotationDetail [ groupSelectedFidList.size()];
+            for (i=0; i<groupSelectedFidList.size(); i++) {
+            if (fid2Annos.get(groupSelectedFidList.get(i)) != null) {
+            selectedAnnotations[i] = (AnnotationDetail)fid2Annos.get(groupSelectedFidList.get(i));
+            }
+            }
+        }
+        mys.setAttribute("selectedFidList",groupSelectedFidList);
+    }
+}
+    
+if (request.getParameter("SelectAllOnPage") != null)
+{
+    if (annotations != null && annotations.length >0) {
+        for (i=0; i<annotations.length; i++) {
+            if (!groupSelectedFidList.contains("" + annotations[i].getFid() ))
+            groupSelectedFidList.add("" +  annotations[i].getFid());
+        }
+        selectedAnnotations = new AnnotationDetail [ groupSelectedFidList.size()];
+        for (i=0; i<groupSelectedFidList.size(); i++) {
+            if (fid2Annos.get(groupSelectedFidList.get(i)) != null) {
+            selectedAnnotations[i] = (AnnotationDetail)fid2Annos.get(groupSelectedFidList.get(i));
+            }
+        }
+        mys.setAttribute("selectedFidList",groupSelectedFidList);
+    }
+}
+    
+AnnotationDetail [] lastAnnos = (AnnotationDetail [])mys.getAttribute("lastPageAnnotations");
+if (!unselectAll && !unselectAllInPage) {
+    fids = request.getParameterValues(checkBoxName);
+    pageSelectedFidList = new ArrayList();
+        if (fids != null && fids.length>0)  {
+        for (int j=0; j<fids.length; j++)  {
+            pageSelectedFidList.add(fids[j]);
+            if (!groupSelectedFidList.contains(fids[j]))
+            groupSelectedFidList.add(fids[j]);
+        }
+        mys.setAttribute("selectedFidList",groupSelectedFidList);
+    }
+    if (request.getParameter("upfid") != null) {
+        if (totalAnnotations != null)
+        for (i=0; i<totalAnnotations.length; i++){
+        if (!groupSelectedFidList.contains("" + totalAnnotations[i].getFid())) {
+        groupSelectedFidList.add("" + totalAnnotations[i].getFid());
+        }
+        }
+        if ((annotations != null) && fids != null && (fids.length < annotations.length)) {
+        if (lastPageIndex.compareTo("" + currentPageIndex)==0) {
+        for (int k=0; k<annotations.length; k++) {
+        if (!pageSelectedFidList.contains("" + annotations[k].getFid()))
+        groupSelectedFidList.remove("" + annotations[k].getFid());
+        } }
+        }
+        mys.setAttribute ("lastPageAnnotations", annotations);
+        mys.setAttribute ("selectedFidList", groupSelectedFidList);
+    }
+}
+mys.setAttribute("selectedAnnos",groupSelectedFidList);
+%>

@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "spark",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "11264mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Cluster by Spark (Analyze Signals)",
+    "shortLabel": "Spark"
+  }
+}

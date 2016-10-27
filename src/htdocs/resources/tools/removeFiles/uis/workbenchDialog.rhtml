@@ -1,0 +1,53 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%=
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 240px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  formTag
+%>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Remove Files" } ) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will remove/delete <i>Files</i> and/or <i>File Folders</i> from a database.
+      "
+    })
+%>
+
+<%# Input data summary %>
+ <%=
+    fileHash = {}
+    @inputs.each { |input|
+      fileHash[input] = true
+    }
+    renderFrag(@toolIdStr, :wbDialogSection,
+     {
+       :sectionTitle => "Files/Folders To Delete:",
+       :sectionHtml => renderFrag(@toolIdStr, :wbMultiSelectInputList, { :multiSelectInputHash => fileHash, :label => "Choose file/folders to delete", :type => "files" } )
+     })
+ %>
+
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit, :onClick => "getFileNodeIds()"}, { :type => :cancel} ]
+    })
+%>
+
+</form>
+<script type="text/javascript">
+</script>

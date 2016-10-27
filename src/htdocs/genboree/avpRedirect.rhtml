@@ -1,0 +1,587 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # LIBRARIES
+  # ---------------------------------------------------------------------------
+  $VERBOSE = nil
+  $DEBUG = true
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  # Constants
+  OK = 0
+  PARAM_MISSING, BAD_REFSEQ, NO_FREFS, NO_FTYPES, NO_ATTR, NO_VALUE, NO_FDATAS, SHOW_TABLE, RELOCATED = 1,2,3,4,5,6,7,8,9
+
+  # ---------------------------------------------------------------------------
+  # METHODS
+  # ---------------------------------------------------------------------------
+  def paramCheck(context)
+    cgi = context.cgi
+    refSeqId = cgi['refSeqId'].to_s.strip
+    if(refSeqId.nil? or refSeqId.empty?)
+      refSeqId = cgi['databaseId'].to_s.strip
+    end
+    attribute = cgi['attribute'].to_s.strip
+    value = cgi['value'].to_s.strip
+    track = cgi['track'].to_s.strip
+    if(track.nil? or track.empty?)
+      track = cgi['trackName'].to_s.strip
+    end
+    percMargin = cgi['percMargin'].to_s.strip
+    isPublic = cgi['isPublic'].to_s.strip
+    # Check that correct params were provided
+    if(refSeqId.empty? or refSeqId !~ /^\d+$/ or
+       attribute.empty? or
+       value.empty?
+      )
+      errCode = PARAM_MISSING
+    else
+      context[:refSeqId] = refSeqId.to_i
+      context[:attribute] = attribute
+      context[:value] = value
+      context[:track] = (track.empty? ? nil : track)
+      context[:isPublic] = (isPublic.empty? ? false : (isPublic =~ /^yes$/i ? true : false))
+      if(percMargin.empty?)
+        context[:percMargin] = 0.2
+      else
+        percMargin = percMargin.to_f
+        percMargin / 100.0 if(percMargin > 1.0)
+        context[:percMargin] = percMargin
+      end
+      # Ok so far
+      errCode = OK
+    end
+    context[:errCode] = errCode
+
+    dputs "  paramCheck(): context: #{context.inspect}"
+    return context
+  end
+
+  def init(context)
+    # Context In variables
+    refSeqId = context[:refSeqId]
+    errCode = context[:errCode]
+    timer = context[:timer]
+    # dbu
+    genbConfig = BRL::Genboree::GenboreeConfig.new()
+    genbConfig.loadConfigFile()
+    dbu = BRL::Genboree::DBUtil.new(genbConfig.dbrcKey, nil, genbConfig.dbrcFile)
+    # anno db
+    annoDbNames = dbu.selectDBNameByRefSeqID(refSeqId)
+    if(annoDbNames.empty?)
+      errCode = BAD_REFSEQ
+    else
+      annoDbName = annoDbNames[0]['databaseName']
+      dbu.setNewDataDb(annoDbName)
+    end
+    timer << "  => DONE: db connections"
+    # ftypes
+    ftypes = dbu.selectAllFtypes()
+    if(ftypes.empty?)
+      errCode = NO_FTYPES
+    else
+      ftypeRecsByName = {}
+      ftypeRecsById = {}
+      ftypes.each { |rec|
+        ftypeRecsByName["#{rec['fmethod']}:#{rec['fsource']}"] = rec
+        ftypeRecsById[rec['ftypeid']] = rec
+      }
+    end
+    timer << "  => DONE: getting tracks"
+    # Context Out variables
+    context[:dbu] = dbu
+    # context[:frefRecs] = frefRecs
+    context[:ftypeRecsByName] = ftypeRecsByName
+    context[:ftypeRecsById] = ftypeRecsById
+    context[:errCode] = errCode
+    return context
+  end
+
+  def getAttributeRecord(context)
+    # Context In variables
+    attribute = context[:attribute]
+    dbu = context[:dbu]
+    # Get attribute by name
+    attrRecs = dbu.selectAttributesByName(attribute)
+    context[:errCode] = NO_ATTR if(attrRecs.empty?)
+    context[:attrRec] = attrRecs.first
+    dputs "  getAttributeRecord(): attRecs = #{attrRecs.inspect}"
+    return context
+  end
+
+  def getValueRecord(context)
+    # Context In variables
+    value = context[:value]
+    dbu = context[:dbu]
+    # Get value by value
+    valueRecs = dbu.selectValueViaMD5(value)
+    context[:errCode] = NO_VALUE if(valueRecs.empty?)
+    context[:valueRec] = valueRecs.first
+    dputs "  getValueRecord(): valueRecs = #{valueRecs.inspect}"
+    return context
+  end
+
+  def getFids(context)
+    # Context In variables
+    errCode = context[:errCode]
+    track = context[:track]
+    attribute = context[:attribute]
+    value = context[:value]
+    ftypeRecsByName = context[:ftypeRecsByName]
+    attrRec = context[:attrRec]
+    valueRec = context[:valueRec]
+    dbu = context[:dbu]
+    # track given or not?
+    ftypeRec = nil
+    if(track)
+      ftypeRec = ftypeRecsByName[track]
+      errCode = NO_FTYPES if(ftypeRec.nil?)
+    end
+    if(errCode == OK)
+      if(attribute == 'lffName')
+        # Get fids based on gname
+        if(track) # use ftypeid and gname
+          fids =  dbu.selectFidsByExactGname(
+                  value,
+                  ftypeRec['ftypeid'],
+                  nil, BRL::Genboree::DBUtil::FDATA2, 500)
+        else # use gname only
+          fids =  dbu.selectFidsByExactGname(
+                  value,
+                  nil, nil, BRL::Genboree::DBUtil::FDATA2, 500)
+        end
+      else # use attribute and value
+        if(track)
+          fids =  dbu.selectFidsByAttrValueFtype(
+                  attrRec['attNameId'],
+                  valueRec['attValueId'],
+                  ftypeRec['ftypeid'],
+                  500)
+        else
+          fids =  dbu.selectFidsByAttrValue(
+                  attrRec['attNameId'],
+                  valueRec['attValueId'],
+                  500)
+        end
+      end
+      errCode = NO_FDATAS if(fids.empty?)
+      fids.flatten!
+      dputs "  getFids(): num fids: #{fids.length}"
+    end
+    # Context Out variables
+    fidArray = []
+    fids.each { |fidHash|
+      fidArray << fidHash['fid']
+    }
+    context[:fids] = fidArray
+    context[:errCode] = errCode
+    return context
+  end
+
+  def getFdatas(context)
+    # Context In variables
+    fids = context[:fids]
+    dbu = context[:dbu]
+    context[:fdatas] = dbu.selectLocationsByFids(fids)
+    dputs "  getFdatas(): num fdatas: #{context[:fdatas].nil? ? 'NONE' : context[:fdatas].length}"
+    return context
+  end
+
+  def getFrefsForFdatas(context)
+    # Context In variables
+    dbu = context[:dbu]
+    timer = context[:timer]
+    fdatas = context[:fdatas]
+    rids = []
+    fdatas.each { |fdataRec|
+      rids << fdataRec['rid']
+    }
+    timer << "      . done extracting rids"
+    frefRecs = dbu.selectFrefsByRids(rids)
+    timer << "      . done getting needed frefs"
+    frefRecsById = {}
+    frefRecs.each { |frefRec| frefRecsById[frefRec['rid']] = frefRec['refname'] }
+    context['frefRecs'] = frefRecsById
+    return frefRecsById
+  end
+
+  def act(context)
+    # Context In variables
+    fdatas = context[:fdatas]
+    errCode = context[:errCode]
+    # Are fdatas all same name and on same chrom?
+    fdataConsistent = allFdatasConsistent(fdatas)
+    if(fdataConsistent)
+      # Redirect to appropriate URI
+      errCode = doRelocate(context)
+    else
+      # Display table of results, with appropriate links
+      errCode = SHOW_TABLE
+    end
+    # Context Out variables
+
+    dputs "  act(): #{(errCode == SHOW_TABLE) ? ' showing table ' : ' relocating to Genboree '}"
+    context[:errCode] = errCode
+  end
+
+  def allFdatasConsistent(fdataRecs)
+    return true if(fdataRecs.length == 1)
+    annoNames = {}
+    chrs = {}
+    tracks = {}
+    fdataRecs.each { |rec|
+      annoNames[rec['gname']] = nil
+      chrs[rec['rid']] = nil
+      tracks[rec['ftypeid']] = nil
+    }
+    return (annoNames.size <= 1 and chrs.size <= 1 and tracks.size <= 1)
+  end
+
+  def doRelocate(context)
+    # Context In variables
+    dbu = context[:dbu]
+    fdatas = context[:fdatas]
+    $stderr.puts("fdatas: #{fdatas.inspect}")
+    refSeqId = context[:refSeqId]
+    # frefRecs = context[:frefRecs]
+    percMargin = context[:percMargin]
+    serverName = context.getServerName()
+    # construct URL like this one:
+    # http://genboree.org/java-bin/gbrowser.jsp?refSeqId=825&entryPointId=chr1&from=95624860&to=151624860
+    rid = fdatas[0]['rid']
+    frefRec = dbu.selectFrefsByRid(rid).first
+    chrom = frefRec['refname']
+    chrStart = fdatas[0]['fstart']
+    chrStop = fdatas[0]['fstop']
+    1.upto(fdatas.length-1) { |ii|
+      chrStart = fdatas[ii]['fstart'] if(fdatas[ii]['fstart'] < chrStart)
+      chrStop = fdatas[ii]['fstop'] if(fdatas[ii]['fstop'] > chrStop)
+    }
+    span = (chrStop-chrStart).round
+    extSize = (span * percMargin).round
+    chrStart -= extSize
+    chrStop += extSize
+    chrStart = 1 if(chrStart < 1)
+    chrStop = frefRec['rlength'] if(chrStop > frefRec['rlength'])
+    url = makeGenboreeURL(context, chrom, chrStart, chrStop)
+
+    dputs "  REDIRECTING TO URL:\n    #{url}"
+
+    context.prepRelocate(url)
+    return RELOCATED
+  end
+
+  def clear(context)
+    return if(context.nil?)
+    dbu = context[:dbu]
+    dbu.clear() unless(dbu.nil?)
+    return
+  end
+
+  def makeGenboreeURL(context, ep, from, to)
+    refSeqId = context[:refSeqId]
+    isPublic = context[:isPublic]
+    serverName = context.getServerName()
+		# http://genboree.org/java-bin/gbrowser.jsp?refSeqId=825&entryPointId=chr1&from=95624860&to=151624860
+		genboreeURL = "/java-bin/gbrowser.jsp?refSeqId=#{refSeqId}&entryPointId=#{ep}&from=#{from}&to=#{to}"
+		genboreeURL += "&isPublic=YES" if(isPublic)
+		return genboreeURL
+	end
+
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  context = nil
+  timer = nil
+
+begin
+  timer = BRL::Util::TimingUtil.new()
+  timer.vMsgs.first << " (avpRedirect.rhtml) "
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+  context[:errCode] = OK
+  context[:err] = nil
+  context[:timer] = timer
+
+  dputs ; dputs '-'*60
+  dputs "avpRedirect.rhtml" ; dputs '-'*60
+
+  # ---------------------------------------------------------------------------
+  # DO CHECK/LOAD/CHECK (hierarchical checking)
+  # ---------------------------------------------------------------------------
+  # 1) Grab Params
+  paramCheck(context)            # Check. Security hole 1 plugged.
+  timer << "- DONE: paramCheck"
+  if(context[:errCode] == OK)
+    # 2) Initdb connections and data
+    #    - dbh
+    #    - get databaseName from refseqId & connect
+    #    - get fref info
+    #    - get ftypeid
+    init(context)
+    timer << "- DONE: init"
+    if(context[:errCode] == OK)
+      # 3) Get attribute data
+      attribute = context[:attribute]
+      getAttributeRecord(context) unless(attribute == 'lffName')
+      timer << "- DONE: getAttributeRecord"
+      if(context[:errCode] == OK)
+        # 4) Get value data
+        getValueRecord(context) unless(attribute == 'lffName')
+        timer << "- DONE: getValueRecord"
+        if(context[:errCode] == OK)
+          # 5) Get fids for attribute, value, ftypeid
+          getFids(context)
+          timer << "- DONE: getFids"
+          if(context[:errCode] == OK)
+            # 6) Get fdatas for fids
+            getFdatas(context)
+            timer << "- DONE: getFdatas"
+            if(context[:errCode] == OK)
+              # 8) Act:
+              # - if only 1 fdata or fdatas all have the same gname & chrom, then redirect
+              # - else display page of hits like search does
+              act(context)
+              timer << "- DONE: act"
+            end
+          end
+        end
+      end
+    end
+  end
+rescue => err
+  dputs "DPUTS: " + err.message
+  dputs err.backtrace.join("\n")
+  context[:err] = err
+ensure
+
+	# ---- OK? ----
+	cgi = context.cgi
+	err = context[:err]
+	errCode = context[:errCode]
+	# ---- Do we need some HTML for table-view or error-reporting? ----
+	unless(errCode == RELOCATED)
+%>
+    <!-- BEGIN: COMMON HTML HEADER -->
+    <HTML><HEAD>
+      <TITLE>Genboree Annotation Lookup Results</TITLE>
+      <STYLE TYPE="text/css">
+        /* Customize Sortable Tables */
+        table.sortable a.sortheader {
+          font-weight: bold;
+          white-space: nowrap;
+          display: block;
+        }
+        table.sortable span.sortarrow {
+          color: red;
+          font-weight: bold;
+          font-size: 18px;
+          text-decoration: none;
+        }
+      </STYLE>
+      <!-- Stick in the overlib stuff...not the right place but it works? -->
+      <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib.js?<%=context.jsVerStr%>"></SCRIPT>
+      <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_hideform.js?<%=context.jsVerStr%>"></SCRIPT>
+      <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_draggable.js?<%=context.jsVerStr%>"></SCRIPT>
+      <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?<%=context.jsVerStr%>"></SCRIPT>
+      <SCRIPT TYPE="text/javascript" SRC="/javaScripts/sorttable.js?<%=context.jsVerStr%>"></SCRIPT>
+      <!-- PAGE HEADER -->
+      <%= context.includeFile("/genboree/header.rhtml") %>
+
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td>
+              <p>
+    <!-- END: COMMON HTML HEADER-->
+<%
+    if(errCode == SHOW_TABLE) # Must show multiple results, like search does
+              fids = context[:fids]
+              fdatas = context[:fdatas]
+              ftypeRecsById = context[:ftypeRecsById]
+              frefRecsById = getFrefsForFdatas(context)
+%>
+              <h3>Matching Annotations</h3>
+              <p>
+              More than one annotation has the '<i><%= context[:attribute]%></i>' attribute with the value '<i><%= context[:value] %></i>'.
+              <p>
+              Please select the appropriate annotation below.
+              <p>
+<%            if(fdatas.size >=500) %>
+                Only the first 500 annotations matching are listed here. Your lookup parameters are too vague for this tool.
+                Your attribute and value should be nearly specific for just one or just a few annotations.
+<%            end %>
+              <p>
+              <DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%
+              # Need to categorize the annotations by track, chromosome, and gname
+              entities = Hash.new {|hh,tt| hh[tt] = Hash.new { |ss,cc| ss[cc] = Hash.new { |rr, gg| rr[gg] = [] } } }
+              fdatas.each { |fdataRec|
+                ftypeid = fdataRec['ftypeid']
+                gname = fdataRec['gname']
+                tStart = fdataRec['fstart']
+                tStop = fdataRec['fstop']
+                strand = fdataRec['fstrand']
+                ftypeRec = ftypeRecsById[ftypeid]
+                track = "#{ftypeRec['fmethod']}:#{ftypeRec['fsource']}"
+                chrom = frefRecsById[fdataRec['rid']]
+                currTStart = entities[track][chrom][gname][0]
+                currTStop = entities[track][chrom][gname][1]
+                entities[track][chrom][gname][0] = tStart if(currTStart.nil? or tStart < currTStart)
+                entities[track][chrom][gname][1] = tStop if(currTStop.nil? or tStop > currTStop)
+              }
+              # Now present data for each track, sorted by chromosome and then by gname
+              #
+              # Each Track:
+              entities.keys.sort{|aa,bb| aa.downcase <=> bb.downcase}.each{ |trackName|
+%>
+              <P>
+              <TABLE CELLPADDING="2" CELLSPACING="0" BORDER="0" WIDTH="100%">
+              <TR>
+                <TD ALIGN="left" VALIGN="bottom"><SPAN CLASS="hdr">In track '<%= trackName %>'</SPAN></TD>
+              </TR>
+              <TR>
+                <TD>
+                  <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="1" BORDERCOLOR="#c8c5f8" width="100%">
+        					<TR>
+        						<TD>
+        							<TABLE CELLPADDING="2" CELLSPACING="0" BORDER="1" BORDERCOLOR="#c8c5f8" class="sortable" id="<%= trackName %>Table" width="100%">
+      								<TR>
+      									<TD ALIGN="center" WIDTH="180"><B>Name</B></TD>
+                        <TD ALIGN="center" WIDTH="100"><B>Entry Point (Chrom)</B></TD>
+                        <TD ALIGN="center" WIDTH="110"><B>Start</B></TD>
+                        <TD ALIGN="center" WIDTH="110"><B>End</B></TD>
+                      </TR>
+<%
+        							# Each Chrom
+        							entities[trackName].keys.sort{|aa, bb| aa.downcase <=> bb.downcase}.each {|chrom|
+                        # Each Gname
+                        entities[trackName][chrom].keys.sort.each {|gname|
+                          tStart = entities[trackName][chrom][gname][0]
+                          tStop = entities[trackName][chrom][gname][1]
+%>
+                          <TR>
+                            <TD ALIGN="center" WIDTH="180"><A HREF="<%= makeGenboreeURL(context, chrom, tStart, tStop) %>"><%= CGI.escapeHTML(gname) %></A></TD>
+                            <TD ALIGN="center" WIDTH="100"><B><%= chrom %></B></TD>
+                            <TD ALIGN="center" WIDTH="110"><%= tStart.commify() %></TD>
+                            <TD ALIGN="center" WIDTH="110"><%= tStop.commify() %></TD>
+                          </TR>
+<%
+                        }
+                      }
+%>
+                      </TABLE>
+                    </TD>
+                  </TR>
+                  </TABLE>
+                </TD>
+              </TR>
+              </TABLE>
+<%
+              }
+%>
+            </td>
+          </tr>
+          </table>
+          <P>
+<%
+    else # Error to report!
+%>
+              <SPAN CLASS="hdr">ANNOTATION LOOKUP FAILED</SPAN>
+              <P>
+              The parameters provided cannot be used to locate annotations in the database you provided.<br>
+              The specific reason for this is detailed below:
+        			<P>
+              <u>Parameters Provided</u><br>
+              <%
+                indent = '&nbsp;'*4
+                refSeqId = context[:refSeqId].to_s
+                track = context[:track].to_s
+              %>
+              <%= indent %>refSeqId (integer required): '<i><%= CGI.escapeHTML(cgi['refSeqId'].to_s) %></i>' <%= (!refSeqId.nil? and !refSeqId.empty?) ? "(But found refSeqId '#{refSeqId}' via an alias parameter)" : ""%><br>
+              <%= indent %>attribute (required): '<i><%= CGI.escapeHTML(cgi['attribute'].to_s) %></i>'<br>
+              <%= indent %>value (required): '<i><%= CGI.escapeHTML(cgi['value'].to_s) %></i>'<br>
+              <%= indent %>track (optional): '<i><%= CGI.escapeHTML(cgi['track'].to_s) %></i>' <%= (!track.nil? and !track.empty?) ? "(But found '#{CGI.escapeHTML(track)}' via an alias parameter)" : ""%><br>
+              <%= indent %>isPublic (optional): '<i><%= CGI.escapeHTML(cgi['isPublic'].to_s) %></i>'<br>
+              <%= indent %>percMargin (defaults to 0.2): '<i><%= CGI.escapeHTML(cgi['percMargin'].to_s) %></i>'<br>
+              <p>
+              <u>Error Details:</u>
+              <UL>
+                <LI>
+<%
+                  # Output info based on type of error
+                  unless(err) # then no exception just bad params or database userd
+                    if(errCode == PARAM_MISSING)
+%>
+                      You provided bad parameter(s) to this tool.
+<%                  elsif(errCode == BAD_REFSEQ) %>
+                      The refSeqId (<%= CGI.escapeHTML(context[:refSeqId].to_s) %>) is not valid and doesn't correspond to a real database.
+<%                  elsif(errCode == NO_FREFS) %>
+                      The database (refSeqId: <%= CGI.escapeHTML(context[:refSeqId].to_s) %>) doesn't contain any entrypoints (chromosomes).
+<%                  elsif(errCode == NO_FTYPES) %>
+                      The database (refSeqId: <%= CGI.escapeHTML(context[:refSeqId].to_s) %>) doesn't contain any tracks (nothing to lookup).
+<%                    if(context[:track]) %>
+                        Or the track you provided ('<%= CGI.escapeHTML(context[:track].to_s) %>') is not present.
+<%                    end
+                    elsif(errCode == NO_ATTR)
+%>
+                      There is no attribute called '<%= CGI.escapeHTML(context[:attribute].to_s) %>' in the database.
+<%                  elsif(errCode == NO_VALUE) %>
+                      There is no such value '<%= CGI.escapeHTML(context[:value].to_s) %>' in the database.
+<%                  elsif(errCode == NO_FDATAS) %>
+                      The database (refSeqId: <%= CGI.escapeHTML(context[:refSeqId].to_s) %>) doesn't contain any annotations matching your parameters.
+<%                    if(context[:track]) %>
+                        Or at least the track you provided ('<%= CGI.escapeHTML(context[:track].to_s) %>') has no annotations matching your parameters.
+<%                    end
+                    else %>
+                      An unknown error occurred (errCode: '<%= CGI.escapeHTML(errCode.to_s) %>)'.
+<%
+                      $stderr.puts "    UNKNOWN ERROR. Current context:"
+                      context.each_key { |key|
+                        $stderr.puts "      #{key.inspect} =>\n        #{context[key].inspect}"
+                      }
+                    end
+                  else # an exception was raised
+%>
+                    An exception was thrown, possibly due to a bad parameter that wasn't validated or
+                    from an incorrect/non-robust section of code. The exception details are:
+                    <UL>
+                      <LI>Message: '<%= CGI.escapeHTML(err.message) %>'</LI>
+                      <LI>Backtrace:
+                        <P>
+                        <%= err.backtrace.map{|xx| CGI.escapeHTML(xx)}.join('<BR>') %>
+                      </LI>
+                    </UL>
+<%                end %>
+                </LI>
+              </UL>
+              <P>
+            </td>
+          </tr>
+          </table>
+<%
+    end
+%>
+  <!-- FOOTER -->
+  <%= context.includeFile("/genboree/footer.rhtml") %>
+<%
+  end # We relocated
+
+  timer << "- ALL DONE"
+  timer.writeTimingReport($stderr)
+  dputs '-'*60 ; dputs
+
+  # Free stuff that use the DB (not needed after this, all work is done)
+	clear(context)
+	timer << "- DONE: clear"
+end # begin-rescue-ensure
+%>

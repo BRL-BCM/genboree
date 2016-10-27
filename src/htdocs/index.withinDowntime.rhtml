@@ -1,0 +1,61 @@
+<%# THIS FILE USES eruby %>
+<%
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+%>
+<!-- Change httdp.conf DirectoryIndex appropriately when using this -->
+<html>
+  <head>
+    <title>Genboree - DOWNTIME</title>
+    <link rel="SHORTCUT ICON" href="/images/favicon.ico">
+    <link rel="stylesheet" href="/styles/news.css?jsVer=1071" type="text/css">
+    <link rel="stylesheet" href="/styles/help.css?jsVer=1071" type="text/css">
+    <meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+    <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <!-- PAGE HEADER -->
+  <%= context.includeFile("/genboree/header.rhtml") %>
+        <center>
+          <img src="/images/shade_1px.gif" width="500" height="1">
+        </center>
+        <table cellpadding="0" cellspacing="2" border="0" width="100%">
+        <tr>
+          <td>
+            <!-- Content Body -->
+
+            <!-- Logged In Message Line -->
+            <div id="loggedMsg" style="color:red; font-weight:bold; font-size:14pt; width: 100% ; text-align: center; margin-bottom: 10px ;">
+              <br>
+              <B>Genboree is currently in a scheduled downtime.</B>
+              <br>&nbsp;<br>
+              <font size="-2">The scheduled database upgrades are taking longer than expected,<br>
+              but need to complete before Genboree will be restored.<br><br>We apologize for any
+              inconvenience.</font>
+              <br>
+            </div>
+            <!-- Downtime warning?
+            <div id="downtime" style="width: 100% ; text-align: center ; ">
+              <center>
+              <div id="dtWarning" style="border-style: solid ; border-width: 2px ; border-color: red ; margin-left: auto ; margin-right: auto; width: 80% ; ">
+                <div id="dtText"" style="padding: 5px ; border-bottom-width: 1px ; border-bottom-style: solid ; color: red ;">
+
+                  <B><U>WARNING:</U></B>
+                  <BR>&nbsp;<BR>
+                  There will be a downtime for parts of this Thursday and Friday for database upgrades.<br>The downtime
+                  will be largely at night, but is also scheduled during several work-hours (CST) of both days.
+                  <BR>&nbsp;<BR>
+                  We apologize for the inconvenience during this period.
+                </div>
+                <div id="dtTime" style="padding: 5px ; color: red ;">
+                  Thursday, Aug 23, 2007, 3:30pm CST<br>
+
+                  TO<br>
+                  Friday, Aug 24, 2007, 11:00am CST
+                </div>
+              </div>
+              </center>
+            </div>
+            -->
+          </td>
+        </tr>
+        </table>
+  <!-- FOOTER -->
+  <%= context.includeFile("/genboree/footer.rhtml") %>

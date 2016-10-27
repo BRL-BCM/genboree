@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "qiimeTrack",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/BRL-Tools-Access",
+    "label": "QIIME -> Track Attribute Oriented",
+    "shortLabel": "QIIME - Track Attribute Oriented"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "pvmem": "5858mb"
+  }
+}

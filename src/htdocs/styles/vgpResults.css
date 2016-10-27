@@ -1,0 +1,120 @@
+/**********************************
+* Project: VGP UI Integration
+*   This project creates a new User Interface (UI) to assist users in
+*   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+*   The integration also creates a server-side support environment to create
+*   necessary configuration files, queue a VGP job with the Genboree environment
+*   and then package the VGP output files and notify the user of job completion.
+*
+* vgpResults.css - This javascript file defines the styles for the VGP Results Page
+*
+* Developed by Bio::Neos, Inc. (BIONEOS)
+* under a software consulting contract for:
+* Baylor College of Medicine (CLIENT)
+* Copyright (c) 2008 CLIENT owns all rights.
+* To contact BIONEOS, visit http://bioneos.com
+**********************************/
+
+*
+{
+  margin: 0 ;
+}
+
+td
+{
+  vertical-align: middle ;
+}
+
+ul
+{
+  list-style-type: none ;
+  margin: 0.5em 1em ;
+  padding: 0 ;
+}
+
+.title
+{
+  font-weight: bold ;
+}
+
+.header
+{
+  border-bottom: 1px solid #CFC8E1 ;
+}
+
+.job
+{
+  border-bottom: 1px dotted #BFBFBF ;
+  padding-bottom: 1px ;
+}
+
+.instruction
+{
+  font-style: normal ;
+  font-weight: normal ;
+  color: #4C3D99 ;
+  padding: 5px ;
+  border: 1px dashed #CCC ;
+  background-color: #EFEFEF ;
+  margin-top: 0 ;
+  margin-bottom: 0.5em ;
+}
+
+.detail
+{
+  font-size: 50% ;
+}
+
+.jobs span.expandable
+{
+  font-weight: normal ;
+  padding-left: 16px ;
+  background-image: url(/images/vgpPlus.gif) ;
+  background-color: #FFF ;
+  background-repeat: no-repeat ;
+  background-position: 2px 50% ;
+}
+
+
+.jobDetails
+{
+  background-color: #EDEDED ;
+  border: 1px solid #BBB ;
+  padding: 1em ;
+  margin: 0.5em 0 ;
+}
+
+.jobMessage
+{
+  margin: 1em 0 ;
+  padding: 1em ;
+  background-color: #EDEDED ;
+  background-repeat: no-repeat ;
+  background-position: 0.75em 0.75em ;
+  border: 2px solid #BBB ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+}
+
+.jobMessage a
+{
+  color: inherit ;
+}
+
+.failure
+{
+  background-image: url(/images/vgpFailure.png) ;
+  background-color: #FFEFEF ;
+  border: 2px solid #C64848 ;
+  color: #C64848 ;
+}
+
+.warning
+{
+  background-image: url(/images/vgpWarning.png) ;
+  background-color: #FBE4D2 ;
+  border: 2px solid #DC6709 ;
+  color: #DC6709 ;
+}

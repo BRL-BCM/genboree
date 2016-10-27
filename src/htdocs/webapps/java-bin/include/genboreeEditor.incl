@@ -1,0 +1,413 @@
+<%@ page import="javax.servlet.http.*, java.util.*, java.sql.*, java.io.*,
+                 org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="userinfo.incl" %>
+<%
+
+	String upfid = request.getParameter("upfid");
+    String actionType = request.getParameter("actionType");
+    String actionSelected = request.getParameter("actionSelected");
+    String annotationStart= request.getParameter("annotationStart");
+    String annotationEnd = request.getParameter("annotationEnd");
+    long annotationStartLong = 0;
+    long annotationEndLong = 0;
+    String groupInitialStart= request.getParameter("groupInitialStart");
+    String groupInitialEnd = request.getParameter("groupInitialEnd");
+    long groupInitialStartLong = 0;
+    long groupInitialEndLong = 0;
+    String groupFinalStart= request.getParameter("groupFinalStart");
+    String groupFinalEnd = request.getParameter("groupFinalEnd");
+    long groupFinalStartLong = 0;
+    long groupFinalEndLong = 0;
+    long groupStartDifference = 0;
+    long groupEndDifference = 0;
+    long currentStart = 0;
+    long currentEnd = 0;
+    long newStart = 0;
+    long newEnd = 0;
+    String fid = request.getParameter("fid");
+    String uploadId = request.getParameter("uploadId");
+    String groupName = request.getParameter("groupName");
+    String typeId = request.getParameter("typeId");
+    String rid = request.getParameter("rid");
+    String chromosomeLength = request.getParameter("chromosomeLength");
+    String newGroupName = request.getParameter("newGroupName");
+    long chromosomeLengthLong = 0;
+    String query = null;
+    String query2 = null;
+    String from1 = null;
+    String from2 = null;
+    String to1 = null;
+    String to2 = null;
+    String fbin = null;
+    ResultSet rs = null;
+    DbResourceSet dbRes = null;
+    String message = null;
+    long minBin = 0;
+
+    if( upfid != null && actionType == null && actionSelected == null)
+    {
+        String[] sss = Util.parseString( upfid, ':' );
+        uploadId = sss[0];
+        fid = sss[1];
+%> <%@ include file="preEditor.incl" %>  <%
+        return;
+    }
+
+    if( upfid == null && actionType == null && actionSelected != null)
+    {
+        
+        if(actionSelected.equalsIgnoreCase("edit"))
+        {
+            
+%> <%@ include file="editAnn.incl" %>  <%
+        }
+        else if(actionSelected.equalsIgnoreCase("delete"))
+        {
+%> <%@ include file="deleteAnn.incl" %>  <%
+
+        }
+        else if(actionSelected.equalsIgnoreCase("create"))
+        {
+%> <%@ include file="createAnn.incl" %>  <%
+
+        }
+        else if(actionSelected.equalsIgnoreCase("move"))
+        {
+%> <%@ include file="moveAnn.incl" %>  <%
+
+        }
+        else
+        {
+            message = "error during action selection, please report the error to genboreeAdmin! <br>";
+%> <%@ include file="myErrorMessage.incl" %> <%
+        }
+
+        return;
+    }
+
+	Hashtable htUpl = new Hashtable();
+
+    Refseq[]   rseqs = Refseq.fetchAll( db, grps);
+//    Refseq[] rseqs = (Refseq []) mys.getAttribute( "RefSeqs" );
+
+    GenboreeUpload u = (GenboreeUpload) htUpl.get( uploadId );
+	if( u == null )
+	{
+			u = new GenboreeUpload();
+			u.setUploadId( Util.parseInt(uploadId,-1) );
+			u.fetch( db );
+			htUpl.put( uploadId, u );
+	}
+
+
+    if(myself == null || grps == null || rseqs == null)
+    {
+        GenboreeUtils.sendRedirect(request,response,  "/java-bin/defaultGbrowser.jsp" );
+		return;
+    }
+
+    if( upfid == null && actionType == null)
+    {
+        GenboreeUtils.sendRedirect(request,response,  "/java-bin/defaultGbrowser.jsp" );
+		return;
+    }
+    else if(upfid == null && actionType != null)
+    {
+                if(actionType.equalsIgnoreCase("deleteAnnotation"))
+                {
+                    if(uploadId != null && fid != null)
+                    {
+                        query = "DELETE FROM fdata2 WHERE fid="+fid;
+        			    db.executeUpdate(u.getDatabaseName(),query);
+                        message = "The Annotation was successfully deleted!";
+        %>
+                        <%@ include file="myErrorMessage.incl" %>
+        <%
+                        return;
+                    }
+                    else
+                    {
+                        message = "error during annotation deleteion! <br> ";
+        %>
+                    <%@ include file="myErrorMessage.incl" %>
+        <%
+                    return;
+                    }
+                }
+                else if(actionType.equalsIgnoreCase("deleteGroupAnnotation"))
+                {
+                        if(uploadId != null && groupName != null && rid != null && typeId != null)
+                        {
+                            query = "DELETE FROM fdata2 WHERE gname='" + groupName + "' and rid = " + rid + " and  ftypeid = " + typeId ;
+                            db.executeUpdate( u.getDatabaseName(),query);
+                            message = "The Annotations from group " + groupName + "was successfully deleted! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                            return;
+
+                        }
+                        else
+                        {
+
+                            message = "error during group annotation deleteion! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                        }
+                }
+                else if(actionType.equalsIgnoreCase("moveAnnotation"))
+                {
+                    if(uploadId != null && fid != null)
+                    {
+                        query = "SELECT fvalue FROM fmeta WHERE fname='MIN_BIN'";
+                        dbRes = db.executeQuery( u.getDatabaseName(),query);
+                        rs = dbRes.resultSet;
+                        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+                        {
+                            dbRes.close();
+                            return;
+                        }
+
+                        if( rs!=null && rs.next() )
+                        {
+                            minBin = rs.getLong(1);
+                        }
+                        dbRes.close();
+
+                        if(annotationStart != null &&annotationStart != null){
+                            annotationStartLong = Util.parseLong(annotationStart, 0L);
+                            annotationEndLong = Util.parseLong(annotationEnd, 0L);
+                            chromosomeLengthLong = Util.parseLong(chromosomeLength, 0L);
+                            if(annotationStartLong >= 1 && annotationEndLong <= chromosomeLengthLong){
+                                fbin = Refseq.computeBin(annotationStartLong,annotationEndLong,minBin);
+                            }
+                            else
+                            {
+                                message = "Your new coordinates are outside the chromosome length" + chromosomeLength +"! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                                return;
+                            }
+
+                            query = "UPDATE fdata2 SET fstart = '" + annotationStart + "', fstop = '" +
+                                    annotationEnd + "', fbin = '" + fbin + "' " +
+                                    "WHERE fid = '"+fid + "'";
+                            db.executeUpdate(u.getDatabaseName(),query);
+                            message = "Your annotation has been updated whith the" + 
+                                    "new coordinates! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                            return;
+                        }
+                    }
+                    else {
+                        message = "error during the relocation of your annotation! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                }
+                else if(actionType.equalsIgnoreCase("moveGroupAnnotation"))
+                {
+                    if(groupInitialStart != null && groupInitialEnd != null){
+                        groupInitialStartLong = Util.parseLong(groupInitialStart, 0L);
+                        groupInitialEndLong = Util.parseLong(groupInitialEnd, 0L);
+                    }
+                    else
+                    {
+                        message = "Unable to process Missing values groupInitialStart and/or groupInitialEnd! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                    if(groupFinalStart != null && groupFinalEnd != null){
+                        groupFinalStartLong = Util.parseLong(groupFinalStart, 0L);
+                        groupFinalEndLong = Util.parseLong(groupFinalEnd, 0L);
+                    }
+                    else
+                    {
+                        message = "Unable to process Missing values groupFinalStart and/or groupFinalEnd! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                    if(chromosomeLength != null){
+                        chromosomeLengthLong = Util.parseLong(chromosomeLength, 0L);
+                    }
+                    else
+                    {
+                        message = "Unable to process Missing values chromosomeLength! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                    groupStartDifference = groupFinalStartLong - groupInitialStartLong;
+                    groupEndDifference = groupFinalEndLong - groupInitialEndLong;
+
+                    if(uploadId != null){
+                        query = "SELECT fvalue FROM fmeta WHERE fname='MIN_BIN'";
+                        dbRes = db.executeQuery( u.getDatabaseName(),query);
+                        rs = dbRes.resultSet;
+                        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+                        {
+                            dbRes.close();
+                            return;
+                        }
+System.err.println("The query is " + query);
+System.err.flush();
+                        if( rs!=null && rs.next() )
+                        {
+                            minBin = rs.getLong(1);
+                        }
+                        dbRes.close();
+                    }
+                    else
+                    {
+                        message = "Unable to process Missing values uploadId! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+
+                    if(groupName != null)
+                    {
+                         query = "SELECT fd.fid, fd.fstart, fd.fstop FROM fdata2 fd WHERE fd.gname='" + groupName +"'";
+System.err.println("The query is " + query);
+System.err.flush();
+                        dbRes = db.executeQuery( u.getDatabaseName(),query);
+                        rs = dbRes.resultSet;
+
+                         if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+                        {
+                            dbRes.close();
+                            return;
+                        }
+                         while( rs.next() )
+                         {
+                            fid = rs.getString(1);
+                            currentStart = rs.getLong(2);
+                            currentEnd = rs.getLong(3);
+                            newStart = currentStart + groupStartDifference;
+                            newEnd = currentEnd + groupEndDifference;
+
+                            if(newStart >= 1 && newEnd <= chromosomeLengthLong){
+                                   fbin = Refseq.computeBin(newStart,newEnd,minBin);
+                             }
+                             else
+                             {
+                                 message = "Your new coordinates are outside the chromosome length" + chromosomeLength +"! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                                 return;
+                              }
+
+                              query2 = "UPDATE fdata2 SET fstart = '" + newStart + "', fstop = '" +
+                              newEnd + "', fbin = '" + fbin + "' " +
+                              "WHERE fid = '"+fid + "'";
+System.err.println("The query is " + query2);
+System.err.flush();
+                               db.executeUpdate(u.getDatabaseName(),query2);
+                            }
+                            dbRes.close();
+                            message = "Your annotation has been updated whith the" +
+                             "new coordinates! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                             return;
+                       }
+                       else
+                       {
+                                message = "error during the relocation of your annotation! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                                return;
+                       }
+                }
+                else if(actionType.equalsIgnoreCase("assignGroupToAnnotation"))
+                {
+                    if(newGroupName != null && fid != null)
+                    {
+                            query = "UPDATE fdata2 SET gname = '" + newGroupName + "' " +
+                                    "WHERE fid = '"+fid + "'";
+                            db.executeUpdate(u.getDatabaseName(),query);
+                            message = "Your annotation has been updated whith the " +
+                                    "new name! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                            return;
+                    }
+                    else {
+                        message = "error during renaming of your annotation! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                }
+                else if(actionType.equalsIgnoreCase("changeGroupName"))
+                {
+                    if(newGroupName != null && groupName != null)
+                    {
+                            query = "UPDATE fdata2 SET gname = '" + newGroupName + "' " +
+                                    "WHERE gname = '"+ groupName + "'";
+                            db.executeUpdate(u.getDatabaseName(),query);
+                            message = "Your group Name has been updated whith the " +
+                                    "new name! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                            return;
+                    }
+                    else {
+                        message = "error during renaming of your annotation! <br>";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                        return;
+                    }
+                }
+
+                 else
+                {
+                    message = "Wrong actionType " + actionType + " exit";
+        %> <%@ include file="myErrorMessage.incl" %> <%
+                    return;
+                }
+
+    }
+    else if(upfid != null && actionType == null)
+    {
+            query = "SELECT fd.fstart fstart, fd.fstop fstop, fd.gname gname, " +
+                    "fd.ftypeid ftypeid, fd.rid rid FROM fdata2 fd WHERE fd.fid="+fid;
+            dbRes = db.executeQuery( u.getDatabaseName(),query);
+            rs = dbRes.resultSet;
+			if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+            {
+                dbRes.close();
+                return;
+            }
+
+            if( rs!=null && rs.next() )
+			{
+				from1 = rs.getString("fstart");
+				to1 = rs.getString("fstop");
+				groupName = rs.getString("gname");
+				typeId = rs.getString("ftypeid");
+				rid = rs.getString("rid");
+			}
+            dbRes.close();
+
+            query = "SELECT min(fd.fstart) minFstart, max(fd.fstop) maxFstop FROM fdata2 fd WHERE fd.gname='" + groupName +"'";
+            dbRes = db.executeQuery( u.getDatabaseName(),query);
+            rs = dbRes.resultSet;
+
+            if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+            {
+                dbRes.close();
+                return;
+            }
+            if( rs!=null && rs.next() )
+            {
+                  from2 = rs.getString("minFstart");
+                  to2 = rs.getString("maxFstop");
+            }
+            dbRes.close();
+            query = "SELECT rlength FROM fref fd WHERE rid=" + rid;
+            dbRes = db.executeQuery( u.getDatabaseName(),query);
+            rs = dbRes.resultSet;
+            if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+            {
+                dbRes.close();
+                return;
+            }
+
+            if( rs!=null && rs.next() )
+            {
+               chromosomeLength = rs.getString("rlength");
+            }
+            dbRes.close();
+
+    }
+%>

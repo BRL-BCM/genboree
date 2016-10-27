@@ -1,0 +1,102 @@
+<%# RENDER HTML %>
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<div style=\"height: #{height}px; width: #{width}px; \" class=\"wbDialog wbHelp\" >"
+%>
+<%= formTag %>
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%# Error Message if it exists %>
+<%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "This tool will filter input <a href='http://maq.sourceforge.net/fastq.shtml'>FASTQ sequence</a> file(s), based on the settings for the filtering options you want. It will create a new FASTQ file in the output database you specify.<br>&nbsp;<br>
+          When setting the filter options, note that:
+          <ul>
+            <li>To <i>disable a filter</i>, leave it <i>blank</i>.</li>
+            <li>The default values are for <i>filtering short reads</i> from, say, Solexa/Illumina and may not be suitable for longer reads from Sanger sequencing or other technologies.</li>
+            <li>The FASTQ file(s) can be <i>plain text</i>, <i>gzipped</i>, or <i>bzipped</i>.</li>
+          </ul>
+          <br>
+          If you haven't yet transferred your FASTQ file(s) to Genboree, follow these steps:
+          <ul>
+            <li>First transfer the file to <code>Genboree via Data -> Upload File</code></li>
+            <li>Following the transfer, drag the transferred file into the &quot;Input Data&quot; area.</li>
+            <li>Your file must be in the supported format: <a href='http://maq.sourceforge.net/fastq.shtml'>FASTQ</a></li>
+          </ul>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>file(s)</u> with the reads data into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Files', 'min: 1 ; max: none' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database/Files Dir</u> into &quot;Output Targets&quot;. The results data will end up in that database under the Files area.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ], ['Files Dir', 'min:1 ; max: 1'] ], # Can also give db/{db}/Files as the output destination
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this analysis job a unique name. This name will be used to store result files within the Output Database.' ],
+          [ 'Max. Read Length',  'If non-blank, reads larger than this will be stripped from the output.' ],
+          [ 'Min. Read Length',  'If non-blank, reads smaller than this will be stripped from the output'],
+          [ 'Min. Read Occurrence',  'If non-blank, a read sequence must occur <i>at least</i> this many times in the input FASTQ file to be present in the output.' ],
+          [ 'Adaptor Sequences',        'If non-blank, a DNA sequence or reqular expression matching the adapter sequences to trim from reads.' ],
+          [ 'Check Trailing Homopolymer?',    'Enable this if the tool should check if the trailing homopolyer is <i>too long</i>. If any length of homopolymer is acceptable, do not check this box. If checked, you will be asked for the <code>Max. Homopolymer Length</code>. ' ],
+          [ 'Max. Homopolymer Length',  'If you enabled <code>Check Trailing Homopolymer</code> above, provide the maximum length of the trailing homopolomer run. If it is longer, the read will be stripped from the output.' ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'This tool uses a read-filtering process described in the following article:',
+                                    'Creighton CJ, Reid JG, Gunaratne PH. <i>Expression profiling of microRNAs by deep sequencing.</i> Brief Bioinform <b>2009</b> Sep;<b>10(5)</b>:490-7. Epub 2009 Mar 30. <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/19332473">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Tool developed internally by Arpit Tandon and Christian Coarfa; integrated into the Workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype under evaluation for manuscript preparation.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

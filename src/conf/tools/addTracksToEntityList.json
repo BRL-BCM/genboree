@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addTracksToEntityList",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Tracks to Entity List",
+    "shortLabel": "Add Tracks to Entity List"
+  }
+}

@@ -1,0 +1,19 @@
+div.error {
+  text-align: center ;
+  color: red ;
+  font-weight: bold ;
+}
+
+div.success {
+  text-align: center ;
+  color: green ;
+  font-weight: bold ;
+}
+
+input.projName {
+  width: 420px ;
+}
+
+select.projName {
+  width: 420px ;
+}

@@ -1,0 +1,47 @@
+#instructions p
+{
+  font-size: 80% ;
+  font-style: italic ;
+  margin: 0 0 3px 0 ;
+}
+
+#uploadInfo
+{
+  background-color: #F8F8FF ;
+  border: 1px dotted #C5C5FF ;
+  padding: 10px ;
+}
+
+#uploadOpts
+{
+  list-style-type: none ;
+  margin: 10px 0 5px 0 ;
+}
+
+#uploadOpts li
+{
+  margin-left: 0 ;
+  overflow: auto ;
+}
+
+#uploadOpts label
+{
+  text-align: left ;
+}
+
+#uploadToggle
+{
+  overflow: auto ;
+}
+
+#uploadToggle label
+{
+  text-align: left ;
+  width: auto ;
+}
+
+#uploadToggle input
+{
+  float: left ;
+  margin: 4px 4px 4px 0 ;
+}

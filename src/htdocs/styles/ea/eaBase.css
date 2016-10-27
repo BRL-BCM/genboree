@@ -1,0 +1,251 @@
+@CHARSET "ISO-8859-1";
+
+
+ul, ol, p {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+body {
+  background: url("../images/page-bg.png") repeat-x scroll left top #4f89ff;
+  margin-top: 0px;
+}
+
+#headerHold {
+  background-color: white;
+  background-image: url("../images/headerHoldLeft.png");
+  background-repeat: repeat-x;
+}
+
+#header {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  background-image: url("../images/header_background.png");
+  background-repeat: no-repeat;
+  width: 900px;
+  height: 140px;
+}
+
+#eaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 279px;
+  float: left;
+}
+
+#headerImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#topRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#topRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+#mainContent {
+  margin: 0 auto;
+  position: relative;
+  width: 900px;
+  overflow:auto;
+  /*height: 520px;*/
+  background-color: #282828;
+}
+
+#leftFeatures {
+  float: right;
+  padding: 10px 0px 10px 10px;
+  width: 500px;
+  height: 520px;
+  background-color: #282828;
+}
+
+#rightInformation {
+  float: left;
+  margin: 10px;
+  padding: 10px 10px 10px 0px;
+  width: 340px;
+  height: 520px;
+  background-color: #2B2B2B;
+}
+
+#welcomeArea {
+  float: left;
+  width: 360px;
+  height: 520px;
+  margin: 0px;
+  padding: 0px;
+  background-color: white;
+}
+
+#welcomeAreaTitle {
+  margin: 0 auto;
+  position: relative;
+  border-bottom: 1px black solid;
+  width: 90%;
+  margin-bottom: 3px;
+  background-color: white;
+  margin-top: 3px;
+  height: 35px;
+}
+
+#welcomeAreaText {
+  margin: 5px;
+  background-color: white;
+  padding: 5px;
+}
+
+.majorTitle {
+  font-size: 24pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  text-align: center;
+}
+
+.mediumTitle {
+  font-size: 14pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  text-align: center;
+}
+
+.minorTitle {
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  text-align: center;
+}
+
+.normalText {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+.welcomeText {
+  font-size: 11pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+.minorText {
+  font-size: 8pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+#footer {
+  margin: 0 auto;
+  position: relative;
+  width: 900px;
+  height: 120px;
+  background-color: white;
+  border-top: 1px black solid;
+}
+
+#footerText {
+  width: 880px;
+  margin: 0px;
+  margin-top: 5px;
+  background-color: white;
+  height: 68px;
+  display: block;
+  padding: 6px 5px;
+  font-size: 8pt;
+  font-weight: none;
+  text-decoration: none;
+  text-align: center;
+  float: left;
+}
+
+#releaseContent {
+  margin: 0 auto;
+  position: relative;
+  width: 880px;
+  height: 100%;
+  background-color: white;
+  padding: 10px;
+}
+
+.content {
+  width: 900px;
+  background-color: white;
+  height: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+.textHeader {
+  text-align: center;
+  font-size: 32px;
+  padding-top: 10px;
+  padding-bottom: 15px;
+  font-family: sans-serif, verdana, arial;
+}
+
+.textNormal {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  width: 800px;
+  padding-left: 30px;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  padding-bottom: 13px;
+  padding-top: 13px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+
+.textMajor {
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: underline;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  padding-top: 20px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+  text-align: center;
+}
+
+.normalMainText {
+  padding: 0px 30px;
+}
+
+p {
+  margin-bottom: 0px;
+  margin-top: 0px;
+  padding-bottom: 5px;
+  padding-top: 5px;
+}

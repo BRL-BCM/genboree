@@ -1,0 +1,27 @@
+<%
+  @queryList = [ @queryList ] unless(@queryList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@queryList.empty?) %>
+      <tr>
+        <th><%= (@label || "Query") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @queryList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        qry = WorkbenchFormHelper.getNameFromURI(:query, item, true)
+%>
+        <tr>
+          <th><%= (@label || "Query") %>:</th>
+          <td><i><%== qry %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

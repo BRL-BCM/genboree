@@ -1,0 +1,372 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'brl/genboree/abstract/resources/gff3File'
+  require 'brl/genboree/abstract/resources/gtfFile'
+  require 'brl/genboree/abstract/resources/lffFile'
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'pp'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/abstract/resources/track'
+  require 'brl/genboree/abstract/resources/bedFile'
+  require 'brl/genboree/abstract/resources/gffFile'
+  require 'brl/genboree/abstract/resources/wigFile'
+  require 'brl/genboree/abstract/resources/entrypoint'
+
+  @req = Apache.request
+  cgi = CGI.new()
+  @serverName = cgi.host
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+    # RefSeq may be set by the select (rseq_id) or posted from another form (refSeqId)
+    refSeqId = context.cgi['refSeqId'].to_i
+    refSeqId = context.cgi['rseq_id'].to_i if(refSeqId == 0)
+    groupId = context.cgi['group_id'].to_i
+    userId = context.cgi['userId'].to_i
+    grpChanged = context.cgi['grpChanged'].strip
+    fileFormat = context.cgi['fileFormat'].strip
+    trackList = context.cgi['trkId'].to_a
+    entryPointList = context.cgi['epId'].to_a
+    landmark = context.cgi['landmark']
+    showHeader = context.cgi['showHeader'] == 'true' ? true : false
+    scaleScores = context.cgi['ucscScaling'] == 'true' ? 1 : 0
+    includeOtherSections = context.cgi['includeOtherSections'] == 'true' ? true : false
+    # hidden vars POSTed from the browser 'Download' link.
+    from = context.cgi['from'].to_i
+    to = context.cgi['to'].to_i
+    entryPointId = context.cgi['entryPointId'].strip
+
+    showForm = true # Determines whether the form is displayed.  Don't show it when the file is being streamed.
+
+    # Is there a DB selected? If so, can proceed. Else show error-hint about selecting database.
+    if(refSeqId > 0)
+      dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil)
+      dbNameRows = dbu.selectDBNameByRefSeqID(refSeqId)
+      databaseName = dbNameRows.first['databaseName']
+      dbu.setNewDataDb(databaseName)
+      # -----------------------------------------
+      # Process POST
+      # -----------------------------------------
+      # LFF files should have been handled by JSP before getting here
+      # Bed, BedGraph, Wig, GFF are handled here
+
+      if (!fileFormat.empty?)
+        # Multiple chromosomes was chosen so concat the chromosome checkboxes that were selected into a landmark string
+        # - collect relevant fref names while we're at it
+        $stderr.puts "DEBUG: landmarkk via cgi[] => #{landmark.inspect}"
+        if(landmark.nil? or landmark.empty?)
+          landmark = entryPointList.join(',').strip
+          $stderr.puts "DEBUG: no landmark. Set to full ep list? =>\n#{landmark.inspect}"
+          frefNames = entryPointList
+        else # have landmark
+          landmark =~ /^\s*([^ \t:]+)/
+          frefNames = [ $1 ]
+        end
+
+        # Headers are handled by JSP
+        ## Get the data from the bedFile object
+        annoFileObj = case fileFormat.downcase
+          when 'bed' then BRL::Genboree::Abstract::Resources::BedFile.new(dbu, nil, true, {"scaleScores" => scaleScores, "modulusLastSpan" => 'true'})
+          when 'bedgraph' then BRL::Genboree::Abstract::Resources::BedGraphFile.new(dbu, nil, true, {"modulusLastSpan" => 'true'})
+          when 'gff' then BRL::Genboree::Abstract::Resources::GffFile.new(dbu, nil, false, {"scaleScores" => scaleScores})
+          when 'vwig' then BRL::Genboree::Abstract::Resources::VWigFile.new(dbu, nil, true, {"modulusLastSpan" => 'true'})
+          when 'fwig' then BRL::Genboree::Abstract::Resources::FWigFile.new(dbu, nil, true, {"modulusLastSpan" => 'true'})
+          when 'gff3' then BRL::Genboree::Abstract::Resources::Gff3File.new(dbu, nil, false, {"scaleScores" => scaleScores, "modulusLastSpan" => 'true'})
+          when 'gtf' then BRL::Genboree::Abstract::Resources::GtfFile.new(dbu, nil, false, {"scaleScores" => scaleScores, "modulusLastSpan" => 'true'})
+          when 'lff' then BRL::Genboree::Abstract::Resources::LffFile.new(dbu, nil, false)
+          else
+            nil
+        end
+
+        # Show column header line? (not all formats will make use of this)
+        annoFileObj.showColumnHeader = showHeader
+
+        # Output data
+        if(!annoFileObj.nil?)
+          annoFileObj.setTrackList(trackList, refSeqId, landmark)
+          if(annoFileObj.error)
+            print(annoFileObj.error.inspect)
+          else
+            $stdout.sync = true
+            # Output chromosome info if asked
+            $stdout.puts annoFileObj.otherSections(frefNames) if(includeOtherSections)
+            # Print column header line?
+            # Print special header line for gff3
+            $stdout.print annoFileObj.makeTrackHead() if(fileFormat.downcase == 'gff3')
+            $stdout.puts annoFileObj.colHeaderLine() if(showHeader)
+            # Actual data records
+            annoFileObj.each { |block|
+              $stdout.print(block)
+            }
+          end
+        end
+        showForm = false
+      end
+
+      if(showForm)
+        # ---------------------------------------
+        # Prepare data for display
+        #----------------------------------------
+        # Tracks
+        TrackData = Struct.new(:name, :ftypeId, :hasAnnos, :isHdhv)
+
+        templateTracks = []
+        userTracks = []
+        if(refSeqId > 0)
+          tracks = BRL::Genboree::GenboreeDBHelper.getAllAccessibleFtypes(refSeqId, userId, true, dbu)
+          tracks.each_key do |trackName|
+            method, source = trackName.split(':')
+            trackObj = BRL::Genboree::Abstract::Resources::Track.new(dbu, refSeqId, method, source)
+            unless(trackObj.annoDownloadBlocked?)
+              if(trackObj.fromTemplate?)
+                templateTracks << TrackData.new(trackName, tracks[trackName]['ftypeid'], trackObj.hasAnnotations?(), trackObj.isHdhv?())
+              else
+                userTracks << TrackData.new(trackName, tracks[trackName]['ftypeid'], trackObj.hasAnnotations?(), trackObj.isHdhv?())
+              end
+            end
+          end
+
+          userTracks.sort! { |a,b| a.name.downcase <=> b.name.downcase }
+          templateTracks.sort! { |a,b| a.name.downcase <=> b.name.downcase }
+
+          # Entrypoints
+          # Get all the entrypoint names if there is a reasonable number < 1000; because they will be shown in a selection list.
+          # This is convenient for dbs where the ep's are chromosomes, but not good if there are many eps
+          epCount = dbu.countFrefs()
+          if(epCount.is_a?(Array))
+            epRows = epCount
+            epCount = epRows.size
+          else # epCount is a count (Fixnum)
+            epRows = nil
+          end
+
+          epRows = (epCount < 1000) ? BRL::Genboree::Abstract::Resources::Entrypoint.getFrefRows(dbu, databaseName) : []
+
+          # Default Landmark
+          # May be set from a POST from various locations
+          if(landmark.empty? and !entryPointId.empty?)
+            landmark = "#{entryPointId}:#{from}-#{to}"
+          else
+            # When A Single Chromosome is selected (default) then a text input a bit to its right labeled Location: is enabled
+            # and has a default such as chr1:{defStart}-{defStop} where defStart and defStop should be for the middle 4th or 5th of chr1 or the first chromosome found.
+            chrFraction = 5
+            chrChunk = 2
+            if(epCount < 1000)
+              landmark = "#{epRows.first['refname']}:#{epRows.first['rlength'].to_i * chrChunk / chrFraction }-#{epRows.first['rlength'].to_i * (chrChunk + 1) / chrFraction }"
+            else
+              # Get the first chromosome
+              firstEpRows = dbu.selectFirstFref();
+              landmark = "#{firstEpRows.first['refname']}:#{firstEpRows.first['rlength'].to_i * chrChunk / chrFraction}-#{firstEpRows.first['rlength'].to_i * (chrChunk + 1) / chrFraction }"
+            end
+          end
+        end
+      end
+    end
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+%>
+
+<% if(showForm) %>
+
+<% if(grpChanged.to_i == 1 or !(refSeqId > 0)) %>
+  <p><font color='red'>Please select a Database.</font></p>
+<% else %>
+
+<style>
+p.helpWindow {
+  background: white;
+  padding: 5px 10px;
+  border:1px solid #888888;
+}
+
+fieldset {
+  margin:10px;
+}
+
+div.fieldsetContent {
+  padding:8px;
+}
+
+legend {
+  font-size:1.3em;
+  font-weight:bold;
+}
+
+.dataList {
+  background-color:#FBFBFB;
+  border:1px solid #DDDDDD;
+  height:400px;
+  margin:5px 0;
+  overflow:auto;
+  padding:5px;
+  width:55%;
+}
+.even {
+  background-color:#EAE6FF;
+  padding:0 0 2px 0;
+}
+</style>
+
+<script>
+  var trkTypesHdhv = new Array() ;
+  var trkTypesFdata = new Array() ;
+  var chromLengths = $H({<%= epRows.map { |epRow| "#{epRow['refname']}:#{epRow['rlength']}" }.join(',') %>}) ;
+</script>
+
+<form name="gettrk" id="gettrk" action="download.jsp" method="post" onsubmit="return validate(this) ;">
+<input type="hidden" name="refSeqId" value="<%= refSeqId %>" />
+
+
+<fieldset>
+  <legend>Download Annotations For:
+  <a id="ext-gen73" href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['entryPoints'].text, helpMessages['entryPoints'].title);">
+    <img width="16" height="16" border="0" src="/images/gHelp1.png" style="margin-left: 5px;"/>
+  </a>
+  </legend>
+  <div class="fieldsetContent">
+    <input type="radio" name="epRadio" id="singleEP" value="singleEP" onclick="setChrDisplay(this, false);" <%= (!landmark.empty?) ? 'checked' : '' %>>
+      <label for="singleEP">A Single Chromosome</label>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <label for="landmark">Location:&nbsp;</label><input type="text" name="landmark" id="landmark" value="<%= landmark %>" onclick="$('singleEP').checked = true;">
+    <br />
+    <% if(epRows.empty?) %>
+    <input type="radio" name="epRadio" id="allEPs" value="allEPs" onclick="setChrDisplay(this, false);">
+      <label for="allEPs">All Chromosomes</label>
+    <% else %>
+    <input type="radio" name="epRadio" id="multipleEPs" value="multipleEPs" onclick="setChrDisplay(this, false);">
+      <label for="multipleEPs">Multiple Chromosome</label>
+    <% end %>
+    <div id="chrList" style="display: none;">
+    <% if(!epRows.empty?) %>
+      <ul class="dataList">
+      <% ii = 0; epRows.each { |epRow| %>
+        <li class="<%= (ii % 2 == 0) ? 'even' : 'odd' %>">
+          <input type="checkbox" value="<%= epRow['refname'] %>" id="<%= epRow['refname'] %>" name="epId">
+          <label for="<%= epRow['refname'] %>"><%= epRow['refname'] %></label>
+        </li>
+      <% ii += 1; } %>
+      </ul>
+    <input type="button" value="Select All" onclick="selectAllChrs(true)" />
+    <input type="button" value="Select None" onclick="selectAllChrs(false)" />
+    <input type="button" value="Select Core Chromosomes" onclick="selectCoreChrs()" />
+    <% end %>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Select File Format:
+  <a id="ext-gen73" href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['fileFormat'].text, helpMessages['fileFormat'].title);">
+    <img width="16" height="16" border="0" src="/images/gHelp1.png" style="margin-left: 5px;"/>
+  </a>
+  </legend>
+  <div class="fieldsetContent">
+    <label for="fileFormat" style="width:50px; float:left; padding-top:5px;">Format:</label>
+    <select name="fileFormat" id="fileFormat" onchange="setFileFormat()" style="">
+      <option value="lff">LFF</option>
+      <option value="bed">Bed</option>
+      <option value="bedGraph">BedGraph</option>
+      <option value="gff">GFF</option>
+      <option value="vwig">Variable Step Wig </option>
+      <option value="fwig">Fixed Step Wig </option>
+      <option value="gff3">GFF3</option>
+      <option value="gtf">GTF</option>
+    </select>
+    <div id="formatOptionsDiv"></div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Select Tracks to Download:
+  <a id="ext-gen73" href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['availableTracks'].text, helpMessages['availableTracks'].title);">
+    <img width="16" height="16" border="0" src="/images/gHelp1.png" style="margin-left: 5px;"/>
+  </a>
+  </legend>
+  <div class="fieldsetContent">
+    <table border="0" cellpadding="4" width="100%">
+    <tbody>
+      <tr>
+        <td class="form_content">
+          <input value="Select All" onclick="checkAll()" type="button">
+          <input value="Select None" onclick="clearAll()" type="button">
+        </td>
+      </tr>
+      <tr>
+        <td class="form_content">
+          <b>Template Tracks:</b>
+          <% templateTracks.each { |trk| %>
+          <div id="<%= CGI.escape(trk.name) %>_div">
+            <input name="trkId" id="<%= CGI.escape(trk.name) %>" value="<%= CGI.escape(trk.name) %>" type="checkbox">
+            <label for="<%= CGI.escape(trk.name) %>"><%= trk.name %><br></label>
+            <script>if(<%= trk.isHdhv %>) trkTypesHdhv.push('<%= CGI.escape(trk.name) %>') ; else trkTypesFdata.push('<%= CGI.escape(trk.name) %>') ;</script>
+          </div>
+        <%  } %>
+          <hr>
+          <b>User Tracks: </b>
+        <% userTracks.each { |trk| %>
+          <div id="<%= CGI.escape(trk.name) %>_div">
+            <input name="trkId" id="<%= CGI.escape(trk.name) %>" value="<%= CGI.escape(trk.name) %>" type="checkbox">
+            <label for="<%= CGI.escape(trk.name) %>"><%= trk.name %><br></label>
+            <script>if(<%= trk.isHdhv %>) trkTypesHdhv.push('<%= CGI.escape(trk.name) %>') ; else trkTypesFdata.push('<%= CGI.escape(trk.name) %>') ;</script>
+          </div>
+        <%  } %>
+        </td>
+      </tr>
+      <tr>
+        <td class="form_content">
+          <input value="Select All" onclick="checkAll()" type="button">
+          <input value="Select None" onclick="clearAll()" type="button">
+        </td>
+      </tr>
+    </tbody>
+    </table>
+  </div>
+</fieldset>
+
+<input name="btnOk" value="Download" type="submit">
+<input id="showHeader" name="showHeader" value="false" type="hidden">
+<input id="includeOtherSections" name="includeOtherSections" value="false" type="hidden">
+<input id="ucscScaling" name="ucscScaling" value="false" type="hidden">
+
+</form>
+
+<script>
+
+/* Initialize the form */
+setFileFormat(true) ;
+setChrDisplay(($('singleEP').checked) ? $('singleEP') : $('multipleEPs'), true) ;
+</script>
+
+  <% end %>
+<% end %>
+<%
+
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the page.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

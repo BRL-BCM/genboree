@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "randomForestEntityList",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/BRL-Tools-Access",
+    "label": "Random Forest -> Track Entity List Oriented",
+    "shortLabel": "Random Forest - Track Entity List Oriented"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "pvmem": "5858mb"
+  }
+}

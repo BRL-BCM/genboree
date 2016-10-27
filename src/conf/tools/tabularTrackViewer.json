@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "tabularTrackViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Tabular Annotation Viewer",
+    "shortLabel": "[NOT SET]",
+    "groupAccessUri": null
+  }
+}

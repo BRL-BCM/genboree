@@ -1,0 +1,475 @@
+<%@ page import="javax.servlet.http.*, java.util.*, java.sql.*, java.io.*,
+                 org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="group.incl" %>
+<%!
+      static boolean areEqual( String s1, String s2 )
+      {
+        if( s1 == null && s2 == null ) return true;
+        if( s1 == null || s2 == null ) return false;
+        return s1.equals(s2);
+      }
+%>
+<%
+// initial values upfid=271:119273&refName=chr14&trackName=Gene:RefSeq
+  int i;
+  // ARJ: Create a TimingUtil object for easy timing of code
+  TimingUtil timer = new TimingUtil(userInfo) ;
+
+  String upfid = null;
+    String refName = null;
+    String trackName = null;
+    String actionDisplay = null;
+    String sequenceType = null;
+    String strand = "plus" ;
+    String sequenceStart = null;
+    String sequenceEnd = null;
+    String fid = null;
+    String uploadId = null;
+    String groupName = null;
+    String typeId = null;
+    String rid = null;
+    String originalRid = null;
+    String[] ss = null;
+    String query = null;
+    String from1 = null;
+    String from2 = null;
+    String from3 = "1";
+    String to1 = null;
+    String to2 = null;
+    String to3 = null;
+    String hardMask = null ;
+    boolean doHardMask = false ;
+    boolean hasMaskedSeq = false ;
+    String refSeqId = null;
+    String original_from1 = null;
+    String stop = null;
+    String start = null;
+    String original_from2 = null;
+    String original_to1 = null;
+    String original_to2 = null;
+    String original_to3 = null;
+    boolean browserRange = false;
+    boolean firstTime = false;
+    String originalRefSeq = null;
+    Hashtable chromosomeProperties = new Hashtable();
+    int totalFrefCount = -1 ;
+    DbFref[] vFrefs = null;
+    Connection tConn = null ;
+    ResultSet rs = null;
+    DbResourceSet dbRes = null;
+
+    upfid = request.getParameter("upfid");
+    refName = request.getParameter("refName");
+    if(refName == null) // Try from session; should be saved as refSeq
+    {
+      refName = (String)mys.getAttribute("refSeq");
+    }
+    trackName = request.getParameter("trackName");
+
+    if(trackName != null && trackName.length() <= 0 )
+    {
+      trackName = null ;
+    }
+
+    sequenceType = request.getParameter("sequenceType");
+    actionDisplay = request.getParameter("actionDisplay");
+    strand = request.getParameter("strand");
+    sequenceStart = request.getParameter("sequenceStart");
+    sequenceEnd = request.getParameter("sequenceEnd");
+    fid = request.getParameter("fid");
+    uploadId = request.getParameter("uploadId");
+    groupName = request.getParameter("groupName");
+    typeId = request.getParameter("typeId");
+    refSeqId = request.getParameter("refSeqId");
+    stop = request.getParameter("stop");
+    start = request.getParameter("start");
+    hardMask = request.getParameter("hardRepMask") ;
+    boolean chkEntire = (request.getParameter("chkEntire") != null || request.getParameter("chkEntire") == "y") ;
+
+    // Check for masked file presence
+    String rsId = refSeqId ;
+    if(rsId == null)
+    {
+      refSeqId = rsId = SessionManager.getSessionDatabaseId(session) ;
+    }
+    if(rsId != null)
+    {
+      Refseq refSeq = new Refseq() ;
+      refSeq.setRefSeqId( rsId ) ;
+      refSeq.fetch( db, null );
+      String localDbName = refSeq.getDatabaseName() ;
+      Connection conn = db.getConnection( localDbName ) ;
+      hasMaskedSeq = DbFmeta.hasMaskedSequence( conn ) ;
+    }
+
+    if(hardMask != null && (hardMask.equals("true")))
+    {
+      doHardMask = true ;
+    }
+
+    mys.setAttribute( "refSeq", refName ) ;
+
+    if(fid == null && sequenceType == null)
+    {
+      firstTime = true ;
+    }
+
+    timer.addMsg("DONE - initialization") ;
+
+    if(trackName == null && refSeqId != null)
+    {
+      firstTime = false;
+      mys.setAttribute( "originalRefSeq", refName );
+      browserRange  = true;
+      originalRefSeq = refName;
+      sequenceType = "stCustomRange";
+      query = "SELECT uploadId from upload where refSeqId = ? " ;
+      String[] bindVars1 = { refSeqId } ;
+      dbRes = db.executeQuery( "genboree", query, bindVars1) ;
+      rs = dbRes.resultSet;
+      if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+      {
+        dbRes.close();
+        return ;
+      }
+
+      if( rs != null && rs.next() )
+      {
+         uploadId =  rs.getString("uploadId");
+      }
+      dbRes.close();
+      from1 = from2 = start;
+      if(strand == null || strand.length() < 1)
+      {
+        strand = "+" ;
+      }
+      mys.setAttribute("from1", from1);
+      mys.setAttribute("from2", from2);
+      original_from1 = from1;
+      original_from2 = from2;
+
+      to1 = to2 = to3 = stop;
+      mys.setAttribute("to1", to1);
+      mys.setAttribute("to2", to2);
+      mys.setAttribute("to3", to3);
+      original_to1 = to1;
+      original_to2 = to2;
+      original_to3 = to3;
+    }
+
+    if(refName == null)
+    {
+      refName = (String)mys.getAttribute( "originalRefSeq" );
+      System.err.println("ERROR: downloadGenomicDNA.incl => The refName is empty/missing from session. This is NOT Allowed.");
+    }
+    else
+    {
+      timer.addMsg("DONE - got upload info") ;
+
+      if(!firstTime)
+      {
+          originalRefSeq = (String)mys.getAttribute( "originalRefSeq" );
+          if(originalRefSeq == null) originalRefSeq = refName;
+
+
+          if( uploadId != null )
+          {
+
+              GenboreeUpload u =  new GenboreeUpload();
+              u.setUploadId( Util.parseInt(uploadId,-1) );
+              u.fetch( db );
+
+              // Try to get database connection only once in this page
+              if(tConn == null)
+                  tConn = db.getConnection(u.getDatabaseName()) ;
+
+              // Try to get the fref count ONCE in this page
+              totalFrefCount = DbFref.countAll(tConn) ;
+
+              timer.addMsg("DONE - counting the frefs (" + totalFrefCount + ")") ;
+
+              // Frefs were retrieved twice in previous version. Now it is just once (I think this is good)
+              // and uses the fast methods (esp. in the face of many many EPs).
+              if(totalFrefCount < 1)
+              {
+                  vFrefs = new DbFref[0] ;
+              }
+              else if(totalFrefCount <= Constants.GB_MAX_FREF_FOR_DROPLIST)
+              {
+                  vFrefs = DbFref.fetchAll( db.getConnection(u.getDatabaseName()) );
+              }
+              else // Too many entrypoints to get list and lengths for
+              {
+                  vFrefs = new DbFref[0] ;
+              }
+
+              for(int ii = 0; ii < vFrefs.length; ii++)
+              {
+                  chromosomeProperties.put(vFrefs[ii].getRefname(),  vFrefs[ii].getRlength());
+              }
+
+              timer.addMsg("DONE - filling in vFrefs and chromosomeProperties") ;
+
+              if(chkEntire)
+              {
+                  rid = "-1";
+              }
+              else
+              {
+                  query = "SELECT rid FROM fref where refname = ?" ;
+                  String[] bindVars1 = { refName } ;
+                  dbRes = db.executeQuery(u.getDatabaseName(), query, bindVars1) ;
+                  rs = dbRes.resultSet;
+                  if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+                  {
+                      dbRes.close();
+                      return;
+                  }
+
+                  if(rs != null &&  rs.next() )
+                  {
+                      rid = rs.getString("rid");
+                  }
+                  dbRes.close();
+              }
+              mys.setAttribute("originalRid", rid);
+              originalRid = rid;
+
+              timer.addMsg("DONE - getting specific chromosome info") ;
+          }
+
+          if(refName.equalsIgnoreCase(originalRefSeq)){
+              from1 = (String)mys.getAttribute("from1");
+              to1 = (String)mys.getAttribute("to1");
+              from2 = (String)mys.getAttribute("from2");
+              to2 = (String)mys.getAttribute("to2");
+              to3 = (String)mys.getAttribute("to3");
+          }
+          else{
+              original_from1 = (String)mys.getAttribute("from1");
+              original_from2 = (String)mys.getAttribute("from2");
+              original_to1 = (String)mys.getAttribute("to1");
+              original_to2 = (String)mys.getAttribute("to2");
+              original_to3 = (String)mys.getAttribute("to3");
+              to1 = to2 = to3 = sequenceEnd;
+          }
+
+          timer.addMsg("DONE - getting session variable info") ;
+
+      }
+
+      if(actionDisplay != null && !firstTime)
+      {
+        String urlDestination = new StringBuffer().append("/genboree/genomeSeqLocator.rhtml?sequenceType=").append(sequenceType).append("&uploadId=").append(uploadId).toString() ;
+        // Pass userId and flag for coming from internal Genboree page (e.g. JSP redirected to RHTML)
+        urlDestination += ("&userId=" + userId +
+                          "&fromInternalGbPage=true") ;
+
+        // BUILD appropriate url with query string based on what we are doing:
+        if(sequenceType.equalsIgnoreCase("stAnnOnly"))
+        {
+          urlDestination += ("&start=" + sequenceStart +
+                            "&stop=" + sequenceEnd +
+                            "&gname=" + Util.urlEncode(groupName) +
+                            "&rid=" + originalRid +
+                            "&fid=" + fid) ;
+        }
+        else if(sequenceType.equalsIgnoreCase("stGroupRange"))
+        {
+          urlDestination += ("&start=" + sequenceStart +
+                            "&stop=" + sequenceEnd +
+                            "&rid=" + originalRid +
+                            "&gname=" + Util.urlEncode(groupName) +
+                            "&ftypeid=" + typeId) ;
+        }
+        else if(sequenceType.equalsIgnoreCase("stAnnoGroup") || sequenceType.equalsIgnoreCase("stAnnConcat"))
+        {
+          urlDestination += ("&start=" + sequenceStart +
+                            "&stop=" + sequenceEnd +
+                            "&rid=" +originalRid +
+                            "&ftypeid=" + typeId +
+                            "&gname=" + Util.urlEncode(groupName)) ;
+        }
+        else if(sequenceType.equalsIgnoreCase("stAnnTrack"))
+        {
+          urlDestination +=  ("&ftypeid=" + typeId +
+                            "&rid=" + rid) ;
+        }
+        else if(sequenceType.equalsIgnoreCase("stCustomRange"))
+        {
+          urlDestination += ("&start=" + sequenceStart +
+                            "&stop=" + sequenceEnd +
+                            "&rid=" + rid) ;
+        }
+        else if(sequenceType.equalsIgnoreCase("stGroupTrack"))
+        {
+          urlDestination += ("&ftypeid=" + typeId +
+                            "&rid=" + rid) ;
+        }
+
+        urlDestination += ("&rc=" + strand) ;
+
+        if(doHardMask)
+        {
+          urlDestination += "&hardRepMask=true" ;
+        }
+
+        if(actionDisplay.indexOf("View") >= 0)
+        {
+          urlDestination += "&action=viewDNA" ;
+        }
+        else if(actionDisplay.indexOf("Save") >= 0)
+        {
+          urlDestination += "&action=saveDNA" ;
+        }
+
+        GenboreeUtils.sendRedirect(request, response, urlDestination ) ;
+        return ;
+      }
+
+      timer.addMsg("DONE - setting URL destination") ;
+
+      if( firstTime )
+      {
+          ss = Util.parseString(upfid,',');
+
+          if(ss == null)
+              ss = new String[0];
+
+          Hashtable htUpl = new Hashtable();
+          for( i=0; i<ss.length; i++ )
+          {
+              upfid = ss[i];
+              String[] sss = Util.parseString( upfid, ':' );
+
+              if( sss.length < 2 ) continue;
+
+              uploadId = sss[0];
+              fid = sss[1];
+              GenboreeUpload u = (GenboreeUpload) htUpl.get( uploadId );
+              if( u == null )
+              {
+                  u = new GenboreeUpload();
+                  u.setUploadId( Util.parseInt(uploadId,-1) );
+                  u.fetch( db );
+                  htUpl.put( uploadId, u );
+              }
+
+              timer.addMsg("DONE - getting upload info") ;
+
+              query = "SELECT fd.fstart fstart, fd.fstop fstop, fd.gname gname, fd.ftypeid ftypeid, fd.rid rid FROM fdata2 fd WHERE fd.fid = ? " ;
+              String[] bindVars1 = { fid } ;
+              dbRes = db.executeQuery(u.getDatabaseName(), query, bindVars1) ;
+              rs = dbRes.resultSet;
+              if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+              {
+                  dbRes.close();
+                  return;
+              }
+
+              if( rs!=null && rs.next() )
+              {
+                  from1 = rs.getString("fstart");
+                  to1 = rs.getString("fstop");
+                  groupName = rs.getString("gname");
+                  typeId = rs.getString("ftypeid");
+                  rid = rs.getString("rid");
+              }
+              dbRes.close();
+
+              timer.addMsg("DONE - getting fdata record") ;
+
+              query = "SELECT min(fd.fstart) minFstart, max(fd.fstop) maxFstop FROM fdata2 fd WHERE fd.rid = ? and fd.ftypeid = ? and fd.gname = ? " ;
+              String[] bindVars3 = { rid, typeId, groupName } ;
+              dbRes = db.executeQuery( u.getDatabaseName(), query, bindVars3) ;
+              rs = dbRes.resultSet;
+              if( JSPErrorHandler.checkErrors(request, response, db, mys) )
+              {
+                  dbRes.close();
+                  return;
+              }
+
+              if( rs!=null && rs.next() )
+              {
+                  from2 = rs.getString("minFstart");
+                  to2 = rs.getString("maxFstop");
+              }
+
+              dbRes.close();
+              timer.addMsg("DONE - group start/stop") ;
+
+              query = "SELECT rlength FROM fref fd WHERE rid = ? " ;
+              bindVars1[0] = rid ;
+              dbRes = db.executeQuery(u.getDatabaseName(), query, bindVars1) ;
+              rs = dbRes.resultSet;
+              if( JSPErrorHandler.checkErrors(request, response, db, mys) )
+              {
+                  dbRes.close();
+                  return;
+              }
+
+              if( rs!=null && rs.next() )
+              {
+                  to3 = rs.getString("rlength");
+              }
+              dbRes.close();
+
+              timer.addMsg("DONE - get specific fref info") ;
+
+              // Try to get database connection only once in this page
+              if(tConn == null)
+                  tConn = db.getConnection(u.getDatabaseName()) ;
+
+              // Try to get the fref count ONCE in this page
+              totalFrefCount = DbFref.countAll(tConn) ;
+
+              timer.addMsg("DONE - counting frefs") ;
+
+              // Frefs were retrieved twice in previous version. Now it is just once (I think this is good)
+              // and uses the fast methods (esp. in the face of many many EPs).
+              if(totalFrefCount < 1)
+              {
+                  vFrefs = new DbFref[0] ;
+              }
+              else if(totalFrefCount <= Constants.GB_MAX_FREF_FOR_DROPLIST)
+              {
+                  vFrefs = DbFref.fetchAll( db.getConnection(u.getDatabaseName()) );
+              }
+              else // Too many entrypoints to get list and lengths for
+              {
+                  vFrefs = new DbFref[0] ;
+              }
+
+              for(int ii = 0; ii < vFrefs.length; ii++)
+              {
+                  chromosomeProperties.put(vFrefs[ii].getRefname(),  vFrefs[ii].getRlength());
+              }
+
+              timer.addMsg("DONE - filling vRefs and chromosomeProperties") ;
+          }
+          mys.setAttribute( "originalRefSeq", refName );
+          mys.setAttribute("from1", from1);
+          mys.setAttribute("to1", to1);
+          mys.setAttribute("from2", from2);
+          mys.setAttribute("to2", to2);
+          mys.setAttribute("to3", to3);
+          mys.setAttribute("originalRid", rid);
+          originalRid = rid;
+          original_from1 = from1;
+          original_from2 = from2;
+          original_to1 = to1;
+          original_to2 = to2;
+          original_to3 = to3;
+          originalRefSeq = refName;
+          sequenceType = "stAnnOnly";
+          sequenceStart = from1 = from2 = from3;
+          sequenceEnd = (String) chromosomeProperties.get( refName );
+          strand = "plus";
+          timer.addMsg("DONE - getting session variables") ;
+
+      }
+    }
+
+
+%>

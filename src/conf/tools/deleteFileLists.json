@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "deleteFileLists",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete File Lists",
+    "shortLabel": "[NOT SET]",
+    "groupAccessUri": null
+  }
+}

@@ -1,0 +1,46 @@
+<%
+	#get the publications from CMS
+	publicationsArrHash = GenboreeRedmine.getRedminePage(@server, "PUBLICATIONS")
+%>
+
+<section class="blue-bg hr">
+	<hr>
+</section>
+
+<div id="publication">
+	<section class="blue-bg">
+		<div class="container">
+			<div class="row ">
+				<div class="col-xs-12">
+					<h1>Publications</h1>
+				</div>
+			</div>
+		</div>
+	</section>
+	<section class="white-bg">
+		<div class="container">
+			<div class="row ">
+				<div class="col-xs-12">
+					<ul class="publications list-unstyled">
+						
+						<% publicationsArrHash.each_with_index{ |pubHash, pubCount| 
+							authors = pubHash["authors"]
+							title = pubHash["title"]
+							journal = pubHash["journal"]
+							pmid = pubHash["pmid"]
+
+							%>
+							<li>
+								 
+								<p class="title"><a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=<%= pmid %>" target="_blank"><%= title %></a></p>
+								<p class="authors"><%= authors %></p><br>
+								<p class="journal"><i class="fa fa-book"></i> <%= journal %></p> <p class="pubmed"><i class="fa fa-archive"></i> PMID: <a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=<%= pmid %>" target="_blank"><%= pmid %></a></i></p>
+							</li>
+						<% } %>
+
+					</ul>
+				</div>
+			</div>
+		</div>
+	</section>
+</div>

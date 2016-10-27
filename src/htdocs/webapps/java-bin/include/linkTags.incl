@@ -1,0 +1,3 @@
+
+<link rel="stylesheet" href="/styles/jsp.css<%=jsVersion%>" type="text/css">
+<link rel="SHORTCUT ICON" href="/images/favicon.ico">

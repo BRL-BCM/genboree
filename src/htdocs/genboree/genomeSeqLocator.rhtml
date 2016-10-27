@@ -1,0 +1,672 @@
+<%# THIS FILE USES eruby %>
+<%
+	# ---------------------------------------------------------------------------
+	# SETUP CONVENIENT ENVIRONMENT
+	# ---------------------------------------------------------------------------
+  require 'cgi'
+  require 'brl/util/util'
+  require 'brl/genboree/seqRetriever'
+	require 'brl/genboree/genboreeDBHelper'
+  require 'brl/genboree/dbUtil'
+  require 'brl/dna/seqIO'
+
+  include BRL::Genboree
+
+  $VERBOSE = nil
+  @cgi = CGI.new()
+	@req = Apache.request
+	@resp = $stdout
+	@serverName = @req.server_name
+	#@serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+	@prepped4output = false
+	@retriever = nil
+  @foundSomeAnnos = false
+
+	# ---------------------------------------------------------------------------
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	# Constants
+	BLANK_RE = /^\s*$/
+	COMMENT_RE = /^\s*#/
+	VALUES_RE = /\/[^\/?]+\?(.+)$/
+	BASE_URL = "http://#{@serverName}/genboree"
+	TOO_MANY_ANNOS_LIMIT = 2_000_000
+	MANY_ANNOS_LIMIT = 1_000_000
+	LARGE_ANNO_LIMIT = 20_000
+	PARAM_OK, PARAM_MISSING, BAD_COORDINATE, BAD_SEQ_TYPE, NO_TRACK_ACCESS  = 0,1,2,3,4
+	EXCEPT_OK = LOAD_OK = RETRIEVER_CREATE_OK = GET_SEQ_OK = PARAM_OK
+	EXCEPT_BAD = 1
+  DBRC_FILE = ENV['DB_ACCESS_FILE'].dup.untaint
+	SEQ_TYPE_AO, SEQ_TYPE_AG, SEQ_TYPE_AC, SEQ_TYPE_GR, SEQ_TYPE_CU, SEQ_TYPE_AT, SEQ_TYPE_GT, SEQ_TYPE_ATC =
+	  'stAnnOnly', 'stAnnoGroup', 'stAnnConcat', 'stGroupRange', 'stCustomRange', 'stAnnTrack', 'stGroupTrack', 'stAnnTrackConcat'
+	ACTION_VIEW_DNA, ACTION_SAVE_DNA = 'viewDNA', 'saveDNA'
+	RC_PLUS, RC_MINUS, RC_STRAND = 0, 1, 2
+	# globals
+	exceptionStatus = EXCEPT_OK
+	createRetrieverStatus = RETRIEVER_CREATE_OK
+	err = nil
+  getSequenceStatus = paramStatus = nil
+
+# !!! BEGIN: PROTECTED SECTION 1 !!!
+begin
+	# Helper Methods
+	def prepForHtml()	# Tell apache we're going to make some html
+	  return if(@prepped4output)
+		@req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+		@req.status = 200
+		@req.send_http_header
+		@prepped4output = true
+  	# Remove Apache buffering on the response object...else apache buffers until
+  	# the request is done. Generally we avoid this, but for D/L it can be good.
+  	@resp.sync_output = true
+	end
+
+	def prepForText() # Tell apache we're going to send some text
+    return if(@prepped4output)
+		@req.headers_out['Content-Type'] = @req.content_type = 'text/plain'
+		@req.headers_out['Accept-Ranges'] = 'bytes'
+		@req.status = 200
+		@req.send_http_header
+		@prepped4output = true
+  	# Remove Apache buffering on the response object...else apache buffers until
+  	# the request is done. Generally we avoid this, but for D/L it can be good.
+  	@resp.sync_output = true
+	end
+
+	def prepForFasta() # Tell apache we're going to send some text
+	  return if(@prepped4output)
+		@req.headers_out['Content-Type'] = @req.content_type = 'text/fasta'
+		@req.headers_out['Accept-Ranges'] = 'bytes'
+		@req.status = 200
+		@req.send_http_header
+		@prepped4output = true
+  	# Remove Apache buffering on the response object...else apache buffers until
+  	# the request is done. Generally we avoid this, but for D/L it can be good.
+  	@resp.sync_output = true
+	end
+
+  def paramCheck()
+    @start = @stop = 0
+    @ftypeId = nil
+  	# Check that correct params were provided
+  	if(	@cgi['sequenceType'].to_s.empty? or
+  			@cgi['uploadId'].to_s.empty?)
+  		return PARAM_MISSING
+  	else	# Process according to sequenceType
+      @fromGenboree = (@cgi['fromInternalGbPage'] =~ /true/i ? true : false)
+  		@userId = (@cgi.params.key?('userId') ? @cgi['userId'] : nil)
+  		@seqDnloadType = @cgi['sequenceType'].to_s
+  		@uploadId = @cgi['uploadId'].to_i
+  		if(@cgi.params.key?('action'))
+     		@action = @cgi['action'].to_s
+  		  @action = CGI::escape(@action)
+  		else
+  		  @action = ACTION_VIEW_DNA
+  		end
+
+  		begin # try to get other params
+        # Get refSeqId
+        # Get Genboree configuration
+        @genbConfig = GenboreeConfig.load()
+        # Do DB query on upload table
+        @dbu = BRL::Genboree::DBUtil.new(@genbConfig.dbrcKey, nil, nil)
+        refSeqIdRows = @dbu.selectRefSeqIdByUploadID(@uploadId)
+        @refSeqId = refSeqIdRows["refSeqId"]
+        userDBNameRows = @dbu.selectDBNameByRefSeqID(@refSeqId)
+        @userDBName = userDBNameRows.first['databaseName'] # array of DBI::Rows returned, get actual name String
+        @dbu.setNewDataDb(@userDBName)
+    		case @seqDnloadType
+    			when SEQ_TYPE_AO, SEQ_TYPE_GR
+    				@start = @cgi['start'].to_i
+    				@stop = @cgi['stop'].to_i
+    				@rid = @cgi['rid'].to_i
+    				@gname = @cgi['gname'].to_s # cgi escape this
+    				if(@seqDnloadType == SEQ_TYPE_AO)
+              @fid = @cgi['fid'].to_s
+              # Get ftypeId for @fid
+              annoRows = @dbu.selectFdataByFid(@fid)
+              @ftypeid = annoRows.first["ftypeid"]
+            else # SEQ_TYPE_GR
+              @ftypeid = @cgi['ftypeid'].to_i
+            end
+    			when SEQ_TYPE_AG, SEQ_TYPE_AC, SEQ_TYPE_ATC
+    				@start = @cgi['start'].to_i
+    				@stop = @cgi['stop'].to_i
+    				@rid = @cgi['rid'].to_i
+    				@gname = @cgi['gname'] # cgi escape this
+    				@ftypeid = @cgi['ftypeid'].to_i unless(@seqDnloadType == SEQ_TYPE_ATC)
+    			when SEQ_TYPE_CU
+    			  @start = @cgi['start'].to_i
+    				@stop = @cgi['stop'].to_i
+    				@rid = @cgi['rid'].to_i
+    			when SEQ_TYPE_AT, SEQ_TYPE_GT
+    				@ftypeid = @cgi['ftypeid'].to_i
+    				@rid = @cgi['rid'].to_i
+    			else # error
+    				return BAD_SEQ_TYPE
+        end
+
+        unless(@ftypeid.nil?)
+          # Check user access to anno data if relevant (i.e. we have an fid or an ftypeid in the request)
+          # Get the accessible track IDs for the user.
+          @accessibleTrackIds = BRL::Genboree::GenboreeDBHelper.getAccessibleTrackIds(@refSeqId, @userId, true, @dbu)
+          # Does user have access to the track referred to in @ftypeid?
+          canAccessTrack = @accessibleTrackIds.key?(@ftypeid)
+          return NO_TRACK_ACCESS unless(canAccessTrack)
+        end
+    	rescue => @err
+    	  return PARAM_MISSING
+    	end
+			@doAllUpperCase = @doAllLowerCase = false
+			@doRevCompl = RC_PLUS
+			if(@cgi.params.key?('rc'))
+			  rcParam = @cgi['rc'].to_s.strip.downcase
+			  if(rcParam == 'plus')
+			    @doRevCompl = RC_PLUS
+			  elsif(rcParam == 'minus')
+			    @doRevCompl = RC_MINUS
+			  elsif(rcParam == 'field')
+			    @doRevCompl = RC_STRAND
+			  end
+			end
+			@strandCode = @doRevCompl # save strand code, even if @doRevCompl changes in certain scenarios
+			@doRepMask = @cgi.params.key?('hardRepMask')
+			if(@cgi.params.key?('allUpper'))
+				firstChar = @cgi['allUpper'].to_s.strip.downcase[0]
+				@doAllUpperCase = true if(firstChar == 116  or firstChar == 121)
+			end
+			if(@cgi.params.key?('allLower'))
+				firstChar = @cgi['allLower'].to_s.strip.downcase[0]
+				@doAllLowerCase = true if(firstChar == 116  or firstChar == 121)
+			end
+			@doAllUpperCase = @doAllLowerCase = false if(@doAllUpperCase and @doAllLowerCase) # asked to do both? Do neither.
+      # Check @rid...if -1  that means "for all chromosomes". We will have to get and then loop over each fref record,
+      # setting @rid appropriately as we proceed, when we go to get each anno's sequence.
+      @doAllFrefs = (@rid < 0)
+  		return PARAM_OK
+  	end
+  end
+
+ 	def nameValsAsString(aHash)
+		buffer = ''
+		aHash.each { |key, val|
+			buffer += '&' unless(buffer.nil? or buffer.empty?)
+			buffer += "#{CGI::escape(key)}=#{CGI::escape(val.to_s)}"
+		}
+		return buffer
+	end
+
+ 	def createRetriever()
+ 	  return RETRIEVER_CREATE_OK unless(@retriever.nil?)
+ 		@retriever = BRL::Genboree::SeqRetriever.new(DBRC_FILE, true)
+ 		@retriever.doRevCompl = true if(@doRevCompl == RC_MINUS)
+ 		@retriever.doAllUpper = true if(@doAllUpperCase)
+ 		@retriever.doAllLower = true if(@doAllLowerCase)
+    @retriever.useMasked = @doRepMask
+ 		return RETRIEVER_CREATE_OK
+ 	end
+
+	def doOutputPrep()
+	  case @action
+	    when ACTION_SAVE_DNA
+	      prepForFasta()
+	    else
+	      prepForText()
+	  end
+	  return
+	end
+
+	def getSingleAnnoStrand()
+	  annos = @retriever.getFdataByFid(@uploadId, @fid)
+	  if(@strandCode == RC_STRAND)
+	    @doRevCompl = (annos[0]['fstrand'] == '-' ? RC_MINUS : RC_PLUS)
+	  end
+	  return
+	end
+
+	# Gets the sequence for a SINGLE annotation, using current start/stop, etc,
+	# as set in the instance variables.
+ 	def getAnnoSequence()
+		getSeqStatus = createRetrieverStatus  = createRetriever() # lazy create
+		if(createRetrieverStatus == RETRIEVER_CREATE_OK)
+		  @retriever.doRevCompl = (@doRevCompl == RC_MINUS ? true : false )
+		  isLarge = ((@stop-@start).abs > LARGE_ANNO_LIMIT) ? true : false
+		  if(isLarge) # Then let the retriever print directly in a mem-efficient way
+		    # Need to do a bunch of manual stuff, then:
+		    @retriever.getDataDBNameByUploadId(@uploadId, true) # We need to do this manually in this case
+		    @retriever.rid = @rid
+		    setStatus = @retriever.setFromAndTo(@start, @stop)
+		    return setStatus unless(setStatus == SeqRetriever::OK)
+		    doOutputPrep()
+		    defLine = @retriever.makeSeqDefline(@gname, @rid, @start, @stop)
+		    if(@doConcating)
+		      @sio.puts @defLine unless(@defLine.nil?)
+		      @defLine = nil
+		      getSeqStatus = sequence = @retriever.getAnnoSequence(@uploadId, @rid, @start, @stop, false)
+		      @sio.print(sequence)
+		    else
+		      puts defLine
+		      getSeqStatus = sequence = @retriever.getAnnoSequence(@uploadId, @rid, @start, @stop, true)
+		    end
+		  else # Do it fast ourselves
+   			getSeqStatus = sequence = @retriever.getAnnoSequence(@uploadId, @rid, @start, @stop, false)
+  	 		if(getSeqStatus.kind_of?(String) or getSeqStatus == SeqRetriever::OK)
+  	 			defLine = @retriever.makeSeqDefline(@gname, @rid, @start, @stop)
+  	 			doOutputPrep()  # Do this at LAST possible moment (allows for HTML error pages)
+  	 			if(@doConcating)
+   				  puts @defLine unless(@defLine.nil?)
+   				  @defLine = nil
+   				  @sio.print(sequence)
+   				else
+   				  puts defLine
+   				  @retriever.prettyPrintSequence(sequence)
+   				end
+  	 		end
+  	 	end
+	 	end
+	 	getSeqStatus = GET_SEQ_OK if(getSeqStatus.kind_of?(String) or getSeqStatus == SeqRetriever::OK)
+	 	return getSeqStatus
+ 	end
+
+ 	def getGroupSequence()
+ 		# Currently, it's the same as for an annotation where the range is provided.
+ 		return getAnnoSequence()
+ 	end
+
+ 	def getCustomSequence()
+ 	  # Currently, it's the same as for an annotation where the range is provided.
+ 	  # But we need to make up some sort of gname
+ 	  @gname = "CustomRange.#{@start}-#{@stop}"
+ 		return getAnnoSequence()
+ 	end
+
+  # Gets the sequnce for MULTIPLE annotations.
+  # - Used by several methods to get all the sequences they need.
+ 	def getSequencesForAnnos(annos)
+    $stderr.debugPuts(__FILE__, __method__, "DBEUG", "first of #{annos.size} annos:\n\n#{annos.first.inspect}\n\n")
+		# For each annotation, get sequences for its range
+		# Set the state in the instance variables for doing sequence retrieval via getAnnoSequence.
+		getSeqStatus = false
+		doOutputPrep()
+		annos.each_index { |ii|
+			anno = annos[ii]
+			@gname = anno['gname']
+			@rid = anno['rid']
+			@start = (anno['fstart'] || anno['min(fstart)'])
+			@stop = (anno['fstop'] || anno['max(fstop)'])
+			if(@strandCode == RC_STRAND)
+			  case @seqDnloadType
+			    when SEQ_TYPE_AT
+				    @doRevCompl = (anno['fstrand'] == '-' ? RC_MINUS : RC_PLUS)
+			    when SEQ_TYPE_GT
+			      @doRevCompl = (anno['fstrand'] == '-' ? RC_MINUS : RC_PLUS)
+			    else # error
+    			  @doRevCompl = (anno['fstrand'] == '-' ? RC_MINUS : RC_PLUS)
+    	  end
+			end
+			getSeqStatus = getAnnoSequence()
+			unless(getSeqStatus == GET_SEQ_OK)
+				break
+			end
+		}
+  	return getSeqStatus
+  end
+
+  def getAnnoSequencesForGroup(doConcating=false)
+    getSeqStatus = false
+    createRetrieverStatus = createRetrieverStatus  = createRetriever()
+    if(createRetrieverStatus == RETRIEVER_CREATE_OK)
+      # Get each annotation in group as a record
+      getFdatasStatus = annos = @retriever.getFdataByExactGname(@uploadId, @gname, @ftypeid, @rid, true)
+      # Do special DB disconnect (b/c of potential long processing time)
+      if(annos)
+        if(annos.size < 1)
+          getSeqStatus = SeqRetriever::NO_ANNOS_FOUND
+        elsif(annos.size > TOO_MANY_ANNOS_LIMIT)
+          getSeqStatus = SeqRetriever::TOO_MANY_ANNOS_FOUND
+        else
+          if(doConcating) # then need to set flags to output 1 defline only and keep track
+            @doConcating = true
+            @retriever.getFrefForRid(@rid)
+            @defLine = @retriever.makeSeqDefline(@gname, @rid, @start, @stop)
+            @sio = BRL::DNA::SeqIO.new()
+          end
+          getSeqStatus = getSequencesForAnnos(annos)
+        end
+      end
+ 		end
+    if(doConcating and @sio)
+      @sio.puts ""
+      @sio.close()
+    end
+	  return getSeqStatus
+	end
+
+	# Sensible and through sorting of chromosome names
+	def sortFrefsByName(frefs)
+    return  frefs.sort { |aa,bb|
+              # remove 'chr' at front
+              aa1 = aa['refname']
+              bb1 = bb['refname']
+              xx = aa1.gsub(/^chr/i, '').downcase
+              yy = bb1.gsub(/^chr/i, '').downcase
+              if(xx =~ /^\d/ and yy =~ /^\d/) # can sort by the number, essentially
+                retVal = (xx.to_i <=> yy.to_i)
+              elsif(xx =~ /^\d/) # then yy doesn't look like number-able, xx wins
+                retVal = -1
+              elsif(yy =~ /^\d/) # then xx doesn't look like number-able, yy wins
+                retVal = 1
+              else # neither looks like it's number-able, sort using string
+                if(xx =~ /^[xy]/ and yy =~ /^[xy]/)
+                  retVal = (xx <=> yy)
+                elsif(xx =~ /^[xy]/)
+                  retVal = -1
+                elsif(yy =~ /^[xy]/)
+                  retVal = 1
+                else
+                  retVal = 0
+                end
+              end
+              # try to resolve ties (eg chr12 == chr12_random at this point, and Chr12 == chr12 at this point)
+              retVal = (xx.downcase <=> yy.downcase) if(retVal == 0)
+              retVal = (aa1.downcase <=> bb1.downcase) if(retVal == 0)
+              retVal
+            }
+	end
+
+  def getTrackAnnoSequences(doConcating=false)
+  	getSeqStatus = false
+    createRetrieverStatus = createRetrieverStatus  = createRetriever()
+    @retriever.getDataDBNameByUploadId(@uploadId)
+    if(createRetrieverStatus == RETRIEVER_CREATE_OK)
+      annos = nil
+      # Prep to do multiple frefs, if that's what we are to do
+      if(@doAllFrefs)
+        frefCount = 0
+        sortedFrefs = sortFrefsByName(@retriever.getFrefs().values)
+      end
+      # Prep to do concatenating if that's what we are to do
+      @doConcating = true if(doConcating)
+      # Get sequences from all annos
+      while(true)
+        # Get annos
+        # - two slightly different processes depending on whether we want for 1 chromosome or for all chomosomes
+        if(@doAllFrefs)
+          @rid = sortedFrefs[frefCount]['rid']
+          frefCount += 1
+        end
+        getFdatasStatus = annos = @retriever.getFdataByFtypeidAndRid(@uploadId, @ftypeid, @rid, true)
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "++++++++++++ found #{annos.size} annos with first like this:\n\n#{annos.first.inspect}")
+        # Do special DB disconnect (b/c of potential long processing time)
+        if(annos)
+          if(annos.size < 1)
+            getSeqStatus = (@doAllFrefs ? GET_SEQ_OK : SeqRetriever::NO_ANNOS_FOUND)
+          elsif(annos.size > TOO_MANY_ANNOS_LIMIT)
+            getSeqStatus = SeqRetriever::TOO_MANY_ANNOS_FOUND
+            @foundSomeAnnos = true
+          else
+            if(doConcating) # then need to set flags to output 1 defline only and keep track
+              @doConcating = true
+              @retriever.getFrefForRid(@rid)
+              # Get all the group fdata
+              annoGroupRecs = @retriever.getGroupFdataByFtypeidAndRid(@uploadId, @ftypeid, @rid, true)
+              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "++++++++++++ found #{annoGroupRecs.size} anno groups with first like this:\n\n#{annoGroupRecs.first.inspect}")
+              # Go through each group
+              annoGroupRecs.each { |annoGroupRec|
+                @gname = annoGroupRec['gname']
+                @start = (anno['fstart'] || anno['min(fstart)'])
+                @stop = (anno['fstop'] || anno['max(fstop)'])
+                getSeqStatus = getAnnoSequencesForGroup(true)
+              }
+            else
+              getSeqStatus = getSequencesForAnnos(annos)
+            end
+            @foundSomeAnnos = true
+          end
+        end
+        break if(!@doAllFrefs or (getSeqStatus != GET_SEQ_OK and !doConcating) or frefCount >= sortedFrefs.size)
+      end
+      getSeqStatus = SeqRetriever::NO_ANNOS_FOUND unless(@foundSomeAnnos)
+    end
+    getSeqStatus = ((@doConcating and @foundSomeAnnos) ? GET_SEQ_OK : getSeqStatus)
+  	return getSeqStatus
+  end
+
+  def getTrackGroupSequences()
+  	getSeqStatus = false
+    createRetrieverStatus = createRetrieverStatus  = createRetriever()
+    @retriever.getDataDBNameByUploadId(@uploadId)
+    if(createRetrieverStatus == RETRIEVER_CREATE_OK)
+      annos = nil
+      # Prep to do multiple frefs, if that's what we are to do
+      if(@doAllFrefs)
+        frefCount = 0
+        sortedFrefs = sortFrefsByName(@retriever.getFrefs().values)
+      end
+      # Get sequences from all annos
+      while(true)
+      # Get annos
+        # - two slightly different processes depending on whether we want for 1 chromosome or for all chomosomes
+        if(@doAllFrefs)
+          @rid = sortedFrefs[frefCount]['rid']
+          frefCount += 1
+        end
+        getFdatasStatus = annos = @retriever.getGroupFdataByFtypeidAndRid(@uploadId, @ftypeid, @rid, true)
+        # Do special DB disconnect (b/c of potential long processing time)
+        if(annos and annos.size >= 1)
+          if(annos.size > TOO_MANY_ANNOS_LIMIT)
+            getSeqStatus = SeqRetriever::TOO_MANY_ANNOS_FOUND
+            @foundSomeAnnos = true
+          else
+            getSeqStatus = getSequencesForAnnos(annos)
+            @foundSomeAnnos = true
+          end
+        end
+        break if(!@doAllFrefs or (getSeqStatus != GET_SEQ_OK) or frefCount >= sortedFrefs.size)
+      end
+      getSeqStatus = SeqRetriever::NO_ANNOS_FOUND if(!@foundSomeAnnos)
+    end
+  	return getSeqStatus
+  end
+
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# INITIALIZATION
+	# ---------------------------------------------------------------------------
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# DO CHECK/LOAD/CHECK (hierarchical checking)
+	# ---------------------------------------------------------------------------
+
+	paramStatus = paramCheck()						# Check. Security hole 1 plugged.
+	$stderr.debugPuts(__FILE__, "none", "DBEUG", "seqDnloadType => #{@seqDnloadType.inspect}")
+	if(paramStatus == PARAM_OK)
+	 	case @seqDnloadType
+			when SEQ_TYPE_AO																# Annotation only (range provided)
+			  createRetriever()
+			  getSingleAnnoStrand()
+				getSequenceStatus = getAnnoSequence()
+			when SEQ_TYPE_GR																# Sequence across a whole group (range provided)
+				getSequenceStatus = getGroupSequence()
+		  when SEQ_TYPE_AC                                # Sequence for each annotation in a group, concat'd together
+        # has:(@rid and @rid >= 0)
+  		  getSequenceStatus = getAnnoSequencesForGroup(true)
+   	  when SEQ_TYPE_ATC
+        getSequenceStatus = getTrackAnnoSequences(true)
+			when SEQ_TYPE_AG																# Sequence for each annotation in a group.
+				getSequenceStatus = getAnnoSequencesForGroup()
+			when SEQ_TYPE_AT
+				getSequenceStatus = getTrackAnnoSequences()		# Sequence for each annotation in a track.
+			when SEQ_TYPE_GT
+				getSequenceStatus = getTrackGroupSequences()	# Sequence for each annotation group in a track.
+		  when SEQ_TYPE_CU
+		    getSequenceStatus = getCustomSequence()       # Sequence for a user-provided chr and range.
+			else # error
+				return BAD_SEQ_TYPE
+		end
+	  # Clean up retriever
+	  @retriever.clear
+	end
+	# ---------------------------------------------------------------------------
+
+rescue Exception => err
+	exceptionStatus = EXCEPT_BAD
+	$stderr.puts "\n\n#{Time.now} ERROR: resource locator threw exception:\n  #{err.message}\n" + err.backtrace.join("\n") + "\n\n"
+ensure
+# !!! END: PROTECTED SECTION 1 !!!
+
+# ---- NOT OK? ----
+unless(
+        exceptionStatus == EXCEPT_OK and
+				paramStatus == PARAM_OK and
+				createRetrieverStatus == RETRIEVER_CREATE_OK and
+				getSequenceStatus == GET_SEQ_OK
+      )
+    # Then we have a problem...prep to send html error text:
+    prepForHtml()
+    $stderr.puts "DEBUG => Something went wrong (#{exceptionStatus.inspect} ; #{paramStatus.inspect} ; #{createRetrieverStatus.inspect} ; #{getSequenceStatus})"
+    # And now construct the html error text to send:
+%>
+
+  <!-- BEGIN: ERROR PAGE HTML -->
+  <TABLE WIDTH="650" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+  <TR>
+    <TD>
+      <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+      <TR>
+        <TD VALIGN="top" ALIGN="left">
+          <A HREF="http://<%= @serverName %>">
+          <IMG SRC="/images/brl_logo60.gif" WIDTH="60" HEIGHT="60" ALT="BRL" BORDER="0"></A>
+        </TD>
+        <TD VALIGN="top" ALIGN="left">
+          <A HREF="http://<%= @serverName %>">
+          <IMG SRC="/images/brl_type60.gif" WIDTH="120" HEIGHT="60" ALT="" BORDER="0"></A>
+          </TD>
+        <TD><IMG SRC="/images/spacer.gif" WIDTH="20" HEIGHT="1" ALT="" BORDER="0"></TD>
+        <TD VALIGN="bottom" ALIGN="right">
+          <TABLE CELLSPACING="0" CELLPADDING="0" BORDER="0" WIDTH="450">
+          <TR>
+            <TD COLSPAN="4" BACKGROUND="/images/bluemed1px.gif">
+              <IMG SRC="/images/spacer.gif" WIDTH="1" HEIGHT="1" ALT="" BORDER="0">
+            </TD>
+          </TR>
+          </TABLE>
+        </TD>
+      </TR>
+      </TABLE>
+    </TD>
+  </TR>
+  <TR>
+    <TD>
+      <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+      <TR>
+        <TD VALIGN="top" WIDTH="30">
+          <IMG SRC="/images/bluemed1px.gif" HEIGHT="30" WIDTH="30" ALT="" BORDER="0">
+        </TD>
+        <TD WIDTH="10">
+          <IMG SRC="/images/spacer.gif" HEIGHT="1" WIDTH="10" ALT="" BORDER="0">
+        </TD>
+        <TD>
+          <BR>
+  <!-- END: COMMON HTML -->
+
+          <SPAN CLASS="hdr">
+            RESOURCE LOCATION ERROR</SPAN>
+            <P>
+            We encountered a problem locating the Reference Sequence you requested.
+            <P>
+            <%  if(getSequenceStatus == SeqRetriever::FROM_BEYOND_END or
+                  getSequenceStatus == SeqRetriever::TO_NEGATIVE or
+                  getSequenceStatus == SeqRetriever::NO_ANNOS_FOUND or
+                  getSequenceStatus == SeqRetriever::TOO_MANY_ANNOS_FOUND)
+                  case getSequenceStatus
+                    when SeqRetriever::FROM_BEYOND_END
+                      puts "<FONT COLOR='darkred'><B>Both the start and stop coordinates are beyond the end of the sequence!</B></FONT>"
+                    when SeqRetriever::TO_NEGATIVE
+                      puts "<FONT COLOR='darkred'><B>Both the start and stop coordinates are negative!</B></FONT>"
+                    when SeqRetriever::NO_ANNOS_FOUND
+                      puts "<FONT COLOR='darkred'><B>No annotations were found, using the provided parameters.</B></FONT>"
+                    when SeqRetriever::TOO_MANY_ANNOS_FOUND
+                      puts  "<FONT COLOR='darkred'><B>More than #{TOO_MANY_ANNOS_LIMIT} sequences requested, using the provided parameters. Too many for live-download.</B></FONT>"
+                    else # some other sequence status problem
+                      puts "Problem retrieving sequence. Status code: '#{@errorNum}'."
+                  end
+            %>
+            <P>
+            Please go back to the download interface and make suitable adjustments. If you believe this information is incorrect
+            or if you need assistance, please contact <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">our admin (brl_admin@brl.bcm.tmc.edu)</A>
+            with the following information (you can copy and paste):
+            <% else %>
+            Please read the Error Type message below and if you still feel this is an error,
+            <br>contact <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">our admin (brl_admin@brl.bcm.tmc.edu)</A> with all the information
+            <br>below (you can copy and paste):
+            <% end %>
+            <UL>
+              <LI>Error Type:
+              <% if(exceptionStatus != EXCEPT_OK) %>
+                Exception thrown. Serious bug. (<%= @req.escape_html(err.message) %>)<P><%= err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %><P>
+              <% elsif(paramStatus != PARAM_OK and paramStatus != NO_TRACK_ACCESS) %>
+                Bad parameters provided. (<%= paramStatus %>)
+              <% elsif(paramStatus == NO_TRACK_ACCESS) %>
+                <FONT COLOR='darkred'><b>You do not have access to the data within the track indiciated in the request.
+                                     <br>You have access to the user group and probably most annotations, but the group
+                                     <br>admin had disabled your access to annotations within the track referenced in this
+                                     <br>request for sequence.</b></FONT>
+              <% elsif(createRetrieverStatus != RETRIEVER_CREATE_OK) %>
+                Couldn't create sequence retriever.
+              <% elsif(getSequenceStatus != GET_SEQ_OK)
+                  @errorNum = getSequenceStatus
+                  htmlStr = ''
+                  case getSequenceStatus
+                    when SeqRetriever::BAD_REFSEQID
+                      htmlStr = "<FONT COLOR='darkred'>The database you want sequence from (id: #{@refSeqId}) doesn't seem to exist!</FONT>"
+                    when SeqRetriever::UNK_REFNAME
+                      htmlStr = "Invalid reference sequence (eg. chromosome) for this database!"
+                    when SeqRetriever::NO_SEQ_DIR, SeqRetriever::NO_SEQ_FILE
+                      htmlStr = "<FONT COLOR='darkred'>No sequence data available for &quot;<B>#{@retriever.refName}</B>&quot; in this database.</FONT></LI>"
+                      htmlStr <<  "<LI><FONT COLOR='darkred'>Make sure your project Administrators upload appropriate sequence data!</FONT>"
+                    when SeqRetriever::SEQ_FILE_UNEXIST
+                      htmlStr =  "<FONT COLOR='darkred'>Sequence file for &quot;<B>#{@retriever.refName}</B>&quot; unexpectedly missing.</FONT>"
+                    when SeqRetriever::FROM_BEYOND_END
+                      htmlStr =  "Start and stop coordinates are beyond the end of the sequence."
+                    when SeqRetriever::TO_NEGATIVE
+                      htmlStr =  "Both the start and stop coordinates negative."
+                    when SeqRetriever::NO_ANNOS_FOUND
+                      htmlStr =  "No annotations found."
+                    when SeqRetriever::TOO_MANY_ANNOS_FOUND
+                      htmlStr = "Too many sequences requested.</FONT>"
+                    else # some other sequence status problem
+                      htmlStr = "Problem retrieving sequence. Status code: '#{@errorNum}'."
+                  end
+
+              %>
+                <%= htmlStr %>
+                </LI>
+                <LI>(Error #: <%= @errorNum %>)</LI>
+              <% else %>
+                Unknown Error (?)
+              <% end %>
+              </LI>
+              <LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+              <LI>Params: <%= @req.escape_html(nameValsAsString(@cgi.params)) %></LI>
+            </UL>
+  <!-- BEGIN: ERROR PAGE FOOTER HTML -->
+          <BR>&nbsp;<BR>
+          <A HREF="http://www.bcm.tmc.edu">
+          <IMG SRC="/images/bcm_logo_for_brl.gif" WIDTH="54" HEIGHT="60" ALT="" BORDER="0" ALIGN="right" VALIGN="top"></A>
+          <CENTER><IMG SRC="/images/bluemed1px.gif" WIDTH="350" HEIGHT="1" ALT="" BORDER="0"></CENTER>
+          <BR><BR>
+          <SPAN CLASS="footer">&copy;2003 Bioinformatics Research Laboratory</SPAN>
+        </TD>
+      </TR>
+      </TABLE>
+    </TD>
+  </TR>
+  </TABLE>
+  <!-- END: COMMON HTML -->
+
+<% end %>
+<% end %><%# begin-rescue-ensure %>

@@ -1,0 +1,107 @@
+<%# RENDER HTML %>
+<div style="height: 380px; width: 580px; " class="wbDialog wbHelp" >
+  <h4 align="center"  class="wbTitle">Welcome to the Genboree Workbench!</h4>
+  <ul class="wbIntro">
+    <h5 align="center"><a href="https://docs.google.com/file/d/0Bz3_YiJBA_j3Tk1uOFlIazdMbkk/edit?usp=drive_web" target="_gbIntro" style="color: blue;"><img src="/images/silk/film.png" style="position: relative; top: 2px;"/>Watch Intro Video</a>
+    </h5> 
+    <br>
+    <ul>
+      <li><a href="#panels">Panels in the Genboree Workbench</a></li>
+      <li><a href="#faqs">FAQs</a></li>
+      <li><a href="#detailedPanels">Detailed description of various panels</a></li>
+    </ul>
+
+    <br><br>
+    <h4><a name="panels">Panels in the Genboree Workbench<a/></h4> 
+    <br>
+    <li>
+      The <a href="#dataSel"><b>Data Selector</b></a> tree on the left
+      shows the data entities to which you have access. See <code>Help</code> &raquo; <code>Legend</code> for a description of various data entities appearing in this panel.</li> 
+    </li>
+    <li>
+      Drag items to be used as tool <i>inputs</i> over to the <a href="#inputs"><b>Input Data</b></a> area.
+    </li>
+    <li>
+      Drag items to be used as <i>output destinations</i> for tool results over to the
+      <a href="#outputs"><b>Output Targets</b></a> area.
+    </li>
+    <li>
+      Tools which can be run on your selections will be highlighted in <span class="greenToolHighlight">green</span>.
+    </li>
+    <li>
+      Unsure about what kinds of items a particular tool needs in the <b>Input Data</b> and <b>Output Targets</b>?
+      <ul style="margin-left: 20px;">
+        <li style="list-style-type: circle">Just click the tool button when it is <i>not highlighted</i> to see help information.</li>
+      </ul>
+    </li>
+    <li>
+      The <a href="#details"><b>Details</b></a> panel on the right contains information on any data entity, represented as
+      an <a href="#attribute">Attribute</a>-<a href="#value">Value</a> Pair.
+    </li>
+
+    <br>&nbsp;<br>
+    <h4><a name="faqs">FAQs</a></h4>
+    <p>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=489" target="_blank">How do I create a new Genboree <img src="/images/silk/group.png" /> Group?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=491" target="_blank">How do I create a new Genboree <img src="/images/silk/database.png" /> Database?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=492" target="_blank">How do I create a new Genboree <img src="/images/silk/application_side_tree.png" /> Project?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=494" target="_blank">How do I manage <img src="/images/silk/group.png" /> Group permissions (data access)?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=496" target="_blank">How do I run / complete tasks / perform an action?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=498" target="_blank">How do I run / activate a tool?</a>
+      <br>
+      <img src="/images/silk/help.png" style="position: relative; top: 2px; "/> <a href="http://genboree.org/theCommons/ezfaq/show/public-commons?faq_id=495" target="_blank">How do I upload <img src="/images/silk/table.png" /> files?</a>
+    </p>
+
+    <br>&nbsp;<br>
+    <h4><a name="detailedPanels">Detailed description of various panels</a></h4>
+    <br>
+
+    <a name="dataSel"><b>Data Selector</b></a>:
+    The Data Selector panel contains data entities on which Workbench tools operate (input) and where analysis results (output) are stored. 
+    <ul>
+      <li>Data entities include input <img src="/images/silk/table.png" /> Files (text files, sequence data, etc.), <img src="/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif" /> Sequence annotation data (tracks), <img src="/images/workbench/sampleIcon16.png" /> Samples, <img src="/images/workbench/sampleSetIcon16.png" /> Sample sets, Entity lists of files or tracks, <img src="/images/silk/group.png" /> Groups, <img src="/images/silk/database.png" /> Databases and <img src="/images/silk/application_side_tree.png" /> Project pages. See <code>Help</code> &raquo; <code>Legend</code> for a description of various data entities appearing in this panel.
+      <li><img src="/images/silk/group.png" /> Groups contain <img src="/images/silk/application_side_tree.png" /> Projects and <img src="/images/silk/database.png" /> Databases and provide for controlled access to <img src="/images/silk/group.png" /> Group members. </li>
+      <li><img src="/images/silk/database.png" /> Databases can be associated with a reference genome and provide a storage location for input and output. </li>
+      <li><img src="/images/silk/application_side_tree.png" /> Projects are HTML-based editable pages that link output results that are easily accessible and sharable to <img src="/images/silk/group.png" /> Group members. </li>
+    </ul>
+    
+    <br>
+    <a name="inputs"><b>Input Data</b></a>:
+    Workbench tools operate on data entities that you drag over to Input Data from the Data Selector.
+    <br>Input Data accepts items such as <img src="/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif" /> tracks, <img src="/images/silk/table.png" /> files, <img src="/javaScripts/ext-3.2.1/resources/images/default/tree/folder.gif" /> folders, <img src="/images/workbench/sampleIcon16.png" /> samples, and entity lists of files or tracks. 
+  
+    <br>&nbsp;<br>
+    <a name="outputs"><b>Output Targets</b></a>:
+    Workbench tools deposit analysis results in the output targets that you designate by dragging over from the Data Selector. 
+    <br>Output Targets accepts data entities such as <img src="/images/silk/database.png" /> Databases, <img src="/javaScripts/ext-3.2.1/resources/images/default/tree/folder.gif" />Folders and <img src="/images/silk/application_side_tree.png" /> Projects (where output is showcased in a HTML-based format that is easily accessible and sharable to <img src="/images/silk/group.png" /> Group members).
+
+    <br>&nbsp;<br>
+    <a name="details"><b>Details</b></a>:
+    The Details panel provides information on any data entity. 
+    <ul>
+      <li>The information represented as an Attribute-Value Pair is displayed automatically for a data entity if it is dragged into Input Data or Output Targets, or highlighted while in the Data Selector. </li>
+      <li>Attribute-Value Pair (AVP) – The term that describes the way a single data entity category is associated with the entry for that category.
+      For example, a <img src="/images/workbench/sampleIcon16.png" /> Sample 'X' has an attribute called 'Health_Status' and the associated value for <img src="/images/workbench/sampleIcon16.png" /> Sample 'X' is listed as 'healthy'.</li>
+    </ul>
+
+    <br>
+    <a name="attribute"><b>Attribute</b></a>:
+    The Attribute is a categorical description of data entity being defined (think column header) that is associated with a Value. 
+    <br>For example, if given a group of five <img src="/images/workbench/sampleIcon16.png" /> Samples that have the following values: 'male', 'male', 'female', 'female', 'female', a reasonable Attribute name to label these Values could be 'Sex'. 
+    <br>Click arrow on right corner to sort this column.
+
+    <br>&nbsp;<br>
+    <a name="value"><b>Value</b></a>:
+    Value is the entry associated with an attribute.  
+    <br>For example, if the Attribute for a given <img src="/images/workbench/sampleIcon16.png" /> Sample is 'Disease_State', a reasonable Value for this Attribute could be 'healthy'. 
+    <br>Click arrow on right corner to sort this column.
+    
+    <br>&nbsp;<br>
+  
+  </ul>
+</div>

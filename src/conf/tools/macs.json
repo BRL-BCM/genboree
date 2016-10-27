@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "macs",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/Epigenome%20ToolSet%20Demo%20Input%20Data",
+    "label": "MACS",
+    "shortLabel": "MACS"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "walltime": "12:00:00",
+    "pvmem": "8787mb"
+  }
+}

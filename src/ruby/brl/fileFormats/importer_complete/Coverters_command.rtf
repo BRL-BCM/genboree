@@ -1,0 +1,153 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf480
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww19980\viewh13780\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 Human:\
+=================\
+BRL_UCSC_fosmidlff.rb -r fosEndPairs.txt.gz -t Fosmid:EndPairs -l 'End Pairs' -i /users/ybai/work/Project1/Fosmid -f fosEndPairs_LFF.txt -d /users/ybai/work/Project1/Fosmid\
+\
+BRL_UCSC_chimpchainlff.rb -r chr1_chainPanTro2.txt.gz -t Alignment:Chain -l 'Comparative Genomics' -i /users/ybai/work/Project1/Chain -s Human -q Chimp -f chr1_chainPanTro2_LFF.txt -d /users/ybai/work/Project1/Chain\
+\
+BRL_UCSC_hapmapsnps.rb -t 'Polymorphisms:HapMap SNPs' -l 'Structural Variants' -i /users/ybai/work/Project4/HapMap_SNPs -f HapMap_SNPs_LFF.txt -d /users/ybai/work/Project4/HapMap_SNPs -o hapmapSnpsCEU.txt.gz -p hapmapSnpsCHB.txt.gz -q hapmapSnpsJPT.txt.gz -u hapmapSnpsYRI.txt.gz\
+\
+BRL_UCSC_cnpIafrate2.rb -r cnpIafrate2.txt.gz -t CNP:Iafrate2 -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpIafrate2 -f cnpIafrate2_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpIafrate2\
+\
+BRL_UCSC_cnpLocke.rb -r cnpLocke.txt.gz -t CNP:Locke -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpLocke -f cnpLocke_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpLocke\
+\
+BRL_UCSC_cnpRedon.rb -r cnpRedon.txt.gz -t CNP:Redon -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpRedon_new -f cnpRedon_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpRedon_new\
+\
+BRL_UCSC_cnpSebat2.rb -r cnpSebat2.txt.gz -t CNP:Sebat2 -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpSebat2_new -f cnpSebat2_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpSebat2_new\
+\
+BRL_UCSC_cnpSharp2.rb -r cnpSharp2.txt.gz -t CNP:Sharp2 -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpSharp2 -f cnpSharp2_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpSharp2\
+\
+BRL_UCSC_cnpTuzun.rb -r cnpTuzun.txt.gz -t CNP:Tuzun -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_cnpTuzun_new -f cnpTuzun_LFF.txt -d /users/ybai/work/Structural_Variants/converter_cnpTuzun_new\
+\
+BRL_UCSC_delConrad2.rb -r delConrad2.txt.gz -t DEL:Conrad2 -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_delConrad2_new -f delConrad2_LFF.txt -d /users/ybai/work/Structural_Variants/converter_delConrad2_new\
+\
+BRL_UCSC_delHinds2.rb -r delHinds2.txt.gz -t DEL:Hinds2 -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_delHinds2_new -f delHinds2_LFF.txt -d /users/ybai/work/Structural_Variants/converter_delHinds2_new\
+\
+BRL_UCSC_delMccarroll.rb -r delMccarroll.txt.gz -t DEL:Mccarroll -l 'Structural Variants' -i /users/ybai/work/Structural_Variants/converter_delMccarroll_new -f delMccarroll_LFF.txt -d /users/ybai/work/Structural_Variants/converter_delMccarroll_new\
+\
+BRL_UCSC_CNPTCAG.rb -r variation.hg18.v3.txt.gz -t Variants:TCAG.v3 -l 'Structural Variants' -i /users/ybai/work/Variants_TCAG -f variation.hg18.v3_LFF.txt -d /users/ybai/work/Variants_TCAG\
+\
+BRL_UCSC_disease.rb -t DIS:CCC -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/DIS_CCC -f DIS_CCC_LFF.txt -d /users/ybai/work/Project3/DIS_CCC -o cccTrendPvalBd.txt.gz -p cccTrendPvalCad.txt.gz -q cccTrendPvalCd.txt.gz -u cccTrendPvalHt.txt.gz -v cccTrendPvalRa.txt.gz -w cccTrendPvalT1d.txt.gz -x cccTrendPvalT2d.txt.gz\
+\
+BRL_UCSC_gad.rb -t DIS:GAD -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/DIS_GAD -f DIS_GAD_LFF.txt -d /users/ybai/work/Project3/DIS_GAD -o gad.txt.gz\
+\
+BRL_UCSC_bipolar.rb -t NIMH:BIPOL -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/NIMH_BIPOLAR -f NIMH_BIPOLAR_LFF.txt -d /users/ybai/work/Project3/NIMH_BIPOLAR -o nimhBipolarDe.txt.gz -p nimhBipolarUs.txt.gz\
+\
+BRL_UCSC_qtl.rb -t RGD:QTL -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/RGD_QTL -f RGD_QTL_LFF.txt -d /users/ybai/work/Project3/RGD_QTL -o rgdQtl.txt.gz -p rgdQtlLink.txt.gz\
+\
+BRL_UCSC_genes.rb -r knownGene.txt.gz -t UCSC:Genes -l 'Gene' -i /users/ybai/work/Project4/UCSC_Genes -f knownGene_LFF.txt -s knownGeneExon.txt -d /users/ybai/work/Project4/UCSC_Genes\
+\
+BRL_UCSC_bacendpairs.rb -r bacEndPairs.txt.gz -t BAC:EndPairs -l 'End Pairs' -i /users/ybai/work/Human_Project5/BAC_EndPairs -f bacEndPairs_LFF.txt -d /users/ybai/work/Human_Project5/BAC_EndPairs\
+\
+BRL_UCSC_microsatellites.rb -t 'Polymorphisms:Microsatellites'  -l 'Structural Variants' -i /users/ybai/work/Human_Project5/Microsatellites -f Microsatellites_LFF.txt -d /users/ybai/work/Human_Project5/Microsatellites -o microsat.txt.gz\
+\
+BRL_UCSC_mouse_simpleRepeats.rb -t 'Polymorphisms:Simple Repeats'  -l 'Structural Variants' -i /users/ybai/work/Human_Project5/Simple_Repeats -f SimpleRepeats_LFF.txt -d /users/ybai/work/Human_Project5/Simple_Repeats -o simpleRepeat.txt.gz\
+\
+BRL_UCSC_snomiRNA.rb -r wgRna.txt.gz -t RNA -s Small -l 'Gene and Gene Prediction' -i /users/ybai/work/Human_sno-miRNA -f snomiRNA -d /users/ybai/work/Human_sno-miRNA\
+\
+BRL_UCSC_snps128.rb -t 'Polymorphisms:SNPs (128)'  -l 'Structural Variants' -i /users/ybai/work/Project4/SNPs_128 -f SNPs_128_LFF.txt -d /users/ybai/work/Project4/SNPs_128 -o snp128.txt.gz\
+\
+BRL_UCSC_affyGNF1H.rb -r affyGnf1h.txt.gz -t AFFY:GNF1H -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/Affy_GNF1H -f affyGnf1h_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_GNF1H\
+\
+BRL_UCSC_affyHuEx.rb -r affyHuEx1.txt.gz -t 'Affy:HuEx 1.0' -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/Affy_HuEx -f affyHuEx_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_HuEx\
+\
+BRL_UCSC_affyU95.rb -r affyU95.txt.gz -t AFFY:U95 -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U95 -f affyU95_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U95\
+\
+BRL_UCSC_gnfAtlas2.rb -r gnfAtlas2.txt.gz -t 'GNF:Atlas 2' -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/GNF_Atlas2 -f gnfAtlas2_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/GNF_Atlas2\
+\
+BRL_UCSC_affyU133.rb -r affyU133.txt.gz -t 'Affy:U133' -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133 -f affyU133_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133\
+\
+BRL_UCSC_affyU133Plus2.rb -r affyU133Plus2.txt.gz -t 'Affy:U133Plus2' -l 'Expression and Regulation' -i /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133Plus2 -f affyU133Plus2_LFF.txt -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133Plus2\
+\
+BRL_UCSC_hapmapld.rb -t 'Polymorphisms:HapMap LD' -l 'Structural Variants' -i /users/ybai/work/Human_Project6/Variation_Repeats/HapMap_LD -f HapMap_LD_LFF.txt -d /users/ybai/work/Human_Project6/Variation_Repeats/HapMap_LD -o hapmapLdPhCeu.txt.gz -p hapmapLdPhChbJpt.txt.gz -q hapmapLdPhYri.txt.gz\
+\
+BRL_UCSC_repeatMasker.rb -t 'Polymorphisms:Repeat Masker'  -l 'Structural Variants' -i /users/ybai/work/Human_Project5/Repeat_Masker -f chr1_rmsk_LFF.txt -d /users/ybai/work/Human_Project5/Repeat_Masker -o chr1_rmsk.txt.gz\
+\
+BRL_UCSC_allEST.rb -r chr1_est.txt.gz -t UCSC:EST -l 'mRNA and EST' -i /users/ybai/work/Human_Project6/mRNA_EST/All_EST -f chr1_est_LFF.txt -d /users/ybai/work/Human_Project6/mRNA_EST/All_EST\
+\
+BRL_UCSC_allmRNA.rb -r all_mrna.txt.gz -t UCSC:mRNA -l 'mRNA and EST' -i /users/ybai/work/Human_Project6/mRNA_EST/All_mRNA -f allmRNA_LFF.txt -d /users/ybai/work/Human_Project6/mRNA_EST/All_mRNA\
+\
+BRL_UCSC_splicedEST.rb -r chr1_intronEst.txt.gz -t 'UCSC:Spliced EST' -l 'mRNA and EST' -i /users/ybai/work/Human_Project6/mRNA_EST/Spliced_EST -f chr1_intronEst__LFF.txt -d /users/ybai/work/Human_Project6/mRNA_EST/Spliced_EST\
+\
+BRL_UCSC_otherEST.rb -r xenoEst.txt.gz -t UCSC:xenoEst -l 'mRNA and EST' -i /users/ybai/work/Human_Project6/mRNA_EST/Other_EST -f xenoEst_LFF.txt -d /users/ybai/work/Human_Project6/mRNA_EST/Other_EST\
+\
+BRL_UCSC_unigene.rb -r uniGene_3.txt.gz -t UCSC:UniGene -l 'mRNA and EST' -i /users/ybai/work/Human_Project6/mRNA_EST/Uni_Gene -f uniGene_3_LFF.txt -d /users/ybai/work/Human_Project6/mRNA_EST/Uni_Gene\
+\
+BRL_UCSC_mgi_mouse.rb -s -1 -c 1 -t 'RGD:MGI MOUSE QTL' -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/MGI_MOUSE_QTL -f MGI_MOUSE_QTL_LFF.txt -d /users/ybai/work/Project3/MGI_MOUSE_QTL -o jaxQtlAsIs.txt.gz -p jaxQtlPadded.txt.gz\
+\
+BRL_UCSC_rat_qtl_requireBothFiles.rb -t 'RGD:RAT QTL' -l 'Phenotype Disease Ass' -i /users/ybai/work/Project3/RGD_RAT_QTL -f RGD_RAT_QTL_LFF.txt -d /users/ybai/work/Project3/RGD_RAT_QTL -o rgdRatQtl.txt.gz -p rgdRatQtlLink.txt.gz\
+\
+BRL_UCSC_snps125.rb -t 'Polymorphisms:SNPs (125)'  -l 'Structural Variants' -i /users/ybai/work/Project4/SNPs_hg17 -f SNPs_125_LFF.txt -d /users/ybai/work/Project4/SNPs_hg17 -o snp125.txt.gz\
+\
+BRL_UCSC_snps.rb -t 'Polymorphisms:SNPs'  -l 'Structural Variants' -i /users/ybai/work/Project4/SNPs_hg16 -f SNP_LFF.txt -d /users/ybai/work/Project4/SNPs_hg16 -o snp.txt.gz\
+\
+BRL_UCSC_hg16-miRNA.rb -r miRNA.txt.gz -t RNA -s miRNA -l 'Gene and Gene Prediction' -i /users/ybai/work/Human_hg16-miRNA -f miRNA_LFF.txt -d /users/ybai/work/Human_hg16-miRNA\
+\
+BRL_UCSC_hg15-miRNA.rb -r rnaGene.txt.gz -t RNA -s 'RNA Genes' -l 'Gene and Gene Prediction' -i /users/ybai/work/Human_hg15-miRNA -f RNA_Genes_LFF.txt -d /users/ybai/work/Human_hg15-miRNA\
+\
+\
+Mouse:\
+=====================\
+BRL_UCSC_mouse_snps128.rb -t 'Polymorphisms:SNPs (128)'  -l 'Structural Variants' -i /users/ybai/work/Project5/SNP128 -f SNP128_LFF.txt -d /users/ybai/work/Project5/SNP128 -o snp128.txt.gz\
+\
+BRL_UCSC_genes.rb -r knownGene.txt.gz -t UCSC:Genes -l 'Gene' -i /users/ybai/work/Mouse_Project4/UCSC_Genes -f knownGene_LFF.txt -s knownGeneExon.txt -d /users/ybai/work/Mouse_Project4/UCSC_Genes\
+\
+BRL_UCSC_bacendpairs.rb -r bacEndPairs.txt.gz -t BAC:EndPairs -l 'End Pairs' -i /users/ybai/work/Project5/BAC_EndPairs -f bacEndPairs_LFF.txt -d /users/ybai/work/Project5/BAC_EndPairs\
+\
+BRL_UCSC_microsatellites.rb -t 'Polymorphisms:Microsatellites'  -l 'Structural Variants' -i /users/ybai/work/Project5/Microsatellites -f Microsatellites_LFF.txt -d /users/ybai/work/Project5/Microsatellites -o microsat.txt.gz\
+\
+BRL_UCSC_repeatMasker.rb -t 'Polymorphisms:Repeat Masker'  -l 'Structural Variants' -i /users/ybai/work/Project5/Repeat_Masker -f chr1_rmsk_LFF.txt -d /users/ybai/work/Project5/Repeat_Masker -o chr1_rmsk.txt.gz\
+\
+BRL_UCSC_mouse_simpleRepeats.rb -t 'Polymorphisms:Simple Repeats'  -l 'Structural Variants' -i /users/ybai/work/Project5/Simple_Repeats -f SimpleRepeats_LFF.txt -d /users/ybai/work/Project5/Simple_Repeats -o simpleRepeat.txt.gz\
+\
+BRL_UCSC_allEST.rb -r chr1_est.txt.gz -t UCSC:EST -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/All_EST -f chr1_est_LFF.txt -d /users/ybai/work/Project6/mRNA_EST/All_EST\
+\
+BRL_UCSC_allmRNA.rb -r all_mrna.txt.gz -t UCSC:mRNA -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/All_mRNA -f allmRNA_LFF.txt -d /users/ybai/work/Project6/mRNA_EST/All_mRNA\
+\
+BRL_UCSC_othermRNA.rb -r xenoMrna.txt.gz -t UCSC:xenomRNA -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/Other_mRNA -f xenomRNA_LFF.txt -d /users/ybai/work/Project6/mRNA_EST/Other_mRNA\
+\
+BRL_UCSC_splicedEST.rb -r chr1_intronEst.txt.gz -t 'UCSC:Spliced EST' -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/Spliced_EST -f chr1_intronEst__LFF.txt -d /users/ybai/work/Project6/mRNA_EST/Spliced_EST\
+\
+BRL_UCSC_miRNA.rb -r miRNA.txt.gz -t RNA -s miRNA -l 'Gene and Gene Prediction' -i /users/ybai/work/Mouse_mRNA -f miRNA_LFF.txt -d /users/ybai/work/Mouse_mRNA\
+\
+BRL_UCSC_mm7_miRNA.rb -r miRNA.txt.gz -t RNA -s miRNA -l 'Gene and Gene Prediction' -i /users/ybai/work/Mouse_mm7-mRNA -f miRNA_LFF.txt -d /users/ybai/work/Mouse_mm7-mRNA\
+\
+BRL_UCSC_mm6_miRNA.rb -r miRNA.txt.gz -t RNA -s miRNA -l 'Gene and Gene Prediction' -i /users/ybai/work/Mouse_mm6-mRNA -f miRNA_LFF.txt -d /users/ybai/work/Mouse_mm6-mRNA\
+\
+BRL_UCSC_affyGNF1M.rb -r affyGnf1m.txt.gz -t AFFY:GNF1M -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_GNF1M -f affyGnf1m_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_GNF1M\
+\
+BRL_UCSC_affyMOE430.rb -r affyMOE430.txt.gz -t AFFY:MOE430 -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_MOE430 -f affyMOE430_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_MOE430\
+\
+BRL_UCSC_affyU74.rb -r affyU74.txt.gz -t AFFY:U74 -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_U74 -f affyU74_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74\
+\
+BRL_UCSC_affyU74A.rb -r affyGnfU74A.txt.gz -t AFFY:U74A -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_U74A -f affyGnfU74A_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74A\
+\
+BRL_UCSC_affyU74B.rb -r affyGnfU74B.txt.gz -t AFFY:U74B -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_U74B -f affyGnfU74B_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74B\
+\
+BRL_UCSC_affyU74C.rb -r affyGnfU74C.txt.gz -t AFFY:U74C -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_U74C -f affyGnfU74C_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74C\
+\
+BRL_UCSC_mgiqtl_mm8.rb -t 'Mapping:MGI QTL'  -l 'Phenotype Disease Ass' -i /users/ybai/work/Mouse_Project3/MGI_QTL -f mgi_qtl_LFF.txt -d /users/ybai/work/Mouse_Project3/MGI_QTL -o jaxQTL.txt.gz\
+\
+BRL_UCSC_mgiqtl_mm5.rb -t 'Mapping:MGI QTL'  -l 'Phenotype Disease Ass' -i /users/ybai/work/Mouse_Project3/MGI_QTL_mm5 -f mgi_qtl_LFF.txt -d /users/ybai/work/Mouse_Project3/MGI_QTL_mm5 -o jaxQTL3.txt.gz\
+\
+BRL_UCSC_wssd_coverage.rb -t 'Mapping:WSSD Coverage'  -l 'Coverage' -i /users/ybai/work/Mouse_Project3/WSSD_Coverage -f wssd_coverage_LFF.txt -d /users/ybai/work/Mouse_Project3/WSSD_Coverage -o wssdCoverage.txt.gz\
+\
+BRL_UCSC_selfchain.rb -t 'Alignment:ChainSelf'  -l 'Structural Variants' -i /users/ybai/work/Project5/Self_Chain -f chr1_chainSelf_LFF.txt -d /users/ybai/work/Project5/Self_Chain -o chr1_chainSelf.txt.gz\
+\
+BRL_UCSC_rinnsexexp.rb -r rinnSex.txt.gz -t 'Special Expression:Sex Gene' -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Rinn_Sex_Exp -f rinnSex_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Rinn_Sex_Exp\
+\
+BRL_UCSC_affyexon.rb -r affyMoEx1Probe.txt.gz -t 'AFFY:EXON' -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/Affy_Exon -f affyMoEx1Probe_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/Affy_Exon\
+\
+BRL_UCSC_pictar_mirna.rb -r picTarMiRNADog.txt.gz -t 'MicroRNA:PicTar' -l 'Expression and Regulation' -i /users/ybai/work/Project6/Expression_Regulation/PicTar_miRNA -f picTarMiRNADog_LFF.txt -d /users/ybai/work/Project6/Expression_Regulation/PicTar_miRNA\
+\
+BRL_UCSC_cgap_sage_requireBothFiles.rb -t 'TAG:CGAP SAGE' -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/CGAP_SAGE -f CGAP_SAGE_LFF.txt -d /users/ybai/work/Project6/mRNA_EST/CGAP_SAGE -o cgapSage.txt.gz -p cgapSageLib.txt.gz\
+\
+BRL_UCSC_cagetc.rb -r rikenCageTc.txt.gz -t 'TAG:CAGE TC' -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/CAGE_TC -f rikenCageTc_LFF.txt -d /users/ybai/work/Project6/mRNA_EST/CAGE_TC\
+\
+BRL_UCSC_tigrgeneindex.rb -r tigrGeneIndex.txt.gz -t Alignment:TGI -l 'mRNA and EST' -i /users/ybai/work/Project6/mRNA_EST/TIGR_Gene_Index -f tigrGeneIndex_LFF.txt -s tigrGeneIndex.txt -d /users/ybai/work/Project6/mRNA_EST/TIGR_Gene_Index\
+}

@@ -1,0 +1,6 @@
+hg18.ccdsInfo.mrnaAcc (via ensGene.name)
+hg18.ensGtp.transcript (via ensGene.name)
+hg18.ensPep.name (via ensGene.name)
+hg18.knownToEnsembl.value (via ensGene.name)
+hg18.sfDescription.name (via ensGene.name)
+hg18.superfamily.name (via ensGene.name)

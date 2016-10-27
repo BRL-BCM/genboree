@@ -1,0 +1,29 @@
+#property	value
+EHR URL	http://www.ncbi.nlm.nih.gov/core/assets/sra/files/Factsheet_SRA.pdf
+* Tags	
+*- Tag	
+*-- Name	OMIM
+*-- Value	609265
+
+#property	value
+EHR URL	https://www.clinicalgenome.org/site/assets/files/2419/brugada_website_posting.pdf
+* Tags	
+*- Tag	
+*-- Name	OMIM
+*-- Value	601144
+*- Tag	
+*-- Name	HGNC
+*-- Value	10593
+
+#property	value
+EHR URL	https://www.clinicalgenome.org/site/assets/files/2419/dilated_cardiomyopathy_final.pdf
+* Tags	
+*- Tag	
+*-- Name	HGNC
+*-- Value	11949
+*- Tag	
+*-- Name	HGNC
+*-- Value	6636
+*- Tag	
+*-- Name	OMIM
+*-- Value	115200

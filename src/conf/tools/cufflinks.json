@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "cufflinks",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/Epigenome%20ToolSet%20Demo%20Input%20Data",
+    "label": "Assemble and Measure Transcripts by Cufflinks",
+    "shortLabel": "Cufflinks"
+  },
+  "cluster": {
+    "mem": null,
+    "queue": "gbMultiCore",
+    "vmem": null,
+    "ppn": 2,
+    "walltime": "12:00:00",
+    "pvmem": "2929mb"
+  }
+}

@@ -1,0 +1,172 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;8. REST API &ndash; Overview&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#intro">8.1 Introduction</A>
+  <LI class="compact1_10"><A HREF="#keyAspects">8.2 Key Aspects</A>
+  	<UL class="compact1">
+      <LI><A HREF="#rsrcURI"><FONT CLASS="tocSmall">8.2.1 Resource IDs (URIs)</FONT></A></LI>
+      <LI><A HREF="#methods"><FONT CLASS="tocSmall">8.2.2 Uniform Methods</FONT></A></LI>
+      <LI><A HREF="#reps"><FONT CLASS="tocSmall">8.2.3 Resource Representations</FONT></A></LI>
+      <LI><A HREF="#auth"><FONT CLASS="tocSmall">8.2.4 Authorization</FONT></A></LI>
+    </UL>
+  </LI>
+  <!-- LI class="compact1_10"><A HREF="#related">8.3 Related Information</A -->
+  <!-- LI class="compact1_10"><A HREF="#comingSoon">8.4 Coming Soon</A -->
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restResourceIDs">8.A REST API &ndash; Resource IDs</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restUniformMethods">8.B REST API &ndash; Methods</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restRepresentations">8.C REST API &ndash; Representations</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAuthorization">8.D REST API &ndash; Authorization</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="intro">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.1. Introduction:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <P class="body">
+    We are beginning an incremental deployment of a <span class="genbLabel">Genboree Application Programming Interface (API)</span>
+    that exposes the data entities represented within Genboree and also allows authorized users
+    to modify stored data.
+    <P class="body">
+    The API is based on <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer">REST</a>
+    principles and a <i>Resource</i> Oriented Architecture (<a href="http://en.wikipedia.org/wiki/Resource_oriented_architecture">ROA</a>).
+    This approach greatly simplifies the interface and results in predicatable consistency. We believe this also makes the learning curve less steep,
+    compared to more 'involved' alternatives for web-services.
+    <P class="body">
+    The API is currently being being used both by collaborators and internally. Non-Genboree users with programming skills
+    have written scripts that assist or automate certain Genboree tasks and created their own user interfaces that use Genboree
+    via Ajax.
+    <p class="body">
+    We will continue to expose more Genboree entities, as well as expand method support for new and existing resources.
+ <HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="keyAspects">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.2. Key Aspects:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+
+
+  <!--   Topic Content -->
+    <DIV>
+      There are 4 key aspects to using the API:
+    </DIV>
+    <P class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="rsrcURI">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.2.1. Resource IDs (URIs) <sup><a class='genbSubLink' href="/java-bin/showHelp.jsp?topic=restResourceIDs">[details]</a></sup>
+        </DIV>
+      <!--   Sub-topic content -->
+      <P class="body">
+      Data entities stored within Genboree are exposed as <i>resources</i>,
+      which have a <i>unique resource identifier (URI)</i>. Genboree resource identifiers
+      are in fact web URLs; each URL is the location of a specific resource which
+      you want to access, modify, or delete. Resources can be single data items or
+      a collection (list) of multiple items.
+      <P class="body">
+      The URLs have a general form:
+      <P class="body">
+      <center><span class="genbLabel">http://<span class='genbField'>{genbHost}</span>/<span class='genbField'>{rsrcPath}</span>?<span class='genbField'>{rsrcParams}</span><span class='genbField'>{authParams}</span></span></center>
+      <P class="body">
+      <ul class="compact2">
+        <li>- <span class='genbField'>{genbHost}</span> is the host where Genboree is running (e.g. <span class='genbFixed'>www.genboree.org</span>)</li>
+        <li>- <span class='genbField'>{rsrcPath}</span> is the path identifying the resource<br>(e.g. <span class='genbFixed'>/REST/v1/grp/{grpName}/db/{dbName}/tracks</span>).
+          <ul class="compact2">
+            <li>. This is like the path for a file on your computer; here, it is the path to get to a resource.</li>
+            <li>. The path points to a <i>unique</i> resource or a set of resources.</li>
+            <li>. It <i>may</i> not be the only path to that resource, however.</li>
+            <li>. Thus, the path provides some <i>context</i> to accessing the resource.</li>
+          </ul>
+        </li>
+        <li>- <span class='genbField'>{rsrcParams}</span> are any parameters for the resource, generally to modify the representation received or sent.</li>
+        <li>- <span class='genbField'>{authParams}</span> are 3 <i>required</i> parameters Genboree uses to authorize and authenticate the user accessing/modifying the resource.</li>
+      </ul>
+    <P class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="methods">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.2.2. Uniform Methods <sup><a class='genbSubLink' href="/java-bin/showHelp.jsp?topic=restUniformMethods">[details]</a></sup>
+        </DIV>
+      <!--   Sub-topic content -->
+      <P class="body">
+      How can you operate on a resource? You'd like to be able to <i>retrieve</i> resources,
+      <i>create</i> new resources and <i>change</i> existing ones, and possibly be able to
+      <i>delete</i> existing resources. These fundamental operations map well to the standard HTTP
+      methods:
+      <ul class="compact2">
+        <li>- <span class='genbField'>GET</span> to retrieve a representation of the resource.</li>
+        <li>- <span class='genbField'>PUT</span> a new resource or a change an existing resource.</li>
+        <li>- <span class='genbField'>DELETE</span> an existing resource.</li>
+        <li>- <span class='genbField'>POST</span> (currently unused, but reserved for appropriate ROA-founded extension)</li>
+      </ul>
+      <P class="body" style="font-size: 84%;">
+      (If this seems similar to the 'CRUD' of relational databases, that's not surprising. Databases store resources and 'CRUD'
+      encapsulates almost anything you'd want to do to a stored resource.)
+      <P class="body">
+      Methods have <i>return values</i> which communicate the result of operation on the resource&mdash;generally success or type of failure.
+      As is standard for REST APIs, Genboree leverages the standard <i>HTTP response codes</i> for this purpose.
+    <P class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="reps">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.2.3. Resource Representations <sup><a class='genbSubLink' href="/java-bin/showHelp.jsp?topic=restRepresentations">[details]</a></sup>
+        </DIV>
+      <!--   Sub-topic content -->
+      <P class="body">
+      In general, each resource has an appropriate representation whose default syntax is <a href="http://en.wikipedia.org/wiki/JSON">JSON</a>. Genboree
+      makes use of a standard wrapper for all JSON representations, to allow communication of the actual
+      data and also of status information (mainly useful for troubleshooting). The status information supplements the
+      aforementioned response code <i>return values</i>.
+      <P class="body">
+      Some resources share representations, although many have specific representations.
+    <P class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="auth">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.2.4. Authorization <sup><a class='genbSubLink' href="/java-bin/showHelp.jsp?topic=restAuthorization">[details]</a></sup>
+        </DIV>
+      <!--   Sub-topic content -->
+      <P class="body">
+      Genboree must authenticate the identity of the person accessing/modifying the resource via the API,
+      just as it requires login on its web site. Furthermore, Genboree must verify that they are
+      authorized to retrieve or change the resource. To do this, <i>ALL</i> resource URIs must be <u>appended</u> with
+      3 parameters containing authorization information:
+      <ol>
+        <li><span class='genbField'>gbLogin</span> the Genboree user name.</li>
+        <li><span class='genbField'>gbTime</span> the current <a href="http://en.wikipedia.org/wiki/POSIX_time">POSIX time</a> (a.k.a. epoch time or UNX time)</li>
+        <li><span class='genbField'>gbToken</span> computed as:<br>SHA1(<span class='genbField'>{rsrcURI}</span>
+                                                                     + SHA1(<span class='genbField'>{gbLogin}</span>
+                                                                     + <span class='genbField'>{userPassword}</span>)
+                                                                     + <span class='genbField'>{gbTime}</span>)</li>
+      </ol>
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DTD for Genboree importer / exporter -->
+<!-- Last updated: 02/10/03 -->
+<!-- root element of the imported data, consists of at least
+     one REFERENCE
+-->
+<!-- Occurrence indicator + * ?  -->
+<!-- + the element appears one or more times    -->
+<!-- * the element appears zero or more times   -->
+<!-- ? the element appears zero or one time  -->
+<!-- each REFERENCE element corresponding to one Genboree database. -->
+<!ELEMENT REFERENCE (ENTRYPOINT+)>
+<!ELEMENT ENTRYPOINT (SEGMENT+)>
+<!ELEMENT SEGMENT (SEQUENCE?, CATEGORY+)>
+<!ELEMENT SEQUENCE (#PCDATA)>
+<!ELEMENT CATEGORY (TYPE+)>
+<!ELEMENT TYPE (TYPELINK*, GROUP+)>
+<!ELEMENT TYPELINK EMPTY>
+<!ELEMENT GROUP (GROUPLINK*, GROUPNOTE*, ANNOTATION+)>
+<!ELEMENT GROUPLINK EMPTY>
+<!ELEMENT GROUPNOTE (#PCDATA)>
+<!ELEMENT ANNOTATION (QUERYLINK*, QUERYSEQUENCE?, QUERYNOTE*)>
+<!ELEMENT QUERYLINK EMPTY>
+<!ELEMENT QUERYSEQUENCE (#PCDATA)>
+<!ELEMENT QUERYNOTE (#PCDATA)>
+<!--  the CDATA section should be used where ever you want to avoid converting each
+     "&", "<", and ">" characters. Example:
+     <QuerySequence>
+     <![CDATA[...sequence goes here....]]>
+     </QuerySequence
+-->
+<!-- attributes list for record element:
+     if an implied attribute is missing, the value of that attribute is null
+     The dates should be in the format YYYY-MM-DD.
+#REQUIRED an essential element
+#IMPLIED if not provided value will be null
+(value1|value2) #IMPLIED Enum
+(value1|value2) "value1" where value1 become the default value if no value is provided
+
+-->
+<!ATTLIST REFERENCE
+	species CDATA #REQUIRED
+	assemblyVersion CDATA #REQUIRED
+	databaseName CDATA #REQUIRED
+	type CDATA #REQUIRED
+>
+
+<!ATTLIST ENTRYPOINT
+	name CDATA #REQUIRED
+	length CDATA #REQUIRED
+	description CDATA #REQUIRED
+>
+<!ATTLIST SEGMENT
+	start CDATA #REQUIRED
+	stop CDATA #REQUIRED
+>
+<!ATTLIST SEQUENCE
+	length CDATA #REQUIRED
+	type CDATA #REQUIRED
+	name CDATA #REQUIRED
+>
+<!ATTLIST CATEGORY
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+>
+<!ATTLIST TYPE
+	type CDATA #REQUIRED
+	subtype CDATA #REQUIRED
+	style CDATA #REQUIRED
+>
+<!ATTLIST TYPELINK
+	href CDATA #REQUIRED
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+>
+<!ATTLIST GROUP
+	name CDATA #REQUIRED
+>
+<!ATTLIST GROUPLINK
+	href CDATA #REQUIRED
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+>
+<!ATTLIST GROUPNOTE
+	name CDATA #REQUIRED
+>
+<!ATTLIST ANNOTATION
+	name CDATA #REQUIRED
+	start CDATA #REQUIRED
+	end CDATA #REQUIRED
+	score CDATA #REQUIRED
+	phase CDATA #REQUIRED
+	query_start CDATA #REQUIRED
+	query_end CDATA #REQUIRED
+>
+<!ATTLIST QUERYLINK
+	href CDATA #REQUIRED
+	name CDATA #REQUIRED
+	description CDATA #REQUIRED
+>
+<!ATTLIST QUERYSEQUENCE
+	length CDATA #REQUIRED
+	type CDATA #REQUIRED
+	name CDATA #REQUIRED
+>
+<!ATTLIST QUERYNOTE
+	name CDATA #REQUIRED
+>

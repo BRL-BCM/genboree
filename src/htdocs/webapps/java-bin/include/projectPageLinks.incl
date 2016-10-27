@@ -1,0 +1,50 @@
+<div id="projects" style="width: 100% ; margin-bottom: 5px ; text-align: center ; font-weight: bold ;">
+  Project-Specific Pages:
+</div>
+<div id="publicProjs" class="projDiv" style="width: 49%;padding-top:5px">
+  <b>Select Public Projects:</b>
+  <ul class="projList">
+    <li>&raquo; <a href="/java-bin/EpigenomeAtlas/index.jsp?isPublic=Yes">Epigenome Atlas</a></li>
+    <li>&raquo; <a href="http://www.genboree.org/java-bin/project.jsp?projectName=Germline%20Methylation&isPublic=yes">Epigenome &amp; Selective Structural Mutability</a></li>
+    <li>&raquo; <a href="http://genboree.org/java-bin/gbrowser.jsp?refSeqId=1868&entryPointId=chr17&from=53496072&to=53694382&isPublic=yes"><span title="Custom BCM-Beaudet Human 1M Exon Autism Array">Beaudet Human 1M Exon Array</span></a></li>
+    <li>&raquo; <a href="/java-bin/MCF7/index.jsp?isPublic=Yes">MCF-7 Breast Cancer</a></li>
+    <li>&raquo; <a href="/java-bin/GenomicTriangulation/index.jsp?isPublic=Yes">Genomic Triangulation</a></li>
+    <li>&raquo; <a href="/java-bin/Hs.chr3/index.jsp?isPublic=Yes">Human Chr3</a></li>
+    <li>&raquo; <a href="/java-bin/Hs.chr12/index.jsp?isPublic=Yes">Human Chr12</a></li>
+    <!-- li>&raquo; <a href="http://www.brl.bcm.tmc.edu/rhesus/rheMac2/rheMac2.html?isPublic=Yes">Rhesus</a></li -->
+    <li>&raquo; <a href="/java-bin/PurpleUrchin/index.jsp?isPublic=Yes">Sea Urchin</a></li>
+    <li>&raquo; <a href="http://www.triboliumgenome.hgsc.bcm.tmc.edu/wiki/index.php">Tribolium</a></li>
+  </ul>
+</div>
+<div id="privateProjs" class="projDiv" style="width: 49%;padding-top:2px;">
+  <b>Select Private Projects:</b><br>
+  <span style="font-style: italic; font-size: 0.88em;">(invitation only)</span>
+  <ul class="projList">
+    <!-- <li>&raquo; <a href="/java-bin/EDACC/edacc_index.jsp">Epigenomics-EDACC</a></li> -->
+    <li>&raquo; <a href="/java-bin/EDACC/edacc_index.jsp">Epigenomics-EDACC</a></li>
+    <li>&raquo; <a href="/epigenomeatlas/multiGridViewer.rhtml?dbList=http%3A%2F%2Fgenboree.org%2FREST%2Fv1%2Fgrp%2FTargeted%2520Atlases%2Fdb%2FBreast%2520Epigenomes%3FgbKey%3Dsv62omuc&gridTitle=Breast%20Epigenome%20Atlas&pageTitle=Breast%20Epigenomes&xlabel=Assay&ylabel=Sample&gbGridXAttr=eaAssayType&gbGridYAttr=eaSampleType&defaultMode=false">
+    Breast Epigenomes</a></li>
+    <!-- <li>&raquo; <a href="/java-bin/ExonArray/index.jsp">Exon Array Project</a></li> -->
+    <li>&raquo; <a href="/java-bin/CMA/index.jsp">Genetic Disorders</a></li>
+    <li>&raquo; <a href="/java-bin/IonChannel/index.jsp">Ion Channel / Epilepsy</a></li>
+    <li>&raquo; <a href="/java-bin/TCGA/index.jsp">The Cancer Genome Atlas (TCGA)</a></li>
+    <li>&raquo; <a href="/java-bin/TCGA-Reporting/index.jsp">TCGA Sequencing Progress Report</a></li>
+    <li>&raquo; <a href="/java-bin/project.jsp?projectName=TCGA%20GBM%205000%20(Genes%20for%20Array%20Design)">TCGA 6000 (Genes for array Design)</a></li>
+    <li>&raquo; <a href="/java-bin/RhesusMacaque/index.jsp">Rhesus Macaque</a></li>
+    <li>&raquo; <a href="http://annotation.hgsc.bcm.tmc.edu/Urchin/login.html">Sea Urchin</a></li>
+  </ul>
+</div>
+<div id="specialContent" class="projDiv" style="width: 49%;padding-top:10px;">
+  <b>Special Content:</b>
+  <ul class="projList">
+   <!-- <li>&raquo; <a href="/java-bin/project.jsp?projectName=EDACC%20May%20Workshop%202012&isPublic=Yes"">4th Epigenomics Workshop 2012</a></li>
+    <li>&raquo; <a href="/java-bin/project.jsp?projectName=EDACC%20Workshop%202012&isPublic=Yes"">3rd Epigenomics Workshop 2012</a>
+        <ul class="projList" style="margin-left: 0.5em; padding-left: 1em;">
+          <li>&curren; <a href="http://genboree.org/theCommons/ezfaq/index/epigenome-workshop">FAQs</a></li>
+          <li>&curren; <a href="http://genboree.org/theCommons/projects/workshop-march-2012/wiki/use_cases">Use Cases</a></li>
+        </ul>
+    </li>-->
+    <li>&raquo; <a href="/java-bin/project.jsp?projectName=CAD%20Course%202013">Computer-Aided Discovery Methods</a></li>
+    <li>&raquo; <a href="/java-bin/RhesusMacaque/rhesus.bacs.jsp?isPublic=Yes">Rhesus BAC Sequencing</a></li>
+  </ul>
+</div>

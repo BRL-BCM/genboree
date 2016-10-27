@@ -1,0 +1,931 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&ldquo;10. Circos Interface&rdquo;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLast">
+  <P><FONT class="tocText">On This Page:</FONT></P>
+  <UL class="compact1_10">
+    <LI class="compact1_10"><A HREF="#circosuiIntro">10.1 Circos</A></LI>
+    <LI class="compact1_10"><A HREF="#selectingEPs">10.2 Entry Points</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#epGlobal"><FONT CLASS="tocSmall">10.2.1 Global Entry Point Properties</FONT></A></LI>
+      <LI><A HREF="#epList"><FONT CLASS="tocSmall">10.2.2 Entry Points List</FONT></A></LI>
+      <LI><A HREF="#epManual"><FONT CLASS="tocSmall">10.2.3 Manually Specifying Entry Points</FONT></A></LI>
+      <LI><A HREF="#epIndProps"><FONT CLASS="tocSmall">10.2.4 Individual Entry Point Properties</FONT></A></LI>
+      <LI><A HREF="#epScales"><FONT CLASS="tocSmall">10.2.5 Entry Point Scales</FONT></A></LI>
+      <LI><A HREF="#epBreaks"><FONT CLASS="tocSmall">10.2.6 Entry Point Breaks</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#ideoProps">10.3 Specifying Ideogram Properties</A></LI>
+    <LI class="compact1_10"><A HREF="#tickMarks">10.4 Tick Marks</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#addTickMark"><FONT CLASS="tocSmall">10.4.1 Adding Tick Marks</FONT></A></LI>
+      <LI><A HREF="#updateTickMark"><FONT CLASS="tocSmall">10.4.2 Updating Tick Mark s</FONT></A></LI>
+      <LI><A HREF="#removeTickMark"><FONT CLASS="tocSmall">10.4.3 Removing Tick Marks</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#annotTracks">10.5 Annotation Tracks</A></LI>
+    <UL class="compact1">
+      <LI><A HREF="#annotTrackTypes"><FONT CLASS="tocSmall">10.5.1 Track Types and Options</FONT></A></LI>
+      <LI><A HREF="#addAnnotTracks"><FONT CLASS="tocSmall">10.5.2 Adding Annotation Tracks</FONT></A></LI>
+      <LI><A HREF="#updateAnnotTracks"><FONT CLASS="tocSmall">10.5.3 Updating Annotation Tracks</FONT></A></LI>
+      <LI><A HREF="#removeAnnotTracks"><FONT CLASS="tocSmall">10.5.4 Removing Annotation Tracks</FONT></A></LI>
+      <LI><A HREF="#annotRules"><FONT CLASS="tocSmall">10.5.5 Annotation Filtering Rules</FONT></A></LI>
+    </UL>
+    <LI class="compact1_10"><A HREF="#circosSubmit">10.6 Submitting a Circos Job</A></LI>
+  </UL>
+</DIV>
+<DIV class="tocLeft">
+  <FONT class="tocText">See Also:</FONT><BR>
+  <UL class="compact1_10">
+    <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13" style="margin-right: 5px;">Help Home</A>
+  </UL>
+</DIV>
+<DIV style="clear: both ;" />
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="circosuiIntro">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">10.1. Circos:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<div>
+  <p class="body">
+    <a href="http://mkweb.bcgsc.ca/circos/">Circos</a> is a visualization tool created by Martin Krzywinski from the 
+    Michael Smith Genome Sciences Centre of Canada. Circos is a powerful command line tool that is particularly well suited 
+    for visualizing comparative genomics data, such as alignments, conservation and duplication events. Circos also supports 
+    drawing generalized 2D data in the form of line plots, scatter plots, heatmaps and histograms. Unlike other visualization tools, 
+    Circos conveys information by drawing circular ideograms, which makes it extremely valuable for displaying intra- and inter-chromosomal 
+    relationships. Circos is similar to other circular visualization tools such as chromowheel or genopix. However, Circos' extremely flexible 
+    engine allows the user significant control and customization opportunities that can result in publication-quality, aesthetically pleasing 
+    images.
+  </p>
+  <p class="body">
+    Circos has an extensive variety of <a href="http://mkweb.bcgsc.ca/circos/?tutorials">tutorials</a> and 
+    <a href="http://mkweb.bcgsc.ca/circos/?tutorial_images">tutorial images</a> which provide information regarding the capabilities of Circos and the 
+    available options for creating images. Circos has also been published: 
+    <a href="http://genome.cshlp.org/content/early/2009/06/15/gr.092759.109.abstract">Circos: an Information Aesthetic for Comparative Genomics.</a>
+  </p>
+  <p class="body">
+    The Circos User Interface (UI) was created to provide users with a simple way to use this
+    powerful command-line tool. Currently, the provided Circos UI supports options for the version <em>0.51-1</em> release. Circos is an extremely powerful 
+    and flexible tool that can respond to a large number of options and customizations. While the available options in the UI allow a user a high level 
+    of control over the resulting image, further options have been left out for simplicity. Please keep in mind that while visiting the Circos webpage and 
+    viewing the available tutorials, not all options discussed will be available in the interface. However, after running Circos, you will be able to download 
+    all necessary configuration files for your Circos run. If you would like to install Circos on your local machine, you can alter your downloaded configuration 
+    file to explore those other options.
+  </p>
+  <p class="body">
+    The Circos UI provides a wizard-like interface for configuring a run of Circos. Each tab can be
+    traversed in order by clicking the <span class="genbLabel">Next Step</span> and 
+    <span class="genbLabel">Previous Step</span> buttons. However visiting each tab is not
+    required to configure Circos. If you are familiar with the Circos UI and know exactly which tab to visit to 
+    customize your desired option you can go directly to the tab by clicking on the tab title.
+  </p>
+</div>
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="selectingEPs">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">10.2. Entry Points</SPAN>
+  <p class="body">
+    On the <span class="genbLabel">Select Entry Points</span> tab, a user can specify which entry points should be
+    drawn in the image and also modify the appearance of entry points. Circos images comprise a circular representation of 
+    entry points with data tracks that can be drawn inside or outside of the circular composition. The symbolic representation 
+    of the entry points are called <em>ideograms</em>. In the Genboree context, a Circos ideogram can be thought of as the 
+    physical representation of an entry point.
+  </p>
+  <div class="egDiv2">
+    <p>
+      NOTE: At least one entry point must be selected for drawing
+    </p>
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="epGlobal">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.1. Global Entry Points Properties</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  In the <span class="genbLabel">Specification for All Entry Points</span> section, the user can set properites that will be 
+  applied to all entry points that are drawn in the image. The options that can be collectively specified for all entry points 
+  are describe below.  
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/circos/circosEpGlobalOpts.png" alt="EPs Selection List" />
+</div>
+<div style="margin-left: 15px ;">
+  <div style="font-weight: bold ; margin-top: 5px ;">Draw entry point labels:</div>
+  <p class="body">
+    Enable/disable the drawing of entry point labels. Entry point labels alert the user to which entry point they are viewing in the 
+    resulting image. 
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Draw cytogenetic banding:</div>
+  <p class="body">
+    Cytogenetic bands can be drawn on top of the entry points. Upon enabling cytogenetic banding, a list of all annotation tracks will 
+    appear. Select the annotation track that contains the banding information
+    <div class="egDiv2">
+      NOTE: Only tracks that contain the Genboree attribute-value pair (AVP), <span class="genbField">bandType</span> will display the 
+      typical banding color scheme. If a track without the <span class="genbField">bandType</span> fiels is specified, the bands will 
+      be outlined on the entry point.
+    </div>
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Color entry points:</div>
+  <p class="body">
+    Specify a color to fill each entry point. After enabling coloring, a color selection widget will appear.
+    <div class="egDiv2">
+      NOTE: If both cytogenetic banding and entry point coloring are enabled, the cytogenetic bands will be outlined on the entry points 
+      and filled with the specified colors. If the cytogenetic banding track has a <span class="genbField">bandType</span> field, these 
+      band colors will be <em>overridden</em> by the entry point color specified.
+    </div>
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Axis break style:</div>
+  <p class="body">
+    Specify the visual style to be used when indicating sequence breaks in the ideogram
+    <div class="egDiv2" style="overflow: auto ;">
+      Examples of the available axis break styles:
+      <ul style="list-style-type: none ; ">
+        <li style="float: left ; margin-right: 30px ;">
+          <p><em>Style 1:</em></p>
+          <p><img src="/images/circos/break_style_1.png" alt="Axis Break 1"></p>
+        </li>
+        <li style="float: left ;">
+          <p><em>Style 2:</em></p>
+          <p><img src="/images/circos/break_style_2.png" alt="Axis Break 2"></p>
+        </li>
+      </ul>
+    </div>
+  </p>
+</div>
+<A NAME="epList">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.2. Entry Points List</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  When there is a reasonably small number of entry points available (<100), the UI will display the available
+  entry points as a list. An entry point can be enabled/disabled for drawing by checking the <span class="genbLabel">Draw</span> 
+  check-box next to the entry point name. Disabled entry points will have a gray background. By default, all 
+  <span style="font-style: italic ;">*_random</span> entry points will not be drawn.
+</p>
+<p class="body">
+  In this selection mode, <span class="genbLabel">Draw All</span> and <span class="genbLabel">Draw None</span>
+  buttons are available to quickly select all or clear all entry points for drawing, respectively.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/circos/circosEpSelectList.png" alt="EPs Selection List" />
+</div>
+<A NAME="epManual">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.3. Manually Specifying Entry Points</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  When the available entry points in a database is relatively large (>100), the UI will require the user to manually
+  specify the entry points to be drawn by name. The UI will display the total number of entry points in the database
+  along with a count of the current entry points specified. To add an entry point, enter the name into the text field
+  and click the <span class="genbLabel">Add</span> button. To remove an already specified entry point, select the 
+  entry point from the list and click the <span class="genbLabel">Remove</span> button.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/circos/circosEpSelectManual.png" alt="EPs Manual Selection" />
+</div>
+<A NAME="epIndProps">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.4 Individual Entry Point Properties</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  Entry points can have particular properties set on an individual basis. Select an entry point from the entry points list 
+  to specify these properties. The available options are described below.
+</p>
+<div class="egDiv2">
+  <img style="border: 1px solid #CCC ;" src="/images/circos/circosEpOpts.png" alt="Properties for Individual EPs" />
+</div>
+<div style="margin-left: 15px ;">
+  <div style="font-weight: bold ; margin-top: 5px ;">Label:</div>
+  <p class="body">
+    Specify the label for the entry point that will appear if <span class="genbLabel">Draw entry point labels:</span> is enabled. 
+    <div class="egDiv2">
+      NOTE: Circos does not handle long labels in an appropriate manner. If a label is too long, it will extend off the edge of 
+      the image. If you specify a long entry point label, a warning will appear on the <span class="genbLabel">Submit</span> tab.
+    </div>
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Individual entry point color:</div>
+  <p class="body">
+    If <span class="genbLabel">Color entry points</span> is enabled in the <span class="genbLabel">Specification for All Entry Points</span> 
+    section, then a user can specify separate colors for each entry point. This option is in the <span class="genbLabel">Advanced Options</span>.
+    <div class="egDiv2">
+      NOTE: The <span class="genbLabel">Color entry points</span> option <em>must</em> be enabled otherwise this color will be ignored.
+    </div>
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Entry point scaling:</div>
+  <p class="body">
+    Specify a global scale for the entire entry point or a local scale for portions of an entry point. The <a href="#epScales">Entry Point Scales</a> 
+    section describes this option in more detail.
+  </p>
+  <div style="font-weight: bold ; margin-top: 5px ;">Visibility:</div>
+  <p class="body">
+    Specify portions of the entry point to hide. The <a href="#epBreaks">Entry Point Breaks</a> section describes this option in more detail.
+  </p>
+</div>
+<A NAME="epScales">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.5 Entry Point Scales</DIV>
+<!--   Sub-topic content -->
+<p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+  <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=7">View the axis scaling tutorial from Circos &rarr;</a>
+</p>
+<p class="body">
+  The <span class="genbLabel">Entry point scaling</span> section allows a user to specify regions of the image that should be zoomed in or out. 
+  Axis scaling is a powerful feature of Circos that gives the user power to focus a viewers attention on areas of the image that are deemed important. 
+  With scaling, you can zoom in on areas of the image that are dense with data or zoom out regions that are barren. There are two modes of axis scaling available:
+  <ol>
+    <li>
+      <div style="font-weight: bold ; margin-top: 5px ;">Global scaling</div>
+      <p>
+        Global scaling can be selected by choosing the <span class="genbLabel">Scale the whole entry point</span> option from the interface. In this mode, 
+        the user specifies the scaling factor that will affect the entire selected entry point. Values greater than zero will effectively zoom in on that 
+        entry point. Values less than zero will zoom the selected entry point out.
+      </p>
+    </li>
+    <li>
+      <div style="font-weight: bold ; margin-top: 5px ;">Local scaling</div>
+      <p>
+        Local scaling can be selected by choosing the <span class="genbLabel">Scale parts of the entry point</span> option from the interface. In this mode,
+        the user can localize the scale to only desired sections of the selected entry point. A user is required to specify the starting and ending genomic 
+        positions of the region to scale. Values greater than zero will effectively zoom in on that entry point. Values less than zero will zoom the selected 
+        entry point out.
+      </p>
+    </li>
+  </ol> 
+</p>
+<A NAME="epBreaks">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.2.6 Entry Point Breaks</DIV>
+<!--   Sub-topic content -->
+<p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+  <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=2&section=6">View the axis breaks tutorial from Circos &rarr;</a>
+</p>
+<p class="body">
+  The <span class="genbLabel">Visibility</span> section of the interface allows a user to add axis breaks to the entry point. By adding an axis break, a user 
+  can effectively hide sections of the entry point so they are not drawn. Axis breaks can be used to hide uninteresting areas of an entry point from view. A 
+  user is required to specify the staring and ending genomic positions for the axis break (the start and end positions of the entry point to hide).
+</p>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="ideoProps">&nbsp;</A>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">10.3 Specifying Ideogram Properties</SPAN>
+  <p class="body">
+    In the <span class="genbLabel">Ideogram Specification</span> section on the <span class="genbLabel">Specify Ideogram Details</span> tab, a user 
+    can control some properties that affect the overall drawing of the circular image. The available options are describe below.
+  </p>
+  <div class="egDiv2">
+    <img style="border: 1px solid #CCC ;" src="/images/circos/circosIdeoOpts.png" alt="Options for the Ideogram" />
+  </div>
+  <div style="margin-left: 15px ;">
+    <div style="font-weight: bold ; margin-top: 5px ;">Chromosome units:</div>
+    <p class="body">
+      The chromsome units parameter defines a multiplier which can be applied to many other variable values within the configuration files. It is 
+      highly recommended to leave the value of the chromosome units as-is. However if you notice spacing issues in your image, this value can be 
+      adjusted to try to resolve those problems. This option is required.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Ideogram spacing:</div>
+    <p class="body">
+      Control the amount of whitespace between each entry point ideogram in the image. This value is required and should be specified in relation to 
+      the specified value of chromosome units. For example, if a user would like the equivalent spacing of 20 megabases between each ideogram and the 
+      chromosome units option is set to 10,000,000 (10 Mb), then a value of 2 would accomplish this. This option is required.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Ideogram radius:</div>
+    <p class="body">
+      Specify the radius of the circular image. The radius value controls the resulting image size. This value can must be an integer greater than zero. 
+      Larger radius sizes create larger and higher resolution images, smaller radius sizes create smaller and lower resolution images.
+      <div class="egDiv2">
+        NOTE: A user can specify any value for the radius they would like, however please note that smaller images can make it more difficult to see 
+        and comprehend dense images.
+      </div>
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Create a microbial ideogram:</div>
+    <p class="body">
+      This option can be used to create the equivalent image of a microbial genome. By selecting this option, Circos will create a closed circle image 
+      resembling a traditional microbial genome image. This option is in the <span class="genbLabel">Advanced Options</span>.
+    </p>
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="tickMarks">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">10.4 Tick Marks</span>
+  <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+    <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=4">View the tick marks tutorial from Circos &rarr;</a>
+  </p>
+  <p class="body">
+    Tick marks can provide visual cues to viewers so they can easily understand the scale and positioning of the data in your images. 
+    Tick marks can be added to the ideogram through the <span class="genbLabel">Tick Mark Settings</span> section on the 
+    <span class="genbLabel">Specify Ideogram Details</span> tab.
+  </p>
+  <p class="body">
+    A tick mark is represented in the image as a line radiating outwards from the ideograms, spaced evenly at designated intervals. 
+    Each tick mark can also be accompanied by a tick mark label that informs viewers the spacial position of each tick. A user is required 
+    to specify the spacing of each tick mark but can also control the size of the mark and the size of the tick label. The available user 
+    options are described below.
+  </p>
+  <div class="egDiv2">
+    <img style="border: 1px solid #CCC ;" src="/images/circos/circosTickOpts.png" alt="Tick Mark Properties" />
+  </div>
+  <div style="margin-left: 15px ;">
+    <div style="font-weight: bold ; margin-top: 5px ;">Show tick mark:</div>
+    <p class="body">
+      Enable/disable the selected tick mark for drawing. This is useful to temporarily turn off a tick mark without having to delete it.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Show tick label:</div>
+    <p class="body">
+      Enable/disable the selected tick mark label for drawing. This is useful to temporarily turn off a tick mark without having to delete it.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Append units to the tick label:</div>
+    <p class="body">
+      The specified magnitude of each tick mark can be appended to the tick mark label to help a viewer better understan the genomic position 
+      of the tick mark and annotation in the image. 
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Tick mark spacing:</div>
+    <p class="body">
+      The interval to space each tick mark. This option is required.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Tick mark size:</div>
+    <p class="body">
+      The length (in pixels) of each tick mark that will be drawn. 
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Tick label size:</div>
+    <p class="body">
+      The font size for the accompanying tick label, if drawn. 
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Create grid line from tick:</div>
+    <p class="body">
+      Every tick mark can be specified to add a complimentary grid line. These grid lines radiate from the specified start and end positions. Grid lines can 
+      be useful for relating genomic position inside of the ideogram where annotation data will be drawn. Grid lines will be drawn on top of any highlights 
+      in the image but will be drawn underneath all other data. This option is in the <span class="genbLabel">Advanced Options</span>.
+      <div class="egDiv2">
+        <p>An example of grid lines created from tick marks:</p>
+        <img style="border: 1px solid #CCC ;" src="/images/circos/circosGridLines.png" alt="Example of Grid Lines" />
+      </div>
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Grid line start:</div>
+    <p class="body">
+      The radial start position for the grid line created from this tick mark. <a href="#radialPositions">Radial positions</a> must be greater than zero. 
+      This option is in the <span class="genbLabel">Advanced Options</span>.
+    </p>
+    <div style="font-weight: bold ; margin-top: 5px ;">Grid line end:</div>
+    <p class="body">
+      The radial end position for the grid line created from this tick mark. <a href="#radialPositions">Radial positions</a> must be greater than zero. 
+      This option is in the <span class="genbLabel">Advanced Options</span>.
+    </p>
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="addTickMark">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.4.1 Adding Tick Marks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To add a tick mark, specify values for the desired options and click the <span class="genbLabel">Add Tick Mark</span> button. The tick mark will be added 
+  for drawing in the ideogram.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="updateTickMark">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.4.2. Updating Tick Marks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To update the options for a tick mark, select the tick mark from the <span class="genbLabel">Currently Added Tick Marks</span> List. The values for the 
+  selected tick mark will appear in the corresponding widgets. Make the desired changes and then click the <span class="genbLabel">Update Tick Mark</span> 
+  button. If the button is not clicked then the changes will be lost.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="removeTickMark">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.4.3. Removing Tick Marks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To remove a tick mark from the image, select the tick mark from the <span class="genbLabel">Currently Added Tick Marks</span> List. Click the
+  <span class="genbLabel">Remove Tick Mark</span> button to completely remove the tick mark.
+</p>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="annotTracks">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">10.5. Annotation Tracks</span>
+  <p class="body">
+    Any annotation track that exists in your Genboree database can be added to your Circos image and visualized in a variety of 
+    drawing types. These data plots are drawn radially outward from the center of the circle and will be drawn in the correct genomic 
+    positions. The circular composition of the data makes it extremely useful for visualizing intra- and inter-chromosomal relationships.
+  </p>
+  <div class="egDiv2">
+    <img style="border: 1px solid #CCC ;" src="/images/circos/circosAnnotTracks.png" alt="Annotation Tracks Interface" />
+  </div>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="annotTrackTypes">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.5.1 Track Types and Options</DIV>
+<!--   Sub-topic content -->
+<p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+  <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6">View the 2D plots tutorial from Circos &rarr;</a>
+</p>
+<p class="body">
+  Circos supports a variety of 2D plot types that can be used to draw annotation data. In this interface, a subset of those types are 
+  supported: highlight, scatter plot, line plot, histogram, tiles, heatmaps and links. These track types are described below along with 
+  the available options.
+  <p class="body">
+    <a name="radialPositions"></a>
+    It is important to discuss a critical option that pertains to all plot types, links and highlights. All tracks need to specify the 
+    starting and ending radial positions for where within the circular image they should be drawn. A radial position is a decimal value 
+    that is greater than zero. A radial position value between 0 - 1 will be drawn <em>inside</em> the circle. A radial value greater 
+    than 1 will be drawn <em>outside</em> the circle. Drawing annotation on both sides of the circular ideogram can produce more 
+    informative images as well as provide more drawing space to reduce clutter. Creative uses of these values can also create some 
+    visually attractive images. When adding annotation tracks, consider the value of the radial options carefully as they control the 
+    overall layout of your data.
+  </p>
+  <div class="egDiv2">
+    <img style="border: 1px solid #CCC ;" src="/images/circos/circosRadiusExample.png" alt="Explanation of Radii Values" />
+  </div>
+  <ol>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Highlight</span> - Annotations are represented as a colored highlight, either inside the circular 
+      image or the highlight can be drawn on top of the ideogram itself.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=3">View the highlight tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <a name="innerRadius"></a>
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The inner radius is the starting position for this plot. The value must be greater than zero and is typically less than 
+            the specified outer radius. Press the up and down arrows to increment and decrement the radius values. Holding down the 
+            shift key while pressing the up and down arrow will change the value by 0.1. This option is required.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <a name="outerRadius"></a>
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The outer radius is the ending position for this plot. The value must be greater than zero and is typically greater than 
+            the specified inner radius. Press the up and down arrows to increment and decrement the radius values. Holding down the 
+            shift key while pressing the up and down arrow will change the value by 0.1. This option is required.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw the highlight on the ideogram</span>
+          <p style="margin-top: 3px ;">
+            This option controls whether the ideogram should be drawn inside the circle or on top of the entry point ideograms themselves. 
+            Enabling this option will make Circos ignore the inner and outer radius values. This is called an ideogram highlight.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Highlight fill color</span>
+          <p style="margin-top: 3px ;">
+            The desired color to fill the highlight with.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Highlight stroke color</span>
+          <p style="margin-top: 3px ;">
+            The desired color to stroke the highlight with. A stroke will be drawn as a one pixel border around the highlight in the specified color. 
+            This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Scatter plot</span> - Annotations are represented as a colored glyphs at their corresponding genomic position.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=1">View the scatter plot tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Glyph</span>
+          <p style="margin-top: 3px ;">
+            The type of marker to be used for each piece of annotation. Options are: circle, rectangle and triangle.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The starting position for this plot. See <a href="#innerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The ending position for this plot. See <a href="#outerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Glyph size</span>
+          <p style="margin-top: 3px ;">
+            The size, in pixels, to draw each glyph representing a piece of annotation. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Glyph color</span>
+          <p style="margin-top: 3px ;">
+            The fill color for all glyphs. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Glyph stroke color</span>
+          <p style="margin-top: 3px ;">
+            The stroke color for all glyphs. The stroke will be drawn as a one pixel border around each glyph in the specified color. 
+            This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <a href="axis"></a>
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw plot axis</span>
+          <p style="margin-top: 3px ;">
+            Enable/disable the drawing of a scale axis for the plot. Axis lines will be drawn at set intervals from the start of the plot 
+            to the end of the plot. They will be drawn as 2 pixel lines in a light gray color. An axis is useful to help give viewers a 
+            sense of relative scale of the annotation values in the plots. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <a href="axisLines"></a>
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of axis lines</span>
+          <p style="margin-top: 3px ;">
+            The number of axis lines to be drawn if the axis is enabled. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Line plot</span> - Similiar to the scatter plot but instead of each annotation being represented as 
+      a glyph, they are connected with a line.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=2">View the line plot tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The starting position for this plot. See <a href="#innerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The ending position for this plot. See <a href="#outerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Line color</span>
+          <p style="margin-top: 3px ;">
+            The color the connecting line will be drawn in.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Line thickness</span>
+          <p style="margin-top: 3px ;">
+            The thickness of the connecting line. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw plot axis</span>
+          <p style="margin-top: 3px ;">
+            Enable/disable the drawing of a scale axis for the plot. See the <a href="#axis">scatter plot</a> description for more information. 
+            This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of axis lines</span>
+          <p style="margin-top: 3px ;">
+            The number of axis lines to be drawn if the axis is enabled. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Histogram</span> - Circos' histograms are a slight variation on the line plot. In a line plot, adjacent 
+      points are connected by a straight line whereas in a histogram the points form a step-like trace.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=3">View the histogram tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The starting position for this plot. See <a href="#innerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The ending position for this plot. See <a href="#outerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Histogram line color</span>
+          <p style="margin-top: 3px ;">
+            The color the histogram line will be drawn in.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Fill histogram area</span>
+          <p style="margin-top: 3px ;">
+            Enable/disable filling the area under the histogram with a specified color. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Histogram area fill color</span>
+          <p style="margin-top: 3px ;">
+            The fill color for the area under the histogram, if fill is enabled. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Histogram orientation</span>
+          <p style="margin-top: 3px ;">
+            Orientation for the histogram to be drawn. Setting orientation to out will draw smaller values closer to the center of the circle than larger 
+            ones. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Tiles</span> - Annotations are represented as a colored rectangles that span their corresponding genomic position. 
+      Tiles will stack within their designated track to avoid overlap.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=4">View the tiles tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The starting position for this plot. See <a href="#innerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The ending position for this plot. See <a href="#outerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Tile color</span>
+          <p style="margin-top: 3px ;">
+            The color that all the tiles should be filled with.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Tile orientation</span>
+          <p style="margin-top: 3px ;">
+            The direction to start drawing the tiles from. When <span class="genbLabel">Out</span> is specified, tiles will stack from the inner radius out towards 
+            the outer radius. When <span class="genbLabel">In</span> is specified, tiles will stack from the outer radius in towars the inner radius.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of tile layers to draw</span>
+          <p style="margin-top: 3px ;">
+            Number of allowed tile layers. The tile data plot will attempt to draw tiles so that they do not overlap. When an overlap is detected, the overlapping tile 
+            will be drawn in a new layer. The extent to which this occurs is limited by the number of tile layers specified. If the layer limit has been reached, tiles 
+            will begin to overlap, either by collapsing or being hidden. The Circos <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=4&image">tutorial image</a> 
+            explains the stacking process of times in more depth.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Stroke color</span>
+          <p style="margin-top: 3px ;">
+            The color that all the tiles will be stroked with. The stroke is a single pixel border. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Tile thickness</span>
+          <p style="margin-top: 3px ;">
+            The thickness, in pixels, of each rectangular tile. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Display for overflow tiles</span>
+          <p style="margin-top: 3px ;">
+            The mode of operation for tiles that cannot be drawn in a layer and thus overflow onto other tiles. If <span class="genbLabel">Collapse</span> is specified 
+            then overlapping tiles will collapse onto other tiles and be colored different. If <span class="genbLabel">Hide</span> is specified, then tiles that overlap 
+            will not be drawn in the image. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Overflow tiles color</span>
+          <p style="margin-top: 3px ;">
+            The fill color for any overlapping tiles that are specified to be drawn in collapsed mode. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw plot axis</span>
+          <p style="margin-top: 3px ;">
+            Enable/disable the drawing of a scale axis for the plot. See the <a href="#axis">scatter plot</a> description for more information. 
+            This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of axis lines</span>
+          <p style="margin-top: 3px ;">
+            The number of axis lines to be drawn if the axis is enabled. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Heatmap</span> - Annotations are represented as a colored rectangles whose drawing color is determined as a function of their 
+      annotation value. Heatmaps combine the utility of highlights and data plots.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=6&section=5">View the heatmap tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Inner radius</span>
+          <p style="margin-top: 3px ;">
+            The starting position for this plot. See <a href="#innerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Outer radius</span>
+          <p style="margin-top: 3px ;">
+            The ending position for this plot. See <a href="#outerRadius">highlight</a> for more information.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Heatmap colors</span>
+          <p style="margin-top: 3px ;">
+            The list of heatmap colors. At least one color is required. The drawing color of the annotations is determined by the following function: 
+            <span style="font-family: monospace ;">color_index = num_colors * (anno. value-min)/(max-min)</span>
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw plot axis</span>
+          <p style="margin-top: 3px ;">
+            Enable/disable the drawing of a scale axis for the plot. See the <a href="#axis">scatter plot</a> description for more information. 
+            This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Number of axis lines</span>
+          <p style="margin-top: 3px ;">
+            The number of axis lines to be drawn if the axis is enabled. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+    <li style="margin-bottom: 1em ;">
+      <span style="font-weight: bold ;">Links</span> - Genomic positions can be linked if a user-specified attribute value is equivalent at differing positions. 
+      Links are visually represented as arching lines who terminal points are the linked genomic positions.
+      <p class="body" style="border: 1px dashed #CCC ; padding: 3px ; background-color: #EEE ;">
+        <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=5">View the link tutorial from Circos &rarr;</a>
+      </p>
+      <ul style="list-style-type: none ; margin-left: 2.5em ;">
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Link this track to</span>
+          <p style="margin-top: 3px ;">
+            The other annotation track to link the selected one to. A track can be linked to itself. When a track is linked to another, genomic positions that 
+            share a common value in the desired attribute will be linked with a line.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Link tracks when values are equal in</span>
+          <p style="margin-top: 3px ;">
+            The attribute to examine and determine if positions are linked. When the values of this selected attribute are equal, a link will be created between 
+            the genomic positions where that annotation exists.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Start &amp; end radius</span>
+          <p style="margin-top: 3px ;">
+            The radial position that the line representing the link will be drawn from. This option is similiar to the inner and outer radius options of the 2D 
+            plots.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Maximum number of links to draw</span>
+          <p style="margin-top: 3px ;">
+            The number of links to be displayed in the final image. If the image appears too cluttered because a high volume of links are visible, consider setting 
+            the value for this option lower.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Link color</span>
+          <p style="margin-top: 3px ;">
+            The drawing color for the links. Links are drawn as 2 pixel colored lines.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Draw links as ribbons</span>
+          <p style="margin-top: 3px ;">
+            Draw the links as <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=5&section=9">ribbons</a> rather than 2 pixel lines. A normal link has a set 
+            thickness and did not convey the span of genomic positions the link covered. By drawing links as ribbons, a viewer can observe the sizes of the 
+            linked regions. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+        <li style="margin-bottom: 0.5em ;">
+          <span style="font-weight: bold ; border-bottom: 1px dotted #555 ;">Bezier radius for links</span>
+          <p style="margin-top: 3px ;">
+            The radius of the <a href="http://mkweb.bcgsc.ca/circos/?tutorials&id=5&section=2&image">bezier control point</a>. Increasing this value makes 
+            the line curve more. This option is in the <span class="genbLabel">Advanced Options</span>.
+          </p>
+        </li>
+      </ul>
+    </li>
+  </ol>
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="addAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.5.2. Adding Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To add an annotation track to the image, first select the track to add from the <span class="genbLabel">Available tracks</span> list. 
+  Select the 2D plot type for the track and specify the desired options and rules. Click the <span class="genbLabel">Add Track</span> button 
+  to add the annotation track. By default, the track will be drawn at the highest layer, on top of all other annotation tracks in the image, 
+  if any overlap exists.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="updateAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.5.3. Updating Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To update a track, select it from the <span class="genbLabel">List of Currenly Added Annotation Tracks</span>. Selecting the track item will 
+  populate the UI widgets <span class="genbLabel">Track Settings</span> section with the currently set track options. Change the desired options 
+  and click the the <span class="genbLabel">Update Track</span> to save the changes. If the button is not clicked then the changes will be lost.
+</p>
+<p class="body">
+  The layering of an annotation track can be changed by selecting the track item from the list and dragging the item up or down to the 
+  desired position. Moving a track to a higher numbered layer (dragging down) will cause the track to be drawn on top of lower numbered 
+  tracks. The new layer position will automatically be saved on release.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="removeAnnotTracks">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.5.4. Removing Annotation Tracks</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  To remove a track, select it from the <span class="genbLabel">List of Currently Added Annotation Tracks</span>. Click the 
+  <span class="genbLabel">Remove Track</span> button to completely remove the track.
+</p>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="annotRules">&nbsp;</A>
+<DIV class="subsubtopicHeader">10.5.5 Annotation Filtering Rules</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+  All 2D data plots, except the histogram type, support annotation filtering rules. Here are user can add rules to 
+  filter the annotation data so that the resulting image will be affected. A condition is required, based on the annotation 
+  score, and if the condition is met, the rule will be enforced. The available properties that the rule can alter are dependent 
+  upon the type of plot selected. Rules can be useful to distinguish annotations that have differring values.
+</p>
+<div style="clear: both ;"></div>
+<hr class="sep" />
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="circosSubmit">&nbsp;</A>
+<DIV class="topLabel">
+	<span class="subtopicHeader">10.6 Submitting a Circos Job</span>
+  <p class="body">
+    When you have finished specifying how your Circos image should be created, you can submit the job to the Genboree servers for processing 
+    by going to the <span class="genbLabel">Submit</span> tab.
+  </p>
+  <div class="egDiv2">
+    <img style="border: 1px solid #CCC ;" src="/images/circos/circosSubmit.png" alt="Circos Submission Page" />
+  </div>
+  <p class="body">
+    The <span class="genbLabel">Submit</span> tab also informs you of the status of you current Circos configuration. To submit a job, there must 
+    be no errors in your configuration and all of the required options must be specified. The options table at the top of the page will display 
+    the options and their current status.
+  </p>
+  <p class="body">
+    The errors table will inform you of any specified options that have invalid values set. All errors must be fixed to submit a job. 
+  </p>
+  <p class="body">
+    The warnings table will provide information about specified options that have values that might produce unexpected results. 
+    The warnings do not have to be removed before submitting a Circos job and can be ignore if they are expected.
+  </p>
+  <p class="body">
+    Upon submitting the job for processing, the server will be sent your request and return an acknowledgment. If an error occurs 
+    while communicating with the server, an error message will be returned. If the request occurs successfully, you will be informed 
+    and given a <span class="genbLabel">Job ID</span> for your Circos job. When the job has finished processing, you will be notified via 
+    email and provided a link to visit so you can view the results.
+  </p>
+  <p class="body">
+    If you have any questions about a submitted Circos job, contact your Genboree administrator and provide them with your Circos Job ID so 
+    they can properly assist you.
+  </p>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

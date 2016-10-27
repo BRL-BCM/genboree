@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "pathwayFinder",
+    "releaseStatus": "release",
+    "version": "1.0",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Pathway Finder",
+    "shortLabel": "[NOT SET]"
+  }
+}

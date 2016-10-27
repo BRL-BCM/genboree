@@ -1,0 +1,308 @@
+#File Desc  TrackName
+BI.Adult_Liver.H3K27me3.3.wig.gz	BI Adult Liver H3K27me3 Donor 3	BI:Liver H3K27me3 1
+BI.Adult_Liver.H3K27me3.5.wig.gz	BI Adult Liver H3K27me3 Donor 5	BI:Liver H3K27me3 2
+BI.Adult_Liver.H3K36me3.3.wig.gz	BI Adult Liver H3K36me3 Donor 3	BI:Liver H3K36me3 1
+BI.Adult_Liver.H3K36me3.5.wig.gz	BI Adult Liver H3K36me3 Donor 5	BI:Liver H3K36me3 2
+BI.Adult_Liver.H3K4me1.3.wig.gz	BI Adult Liver H3K4me1 Donor 3	BI:Liver H3K4me1 1
+BI.Adult_Liver.H3K4me3.3.wig.gz	BI Adult Liver H3K4me3 Donor 3	BI:Liver H3K4me3 1
+BI.Adult_Liver.H3K4me3.5.wig.gz	BI Adult Liver H3K4me3 Donor 5	BI:Liver H3K4me3 2
+BI.Adult_Liver.H3K9ac.3.wig.gz	BI Adult Liver H3K9ac Donor 3	BI:Liver H3K9ac 1
+BI.Adult_Liver.H3K9me3.3.wig.gz	BI Adult Liver H3K9me3 Donor 3	BI:Liver H3K9me3 1
+BI.Adult_Liver.H3K9me3.5.wig.gz	BI Adult Liver H3K9me3 Donor 5	BI:Liver H3K9me3 2
+BI.CD15_Primary_Cells.H3K27me3.23.wig.gz	BI CD15 Primary Cells H3K27me3 Donor 23	BI:CD15 H3K27me3 3
+BI.CD15_Primary_Cells.H3K4me3.23.wig.gz	BI CD15 Primary Cells H3K4me3 Donor 23	BI:CD15 H3K4me3 3
+BI.CD19_Primary_Cells.Input.CD19_8_1_08.wig.gz	BI CD19 Primary Cells Input Donor CD19_8_1_08	BI:CD19 Input 4
+BI.CD19_Primary_Cells.H3K27me3.CD19_12_22_08.wig.gz	BI CD19 Primary Cells H3K27me3 Donor CD19_12_22_08	BI:CD19 H3K27me3 5
+BI.CD19_Primary_Cells.H3K27me3.CD19_6_26_08.wig.gz	BI CD19 Primary Cells H3K27me3 Donor CD19_6_26_08	BI:CD19 H3K27me3 6
+BI.CD19_Primary_Cells.H3K36me3.CD19_12_29_08.wig.gz	BI CD19 Primary Cells H3K36me3 Donor CD19_12_29_08	BI:CD19 H3K36me3 7
+BI.CD19_Primary_Cells.H3K36me3.CD19_8_1_08.wig.gz	BI CD19 Primary Cells H3K36me3 Donor CD19_8_1_08	BI:CD19 H3K36me3 4
+BI.CD19_Primary_Cells.H3K4me3.CD19_12_22_08.wig.gz	BI CD19 Primary Cells H3K4me3 Donor CD19_12_22_08	BI:CD19 H3K4me3 5
+BI.CD19_Primary_Cells.H3K4me3.CD19_8_1_08.wig.gz	BI CD19 Primary Cells H3K4me3 Donor CD19_8_1_08	BI:CD19 H3K4me3 4
+BI.CD19_Primary_Cells.H3K9me3.CD19_12_29_08.wig.gz	BI CD19 Primary Cells H3K9me3 Donor CD19_12_29_08	BI:CD19 H3K9me3 7
+BI.CD19_Primary_Cells.H3K9me3.CD19_2_20_09.wig.gz	BI CD19 Primary Cells H3K9me3 Donor CD19_2_20_09	BI:CD19 H3K9me3 8
+BI.CD34_Cultured_Cells.H3K27me3.cultured_CD34_2_20_09.wig.gz	BI CD34 Cultured Cells H3K27me3 Donor cultured_CD34_2_20_09	BI:CD34 H3K27me3 9
+BI.CD34_Cultured_Cells.H3K36me3.cultured_CD34_2_20_09.wig.gz	BI CD34 Cultured Cells H3K36me3 Donor cultured_CD34_2_20_09	BI:CD34 H3K36me3 9
+BI.CD34_Cultured_Cells.H3K4me1.cultured_CD34_2_20_09.wig.gz	BI CD34 Cultured Cells H3K4me1 Donor cultured_CD34_2_20_09	BI:CD34 H3K4me1 9
+BI.CD34_Cultured_Cells.H3K4me3.cultured_CD34_2_20_09.wig.gz	BI CD34 Cultured Cells H3K4me3 Donor cultured_CD34_2_20_09	BI:CD34 H3K4me3 9
+BI.CD34_Cultured_Cells.H3K9me3.cultured_CD34_2_20_09.wig.gz	BI CD34 Cultured Cells H3K9me3 Donor cultured_CD34_2_20_09	BI:CD34 H3K9me3 9
+BI.CD34_Primary_Cells.Input.CD34_39661.wig.gz	BI CD34 Primary Cells Input Donor CD34_39661	BI:CD34 Input 10
+BI.CD34_Primary_Cells.H3K27me3.CD34_39661.wig.gz	BI CD34 Primary Cells H3K27me3 Donor CD34_39661	BI:CD34 H3K27me3 10
+BI.CD34_Primary_Cells.H3K27me3.CD34_39804.wig.gz	BI CD34 Primary Cells H3K27me3 Donor CD34_39804	BI:CD34 H3K27me3 11
+BI.CD34_Primary_Cells.H3K36me3.CD34_39661.wig.gz	BI CD34 Primary Cells H3K36me3 Donor CD34_39661	BI:CD34 H3K36me3 10
+BI.CD34_Primary_Cells.H3K36me3.CD34_39811.wig.gz	BI CD34 Primary Cells H3K36me3 Donor CD34_39811	BI:CD34 H3K36me3 12
+BI.CD34_Primary_Cells.H3K4me1.CD34_39811.wig.gz	BI CD34 Primary Cells H3K4me1 Donor CD34_39811	BI:CD34 H3K4me1 12
+BI.CD34_Primary_Cells.H3K4me1.CD34_39889.wig.gz	BI CD34 Primary Cells H3K4me1 Donor CD34_39889	BI:CD34 H3K4me1 13
+BI.CD34_Primary_Cells.H3K4me3.CD34_39629.wig.gz	BI CD34 Primary Cells H3K4me3 Donor CD34_39629	BI:CD34 H3K4me3 14
+BI.CD34_Primary_Cells.H3K4me3.CD34_39804.wig.gz	BI CD34 Primary Cells H3K4me3 Donor CD34_39804	BI:CD34 H3K4me3 11
+BI.CD34_Primary_Cells.H3K9me3.CD34_39811.wig.gz	BI CD34 Primary Cells H3K9me3 Donor CD34_39811	BI:CD34 H3K9me3 12
+BI.CD34_Primary_Cells.H3K9me3.CD34_39889.wig.gz	BI CD34 Primary Cells H3K9me3 Donor CD34_39889	BI:CD34 H3K9me3 13
+BI.CD3_Primary_Cells.Input.CD3_39661.wig.gz	BI CD3 Primary Cells Input Donor CD3_39661	BI:CD3 Input 15
+BI.CD3_Primary_Cells.H3K27me3.CD3_39661.wig.gz	BI CD3 Primary Cells H3K27me3 Donor CD3_39661	BI:CD3 H3K27me3 15
+BI.CD3_Primary_Cells.H3K27me3.CD3_39804.wig.gz	BI CD3 Primary Cells H3K27me3 Donor CD3_39804	BI:CD3 H3K27me3 16
+BI.CD3_Primary_Cells.H3K36me3.CD3_39661.wig.gz	BI CD3 Primary Cells H3K36me3 Donor CD3_39661	BI:CD3 H3K36me3 15
+BI.CD3_Primary_Cells.H3K36me3.CD3_39804.wig.gz	BI CD3 Primary Cells H3K36me3 Donor CD3_39804	BI:CD3 H3K36me3 16
+BI.CD3_Primary_Cells.H3K4me1.CD3_39811.wig.gz	BI CD3 Primary Cells H3K4me1 Donor CD3_39811	BI:CD3 H3K4me1 17
+BI.CD3_Primary_Cells.H3K4me1.CD3_39840.wig.gz	BI CD3 Primary Cells H3K4me1 Donor CD3_39840	BI:CD3 H3K4me1 18
+BI.CD3_Primary_Cells.H3K4me3.CD3_39661.wig.gz	BI CD3 Primary Cells H3K4me3 Donor CD3_39661	BI:CD3 H3K4me3 15
+BI.CD3_Primary_Cells.H3K4me3.CD3_39804.wig.gz	BI CD3 Primary Cells H3K4me3 Donor CD3_39804	BI:CD3 H3K4me3 16
+BI.CD3_Primary_Cells.H3K9me3.CD3_39811.wig.gz	BI CD3 Primary Cells H3K9me3 Donor CD3_39811	BI:CD3 H3K9me3 17
+BI.CD3_Primary_Cells.H3K9me3.CD3_39840.wig.gz	BI CD3 Primary Cells H3K9me3 Donor CD3_39840	BI:CD3 H3K9me3 18
+BI.ES-I3.Input.Solexa-10219.wig.gz	BI ES-I3 Input Library Solexa-10219	BI:ESI3 Input 1
+BI.ES-I3.H3K27me3.Solexa-10213-15380.wig.gz	BI ES-I3 H3K27me3 Library Solexa-10213-15380	BI:ESI3 H3K27me3 1
+BI.ES-I3.H3K27me3.Solexa-12678.wig.gz	BI ES-I3 H3K27me3 Library Solexa-12678	BI:ESI3 H3K27me3 2
+BI.ES-I3.H3K36me3.Solexa-15381.wig.gz	BI ES-I3 H3K36me3 Library Solexa-15381	BI:ESI3 H3K36me3 1
+BI.ES-I3.H3K36me3.Solexa-16493.wig.gz	BI ES-I3 H3K36me3 Library Solexa-16493	BI:ESI3 H3K36me3 2
+BI.ES-I3.H3K4me1.Solexa-15382.wig.gz	BI ES-I3 H3K4me1 Library Solexa-15382	BI:ESI3 H3K4me1 1
+BI.ES-I3.H3K4me3.Solexa-12681.wig.gz	BI ES-I3 H3K4me3 Library Solexa-12681	BI:ESI3 H3K4me3 1
+BI.ES-I3.H3K4me3.Solexa-15474.wig.gz	BI ES-I3 H3K4me3 Library Solexa-15474	BI:ESI3 H3K4me3 2
+BI.ES-I3.H3K9ac.Solexa-12682.wig.gz	BI ES-I3 H3K9ac Library Solexa-12682	BI:ESI3 H3K9ac 1
+BI.ES-I3.H3K9ac.Solexa-15383.wig.gz	BI ES-I3 H3K9ac Library Solexa-15383	BI:ESI3 H3K9ac 2
+BI.ES-I3.H3K9me3.Solexa-12683-16494.wig.gz	BI ES-I3 H3K9me3 Library Solexa-12683-16494	BI:ESI3 H3K9me3 1
+BI.ES-I3.H3K9me3.Solexa-15475.wig.gz	BI ES-I3 H3K9me3 Library Solexa-15475	BI:ESI3 H3K9me3 2
+BI.ES-WA7.H3K27me3.Solexa-12609.wig.gz	BI ES-WA7 H3K27me3 Library Solexa-12609	BI:ESWA7 H3K27me3 1
+BI.ES-WA7.H3K36me3.Solexa-12610.wig.gz	BI ES-WA7 H3K36me3 Library Solexa-12610	BI:ESWA7 H3K36me3 1
+BI.ES-WA7.H3K4me1.Solexa-12611.wig.gz	BI ES-WA7 H3K4me1 Library Solexa-12611	BI:ESWA7 H3K4me1 1
+BI.ES-WA7.H3K4me3.Solexa-13062.wig.gz	BI ES-WA7 H3K4me3 Library Solexa-13062	BI:ESWA7 H3K4me3 1
+BI.ES-WA7.H3K9me3.Solexa-12613.wig.gz	BI ES-WA7 H3K9me3 Library Solexa-12613	BI:ESWA7 H3K9me3 1
+BI.H1.Input.Solexa-12532.wig.gz	BI H1 Input Library Solexa-12532	BI:H1 Input 1
+BI.H1.input.wig.gz	BI H1 Input Common Marks	BI:H1 Input
+BI.H1.H3K27me3.Solexa-12523.wig.gz	BI H1 H3K27me3 Library Solexa-12523	BI:H1 H3K27me3 1
+BI.H1.H3K27me3.wig.gz	BI H1 H3K27me3 Common Marks	BI:H1 H3K27me3
+BI.H1.H3K36me3.Solexa-14961.wig.gz	BI H1 H3K36me3 Library Solexa-14961	BI:H1 H3K36me3 1
+BI.H1.H3K36me3.wig.gz	BI H1 H3K36me3 Common Marks	BI:H1 H3K36me3
+BI.H1.H3K4me1.Solexa-13061.wig.gz	BI H1 H3K4me1 Library Solexa-13061	BI:H1 H3K4me1 1
+BI.H1.H3K4me1.wig.gz	BI H1 H3K4me1 Common Marks	BI:H1 H3K4me1
+BI.H1.H3K4me3.Solexa-10398.wig.gz	BI H1 H3K4me3 Library Solexa-10398	BI:H1 H3K4me3 1
+BI.H1.H3K4me3.Solexa-12522.wig.gz	BI H1 H3K4me3 Library Solexa-12522	BI:H1 H3K4me3 2
+BI.H1.H3K4me3.wig.gz	BI H1 H3K4me3 Common Marks	BI:H1 H3K4me3
+BI.H1.H3K9ac.Solexa-14962.wig.gz	BI H1 H3K9ac Library Solexa-14962	BI:H1 H3K9ac 1
+BI.H1.H3K9ac.wig.gz	BI H1 H3K9ac Common Marks	BI:H1 H3K9ac
+BI.H1.H3K9me3.wig.gz	BI H1 H3K9me3 Common Marks	BI:H1 H3K9me3
+BI.iPS-11a.Input.Solexa-11734.wig.gz	BI iPS-11a Input Library Solexa-11734	BI:iPS11a Input 1
+BI.iPS-11a.H3K4me3.Solexa-11733.wig.gz	BI iPS-11a H3K4me3 Library Solexa-11733	BI:iPS11a H3K4me3 1
+BI.iPS-15b.Input.Solexa-15157.wig.gz	BI iPS-15b Input Library Solexa-15157	BI:iPS15b Input 1
+BI.iPS-15b.H3K36me3.Solexa-20749.wig.gz	BI iPS-15b H3K36me3 Library Solexa-20749	BI:iPS15b H3K36me3 1
+BI.iPS-15b.H3K4me3.Solexa-20743.wig.gz	BI iPS-15b H3K4me3 Library Solexa-20743	BI:iPS15b H3K4me3 1
+BI.iPS-15b.H3K9ac.Solexa-20747.wig.gz	BI iPS-15b H3K9ac Library Solexa-20747	BI:iPS15b H3K9ac 1
+BI.iPS-15b.H3K9me3.Solexa-20732.wig.gz	BI iPS-15b H3K9me3 Library Solexa-20732	BI:iPS15b H3K9me3 1
+BI.iPS-18c.H3K27me3.Solexa-19791.wig.gz	BI iPS-18c H3K27me3 Library Solexa-19791	BI:iPS18c H3K27me3 1
+BI.iPS-18c.H3K36me3.Solexa-19808.wig.gz	BI iPS-18c H3K36me3 Library Solexa-19808	BI:iPS18c H3K36me3 1
+BI.iPS-18c.H3K4me3.Solexa-15173.wig.gz	BI iPS-18c H3K4me3 Library Solexa-15173	BI:iPS18c H3K4me3 1
+BI.iPS-18c.H3K4me3.Solexa-19747.wig.gz	BI iPS-18c H3K4me3 Library Solexa-19747	BI:iPS18c H3K4me3 2
+BI.iPS-18c.H3K9ac.Solexa-19756.wig.gz	BI iPS-18c H3K9ac Library Solexa-19756	BI:iPS18c H3K9ac 1
+BI.iPS-18c.H3K9me3.Solexa-19774.wig.gz	BI iPS-18c H3K9me3 Library Solexa-19774	BI:iPS18c H3K9me3 1
+BI.iPS-20b.Input.Solexa-10232.wig.gz	BI iPS-20b Input Library Solexa-10232	BI:iPS20b Input 1
+BI.iPS-20b.H3K27me3.Solexa-15159.wig.gz	BI iPS-20b H3K27me3 Library Solexa-15159	BI:iPS20b H3K27me3 1
+BI.iPS-20b.H3K36me3.Solexa-20763.wig.gz	BI iPS-20b H3K36me3 Library Solexa-20763	BI:iPS20b H3K36me3 1
+BI.iPS-20b.H3K9ac.Solexa-20764.wig.gz	BI iPS-20b H3K9ac Library Solexa-20764	BI:iPS20b H3K9ac 1
+BI.iPS-20b.H3K9me3.Solexa-20765.wig.gz	BI iPS-20b H3K9me3 Library Solexa-20765	BI:iPS20b H3K9me3 1
+BI.Mobilized_CD34_Primary_Cells.Input.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells Input Donor Mobilized_CD34_5_28_09	BI:CD34 Input 19
+BI.Mobilized_CD34_Primary_Cells.H3K27me3.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells H3K27me3 Donor Mobilized_CD34_5_28_09	BI:CD34 H3K27me3 19
+BI.Mobilized_CD34_Primary_Cells.H3K36me3.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells H3K36me3 Donor Mobilized_CD34_5_28_09	BI:CD34 H3K36me3 19
+BI.Mobilized_CD34_Primary_Cells.H3K4me1.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells H3K4me1 Donor Mobilized_CD34_5_28_09	BI:CD34 H3K4me1 19
+BI.Mobilized_CD34_Primary_Cells.H3K4me3.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells H3K4me3 Donor Mobilized_CD34_5_28_09	BI:CD34 H3K4me3 19
+BI.Mobilized_CD34_Primary_Cells.H3K9me3.Mobilized_CD34_5_28_09.wig.gz	BI Mobilized CD34 Primary Cells H3K9me3 Donor Mobilized_CD34_5_28_09	BI:CD34 H3K9me3 19
+BI.Pancreatic_Islets.Input.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets Input Library pancreatic_islets_normal_3_27_09	BI:Pancreas Input 1
+BI.Pancreatic_Islets.H3K27me3.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets H3K27me3 Library pancreatic_islets_normal_3_27_09	BI:Pancreas H3K27me3 1
+BI.Pancreatic_Islets.H3K36me3.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets H3K36me3 Library pancreatic_islets_normal_3_27_09	BI:Pancreas H3K36me3 1
+BI.Pancreatic_Islets.H3K4me1.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets H3K4me1 Library pancreatic_islets_normal_3_27_09	BI:Pancreas H3K4me1 1
+BI.Pancreatic_Islets.H3K4me3.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets H3K4me3 Library pancreatic_islets_normal_3_27_09	BI:Pancreas H3K4me3 1
+BI.Pancreatic_Islets.H3K9ac.pancreatic_islets_normal_3_27_09.wig.gz	BI Pancreatic Islets H3K9ac Library pancreatic_islets_normal_3_27_09	BI:Pancreas H3K9ac 1
+BI.Pancreatic_Islets.H3K9me3.pancreatic_islets_normal_0_0_00.wig.gz	BI Pancreatic Islets H3K9me3 Library pancreatic_islets_normal_0_0_00	BI:Pancreas H3K9me3 1
+UCSD.H1.H3K27ac.LL313.wig.gz	UCSD H1 H3K27ac Library LL313	SD:H1 H3K27ac 1
+UCSD.H1.H3K27me3.2.wig.gz	UCSD H1 H3K27me3 Library 2	SD:H1 H3K27me3 2
+UCSD.H1.H3K27me3.wig.gz	UCSD H1 H3K27me3 Common Marks	SD:H1 H3K27me3
+UCSD.H1.H3K36me3.2.wig.gz	UCSD H1 H3K36me3 Library 2	SD:H1 H3K36me3 2
+UCSD.H1.H3K36me3.wig.gz	UCSD H1 H3K36me3 Common Marks	SD:H1 H3K36me3
+UCSD.H1.H3K4me1.2.wig.gz	UCSD H1 H3K4me1 Library 2	SD:H1 H3K4me1 2
+UCSD.H1.H3K4me1.wig.gz	UCSD H1 H3K4me1 Common Marks	SD:H1 H3K4me1
+UCSD.H1.H3K4me3.2.wig.gz	UCSD H1 H3K4me3 Library 2	SD:H1 H3K4me3 3
+UCSD.H1.H3K4me3.wig.gz	UCSD H1 H3K4me3 Common Marks	SD:H1 H3K4me3
+UCSD.H1.H3K9ac.wig.gz	UCSD H1 H3K9ac Common Marks	SD:H1 H3K9ac
+UCSD.H1.H3K9me3.wig.gz	UCSD H1 H3K9me3 Common Marks	SD:H1 H3K9me3
+UCSD.IMR90.Input.IMR90-05-I1.wig.gz	UCSD IMR90 Input Library IMR90-05-I1	SD:IMR90 Input 1
+UCSD.IMR90.Input.IMR90-06-I1.wig.gz	UCSD IMR90 Input Library IMR90-06-I1	SD:IMR90 Input 2
+UCSD.IMR90.Input.IMR90-07-I1.wig.gz	UCSD IMR90 Input Library IMR90-07-I1	SD:IMR90 Input 3
+UCSD.IMR90.Input.LL-I1.wig.gz	UCSD IMR90 Input Library LL-I1	SD:IMR90 Input 4
+UCSD.IMR90.Input.LL-I2.wig.gz	UCSD IMR90 Input Library LL-I2	SD:IMR90 Input 5
+UCSD.IMR90.Input.SK-I1.wig.gz	UCSD IMR90 Input Library SK-I1	SD:IMR90 Input 6
+UCSD.IMR90.Input.SK-I2.wig.gz	UCSD IMR90 Input Library SK-I2	SD:IMR90 Input 7
+UCSD.IMR90.Input.SK-I3.wig.gz	UCSD IMR90 Input Library SK-I3	SD:IMR90 Input 8
+UCSD.IMR90.H2AK5ac.YL20.wig.gz	UCSD IMR90 H2AK5ac Library YL20	SD:IMR90 H2AK5ac 1
+UCSD.IMR90.H2AK5ac.YL60.wig.gz	UCSD IMR90 H2AK5ac Library YL60	SD:IMR90 H2AK5ac 2
+UCSD.IMR90.H2BK120ac.SK15.wig.gz	UCSD IMR90 H2BK120ac Library SK15	SD:IMR90 H2BK120ac 1
+UCSD.IMR90.H2BK120ac.YL06.wig.gz	UCSD IMR90 H2BK120ac Library YL06	SD:IMR90 H2BK120ac 2
+UCSD.IMR90.H2BK12ac.YL138.wig.gz	UCSD IMR90 H2BK12ac Library YL138	SD:IMR90 H2BK12ac 1
+UCSD.IMR90.H2BK12ac.YL18.wig.gz	UCSD IMR90 H2BK12ac Library YL18	SD:IMR90 H2BK12ac 2
+UCSD.IMR90.H2BK12ac.YL68.wig.gz	UCSD IMR90 H2BK12ac Library YL68	SD:IMR90 H2BK12ac 3
+UCSD.IMR90.H2BK15ac.SK42.wig.gz	UCSD IMR90 H2BK15ac Library SK42	SD:IMR90 H2BK15ac 1
+UCSD.IMR90.H2BK15ac.YL19.wig.gz	UCSD IMR90 H2BK15ac Library YL19	SD:IMR90 H2BK15ac 2
+UCSD.IMR90.H2BK15ac.YL69.wig.gz	UCSD IMR90 H2BK15ac Library YL69	SD:IMR90 H2BK15ac 3
+UCSD.IMR90.H2BK20ac.SK14.wig.gz	UCSD IMR90 H2BK20ac Library SK14	SD:IMR90 H2BK20ac 1
+UCSD.IMR90.H2BK20ac.YL07.wig.gz	UCSD IMR90 H2BK20ac Library YL07	SD:IMR90 H2BK20ac 2
+UCSD.IMR90.H3K14ac.SK17.wig.gz	UCSD IMR90 H3K14ac Library SK17	SD:IMR90 H3K14ac 1
+UCSD.IMR90.H3K14ac.YL15.wig.gz	UCSD IMR90 H3K14ac Library YL15	SD:IMR90 H3K14ac 2
+UCSD.IMR90.H3K18ac.LL230.wig.gz	UCSD IMR90 H3K18ac Library LL230	SD:IMR90 H3K18ac 1
+UCSD.IMR90.H3K18ac.SK09.wig.gz	UCSD IMR90 H3K18ac Library SK09	SD:IMR90 H3K18ac 2
+UCSD.IMR90.H3K23ac.SK18.wig.gz	UCSD IMR90 H3K23ac Library SK18	SD:IMR90 H3K23ac 1
+UCSD.IMR90.H3K23ac.YL09.wig.gz	UCSD IMR90 H3K23ac Library YL09	SD:IMR90 H3K23ac 2
+UCSD.IMR90.H3K27ac.LL231.wig.gz	UCSD IMR90 H3K27ac Library LL231	SD:IMR90 H3K27ac 1
+UCSD.IMR90.H3K27ac.LL235.wig.gz	UCSD IMR90 H3K27ac Library LL235	SD:IMR90 H3K27ac 2
+UCSD.IMR90.H3K27ac.YL58.wig.gz	UCSD IMR90 H3K27ac Library YL58	SD:IMR90 H3K27ac 3
+UCSD.IMR90.H3K27me3.LL223.wig.gz	UCSD IMR90 H3K27me3 Library LL223	SD:IMR90 H3K27me3 1
+UCSD.IMR90.H3K27me3.SK05.wig.gz	UCSD IMR90 H3K27me3 Library SK05	SD:IMR90 H3K27me3 2
+UCSD.IMR90.H3K36me3.LL225.wig.gz	UCSD IMR90 H3K36me3 Library LL225	SD:IMR90 H3K36me3 1
+UCSD.IMR90.H3K36me3.YL67.wig.gz	UCSD IMR90 H3K36me3 Library YL67	SD:IMR90 H3K36me3 2
+UCSD.IMR90.H3K4ac.LL239.wig.gz	UCSD IMR90 H3K4ac Library LL239	SD:IMR90 H3K4ac 1
+UCSD.IMR90.H3K4ac.SK16.wig.gz	UCSD IMR90 H3K4ac Library SK16	SD:IMR90 H3K4ac 2
+UCSD.IMR90.H3K4me1.LL222.wig.gz	UCSD IMR90 H3K4me1 Library LL222	SD:IMR90 H3K4me1 1
+UCSD.IMR90.H3K4me1.SK04.wig.gz	UCSD IMR90 H3K4me1 Library SK04	SD:IMR90 H3K4me1 2
+UCSD.IMR90.H3K4me1.SYL133.wig.gz	UCSD IMR90 H3K4me1 Library SYL133	SD:IMR90 H3K4me1 3
+UCSD.IMR90.H3K4me2.LL232.wig.gz	UCSD IMR90 H3K4me2 Library LL232	SD:IMR90 H3K4me2 1
+UCSD.IMR90.H3K4me2.SK07.wig.gz	UCSD IMR90 H3K4me2 Library SK07	SD:IMR90 H3K4me2 2
+UCSD.IMR90.H3K4me3.LL221.wig.gz	UCSD IMR90 H3K4me3 Library LL221	SD:IMR90 H3K4me3 1
+UCSD.IMR90.H3K4me3.SK03.wig.gz	UCSD IMR90 H3K4me3 Library SK03	SD:IMR90 H3K4me3 2
+UCSD.IMR90.H3K56ac.YL05.wig.gz	UCSD IMR90 H3K56ac Library YL05	SD:IMR90 H3K56ac 1
+UCSD.IMR90.H3K56ac.YL61.wig.gz	UCSD IMR90 H3K56ac Library YL61	SD:IMR90 H3K56ac 2
+UCSD.IMR90.H3K79me1.SK11.wig.gz	UCSD IMR90 H3K79me1 Library SK11	SD:IMR90 H3K79me1 1
+UCSD.IMR90.H3K79me1.YL103.wig.gz	UCSD IMR90 H3K79me1 Library YL103	SD:IMR90 H3K79me1 2
+UCSD.IMR90.H3K79me1.YL145.wig.gz	UCSD IMR90 H3K79me1 Library YL145	SD:IMR90 H3K79me1 3
+UCSD.IMR90.H3K79me1.YL16.wig.gz	UCSD IMR90 H3K79me1 Library YL16	SD:IMR90 H3K79me1 4
+UCSD.IMR90.H3K79me2.LL238.wig.gz	UCSD IMR90 H3K79me2 Library LL238	SD:IMR90 H3K79me2 1
+UCSD.IMR90.H3K79me2.SK43.wig.gz	UCSD IMR90 H3K79me2 Library SK43	SD:IMR90 H3K79me2 2
+UCSD.IMR90.H3K9ac.LL233.wig.gz	UCSD IMR90 H3K9ac Library LL233	SD:IMR90 H3K9ac 1
+UCSD.IMR90.H3K9ac.SK46.wig.gz	UCSD IMR90 H3K9ac Library SK46	SD:IMR90 H3K9ac 2
+UCSD.IMR90.H3K9me3.LL224.wig.gz	UCSD IMR90 H3K9me3 Library LL224	SD:IMR90 H3K9me3 1
+UCSD.IMR90.H3K9me3.SK06.wig.gz	UCSD IMR90 H3K9me3 Library SK06	SD:IMR90 H3K9me3 2
+UCSD.IMR90.H3K9me3.YL104.wig.gz	UCSD IMR90 H3K9me3 Library YL104	SD:IMR90 H3K9me3 3
+UCSD.IMR90.H4K20me1.YL21.wig.gz	UCSD IMR90 H4K20me1 Library YL21	SD:IMR90 H4K20me1 1
+UCSD.IMR90.H4K20me1.YL59.wig.gz	UCSD IMR90 H4K20me1 Library YL59	SD:IMR90 H4K20me1 2
+UCSD.IMR90.H4K5ac.LL234.wig.gz	UCSD IMR90 H4K5ac Library LL234	SD:IMR90 H4K5ac 1
+UCSD.IMR90.H4K5ac.SK08.wig.gz	UCSD IMR90 H4K5ac Library SK08	SD:IMR90 H4K5ac 2
+UCSD.IMR90.H4K8ac.SK45.wig.gz	UCSD IMR90 H4K8ac Library SK45	SD:IMR90 H4K8ac 1
+UCSD.IMR90.H4K8ac.YL142.wig.gz	UCSD IMR90 H4K8ac Library YL142	SD:IMR90 H4K8ac 2
+UCSD.IMR90.H4K8ac.YL17.wig.gz	UCSD IMR90 H4K8ac Library YL17	SD:IMR90 H4K8ac 3
+UCSD.IMR90.H4K8ac.YL57.wig.gz	UCSD IMR90 H4K8ac Library YL57	SD:IMR90 H4K8ac 4
+UCSD.IMR90.H4K91ac.SK49.wig.gz	UCSD IMR90 H4K91ac Library SK49	SD:IMR90 H4K91ac 1
+UCSD.IMR90.H4K91ac.YL08.wig.gz	UCSD IMR90 H4K91ac Library YL08	SD:IMR90 H4K91ac 2
+UCSF-UBC.Breast_Luminal_Epithelial_Cells_Individual_1.mre-seq.wig.gz	UCSF-UBC Breast Luminal Epithelial Cells Individual 1 MRE-Seq	SF:Br Luminal 1 MRE
+UCSF-UBC.Breast_Luminal_Epithelial_Cells_Individual_2.MeDIP-Seq.wig.gz	UCSF-UBC Breast Luminal Epithelial Cells Individual 2 MeDIP-Seq	SF:Br Luminal 2 MeDIP
+UCSF-UBC.Breast_Luminal_Epithelial_Cells_Individual_2.mre-seq.wig.gz	UCSF-UBC Breast Luminal Epithelial Cells Individual 2 MRE-Seq	SF:Br Luminal 2 MRE
+UCSF-UBC.Breast-Luminal-Epithelial-Cells-Individual-2.mRNA-Seq.wig.gz	UCSF-UBC Breast Luminal Epithelial Cells Individual 2 mRNA-Seq	SF:Br Luminal 2 mRNA
+UCSF-UBC.Breast-Myoepithelial-Cells-Individual-2.MeDIP-Seq.wig.gz	UCSF-UBC Breast Myoepithelial Cells Individual 2 MeDIP-Seq	SF:Br Myoepi 2 MeDIP
+UCSF-UBC.Breast_Myoepithelial_Cells_Individual_2.mre-seq.wig.gz	UCSF-UBC Breast Myoepithelial Cells Individual 2 MRE-Seq	SF:Br Myoepi 2 MRE
+UCSF-UBC.Breast-Myoepithelial-Cells-Individual-2.mRNA-Seq.wig.gz	UCSF-UBC Breast Myoepithelial Cells Individual 2 mRNA-Seq	SF:Br Myoepi 2 mRNA
+UCSF-UBC.Breast-Stem-Cells-Individual-2.MeDIP-Seq.wig.gz	UCSF-UBC Breast Stem Cells Individual 2 MeDIP-Seq	SF:Br Stem 2 MeDIP
+UCSF-UBC.Breast_Stem_Cells_Individual_2.mre-seq.wig.gz	UCSF-UBC Breast Stem Cells Individual 2 MRE-Seq	SF:Br Stem 2 MRE
+UCSF-UBC.Breast-vHMEC-Individual-2.MeDIP-Seq.wig.gz	UCSF-UBC Breast vHMEC Individual 2 MeDIP-Seq	SF:Br vHMEC 2 MeDIP
+UCSF-UBC.Breast-vHMEC-Individual-2.MRE-Seq.wig.gz	UCSF-UBC Breast vHMEC Individual 2 MRE-Seq	SF:Br vHMEC 2 MRE
+UCSF-UBC.Breast-vHMEC-Individual-2.smRNA-Seq.Run108066Lane7.wig.gz	UCSF-UBC Breast-vHMEC-Individual-2 smRNA-Seq Library Run108066Lane7	SF:Br vHMEC 2 smRNA 1
+UCSF-UBC.CD4-Naive-Primary-Cells.H3K36me3.wig.gz	UCSF-UBC CD4 Naive Primary Cells H3K36me3	SF:CD4 H3K36me3
+UCSF-UBC.CD4-Naive-Primary-Cells.H3K9ac.wig.gz	UCSF-UBC CD4 Naive Primary Cells H3K9ac	SF:CD4 H3K9ac
+UCSF-UBC.CD4-Naive-Primary-Cells.MeDIP-Seq.wig.gz	UCSF-UBC CD4 Naive Primary Cells MeDIP-Seq	SF:CD4 MeDIP
+UCSF-UBC.CD4-Naive-Primary-Cells.MRE-Seq.wig.gz	UCSF-UBC CD4 Naive Primary Cells MRE-Seq	SF:CD4 MRE
+UCSF-UBC.CD8-Naive-Primary-Cells.MeDIP-Seq.wig.gz	UCSF-UBC CD8 Naive Primary Cells MeDIP-Seq	SF:CD8 MeDIP
+UCSF-UBC.CD8-Naive-Primary-Cells.MRE-Seq.wig.gz	UCSF-UBC CD8 Naive Primary Cells MRE-Seq	SF:CD8 MRE
+UCSF-UBC.H1.input.wig.gz	UCSF-UBC H1 Input Common Marks	SF:H1 Input
+UCSF-UBC.H1.H3K27me3.wig.gz	UCSF-UBC H1 H3K27me3 Common Marks	SF:H1 H3K27me3
+UCSF-UBC.H1.H3K36me3.2.wig.gz	UCSF-UBC H1 H3K36me3 Library 2	SF:H1 H3K36me3 3
+UCSF-UBC.H1.H3K36me3.wig.gz	UCSF-UBC H1 H3K36me3 Common Marks	SF:H1 H3K36me3
+UCSF-UBC.H1.H3K4me1.wig.gz	UCSF-UBC H1 H3K4me1 Common Marks	SF:H1 H3K4me1
+UCSF-UBC.H1.H3K4me3.Batch1.wig.gz	UCSF-UBC H1 H3K4me3 Library Batch1	SF:H1 H3K4me3 1
+UCSF-UBC.H1.H3K4me3.Batch2.wig.gz	UCSF-UBC H1 H3K4me3 Library Batch2	SF:H1 H3K4me3 2
+UCSF-UBC.H1.H3K9ac.wig.gz	UCSF-UBC H1 H3K9ac Common Marks	SF:H1 H3K9ac
+UCSF-UBC.H1.H3K9me3.2.wig.gz	UCSF-UBC H1 H3K9me3 Library 2	SF:H1 H3K9me3 1
+UCSF-UBC.H1.H3K9me3.wig.gz	UCSF-UBC H1 H3K9me3 Common Marks	SF:H1 H3K9me3
+UCSF-UBC.H1.MeDIP-Seq.Batch1.wig.gz	UCSF-UBC H1 MeDIP-Seq Batch1	SF:H1 MeDIP 1
+UCSF-UBC.H1.MeDIP-Seq.Batch2.wig.gz	UCSF-UBC H1 MeDIP-Seq Batch2	SF:H1 MeDIP 2
+UCSF-UBC.H1.MRE-Seq.Batch1.wig.gz	UCSF-UBC H1 MRE-Seq Batch1	SF:H1 MRE 1
+UCSF-UBC.H1.MRE-Seq.Batch2.2.wig.gz	UCSF-UBC H1 MRE-Seq Batch2.2	SF:H1 Batch2 2.2
+UCSF-UBC.H1.MRE-Seq.Batch2.wig.gz	UCSF-UBC H1 MRE-Seq Batch2	SF:H1 MRE 2
+UCSF-UBC.H1.mRNA-seq.wig.gz	UCSF-UBC H1 mRNA-Seq	SF:H1 mRNA
+UCSF-UBC.H1.smRNA.Run104536Lane5.wig.gz	UCSF-UBC H1 smRNA Run104536Lane5	SF:H1 smRNA 1
+UCSF-UBC.Peripheral-Blood-Mononuclear-Primary-Cells.MeDIP-Seq.wig.gz	UCSF-UBC Peripheral Blood Mononuclear Primary Cells MeDIP-Seq	SF:PBMC MeDIP
+UCSF-UBC.Peripheral-Blood-Mononuclear-Primary-Cells.MRE-Seq.wig.gz	UCSF-UBC Peripheral Blood Mononuclear Primary Cells MRE-Seq	SF:PBMC MRE
+UW.CD34.ChromatinAccessibility.CD34+-DS12339.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12339	UW:CD34 DNase 1
+UW.CD34.ChromatinAccessibility.CD34+-DS12734.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12734	UW:CD34 DNase 2
+UW.CD34.ChromatinAccessibility.CD34+-DS12771.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12771	UW:CD34 DNase 3
+UW.CD34.ChromatinAccessibility.CD34+-DS12774.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12774	UW:CD34 DNase 4
+UW.CD34.ChromatinAccessibility.CD34+-DS12785.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12785	UW:CD34 DNase 5
+UW.CD34.ChromatinAccessibility.CD34+-DS13196.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS13196	UW:CD34 DNase 6
+UW.CD34.ChromatinAccessibility.CD34+-DS13199.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS13199	UW:CD34 DNase 7
+UW.CD34.rep1.ChromatinAccessibility.CD34+-DS12274.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS12274	UW:CD34 DNase 8
+UW.CD34.rep2.ChromatinAccessibility.CD34+-DS11202.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS11202	UW:CD34 DNase 9
+UW.CD34.rep3.ChromatinAccessibility.CD34+-DS11666.wig.gz	UW CD34 Primary Cells DNase Hypersensitivity Library CD34+-DS11666	UW:CD34 DNase 10
+UW.FetalAdrenalGland.ChromatinAccessibility.fAdrenal-DS12528.wig.gz	UW FetalAdrenalGland DNase Hypersensitivity Library fAdrenal-DS12528	UW:fAdrenal DNase 1
+UW.FetalBrain.ChromatinAccessibility.fBrain-DS11872.wig.gz	UW FetalBrain DNase Hypersensitivity Library fBrain-DS11872	UW:fBrain DNase 1
+UW.FetalHeart.ChromatinAccessibility.fHeart-DS12531.wig.gz	UW FetalHeart DNase Hypersensitivity Library fHeart-DS12531	UW:fHeart DNase 1
+UW.FetalHeart.ChromatinAccessibility.fHeart-DS12810.wig.gz	UW FetalHeart DNase Hypersensitivity Library fHeart-DS12810	UW:fHeart DNase 2
+UW.FetalKidney.ChromatinAccessibility.fKidney-DS10986.wig.gz	UW FetalKidney DNase Hypersensitivity Library fKidney-DS10986	UW:fKidney DNase 1
+UW.FetalKidney.ChromatinAccessibility.fKidney-DS12635.wig.gz	UW FetalKidney DNase Hypersensitivity Library fKidney-DS12635	UW:fKidney DNase 2
+UW.FetalLung.ChromatinAccessibility.fLung-DS12646.wig.gz	UW FetalLung DNase Hypersensitivity Library fLung-DS12646	UW:fLung DNase 1
+UW.FetalLung.ChromatinAccessibility.fLung-DS12817.wig.gz	UW FetalLung DNase Hypersensitivity Library fLung-DS12817	UW:fLung DNase 2
+UW.IMR90.ChromatinAccessibility.IMR90-DS13219.wig.gz	UW IMR90 DNase Hypersensitivity Library IMR90-DS13219	UW:IMR90 DNase 1
+UW.IMR90.ChromatinAccessibility.IMR90-DS13229.wig.gz	UW IMR90 DNase Hypersensitivity Library IMR90-DS13229	UW:IMR90 DNase 2
+UW.IMR90.rep1.ChromatinAccessibility.IMR90-DS11759.wig.gz	UW IMR90 DNase Hypersensitivity Library IMR90-DS11759	UW:IMR90 DNase 3
+UW.IMR90.rep2.ChromatinAccessibility.IMR90-DS11764.wig.gz	UW IMR90 DNase Hypersensitivity Library IMR90-DS11764	UW:IMR90 DNase 4
+BI.iPS-15b.RRBS.356.357.wig.gz	BI:iPS-15b RRBS Library Solexa-11964,Solexa-11965	BI:iPS-15b RRBS 1
+BI.iPS-15b.RRBS.522.523.wig.gz	BI:iPS-15b RRBS Library Solexa-17917,Solexa-17944	BI:iPS-15b RRBS 2
+BI.iPS-20b.RRBS.526.527.wig.gz	BI:iPS-20b RRBS Library Solexa-17950,Solexa-17937	BI:iPS-20b RRBS 2
+BI.iPS-20b.RRBS.353.wig.gz	BI:iPS-20b RRBS Library Solexa-11961	BI:iPS-20b RRBS 1
+BI.iPS-18b.RRBS.366.367.wig.gz	BI:iPS-18b RRBS Library Solexa-13285,Solexa-13234	BI:iPS-18b RRBS 1
+BI.H1.RRBS.360.361.wig.gz	BI:H1 RRBS Library Solexa-13232,Solexa-13233	BI:H1 RRBS 1
+BI.H1.RRBS.534.535.wig.gz	BI:H1 RRBS Library Solexa-17916,Solexa-17918	BI:H1 RRBS 2
+BI.iPS-18c.RRBS.396.wig.gz	BI:iPS-18c RRBS Library Solexa-13943	BI:iPS-18c RRBS 1
+BI.iPS-18c.RRBS.524.525.wig.gz	BI:iPS-18c RRBS Library Solexa-17946,Solexa-17948	BI:iPS-18c RRBS 2
+BI.Pancreatic_Islets.RRBS.478.479.wig.gz	BI Pancreatic Islets RRBS Donor normal_0/0/00	BI:Pancreatic Islets RRBS 0
+BI.CD34_Primary_Cells.RRBS.514.515.wig.gz	BI CD34 Primary Cells RRBS Donor CD34_0/0/00	BI:CD34 Primary Cells RRBS 0
+BI.CD34_Primary_Cells.RRBS.532.533.wig.gz	BI CD34 Primary Cells RRBS Donor CD34_0/0/00	BI:CD34 Primary Cells RRBS 1
+BI.CD19_Primary_Cells.RRBS.512.513.wig.gz	BI CD19 Primary Cells RRBS Donor CD19_0/0/00	BI:CD19 Primary Cells RRBS 0
+BI.ES-I3.RRBS.368.369.wig.gz	BI:ES-I3 RRBS Library Solexa-13317,Solexa-13235	BI:ES-I3 RRBS 2
+BI.ES-I3.RRBS.349.wig.gz	BI:ES-I3 RRBS Library Solexa-11957	BI:ES-I3 RRBS 1
+BI.ES-I3.RRBS.348.wig.gz	BI:ES-I3 RRBS Library Solexa-11956	BI:ES-I3 RRBS 3
+BI.ES-WA7.RRBS.350.351.wig.gz	BI:ES-WA7 RRBS Library Solexa-11958,Solexa-11959	BI:ES-WA7 RRBS 1
+BI.ES-WA7.RRBS.528.wig.gz	BI:ES-WA7 RRBS Library Solexa-17914	BI:ES-WA7 RRBS 2
+UCSD.H1.Bisulfite-Seq.wig.gz	UCSD/Salk H1 Cell Line Bisulfite-Seq	SD:H1 Bisulfite
+UCSD.IMR90.Bisulfite-Seq.wig.gz	UCSD/Salk IMR90 Cell Line Bisulfite-Seq	SD:IMR90 Bisulfite
+UCSD.H1.H2AK5ac.SAK201.wig.gz	UCSD H1 Cell Line Histone H2AK5ac Library SAK201	SD:H1 H2AK5ac 01
+UCSD.H1.H2AK5ac.YL97.wig.gz	UCSD H1 Cell Line Histone H2AK5ac Library YL97	SD:H1 H2AK5ac 97
+UCSD.H1.H2BK120ac.SAK206.wig.gz	UCSD H1 Cell Line Histone H2BK120ac Library SAK206	SD:H1 H2BK120ac 06
+UCSD.H1.H2BK12ac.SAK203.wig.gz	UCSD H1 Cell Line Histone H2BK12ac Library SAK203	SD:H1 H2BK12ac 03
+UCSD.H1.H2BK12ac.YL93.wig.gz	UCSD H1 Cell Line Histone H2BK12ac Library YL93	SD:H1 H2BK12ac 93
+UCSD.H1.H2BK15ac.SAK204.wig.gz	UCSD H1 Cell Line Histone H2BK15ac Library SAK204	SD:H1 H2BK15ac 04
+UCSD.H1.H2BK15ac.YL206.wig.gz	UCSD H1 Cell Line Histone H2BK15ac Library YL206	SD:H1 H2BK15ac 06
+UCSD.H1.H2BK20ac.SAK205.wig.gz	UCSD H1 Cell Line Histone H2BK20ac Library SAK205	SD:H1 H2BK20ac 05
+UCSD.H1.H2BK20ac.YL207.wig.gz	UCSD H1 Cell Line Histone H2BK20ac Library YL207	SD:H1 H2BK20ac 07
+UCSD.H1.H3K18ac.LL321.wig.gz	UCSD H1 Cell Line Histone H3K18ac Library LL321	SD:H1 H3K18ac 21
+UCSD.H1.H3K18ac.SAK208.wig.gz	UCSD H1 Cell Line Histone H3K18ac Library SAK208	SD:H1 H3K18ac 08
+UCSD.H1.H3K27me3.YL95.wig.gz	UCSD H1 Cell Line Histone H3K27me3 Library YL95	SD:H1 H3K27me3 95
+UCSD.H1.H3K36me3.SAK70.wig.gz	UCSD H1 Cell Line Histone H3K36me3 Library SAK70	SD:H1 H3K36me3 70
+UCSD.H1.H3K4ac.SAK207.wig.gz	UCSD H1 Cell Line Histone H3K4ac Library SAK207	SD:H1 H3K4ac 07
+UCSD.H1.H3K4me1.YL131.wig.gz	UCSD H1 Cell Line Histone H3K4me1 Library YL131	SD:H1 H3K4me1 31
+UCSD.H1.H3K4me2.LL322.wig.gz	UCSD H1 Cell Line Histone H3K4me2 Library LL322	SD:H1 H3K4me2 22
+UCSD.H1.H3K4me2.YL96.wig.gz	UCSD H1 Cell Line Histone H3K4me2 Library YL96	SD:H1 H3K4me2 96
+UCSD.H1.H3K4me3.SAK67.wig.gz	UCSD H1 Cell Line Histone H3K4me3 Library SAK67	SD:H1 H3K4me3 67
+UCSD.H1.H3K56ac.SAK211.wig.gz	UCSD H1 Cell Line Histone H3K56ac Library SAK211	SD:H1 H3K56ac 11
+UCSD.H1.H3K79me1.SAK73.wig.gz	UCSD H1 Cell Line Histone H3K79me1 Library SAK73	SD:H1 H3K79me1 73
+UCSD.H1.H3K79me1.YL192.wig.gz	UCSD H1 Cell Line Histone H3K79me1 Library YL192	SD:H1 H3K79me1 92
+UCSD.H1.H3K79me1.YL82.wig.gz	UCSD H1 Cell Line Histone H3K79me1 Library YL82	SD:H1 H3K79me1 82
+UCSD.H1.H3K79me2.SAK80.wig.gz	UCSD H1 Cell Line Histone H3K79me2 Library SAK80	SD:H1 H3K79me2 80
+UCSD.H1.H3K79me2.YL204.wig.gz	UCSD H1 Cell Line Histone H3K79me2 Library YL204	SD:H1 H3K79me2 04
+UCSD.H1.H3K9ac.SAK68.wig.gz	UCSD H1 Cell Line Histone H3K9ac Library SAK68	SD:H1 H3K9ac 68
+UCSD.H1.H3K9me3.LL218.wig.gz	UCSD H1 Cell Line Histone H3K9me3 Library LL218	SD:H1 H3K9me3 18
+UCSD.H1.H3K9me3.YL75.wig.gz	UCSD H1 Cell Line Histone H3K9me3 Library YL75	SD:H1 H3K9me3 75
+UCSD.H1.H3K9me3.YL77.wig.gz	UCSD H1 Cell Line Histone H3K9me3 Library YL77	SD:H1 H3K9me3 77
+UCSD.H1.H4K20me1.YL253.wig.gz	UCSD H1 Cell Line Histone H4K20me1 Library YL253	SD:H1 H4K20me1 53
+UCSD.H1.H4K5ac.LL323.wig.gz	UCSD H1 Cell Line Histone H4K5ac Library LL323	SD:H1 H4K5ac 23
+UCSD.H1.H4K91ac.YL254.wig.gz	UCSD H1 Cell Line Histone H4K91ac Library YL254	SD:H1 H4K91ac 54
+UCSD.H1.Input.DM219.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library DM219	SD:H1 Input 19
+UCSD.H1.Input.LL-H1-I1.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library LL-H1-I1	SD:H1 Input I1
+UCSD.H1.Input.LL-H1-I2.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library LL-H1-I2	SD:H1 Input I2
+UCSD.H1.Input.LLH1U.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library LLH1U	SD:H1 Input 1U
+UCSD.H1.Input.YL154.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library YL154	SD:H1 Input 54
+UCSD.H1.Input.YL208.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library YL208	SD:H1 Input 08
+UCSD.H1.Input.YL262.wig.gz	UCSD H1 Cell Line ChIP-Seq Input Library YL262	SD:H1 Input 62
+UCSD.H9.H3K36me3.SK102.wig.gz	UCSD H9 Cell Line Histone H3K36me3 Library SK102	SD:H9 H3K36me3 02
+UCSD.H9.H3K4me2.SK198.wig.gz	UCSD H9 Cell Line Histone H3K4me2 Library SK198	SD:H9 H3K4me2 98
+UCSD.H9.H3K4me3.SK101.wig.gz	UCSD H9 Cell Line Histone H3K4me3 Library SK101	SD:H9 H3K4me3 01
+UCSD.H9.H3K9ac.SK199.wig.gz	UCSD H9 Cell Line Histone H3K9ac Library SK199	SD:H9 H3K9ac 99

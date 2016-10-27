@@ -1,0 +1,51 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/",
+        0,
+        null
+      ],
+      [
+        "/files/",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Study Name cannot be left blank."
+      ],
+      "coverageFactor": [
+	"^\\d+$",
+	"Coverage factor should be a positive integer."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ],
+      [
+        "/redminePrj/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 2
+  }
+}

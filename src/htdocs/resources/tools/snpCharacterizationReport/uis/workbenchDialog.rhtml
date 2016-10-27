@@ -1,0 +1,59 @@
+<%# RENDER HTML %>
+<%
+    require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileDirOrTrackListSummary, { :fileOrTrackList => @inputs, :label => "Folder/Track:" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Location:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :label => 'Output Database', :databaseList => @outputs } )
+    })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "SNPSummaryReport-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}" },
+        { :id => 'widgetHeader1', :value => 'Known SNPs Sources:', :type => :wbSimpleWidgetHeader },
+        { :id => 'dbSnp', :label => 'dbSNP', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => '1000Genomes', :label => '1000 Genomes SNPs', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => 'gwas', :label => 'GWAS SNPs', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => 'widgetHeader2', :value => 'Genomic Features:', :type => :wbSimpleWidgetHeader },
+        { :id => 'genes', :label => 'Gene Elements', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => 'smallRNA', :label => 'Small RNAs', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => 'cpgIslands', :label => 'CpG Islands', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" },
+        { :id => 'repeats', :label => 'Repeats', :type => :checkbox, :size => "25", :value => false, :labelWidth => "180px" }
+      ]
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

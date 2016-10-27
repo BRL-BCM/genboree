@@ -1,0 +1,6 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolErrorTitle, { :title => 'Samples Importer' } ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+</div>

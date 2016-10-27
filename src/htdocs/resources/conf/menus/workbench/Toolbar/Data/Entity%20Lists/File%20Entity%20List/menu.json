@@ -1,0 +1,31 @@
+
+[
+  {
+    "text": "Create File Entity List",
+    "tooltip": "Create/Add a new file entity list in a selected database.",
+    "idStr": "createFileList"
+  },
+  {
+    "text": "Copy/Move File Entity List",
+    "tooltip": "Copy or move one or more existing file entity lists to a target database.",
+    "idStr": "copyFileLists"
+  },
+  {
+    "text": "Delete/Remove File Entity List",
+    "tooltip": "Permanently remove one or more file entity lists from a selected database.",
+    "idStr": "deleteFileLists"
+  },
+  { "text": "Rename File Entity List",
+    "toolTip": "Rename an existing file entity list.",
+    "idStr": "renameFileList"
+  },
+  { "text": "Add Files to File Entity List",
+    "toolTip": "Add additional files to an existing file entity list.",
+    "idStr": "addFilesToEntityList"
+  },
+  { "text": "Remove Files from File Entity List",
+    "toolTip": "Remove one or more files from an existing file entity list.",
+    "idStr": "removeFilesFromEntityList"
+  }
+]
+

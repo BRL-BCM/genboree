@@ -1,0 +1,36 @@
+{
+  "info": {
+    "idStr": "exceRptPipeline",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 6,
+    "mem": "4gb",
+    "vmem": "4gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "exceRpt small RNA-seq Pipeline (New, Customized Endogenous Engine) Batch Submission",
+    "shortLabel": "exceRpt smallRNA-seq Pipeline (New, Customized Endogenous Engine) Batch Submission",
+    "groupAccessUri": null
+  },
+  "groupDiskSpace": {
+    "william_thistle_group": {
+      "local": "200 GB",
+      "remote": "200 GB"
+    }
+  },
+  "settings": {
+    "toolIdStrsForStorageSniffing": ["exceRptPipeline", "runExceRpt"],
+    "compressedMultiplierExoOff": 3.4,
+    "compressedMultiplierExoMiRNA": 6.5,
+    "compressedMultiplierExoOn": 9.7,
+    "uncompressedMultiplierExoOff": 0.8,
+    "uncompressedMultiplierExoMiRNA": 1.8,
+    "uncompressedMultiplierExoOn": 2.4,
+    "exogenousNodes": 3,
+    "maxSamplesPerExoJob": 50
+  }
+}

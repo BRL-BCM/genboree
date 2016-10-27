@@ -1,0 +1,88 @@
+<%@ page import="
+  org.genboree.util.Util,
+  org.genboree.util.SessionManager,
+  org.genboree.dbaccess.GenboreeGroup"
+%>
+<%
+/**
+ * File: 
+ *   include/ajax/groupBar.incl
+ * Description: 
+ *   This file includes all of the code needed to generate a dynamic AJAX
+ *   menubar for selecting a group from a drop down that shows all of the
+ *   groups that the currently logged in user has access to.  This file
+ *   communicates with ajax/group.jsp to retrieve the access level for the
+ *   selected group and set the selected group in the current HTTPSession.
+ * Dependancies:
+ *   ajax.js
+ *   prototype.js
+ *   include/group.incl
+ * Incompatibilities
+ *   json.js
+ *     Including the "json.js" javascript will break some of the Prototype AJAX
+ *     functionality.
+ *
+ * June 26, 2008
+ * sgdavis@bioneos.com
+ */
+%>
+<tr>
+  <td class="form_header">
+    Group
+  </td>
+  <td class="form_header">
+<%
+    // This user is only able to access a single group.  No need for a menu...
+    String groupAccess = "...";
+    if(grps.length == 1)
+    {
+      groupAccess = grps[0].isOwner(myself.getUserId()) ? "ADMINISTRATOR" : 
+        (grps[0].isReadOnly(myself.getUserId()) ? "SUBSCRIBER" : "AUTHOR") ;
+%>
+      <%= Util.htmlQuote(grps[0].getGroupName()) %>&nbsp;&nbsp;
+<%
+    }
+    else
+    {
+%>
+      <select name="group_id" id="group_id" class="txt" style="width: 30em;"
+      onChange="updateGroup(this.value, 'groupAccessLabel')">
+<%
+        groupId = SessionManager.getSessionGroupId(mys) ;
+        if (groupId == null) groupId = grps[0].getGroupId() ;
+        groupAccess = grps[0].isOwner(myself.getUserId()) ? "ADMINISTRATOR" : 
+          (grps[0].isReadOnly(myself.getUserId()) ? "SUBSCRIBER" : "AUTHOR") ;
+
+        // Create a drop down of all of the groups accessible to this user
+        for(int num = 0; num < grps.length; num++)
+        {
+          String sel = "" ;
+          if(grps[num].getGroupId().equals(groupId)) 
+          {
+            sel = " selected='selected'" ;
+            groupAccess = grps[num].isOwner(myself.getUserId()) ? "ADMINISTRATOR" : 
+              (grps[num].isReadOnly(myself.getUserId()) ? "SUBSCRIBER" : "AUTHOR") ;
+          }
+%>
+          <option value="<%= grps[num].getGroupId()  %>"<%= sel %>>
+            <%= Util.htmlQuote(grps[num].getGroupName()) %>
+          </option>
+<%
+        }
+
+        // Assign the first available group as the selected group, if nothing
+        // was already selected
+        if(SessionManager.getSessionGroupId(mys) == null) 
+        {
+          SessionManager.setSessionGroupId(mys, groupId) ;
+          SessionManager.clearSessionDatabase(mys) ;
+        }
+%>
+      </select>
+<%
+    }
+%>
+    <span style="color: #ccccff">Role:</span>
+    <span id="groupAccessLabel"><%= groupAccess %></span>
+  </td>
+</tr>

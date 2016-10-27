@@ -1,0 +1,38 @@
+{
+  "inputs" :
+  {
+    "minItemCount" : 1,
+    "maxItemCount" : 1,
+    "ruleSet" :
+    [
+      [ "/trk/[^/ \\t\\n]+(\\?.*)?$", 1, 1]
+    ]
+  },
+  "outputs" :
+  {
+    "minItemCount" : 2,
+    "maxItemCount" : 2,
+    "ruleSet" :
+    [
+      [ "/db/[^/ \\t\\n]+(\\?.*)?$", 1, 1],
+      [ "/prj/[^/ \\t\\n]+(\\?.*)?$", 1, 1]
+      
+    ]
+  },
+  "context" :
+  {
+    "required" :
+    [
+    ]
+  },
+  "settings" :
+  {
+    "patterns" :
+    {
+      "analysisName" : ["^(?:^.+$)$", "Analysis Name cannot be left blank"],
+      "-len" : ["^(?:^.+$)$", "Motif Length Name cannot be left blank"],
+      "-S" : ["^(?:^.+$)$", "No of motifs to optimize cannot be left blank"],
+      "-nlen" : ["^(?:^.+$)$", "Len of low-order oligos cannot be left blank"]
+    }
+  }
+}

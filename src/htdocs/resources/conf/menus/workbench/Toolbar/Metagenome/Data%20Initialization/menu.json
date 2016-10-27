@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Import 16S rRNA Sequences",
+    "tooltip": "Prepare samples and related sequence files for use in the Microbiome Workbench.",
+    "idStr": "seqImport"
+  },
+  {
+    "text" : "Upload Metagenomic WGS Results",
+    "tooltip" : "Assists you in uploading pathway, gene, or taxonmy score data resulting from analyzing your WGS data you collected for 1 or more samples.",
+    "idStr" : "microbiomeResultUploader"
+  }
+]

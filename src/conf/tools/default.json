@@ -1,0 +1,39 @@
+{
+   "cluster": {
+     "type": "TorqueMaui",
+     "queue": "gb",
+     "nodes": 1,
+     "ppn": 1,
+     "pvmem": null,
+     "mem" : "2929mb",
+     "vmem" : "2929mb"
+   },
+   "ui": {
+     "label": "[Not Set]",
+     "shortLabel": "[Not Set]",
+     "groupAccessUri": null,
+     "advisoryHtml" :
+     {
+       "release" : "",
+       "internalAlpha" : "",
+       "restrictedAlpha" : "This tool has very recently been deployed and is currently being tested. It can be accessed only by BRL members and certain collaborators. If you need access to this tool, please contact  <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a>.",
+       "beta" : "<div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'> <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'> This tool is a recent addition and has been marked as <font color=\"red\">BETA</font>. It is possible you may encounter problems when changing some of the default settings.</br> Please contact <a href='mailto:genboree_admin@genboree.org'>genboree_admin@genboree.org</a> with questions or comments, or for help using it on your own data. </div>",
+       "deprecated" : "<div style='font-size:80%;color:red;width:96%;margin:0px auto 10px auto;'> <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;position:relative;top:6px;'>This tool is <u><b>flagged for removal at the end of Oct 2016</b></u> due to a lack of use and/or lack of funding for continued maintenance &amp; development. If you are interested in this tool's functionality, please contact the <a href='mailto:genboree_admin@genboree.org'>Genboree Admins</a> with your use-case so we can review the planned removal.</div>"
+     },
+     "useCases" :
+     [
+       /* { "text" : "", "url" : "" } */
+     ],
+     "videos" :
+     [
+       /* { "text" : "", "url" : "" } */
+     ]
+   },
+   "info": {
+     "idStr": "[Not Set]",
+     "toolType": "gbToolJob",
+     "altToolTypes": [],
+     "releaseStatus": "release",
+     "version": "0.1"
+   }
+}

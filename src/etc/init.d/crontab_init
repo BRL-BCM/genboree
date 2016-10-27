@@ -1,0 +1,34 @@
+#!/bin/bash
+
+
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+
+start() {
+       su genboree -l -c "crontab ${DIR_TARGET}/etc/crontab"
+}
+
+stop() {
+       su genboree -l -c "crontab -r"
+}
+
+restart() {
+       su genboree -l -c "crontab ${DIR_TARGET}/etc/crontab"
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac

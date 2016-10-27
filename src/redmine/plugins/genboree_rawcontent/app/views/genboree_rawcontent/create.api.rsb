@@ -1,0 +1,27 @@
+# Not used. Currently we are doing a direct render via:
+#   render :json => @result
+# which directly renders @result without going through this view.
+# If we added some kind of create.html.erb view as well, then this beccomes
+# relevant. But then you've got to solve the Redmine ext-is-format issue that
+# direct rendering is working around (it's hard to deal with; try a dir with
+# the .html or .txt or .json extension and then try putting stuff in it or
+# getting a dir listing; you get errors, especially when asking for json
+# for the .txt one since there is no text builder in redmine [you wanted json
+# but it insists on text due to extension]).
+  api.rawcontent do
+    api.targetDir @result[:targetDir]
+    api.numUploads @result[:numUploads]
+    api.numOK @result[:numOK]
+    api.numFail @result[:numFail]
+    api.message @result[:message]
+    if(@result[:failures])
+      api.array :failures do |ff|
+        @result[:failures].each do |failure|
+          ff.failure do
+            ff.uploadIndex failure[:idx]
+            ff.failureMsg failure[:failure]
+          end
+        end
+      end
+    end
+  end

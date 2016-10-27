@@ -1,0 +1,109 @@
+
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/genboree/abstract/resources/unlockedGroupResource'
+  require 'brl/genboree/abstract/resources/role'
+
+  include BRL::Genboree::Abstract::Resources
+
+  $VERBOSE = true
+  @req = Apache.request
+  @serverName = @req.server_name
+  @serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+    # Context In variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    context[:userId] = context.cgi['userId']
+    context[:errCode] = OK
+    context[:err] = nil
+    context[:timer] = timer
+    context[:req] = @req
+    context[:isPublicAccess] = (context.cgi['isPublic'] and context.cgi['isPublic'] =~ /^YES|TRUE$/i)
+
+    groupId = context.cgi['group_id'].strip
+    userId = context.cgi['userId'].strip
+    refSeqId = context.cgi['refseq_id'].strip
+    grpChangeState= context.cgi['grpChangeState'].strip
+
+    dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil)
+
+    # -----------------------------------------
+    # Process POST
+    # -----------------------------------------
+
+    # Generate key
+    if(!context.cgi['generateKey'].empty?)
+      BRL::Genboree::Abstract::Resources::UnlockedGroupResource.unlockDatabaseById(dbu, groupId, refSeqId)
+    elsif(!context.cgi['deleteKey'].empty?)
+      BRL::Genboree::Abstract::Resources::UnlockedGroupResource.lockDatabaseById(dbu, groupId, refSeqId)
+    end
+
+    # ---------------------------------------
+    # Prepare data for display
+    #----------------------------------------
+    gbKey = BRL::Genboree::Abstract::Resources::UnlockedGroupResource.getKeyForDatabaseById(dbu, groupId, refSeqId)
+    isUnlocked = !gbKey.nil?
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+%>
+
+<%
+    $stderr.debugPuts(__FILE__, "RHTML", "DEBUG", "About to check access to:\n    - groupId: #{groupId.inspect}\n    - userId: #{userId.inspect}\n    - minLevel = 'o'\n    - dbu:\n#{dbu.to_s}" )
+    userAllowed = BRL::Genboree::GenboreeDBHelper.checkUserAllowed(userId, groupId, 'o', dbu)
+    $stderr.debugPuts(__FILE__, "RHTML", "DEBUG", "User is allowed to unlock? #{userAllowed.inspect}")
+    #if(BRL::Genboree::Abstract::Resources::Role.getRoleByUserIdAndGroupId(dbu, userId, groupId) == 'administrator' )
+    if(userAllowed)
+      if(grpChangeState.to_i == 1 or refSeqId !~ /\d+/)
+%>
+        <p>Please select a Database.</p>
+<%
+      else
+%>
+        <p>Unlocking the database allows you to expose database resources to the public.  Once unlocked, you can use the key to view data without requiring authentication</p>
+        <input id="generateKey" class="btn" type="submit" value=" Generate New Key (Unlock) " name="generateKey"/>
+        <input id="deleteKey" class="btn" type="submit" value=" Delete Key (Lock Resource) " name="deleteKey"/>
+        <% if(isUnlocked) %>
+          <p>This resource is currently <b>unlocked</b></p>
+          <p>The unlock key for this database is: <b><%= gbKey %></b></p>
+        <% else %>
+          <p>This resource is currently <b>locked</b></p>
+        <% end %>
+<%
+      end
+    else
+%>
+      <p><span class="errorMsg"><strong>Sorry, you do not have sufficient privileges to unlock this resource.</strong></span></p>
+<%
+    end
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the page.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

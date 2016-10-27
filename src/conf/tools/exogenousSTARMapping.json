@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "exogenousSTARMapping",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 16,
+    "mem": "94gb",
+    "vmem": "94gb",
+    "walltime": "240:00:00",
+    "queue": "gbStaticData"
+  },
+  "ui": {
+    "label": "Exogenous STAR Mapping for exceRpt",
+    "shortLabel": "Exogenous STAR Mapping for exceRpt",
+    "groupAccessUri": null
+  }
+}

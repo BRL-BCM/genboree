@@ -1,0 +1,32 @@
+{
+  "inputs" :
+  {
+    "minItemCount" : 1,
+    "maxItemCount" : 2,
+    "ruleSet" :
+    [
+      ["/files/", 0, 2]
+    ]
+  },
+  "outputs" :
+  {
+    "minItemCount" : 1,
+    "maxItemCount" : 1,
+    "ruleSet" :
+    [
+      [ "/db/[^/ \\t\\n]+(\\?.*)?$", 1, 1]
+    ]
+  },
+  "context" :
+  {
+    "required" :
+    [ ]
+  },
+  "settings" :
+  {
+    "patterns" :
+    {
+      "analysisName" : ["^(?:^.+$)$", "Study Name cannot be left blank"]
+    }
+  }
+}

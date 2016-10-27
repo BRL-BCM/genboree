@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "sendRSEQtoolsEmail",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 1,
+    "queue": "gb"
+  },
+  "ui": {
+    "label": "RSEQtools Long RNA-seq Batch Processing Pipeline",
+    "shortLabel": "SendRSEQtoolsEmail",
+    "groupAccessUri": null
+  }
+}

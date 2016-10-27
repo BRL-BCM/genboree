@@ -1,0 +1,43 @@
+[
+  {
+    "text": "Create Project",
+    "idStr": "createProject",
+    "tooltip": "Create a new project in a target group."
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "Rename Project",
+    "href": "/java-bin/projectManagement.jsp?mode=1",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Rename a Project using the old Genboree interface in a new tab. (There is currently no Workbench tool for doing this.)"
+  },
+  {
+    "text": "Delete Project",
+    "href": "/java-bin/projectManagement.jsp?mode=2",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Delete a Project using the old Genboree interface in a new tab. (There is currently no Workbench tool for doing this.)"
+  },
+  {
+    "text": "Copy Project",
+    "href": "/java-bin/projectManagement.jsp?mode=3",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Copy a Project using the old Genboree interface in a new tab. (There is currently no Workbench tool for doing this.)"
+  },
+  {
+    "text": "Move Project",
+    "href": "/java-bin/projectManagement.jsp?mode=4",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Move a Project using the old Genboree interface in a new tab. (There is currently no Workbench tool for doing this.)"
+
+  }
+]

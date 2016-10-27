@@ -1,0 +1,29 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "requestText": [
+        "^(?:^.+$)$",
+        "Message cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  }
+}

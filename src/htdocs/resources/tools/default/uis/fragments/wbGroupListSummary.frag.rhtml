@@ -1,0 +1,24 @@
+<%
+  @groupList = [ @groupList ] unless(@groupList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@groupList.empty?) %>
+      <tr>
+        <th><%= (@label || "Group") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @groupList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+%>
+        <tr>
+          <th><%= (@label || "Group") %>:</th>
+          <td><i><%== grp %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "FTPsmRNAPipeline",
+    "releaseStatus": "beta",
+    "version": "2.2.8"
+  },
+  "cluster": {
+    "ppn": 12,
+    "mem": "96gb",
+    "vmem": "96gb",
+    "walltime": "240:00:00",
+    "queue": "gbRamHeavy"
+  },
+  "ui": {
+    "label": "FTP exceRpt smallRNA-seq Pipeline for exRNA Profiling",
+    "shortLabel": "FTP exceRpt smallRNA-seq Pipeline",
+    "groupAccessUri": null
+  }
+}
+

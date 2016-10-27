@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "resultFileBaseName": [
+        "^(?:^.+$)$",
+        "Result File Base Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ],
+      [
+        "/files",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

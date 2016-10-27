@@ -1,0 +1,319 @@
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<%# RENDER HTML %>
+<div style="height: <%= height %>px; width: <%= width %>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        LIMMA Signal Comparison calculates signal intensity of next-gen sequencing tracks
+        and outputs the differences in signal intensity between samples of interest.
+        This allows one to determine differences between samples (i.e. muscle vs treated muscle).
+        Differences may include differential methylation (if MeDIP input),
+        or gene expression level (if RNA-Seq input).
+        <br>&nbsp;<br>
+        LIMMA requires the following user-supplied input:
+        <ul>
+          <li>Two or more sets of entity lists containing epigenomic signals.</li>
+          <li>A &quot;regions-of-interest&quot; (ROI) onto which the epigenomic signals will be superimposed.</li>
+        </ul>
+        &nbsp;<br>
+        LIMMA outputs the following:
+        <ul>
+          <li>Raw results file (deposited in &quot;Files&quot; of the output database).</li>
+          <!--<li>A list of genes associated with the ROI and GO enrichment, containing:
+          <ul>
+            <li>Functional annotation chart</li>
+            <li>Functional annotation table</li>
+            <li>Functional annotation clustering</li>
+            <li>Gene clustering</li>
+          </ul>
+          </li>
+          <li>A link to the ranked genes associated with the ROIs.</li> -->
+        </ul>
+        &nbsp;<br>
+        User options:
+        <ul>
+          <li>You may choose to upload the discriminating ROIs as a track in Genboree</li>
+        </ul>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag two <u>track entity lists</u> into &quot;Input Data&quot;',
+          'Additionally, drag a <u>track</u> with the <i>regions-of-interest</i> into &quot;Input Data&quot;'
+        ],
+        :types              => [ [ 'Track Entity List', 'min: 2 ; max: unlimited' ] , [ 'Track (ROI)', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag a destination <u>database</u> into &quot;Output Targets&quot;. The result data will end up in that database under the Files area.'],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "Give this job a unique analysis name."],         
+          [ 'Minimum P Value (float)', 'Minimum p-value in which to allow for in filtered table results for the pair-wise comparisons.' ],
+          [ 'Minimum Adjusted P Value (float)', 'Minimum p-value in which to allow for in filtered table results for the pair-wise comparisons as well as the minimum p-value used to filter the decideTests (aka. multi-wise comparisons)'],
+          [ 'Minimum Fold Change (float)', 'Minimum value to allow for fold change in filtered table results (decideTests only). This value is converted to its absolute value in order to account for sign change'],                    
+          [ 'Multiplier (float)', 'The results of percentage normalization are multiplied by this value. For example, if you wanted your columns to sum to 100 you would use \'100\', if you wanted your columns to sum to 100,000 you would use \'100000\', etc. This value is only in effect if percentage normalization is used.' ],
+          [ 'Test Method', 'Character string specifies how probes and contrasts are to be combined in the multiple testing strategy. Choices are ‘"separate"’, ‘"global"’, ‘"hierarchical"’, ‘"nestedF"’ or any partial string.
+            <ul>
+              <li class="helpInfo">
+                The simplest multiple testing method is method="separate. This method does multiple testing for each contrast separately. This method is the default because it is equivalent to using topTable().
+                Using this method, testing a set of contrasts together will give the same results as when each contrast is tested on its own. The great advantage of this method is that it gives the same results regardless of which set of contrasts are tested together. The disadvantage of this method is that it does not do any multiple testing adjustment between contrasts. If you are considering many contrasts together, then the adjusted p-values may be insufficiently stringent, i.e., may underestimate the overall false discovery rate or type I error rate. Another disadvantage is that the raw p-value cutoff for any particular adjusted p-value threshold can be very different for different contrasts. This method is suitable if you have
+                only a few contrasts and want to use the simplest method."
+              </li>
+              <li class="helpInfo">
+                method="global" is the simplest recommended choice for those who want to do multiple testing across all the probes and contrasts simultaneously. This method simply appends all the tests together into one long vector of tests, i.e., it treats all the tests as equivalent regardless
+                of which probe or contrast they relate to. This method uses the same multiple testing methodology as is used by topTable() for individual contrasts. It is therefore supported by standard multiple testing theory. An advantage of that the raw p-value cutoff will be consistent across all contrasts. However users need to be careful not to include unnecessary contrasts in the test set because these will affect the results for the other contrasts. Another potential problem is that there is no theorem which proves that adjust.method="BH" in combination with method="global" will correctly control the false discovery rate for combinations of negatively correlated contrasts, although simulations suggest that the method is relatively safe inpractice.
+              </li>
+              <li class="helpInfo">
+                The "hierarchical" method offers power advantages when used with adjust.method="holm" to control the family-wise error rate. However its properties are not yet well understood with adjust="BH".
+              </li>
+              <li class="helpInfo">
+                Most multiple testing methods tend to underestimate the number of probes which are simultaneously significant for two or more contrasts. There is some practical experience to suggest that method="nestedF" gives less conservative results when finding probes which respond to several different contrasts at once. However this method should still be viewed as experimental.
+                It provides formal false discovery rate control at the probe level only, not at the contrast level.
+              </li>
+            </ul>
+            '
+          ],
+          [ 'Adjust Method', 'Method used to adjust the p-values for multiple testing. Options, in increasing conservatism, include ‘"none"’, ‘"BH"’, ‘"BY"’ and ‘"holm"’. See ‘p.adjust’ for the complete list of options. A ‘NULL’ value will result in the default adjustment method, which is ‘"BH"’.' ],
+          [ 'Normalize', 'Select the type of normalization you prefer.'],
+          ['No Data Regions (Advanced)','Specify how no-data regions should be filtered
+           <ul>
+            <li class="helpInfo">
+              The simplest method is to not remove any no-data regions. For this, leave the <code>Remove No Data Regions</code> checkbox unchecked.
+            </li>
+            <li class="helpInfo"> If you do want no-data regions removed, you can control the regions to be deleted in one of the following ways:
+              <ul style="list-style-type:circle;">
+                <li class="helpInfo">
+                  Regions where <code>ANY</code> track has no data
+                </li>
+                <li class="helpInfo">
+                  Regions where <code>ALL</code> tracks have no data
+                </li>
+                <li class="helpInfo">
+                  Regions where a <code>Percentage</code> of tracks have no data. You can specify the percentage.
+                </li>
+              </ul>
+            </li>
+            <li class="helpInfo">
+            NOTE: The <a href="#addendum">Addendum</a> provides a detailed explanation of these options
+            </li>
+            <li class="helpInfo">
+            NOTE: Also see the <code>No Data Value</code> setting
+            </li>
+           </ul>
+          '
+          ],
+          ['No Data Value','This value will replace the <code>NA</code> values in no-data regions after filtering.
+           <ul>
+            <li class="helpInfo">
+            NOTE: Also see the <a href="#addendum">Addendum</a> on replacing <code>NA</code> values.
+            </li>
+            <li class="helpInfo">
+            NOTE: Also see the <code>No Data Regions</code> setting
+            </li>
+            </ul>
+           '],
+          [ 'Submit', "Once you've reviewed the input files, the output destination database, and the settings, click &quot;Submit&quot;." ]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'This tool makes use of <a href="http://www.bioconductor.org/packages/release/bioc/html/limma.html">LIMMA</a> for the analysis of gene expression of microarray data:',
+                                    'Smyth, G. K. (2005). Limma: linear models for microarray data. In: Bioinformatics and Computational Biology Solutions using R and Bioconductor, R. Gentleman, V. Carey, S. Dudoit, R. Irizarry, W. Huber (eds.), Springer, New York, pages 397-420.'
+                                  ],
+                                  [ 'Smyth, G. K. (2004). Linear models and empirical Bayes methods for assessing differential expression in microarray experiments. Statistical Applications in Genetics and Molecular Biology 3, No. 1, Article 3.'
+                                  ],
+                                  [ 'Heatmaps generated by the R package: <a href="http://cran.r-project.org/web/packages/gplots/index.html">gplots</a>:',
+                                    'Gregory R. Warnes. Includes R source code and/or documentation contributed by (in alphabetical order): Ben Bolker, Lodewijk Bonebakker, Robert Gentleman, Wolfgang Huber Andy Liaw, Thomas Lumley, Martin Maechler, Arni Magnusson, Steffen Moeller, Marc Schwartz, Bill Venables'
+                                  ],
+                                  [ 'Tool developed internally by Kevin Riehle, Arpit Tandon and Christian Coarfa; integrated into the Workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+
+<%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool, which will leverage the <a href='http://bioinf.wehi.edu.au/limma/'>LIMMA</a> R package, is currently
+          under development and only available internally and to some collaborators for testing.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>
+          <br>
+          <span style='color: red;'>Once development is complete, and testing and review carried out, the tool will be available for all users.</span>
+        "
+      })
+  %>
+<%
+  end
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html => "<a name='addendum'>
+            <div style='display:block; margin: 15px auto 8px auto; text-align:center; color:#0052DC; font-size:1.1em; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <div><div style='font-size: 1.1em;'>
+          <b>A. Filtering no-data regions</b><br></div>
+          <br>
+            When attempting to slice score tracks with a ROI track, there are usually ROI annotations for which 1 or more of the score tracks have no annotations.
+These are referred to as no-data or NA regions. Genboree offers the following options to deal with NAs<br><br>
+<ul>
+    <li>
+      <b>Do Nothing (i.e. leave <code>Remove No Data Regions</code> unchecked)</b><br><br>
+      If the original slice looked like this, it would be left untouched.
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno2</td><td>10</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno4</td><td>NA</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      <br>
+    </li>
+    <li>
+      <b>Remove No Data Regions</b><br><br>
+        There are 3 possible ways of removing no data regions:<br><br>
+        <ol>
+          <li>
+            <b>Remove a region (annotation) if <i>ANY</i> track has missing data for it</b><br>
+            If the original slice looked like this,
+            <div >
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno2</td><td>10</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno4</td><td>NA</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+            <br>
+              After removing no data regions, you would be left with
+              <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      <br>
+          </li>
+          <li>
+            <b>Remove a region (annotation) if <i>ALL</i> tracks have missing data for it</b><br><br>
+            In this case, an original slice that looked like this:
+            <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno2</td><td>10</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno4</td><td>NA</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+            would be transformed into
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno2</td><td>10</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      Only Anno4 for which all tracks have missing data was removed.
+      <br><br>
+          </li>
+          <li><b>Remove a region (annotation) if a certain <i>percentage</i> of tracks have missing data for it</b><br><br>
+             Finally for more fine grained control, you can require that all regions that have or exceed a certain percentage of NAs be removed. If you specified 60% as the cutoff, i.e. all regions where 60% or more of the tracks have no data regions were to be removed,
+             an original slice that looked like this:
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno2</td><td>10</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno4</td><td>NA</td><td>NA</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      
+      would be transformed into
+      
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      <br>
+          </li>
+        </ol>
+    </li>
+</ul>
+<div style='font-size: 1.1em;'><b>B. Replacing NA values</b><br></div>
+      <br> After filtering out no-data regions, there are are usually annotations for which one or more of the tracks have <code>NA</code> values. These regions (annotations) need to be retained but the <code>NA</code> values cannot be passed as-is to downstream processes. By default, <code>NA</code> values following filtering are replaced with 0. The <code>No Data Value</code> setting allows users to specify the value that <code>NA</code>s should be replaced with.
+      If a slice after filtering looked like this:
+      
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>NA</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      
+      with a default <code>No Data Value</code> of 0, the slice would be transformed into
+      
+      <div>
+        <table style='border-spacing:8px;margin:0 auto;'>
+          <tr><td></td><td>S1</td><td>S2</td><td>S3</td></tr>
+          <tr><td>Anno1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>Anno3</td><td>4</td><td>4</td><td>0</td></tr>
+          <tr><td>Anno5</td><td>3</td><td>4</td><td>4</td></tr>
+        </table>
+      </div>
+      
+</div>"
+})
+%>
+</div>

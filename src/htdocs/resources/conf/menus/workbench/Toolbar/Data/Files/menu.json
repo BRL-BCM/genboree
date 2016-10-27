@@ -1,0 +1,66 @@
+[
+  {
+    "text": "Transfer File",
+    "idStr": "uploadDbFile",
+    "tooltip": "Transfer a raw file to Genboree for storage, sharing, and/or subsequent analysis.<br>&nbsp;<br>The file will not be automatically processed following transfer. It will be stored in Genboree as-is."
+  },
+  {
+    "text": "Process File",
+    "idStr": "processFile",
+    "tooltip": "Extract a compressed file and/or convert it to unix format."
+  },
+  {
+    "text": "Copy/Move File",
+    "idStr": "fileCopier",
+    "tooltip": "Copy or Move a file." 
+  },
+  {
+    "text": "Remove File(s)",
+    "idStr": "removeFiles",
+    "tooltip": "Permanently remove/delete one or more files or file folders."
+  },
+  {
+   "text": "Newick Viewer",
+    "idStr": "newickViewer",
+    "tooltip": "A tool for viewing newick files in a variety of drawing formats."
+  },
+  {
+    "text": "Create BAI Files",
+    "idStr": "createBAI",
+    "tooltip": "Generate the BAI (index) files from one or more BAM/SAM file(s)."
+  },
+  {
+    "text": "Prepare Archive",
+    "idStr": "prepareArchive",
+    "tooltip": "Create an archive file in the target database."
+  },
+  {
+    "text": "Edit Attributes",
+    "idStr": "editDbFileAttributes",
+    "tooltip": "Edit Attributes of a file.",
+    "hidden" :  true,
+    "disabled": true
+  },
+  {
+    "text": "Tabbed File Viewer",
+    "idStr": "tabbedFileViewer",
+    "tooltip": "View tabbed files.",
+    "hidden" :  true,
+    "disabled": true
+  },
+  {
+    "text": "Text File Viewer",
+    "idStr": "fileTextViewer",
+    "tooltip": "View text files."
+  },
+  {
+    "text": "Image File Viewer",
+    "idStr": "fileImageViewer",
+    "tooltip": "View image files."
+  },
+    {
+    "text": "Create Remote Storage Area",
+    "idStr": "createRemoteStorageArea",
+    "tooltip": "Create a remote storage area (example: FTP)."
+  }
+]

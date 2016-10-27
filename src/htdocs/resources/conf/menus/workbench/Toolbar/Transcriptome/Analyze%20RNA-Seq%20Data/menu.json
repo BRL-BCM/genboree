@@ -1,0 +1,27 @@
+[
+  {
+    "text": "Map Reads and Splice Junctions by TopHat",
+    "tooltip": "A fast splice junction mapper that aligns RNA-Seq reads to mammalian-sized genomes using Bowtie, and then analyzes the mapping results to identify splice junctions between exons.",
+    "idStr": "tophat"
+  },
+  {
+    "text": "Assemble and Measure Transcripts by Cufflinks",
+    "tooltip": "Cufflinks assembles transcripts, estimates their abundances, and tests for differential expression and regulation in RNA-Seq samples.",
+    "idStr": "cufflinks"
+  },
+  {
+    "text": "Detect Transcription Changes by Cuffdiff",
+    "tooltip": "To find significant changes in transcript expression, splicing, and promoter use.",
+    "idStr": "cuffdiff"
+  },
+  {
+    "text": "Analyze RNA-Seq data by RSEQtools",
+    "tooltip": "A modular framework with a suite of tools to calculate gene expression values, generate signal tracks of mapped reads, build customizable RNA-Seq workflows, using compact anonymized data summaries.",
+    "idStr": "rseqtools"
+  },
+  {
+    "text": "Analyze RNA-Seq data by RSEQtools - Batch processing",
+    "tooltip": "Batch processing mode of RSEQtools pipeline - A modular framework with a suite of tools to calculate gene expression values, generate signal tracks of mapped reads, build customizable RNA-Seq workflows, using compact anonymized data summaries.",
+    "idStr": "rseqtoolsBatch"
+  }
+]

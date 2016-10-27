@@ -1,0 +1,30 @@
+[
+  {
+    "text": "Create Track Entity List",
+    "tooltip": "Create/Add a new track entity list in a selected database.",
+    "idStr": "createTrackList"
+  },
+  {
+    "text": "Copy/Move Track Entity List",
+    "tooltip": "Copy or move one or more existing track entity lists to a target database.",
+    "idStr": "copyTrackLists"
+  },
+  {
+    "text": "Delete/Remove Track Entity List",
+    "tooltip": "Permanently remove one or more track entity lists from a selected database.",
+    "idStr": "deleteTrackLists"
+  },
+  { "text": "Rename Track Entity List",
+    "toolTip": "Rename an existing track entity list.",
+    "idStr": "renameTrackList"
+  },
+  { "text": "Add Tracks to Track Entity List",
+    "toolTip": "Add additional tracks to an existing track entity list.",
+    "idStr": "addTracksToEntityList"
+  },
+  { "text": "Remove Tracks from Track Entity List",
+    "toolTip": "Remove one or more tracks from an existing track entity list.",
+    "idStr": "removeTracksFromEntityList"
+  }
+]
+

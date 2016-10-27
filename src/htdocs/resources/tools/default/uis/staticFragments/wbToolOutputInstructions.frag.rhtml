@@ -1,0 +1,16 @@
+<%#
+  Just a convenience wrapper for making an outputs instruction section
+  using the generic wbDialogSection and wbToolIOInstructions fragments
+%>
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Targets", 
+      :sectionHtml => renderFrag(@toolIdStr, :wbToolIOInstructions,
+      {
+        :instructionType    => :outputs,
+        :instructions       => @instructions,
+        :types              => @types,
+        :beEmpty            => @beEmpty
+      })
+    })
+%>

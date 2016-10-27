@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "copyFileLists",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Copy File Lists",
+    "shortLabel": "Copy File Lists",
+    "groupAccessUri": null
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "projectName": [
+        "^(?:^.+$)$",
+        "Project Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/grp/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

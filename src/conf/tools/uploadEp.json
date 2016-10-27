@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "uploadEp",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Upload Entrypoints",
+    "shortLabel": "Upload Entrypoints"
+  }
+}

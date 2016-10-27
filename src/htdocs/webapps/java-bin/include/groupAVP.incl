@@ -1,0 +1,91 @@
+<%@ page import="java.util.Iterator,
+                 java.util.Arrays"%>
+
+<TR>
+    <TD ALIGN="center" class="annotation2" colspan="4" >
+        <div style="float:left; width:20%;">&nbsp;
+        </div>
+    <% if (name2Values != null && !name2Values.isEmpty()) {  %>
+        <div  class="annotation3" style="width:60%; "><B>Annotation Attribute Value Pairs (AVP)<B>&nbsp; &nbsp; &nbsp; &nbsp;<input type="button" name="" id="" class="btn" value="+"  onClick="addNewAnnoAttribute(<%=i%>); ">               
+   <% } else { %>
+     <div  class="annotation3" style="width:60%; "><B>Annotation Attribute Value Pairs (AVP)<B>&nbsp; &nbsp; &nbsp; &nbsp;<input type="button" name="" id="" class="btn" value="+"  onClick="addNewAnnoAttribute(<%=i%>); ">
+          <% }  %>
+        </div>
+      
+    </TD>
+</TR>
+
+<TR>
+     <TD  colspan="4" class="form_body" >
+     <div id="attributePairsDiv_<%=i%>"  class="scrollable">
+           <TABLE  width="100%" border="0px" cellpadding="0" cellspacing="0">
+            <TR width="100%">
+                <TD  width="30%"  class="form_body">
+                    <div align="center" class="annotation3" style="width:90%" >
+                         Attribute Name
+                    </div>
+                </TD>
+                <TD width="70%">
+                    <div  align="center" class="annotation3" style="width:90%" >
+                    Attribute Value
+                    </div>
+                </TD>
+            </TR>
+
+  <% if (name2Values != null && !name2Values.isEmpty()) {  
+ 
+        String [] avpNames = new String [name2Values.size()];
+        Iterator it = name2Values.keySet().iterator();
+        int m=0;
+        while (it.hasNext()  ){
+        avpNames[m] = (String)it.next();
+            m++;
+        }
+
+       Arrays.sort(avpNames);
+       for (int n=0; n<avpNames.length; n++){
+         String name = avpNames[n];
+        String value =  (String)name2Values.get(name);
+       
+        if (value != null)
+        value = value.replaceAll(";", " " ) ;
+        %>
+        <TR id="attRowId_<%=i%>_<%=n%>" width="100%">
+           <TD  width="30%"  class="form_body">
+            <div id="minusDiv_<%=i%>_<%=n%>" class="minusButton" >
+            <input type="button" id="btnMinus_<%=i%>_<%=n%>" class="btn1"  value="-" onClick="removeGrpAtt(<%=i%>, <%=n%>);" >
+            </div>
+
+           <div id="nameInputDiv_<%=i%>_<%=n%>"  class="attributeName" style="display:block;">       
+            <input type="text"  class="longInput1" maxLength="255" name="atttxtName_<%=i%>_<%=n%>"   id="atttxtName_<%=i%>_<%=n%>" BGCOLOR="white" value="<%=name%>" onChange="markAnnotation('<%=checkBoxId%>')">
+            </div>
+            </TD><TD width="70%">
+            <div id="valueInputDiv_<%=i%>_<%=n%>" class="attributeValue" style="display:block;">
+            <input type="text"  class="longInput1" maxLength="255" name="atttxtValues_<%=i%>_<%=n%>" id="atttxtValues_<%=i%>_<%=n%>" BGCOLOR="white" value="<%=value%>"  onChange="markAnnotation('<%=checkBoxId%>')">
+            </div>
+            </TD>
+      </TR>
+        <%
+         }
+        }
+        else {  %>
+          <TR id="attRowId0" width="100%">
+           <TD  width="30%"  class="form_body">
+            <div id="minusDiv0>" class="minusButton" >
+            <input type="button" id="btnMinus_<%=i%>_0" class="btn1" value="-" onClick="removeGrpAtt(<%=i%>, 0);" >
+            </div>
+
+           <div id="nameInputDiv0"  class="attributeName" style="display:block;">
+            <input type="text"   class="longInput1" name="atttxtName_<%=i%>_0" id="atttxtName_<%=i%>_0" maxLength="255" BGCOLOR="white" value="" onChange="markAnnotation('<%=checkBoxId%>')">
+            </div>
+            </TD><TD width="70%">
+            <div id="valueInputDiv0" class="attributeValue" style="display:block;">
+            <input type="text"  class="longInput1"  name="atttxtValues_<%=i%>_0" maxLength="255" id="atttxtValues_<%=i%>_0" BGCOLOR="white" value="" onChange="markAnnotation('<%=checkBoxId%>')">
+            </div>
+            </TD>
+      </TR>
+  <% } %>
+      </TABLE>
+      </div>
+ </TD>
+</TR>

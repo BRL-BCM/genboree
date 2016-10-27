@@ -1,0 +1,465 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  # Normalize all inputs as tracks:
+    trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    classApiHelper = BRL::Genboree::REST::Helpers::ClassApiUriHelper.new()
+    newInputs = []
+    @inputs.each { |input|
+      if(input =~ BRL::Genboree::REST::Helpers::TrackApiUriHelper::NAME_EXTRACTOR_REGEXP) # For tracks
+        newInputs << "#{input.chomp("?")}?"
+      elsif(input =~ BRL::Genboree::REST::Helpers::ClassApiUriHelper::NAME_EXTRACTOR_REGEXP) # For class
+        className = classApiHelper.extractName(input)
+        dbUri = dbApiHelper.extractPureUri(input)
+        uri = dbUri.dup()
+        uri = URI.parse(uri)
+        rcscUri = uri.path.chomp("?")
+        rcscUri << "/trks?connect=false&class=#{CGI.escape(className)}"
+        # Get all tracks for this class
+        $stderr.puts "host: #{uri.host.inspect}\trcscUri: #{rcscUri.inspect}"
+        apiCaller = WrapperApiCaller.new(uri.host, rcscUri, @context['userId'])
+        apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+        apiCaller.get()
+        if(!apiCaller.succeeded?)
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'MISSING_RESOURCE', "ApiCaller failed for getting tracks for class: #{className.inspect}. Tracks not present? ")
+          raise wue
+        end
+        resp = apiCaller.respBody()
+        retVal = JSON.parse(resp)
+        tracks = retVal['data']
+        tracks.each { |track|
+          trkUri = "#{dbUri.chomp("?")}/trk/#{CGI.escape(track['text'])}?"
+          newInputs << trkUri
+        }
+      else # For db
+        allFtypes = trkApiHelper.allFtypes(input)
+        dbUri = input.chomp("?")
+        allFtypes.each_key { |key|
+          if(allFtypes[key]['dbNames'].size > 1 or allFtypes[key]['dbNames'][0][2] == :sharedDb) # More than 1 db associated or shared db
+            newInputs << "#{dbUri}/trk/#{CGI.escape(key)}?"
+          else
+            newInputs << "#{dbUri}/trk/#{CGI.escape(key)}?"
+          end
+        }
+      end
+    }
+    inputList = newInputs.join(",")
+%>
+<div style="height: 800px; width: 1200px; overflow-y: auto;" class="genBrowser" >
+  <%
+    # Get the entrypoints/chromosomes
+    epLength = {}
+    epNameArray = epLengthArray = ""
+    buff = ''
+    uriObj = URI.parse(dbApiHelper.extractPureUri(@inputs[0]))
+    apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/eps?", @context['userId'])
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    eps = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+    eps.each_index { |ii|
+      chr = eps[ii]['name']
+      epLength[chr] = eps[ii]['length'].to_i
+      epNameArray << "#{chr},"
+      epLengthArray << "#{eps[ii]['length']},"
+    }
+    # Get the assembly
+    apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}?", @context['userId'])
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    assembly = JSON.parse(apiCaller.respBody)['data']['version']
+    epNameArray.chomp!(",")
+    epLengthArray.chomp!(",")
+    cytobandURL = "#{dbApiHelper.extractPureUri(newInputs[0])}/ep/"
+  %>
+  <%# div for soliciting landmarks %>
+  <div align="center" style="margin-top: 25px; margin-left: 10px; margin-right: 10px; width: 1000; height: 50px;" id="landmark">
+    <span style="margin-left: 10px;"><b>Assembly</b>: <i><%=assembly%></i></span>
+    <span style="margin-left: 20px; margin-top: 18px;"><b>Entrypoint/Chromosome</b></span>
+    <%
+      buff << %Q^ <select id="chrom" style="visibility: visible; margin-left: 10px; margin-top: 18px; width:80px" onchange="changeLandmark(this.value, '#{epNameArray}', '#{epLengthArray}');"> ^
+    %>
+    <%=buff%>
+    <%
+      # border: 1px solid
+      buff = ""
+      from = to = nil
+      eps.each_index { |ii|
+        chr = eps[ii]['name']
+        selectedStr = (ii == 0 ? 'selected="selected"' : '')
+        buff << %Q^ <option value="#{chr}" #{selectedStr} >#{chr}</option> ^
+        if(ii == 0)
+          rlength = epLength[chr]
+          to  = ( rlength / 2 ).to_i
+          from = ( to / 2 ).to_i
+        end
+      }
+      @settings['epLength'] = epLength
+    %>
+    <%=buff%>
+    </select>
+    <span style="margin-left: 20px; margin-top: 18px;"><b>From</b></span>
+    <input id="fromCoord" style="margin-left: 10px; margin-top: 18px; width: 100px;" type="text" name="" value=<%="#{from}"%> />
+    <span style="margin-left: 20px; margin-top: 18px;"><b>To</b></span>
+    <input id="toCoord" style="margin-left: 10px; margin-top: 18px; width: 100px;" type="text" name="" value=<%="#{to}"%> />
+    <%
+      buff = %Q^ <input title="Click to draw tracks" style="margin-left: 20px; margin-top: 18px; border: 1px solid #006; padding-left:2px; padding-right: 2px" type="submit" name="" value="Go" onclick="getPNGs('#{inputList}', '#{cytobandURL}')" /> ^
+    %>
+    <%=buff%>
+    <span style="margin-left: 20px; margin-top: 18px;"><b>Search</b></span>
+    <input style="margin-left: 10px; margin-top: 18px;" type="text" name="" value="" />
+    </br>
+
+  </div>
+  <%# div for additional settings %>
+  <div align="center" style="margin-top: 2px; margin-left: 10px; margin-right: 10px; width: 1000; height: 50px;" id="additionalSettings">
+    <span id="spanZoomFactor" style="margin-left: 10px; visibility: hidden;"><b>Zoom Factor</b></span>
+    <select id="zoomFactor" style="visibility: hidden; margin-left: 10px; margin-top: 18px; width:80px" title="Use this drop list to set the scale for zomming in/out.">
+      <option value="1.5" selected="selected">1.5x</option>
+      <option value="2">2x</option>
+      <option value="3">3x</option>
+      <option value="5">5x</option>
+      <option value="10">10x</option>
+      <option value="base">Base</option>
+      <option value="full">Full</option>
+    </select>
+    <span id="spanShiftFactor" style="margin-left: 20px; visibility: hidden"><b>Shift/Move Factor</b></span>
+    <select id="shiftFactor" style="visibility: hidden; margin-left: 10px; margin-top: 18px; width:80px" title="Use this drop list to set the scale for shifting to the left or right.">
+      <option value="0.9" selected="selected">9/10th</option>
+      <option value="0.5">1/2</option>
+      <option value="0.1">1/10th</option>
+    </select>
+    <span id="spanPicWidth" style="margin-left: 20px; visibility: hidden"><b>Picture Width</b></span>
+    <input id="pictureWidth" style="margin-left: 10px; width: 100px; visibility: hidden" type="text" value="620" />
+    <span id="spanTrackDesc" style="margin-left: 20px; visibility: hidden"><b>Display Track Descriptions</b></span>
+    <input id="displayTrackDesc" style="margin-left: 10px; size: auto; visibility: hidden" type="checkbox" checked="checked" value='displayTrackDesc' />
+  </div>
+  <%# div for arrows for zooming and shifting %>
+  <div id="arrowsUpParent" align="center" style="margin-top: 30px; margin-left: 10px; margin-right: 10px; width: 1000; height: 20px;">
+  <%
+    buff = %Q^ <div id="arrowUp" onclick="zoomIn('#{inputList}', '#{cytobandURL}')" style="margin-top: 2px; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 15px solid black; visibility: hidden;" title="Click to zoom in. Select the amount you want to zoom in using the 'Zoom Factor' drop list." ></div> ^
+  %>
+  <%=buff%>
+  </div>
+    <%
+      buff = %Q^ <div id="arrowLeft" onclick="shiftLeft('#{inputList}', '#{cytobandURL}', '#{epNameArray}', '#{epLengthArray}')" style=" margin-left: 230px; float: left; width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-right: 15px solid black; visibility: hidden;" title="Click to shift left. Select the amount you want to shift/move using the 'Shift/Move Factor' drop list." ></div> ^
+    %>
+    <%=buff%>
+    <%
+      buff = %Q^ <div id="arrowRight" onclick="shiftRight('#{inputList}', '#{cytobandURL}', '#{epNameArray}', '#{epLengthArray}')" style=" margin-left: 700px; width: 0; height: 0; float: left; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 15px solid black; visibility: hidden;" title="Click to shift right. Select the amount you want to shift/move using the 'Shift/Move Factor' drop list." ></div> ^
+    %>
+    <%=buff%>
+  <div id="arrowsDownParent" align="center" style="margin-top: 25px; margin-left: 10px; margin-right: 10px; width: 1000; height: 20px;">
+  <%
+    buff = %Q^ <div id="arrowDown" onclick="zoomOut('#{inputList}', '#{cytobandURL}', '#{epNameArray}', '#{epLengthArray}')" style="margin-top: 2px; width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 15px solid black; visibility: hidden;" title="Click to zoom out. Select the amount you want to zoom out using the 'Zoom Factor' drop list." ></div> ^
+  %>
+  <%=buff%>
+  </div>
+  <div align="center" style="margin-top: 10px; margin-left: 214px; margin-right: 230px; width: 700; height: 30px;" id="chromThumbDiv">
+    <div align="center" id="chromThumb_imgCrop_wrap_id1" class="imgCrop_wrap">
+      <img id="chromThumb" style="visibility: hidden;  position:relative; " src="apiCaller.jsp?method=GET&amp;binMode=true&amp;errorRespTextOk=false&amp;rsrcPath=%2FREST%2Fv1%2Fgrp%2Fpaithank_group%2Fdb%2FarrayTestHg19%2Fep%2Fchr1%3Fformat%3Dchr_band_png%26landmark%3Dchr1%26orientation%3Dhorz%26pxHeight%3D15%26pxWidth%3D300%26topMargin%3D2%26rightMargin%3D2%26bottomMargin%3D2%26leftMargin%3D2" border="0">
+      <span id="chromThumbHint" style="visibility:hidden;position:relative;bottom:3px;" name="chromThumbHint" onclick="$('btnView').click() ;">View</span>
+      <div id="chromThumb_imgCrop_dragArea_id1" class="imgCrop_dragArea">
+        <div class="imgCrop_overlay imgCrop_north" style="opacity: 0.16; height: 0px; position:relative;">
+          <div class="imgCrop_overlayText" style="display: none;position:relative; "></div>
+        </div>
+        <div class="imgCrop_overlay imgCrop_east" style="opacity: 0.16; top: 0px; height: 15px; left: 229px; width: 71px;position:relative; ">
+          <div class="imgCrop_overlayText" style="position:relative;"></div>
+        </div>
+        <div class="imgCrop_overlay imgCrop_south" style="opacity: 0.16; top: 15px; height: 0px;position:relative; ">
+          <div class="imgCrop_overlayText" style="display: none;position:relative; "></div>
+        </div>
+        <div class="imgCrop_overlay imgCrop_west" style="opacity: 0.16; top: 0px; height: 15px; width: 227px;position:relative; ">
+          <div class="imgCrop_overlayText" style="position:relative;"></div>
+        </div>
+        <div class="imgCrop_selArea" style="left: 227px; top: 0px; width: 2px; height: 15px;position:relative; " id="">
+          <div id="chromThumb_imgCrop_marqueeNorth" class="imgCrop_marqueeHoriz imgCrop_marqueeNorth" style="background: transparent url(/images/genbMarqueeHoriz.gif) repeat-x 0 0 ;height: 2px ; "><span></span></div>
+          <div id="chromThumb_imgCrop_marqueeEast" class="imgCrop_marqueeVert imgCrop_marqueeEast" style="background: transparent url(/images/genbMarqueeVert.gif) repeat-x 0 0 ;width: 2px ; "><span></span></div>
+          <div id="chromThumb_imgCrop_marqueeSouth" class="imgCrop_marqueeHoriz imgCrop_marqueeSouth" style="background: transparent url(/images/genbMarqueeHoriz.gif) repeat-x 0 0 ;height: 2px ; "><span></span></div>
+          <div id="chromThumb_imgCrop_marqueeWest" class="imgCrop_marqueeVert imgCrop_marqueeWest" style="background: transparent url(/images/genbMarqueeVert.gif) repeat-x 0 0 ;width: 2px ; "><span></span></div>
+          <div class="imgCrop_handle imgCrop_handle_full imgCrop_handle_full_N" style="border: 1px solid rgb(51, 0, 102); background-color: rgb(204, 0, 204); opacity: 1; height: 2px; display: none; top: -1px; left: 1px; width: 1px; background-position: initial initial; background-repeat: initial initial; "></div>
+          <div class="imgCrop_handle imgCrop_handle_full imgCrop_handle_full_E" style="border: 1px solid rgb(51, 0, 102); background-color: rgb(204, 0, 204); opacity: 1; width: 2px; right: -1px; top: 1px; height: 12px; background-position: initial initial; background-repeat: initial initial; "></div>
+          <div class="imgCrop_handle imgCrop_handle_full imgCrop_handle_full_S" style="border: 1px solid rgb(51, 0, 102); background-color: rgb(204, 0, 204); opacity: 1; height: 2px; display: none; bottom: -1px; left: 1px; width: 1px; background-position: initial initial; background-repeat: initial initial; ">
+            <div style="visibility: hidden; "></div>
+          </div>
+          <div class="imgCrop_handle imgCrop_handle_full imgCrop_handle_full_W" style="border: 1px solid rgb(51, 0, 102); background-color: rgb(204, 0, 204); opacity: 1; width: 2px; left: -1px; top: 1px; height: 12px; background-position: initial initial; background-repeat: initial initial; "></div>
+            <div id="chromThumb_imgCrop_clickArea_id1" class="imgCrop_clickArea" style="width: 2px; height: 15px; "></div>
+          </div>
+          <div id="chromThumb_imgCrop_clickArea_id2" class="imgCrop_clickArea" style="width: 300px; height: 15px; "></div>
+        </div>
+      </div>
+    </div>
+  <div align="center" style="margin-top: 15px; margin-left: 214px; margin-right: 230px; width: 700; height: 45px;" id="ruler">
+    <img style="visibility: hidden;" src="" id="ruler_image"/>
+  </div>
+  <div align="center" style="margin-top: 1px; margin-left: 230px; margin-right: 230px; width: 700; height: 500px; overflow:scroll;" id="images">
+      <%
+        newInputs.each_index { |ii|
+      %>
+          <img style="visibility: hidden;" src="" id="<%="image_#{ii}"%>"/></br>
+      <%
+        }
+      %>
+  </div>
+    <%# This div is just for making the dialog scrollable %>
+  <div align="center" id="bottomSpacer" style="margin-top: 100px; margin-left: 230px; margin-bottom: 20px; margin-right: 230px; width: 700; height: 10px;">
+
+  </div>
+</div>
+<script type="text/javascript">
+
+  function showDivs()
+  {
+    var ii = 0 ;
+    var imagesDivStyle = document.getElementById('images').style ;
+    imagesDivStyle.visibility = 'visible' ;
+    var arrowUp = document.getElementById('arrowUp') ;
+    arrowUp.style.visibility = 'visible' ;
+    var arrowDown = document.getElementById('arrowDown') ;
+    arrowDown.style.visibility = 'visible' ;
+    var arrowRight = document.getElementById('arrowRight') ;
+    arrowRight.style.visibility = 'visible' ;
+    var arrowLeft = document.getElementById('arrowLeft') ;
+    arrowLeft.style.visibility = 'visible' ;
+    document.getElementById('spanZoomFactor').style.visibility = 'visible' ;
+    document.getElementById('spanShiftFactor').style.visibility = 'visible' ;
+    document.getElementById('spanPicWidth').style.visibility = 'visible' ;
+    document.getElementById('spanTrackDesc').style.visibility = 'visible' ;
+    document.getElementById('zoomFactor').style.visibility = 'visible' ;
+    document.getElementById('shiftFactor').style.visibility = 'visible' ;
+    document.getElementById('pictureWidth').style.visibility = 'visible' ;
+    document.getElementById('displayTrackDesc').style.visibility = 'visible' ;
+  }
+
+  function shiftRight(inputList, cytobandURL, epNameArr, epLengthArr)
+  {
+    var from = parseInt(document.getElementById('fromCoord').value) ;
+    var to = parseInt(document.getElementById('toCoord').value) ;
+    var shiftFactor = parseFloat(document.getElementById('shiftFactor').value) ;
+    var newStart, newStop ;
+    var ii ;
+    var epNameArray = epNameArr.split(",") ;
+    var epLengthArray = epLengthArr.split(",") ;
+    var chrom = document.getElementById('chrom').value ;
+    var rlength ;
+    for(ii = 0; ii < epNameArray.length; ii ++)
+    {
+      chr = epNameArray[ii] ;
+      if(chr == chrom)
+      {
+        rlength = parseInt(epLengthArray[ii + 1]) ;
+        break ;
+      }
+    }
+    var currLength = ( to - from ) + 1 ;
+    var shiftBy = parseInt(currLength * shiftFactor) ;
+    newStart = parseInt(from + shiftBy) ;
+    newStop = parseInt(to + shiftBy) ;
+    if(newStart >= rlength)
+    {
+      newStart = rlength - 20 ;
+    }
+    if(newStop > rlength)
+    {
+      newStop = rlength ;
+    }
+    document.getElementById('fromCoord').value = newStart ;
+    document.getElementById('toCoord').value = newStop ;
+    getPNGs(inputList, cytobandURL) ;
+  }
+
+  function shiftLeft(inputList, cytobandURL, epNameArr, epLengthArr)
+  {
+    var from = document.getElementById('fromCoord').value ;
+    var to = document.getElementById('toCoord').value ;
+    var shiftFactor = document.getElementById('shiftFactor').value ;
+    var newStart, newStop ;
+    var ii ;
+    var epNameArray = epNameArr.split(",") ;
+    var epLengthArray = epLengthArr.split(",") ;
+    var chrom = document.getElementById('chrom').value ;
+    var rlength ;
+    currLength = ( to - from ) + 1 ;
+    shiftBy = parseInt(currLength * shiftFactor) ;
+    newStart = parseInt(from - shiftBy) ;
+    newStop = parseInt(to - shiftBy) ;
+    if(newStart < 1)
+    {
+      newStart = 1 ;
+    }
+    if(newStop < 1)
+    {
+      newStop = 20 ;
+    }
+    document.getElementById('fromCoord').value = newStart ;
+    document.getElementById('toCoord').value = newStop ;
+    getPNGs(inputList, cytobandURL) ;
+  }
+
+  function zoomOut(inputList, cytobandURL, epNameArr, epLengthArr)
+  {
+    var from = document.getElementById('fromCoord').value ;
+    var to = document.getElementById('toCoord').value ;
+    var zoomFactor = document.getElementById('zoomFactor').value ;
+    var newStart, newStop ;
+    var ii ;
+    var epNameArray = epNameArr.split(",") ;
+    var epLengthArray = epLengthArr.split(",") ;
+    var chrom = document.getElementById('chrom').value ;
+    var rlength ;
+    // Calculate the amount we need to zoom in
+    if(zoomFactor == 'base')
+    {
+      alert("'Base' can only be chosen when zooming in") ;
+    }
+    else if(zoomFactor == 'full')
+    {
+      for(ii = 0; ii < epNameArray.length; ii ++)
+      {
+        chr = epNameArray[ii] ;
+        if(chr == chrom)
+        {
+          rlength = parseInt(epLengthArray[ii + 1]) ;
+          document.getElementById('fromCoord').value = 1 ;
+          document.getElementById('toCoord').value = rlength ;
+          break ;
+        }
+      }
+      getPNGs(inputList, cytobandURL) ;
+    }
+    else
+    {
+      for(ii = 0; ii < epNameArray.length; ii ++)
+      {
+        chr = epNameArray[ii] ;
+        if(chr == chrom)
+        {
+          rlength = parseInt(epLengthArray[ii + 1]) ;
+          break ;
+        }
+      }
+      currLength = ( to - from ) + 1 ;
+      newLength = parseInt( currLength * zoomFactor );
+      subValue = parseInt( ( ( newLength - currLength ) / 2 ) ) ;
+      newStart = parseInt(from) - parseInt(subValue)  ;
+      newStop = ( newStart + newLength ) - 1 ;
+      if(newStart < 1)
+      {
+        newStart = 1 ;
+      }
+      if(newStop > rlength)
+      {
+        newStop = rlength ;
+      }
+      document.getElementById('fromCoord').value = newStart ;
+      document.getElementById('toCoord').value = newStop ;
+      getPNGs(inputList, cytobandURL) ;
+    }
+  }
+
+  function zoomIn(inputList, cytobandURL)
+  {
+    var from = document.getElementById('fromCoord').value ;
+    var to = document.getElementById('toCoord').value ;
+    var zoomFactor = document.getElementById('zoomFactor').value ;
+    var newStart, newStop ;
+    // Calculate the amount we need to zoom in
+    if(zoomFactor == 'full')
+    {
+      alert("'Full' can only be chosen when zooming out") ;
+    }
+    else if(zoomFactor == 'base')
+    {
+      newStart = parseInt( (to - from) / 2 ) ;
+      newStop = newStart + 20 ;
+      document.getElementById('fromCoord').value = newStart ;
+      document.getElementById('toCoord').value = newStop ;
+      getPNGs(inputList, cytobandURL) ;
+    }
+    else
+    {
+      currLength = ( to - from ) + 1 ;
+      newLength = parseInt( currLength / zoomFactor );
+      addValue = parseInt( ( ( currLength - newLength ) / 2 ) ) ;
+      newStart = parseInt(from) + parseInt(addValue)  ;
+      newStop = ( newStart + newLength ) - 1 ;
+      if(newStart > newStop)
+      {
+        newStart = newStop ;
+      }
+      document.getElementById('fromCoord').value = newStart ;
+      document.getElementById('toCoord').value = newStop ;
+      getPNGs(inputList, cytobandURL) ;
+    }
+
+  }
+  function getPNGs(inputList, cytobandURL)
+  {
+    showDivs()
+    var inputs = inputList.split(",") ;
+    var from = document.getElementById('fromCoord').value ;
+    var to = document.getElementById('toCoord').value ;
+    var chrom = document.getElementById('chrom').value ;
+    var ii = 0 ;
+    if(parseInt(from) > parseInt(to))
+    {
+      alert("'From' cannot be larger than 'To'")
+    }
+    else
+    {
+      for(ii = 0; ii < inputs.length; ii ++)
+      {
+        imgUrl = inputs[ii] + "format=browser_png&startCoord=" + from.toString() + "&stopCoord=" + to.toString() + "&chrom=" + chrom ;
+
+        var trackDesc = document.getElementById('displayTrackDesc') ;
+        if(trackDesc.value == "displayTrackDesc")
+        {
+          imgUrl = imgUrl + '&displayTrackDescription' ;
+        }
+        var imageId = 'image_' + ii ;
+        var imageId = document.getElementById(imageId) ;
+        imageId.style.visibility = 'visible' ;
+        imageId.src = "/java-bin/apiCaller.jsp?apiMethod=GET&binMode=true&rsrcPath=" + escape(imgUrl) ;
+        if(ii == 0)
+        {
+          imgUrl = imgUrl + "&drawRuler" ;
+          var ruler = document.getElementById('ruler_image') ;
+          ruler.style.visibility = 'visible' ;
+          ruler.src = "/java-bin/apiCaller.jsp?apiMethod=GET&binMode=true&rsrcPath=" + escape(imgUrl) ;
+          var cytoBand = document.getElementById('chromThumb') ;
+          cytoBand.style.visibility = 'visible' ;
+          var chromThumbHint = document.getElementById('chromThumbHint') ;
+          chromThumbHint.style.visibility = 'visible' ;
+          //cytoBand.src = "/java-bin/apiCaller.jsp?apiMethod=GET&binMode=true&rsrcPath=" + escape(cytobandURL + chrom + "?format=chr_band_png&landmark=" + chrom) + "%26orientation%3Dhorz%26pxHeight%3D20%26pxWidth%3D500%26topMargin%3D2%26rightMargin%3D2%26bottomMargin%3D2%26leftMargin%3D2" ;
+        }
+      }
+    }
+
+
+  }
+
+  function changeLandmark(chrom, epNameArr, epLengthArr)
+  {
+    var ii ;
+    var epNameArray = epNameArr.split(",") ;
+    var epLengthArray = epLengthArr.split(",") ;
+    for(ii = 0; ii < epNameArray.length; ii ++)
+    {
+      chr = epNameArray[ii] ;
+      if(chr == chrom)
+      {
+        rlength = parseInt(epLengthArray[ii + 1]) ;
+        to  = parseInt( ( rlength / 2 ) ) ;
+        from = parseInt( ( to / 2 ) ) ;
+        document.getElementById('fromCoord').value = from ;
+        document.getElementById('toCoord').value = to ;
+        break ;
+      }
+    }
+  }
+
+</script>

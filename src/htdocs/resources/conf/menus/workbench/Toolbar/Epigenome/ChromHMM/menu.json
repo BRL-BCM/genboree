@@ -1,0 +1,22 @@
+[
+  /*{
+    "text" : "BinarizeBed",
+    "idStr" : "chromHMMBinarizeBed",
+    "tooltip" : "This tool converts coordinates of aligned reads into binarized data form from which a chromatin state model can be learned."
+  },*/
+  {
+    "text": "LearnModel",
+    "idStr": "chromHMMLearnModel",
+    "tooltip" : "This tool learns a chromatin state model from a set of binarized data files."
+  },
+  {
+    "text" : "BinarizeSignal",
+    "idStr" : "chromHMMBinarizeSignal",
+    "tooltip" : "This tool converts signal data files into binarized data files."
+  }
+ /* {
+    "text": "FindERChromHMM",
+    "idStr": "makeSignalChrom",
+    "tooltip" : "This tool runs FindER and chromHMM LearnModel tools."
+  }*/
+]

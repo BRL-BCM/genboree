@@ -1,0 +1,98 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "This tool will generate a combined miRNA profile from the output LFF files produced by the <code>Small RNA Pash Mapping</code> tool.
+        <br>&nbsp;<br>
+        Review that the correct LFF files are going to be processed.
+        <br>&nbsp;<br>
+        "
+      })
+  %>
+
+  <%# Input summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # calculate width to use depending on length of file name
+    length = 0
+    @inputs.each { |input|
+      fileName = File.basename(input)
+      length = fileName.length if(fileName.length > length)
+    }
+    widthToUse = length > 30 ? "80%" : "180px"
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Combined Coverage Profiler Settings",
+      :widgets =>
+      [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Combined Coverage Profile-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+        { :id => 'labelOnly', :label => 'Sample Type:', :type => 'hidden' },
+        { :id => 'sampleType', :labelStyle => "width:#{widthToUse} ; font-size:80%", :style => 'font-size:80%', :type => :eachTrkOrFileWithSelect, :set => @inputs, :options =>
+          {
+            :na => { :label => 'n/a', :selected => true },
+            :sample => { :label => 'sample' },
+            :control => { :label => 'control' }
+          }
+        }
+      ]
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype under evaluation for manuscript preparation.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

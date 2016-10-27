@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "deleteHubs",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Hub",
+    "shortLabel": "delete hub",
+    "groupAccessUri": null 
+  }
+}

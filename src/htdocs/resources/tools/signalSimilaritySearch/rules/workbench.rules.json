@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ],
+      [
+        "/class/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^\\S[^\t\n\\$\"'\\\\]+\\S$",
+        "The analysis name cannot contain these characters: \\, ', \", or  $, and cannot begin or end with whitespace."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

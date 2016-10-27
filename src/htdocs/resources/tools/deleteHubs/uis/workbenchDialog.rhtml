@@ -1,0 +1,88 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  hubArray = []
+  hubList = []
+  rowKeyArray = []
+  @inputs.each { |hubUri|
+    hubUriObj = URI.parse(hubUri)
+    hub = CGI.unescape(File.basename(hubUriObj.path))
+    hubArray << [ { 'name' => {:value => hub, :checkbox => false } }, { 'delete' => { :value => "", :checkbox => true } } ]
+    rowKeyArray << hubUri
+  }
+  width = 700
+  height = 550 
+  height = 350 
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will allow you to delete existing hub(s) in Genboree.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All hubs belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbHubListSummary, { :hubList => @inputs} )
+      })
+    %>
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Delete",
+        :widgets =>
+        [
+          { :id => "hubArray", :label => "", :labelWidth => "5px", :rowKeys => rowKeyArray, :type => :tabularCheckboxSection, :rows => hubArray,
+          :headerRow => ['Hub Name', 'Delete'], :fontSize => '12px', :noWrap => true, :paddingTop => "7px", :valign => "middle", :addRowColor => true},
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'hubArray'}
+        ]
+      })
+
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :submit, :value => "Delete" }, { :type => :cancel} ]
+        })
+    %>
+    </form>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolOverview,
+        { :toolOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

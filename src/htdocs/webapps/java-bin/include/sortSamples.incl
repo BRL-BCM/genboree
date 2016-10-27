@@ -1,0 +1,188 @@
+<%@ page import="org.genboree.samples.Sample,
+                 org.genboree.samples.Attribute,
+                 java.util.*"
+ %>
+ 
+<%
+      
+    Sample [] newSamples = new Sample[samples.length];              
+    HashMap id2index = new HashMap (); 
+    for ( int j=0; j<samples.length; j++) 
+        id2index.put("" + samples[j].getSampleId(), new Integer(j)); 
+   
+    boolean isDefaultSort = false;   
+    HashMap orderMap = new HashMap ();  
+ 
+    int index = 0;  
+    String [] sortNames = request.getParameterValues("sortOrder"); 
+    if (sortNames != null && sortNames.length >0) {    
+        String orderedSortNames [] = null; 
+        HashMap order2sortName = new HashMap (); 
+        int [] sortOrders  = new int[sortNames.length]; 
+        for (int j=0; j<sortNames.length; j++) {
+            String sortOrder = request.getParameter(sortNames[j] + "_sort");
+            order2sortName.put(sortOrder, sortNames[j]); 
+            int sortIndex = Integer.parseInt(sortOrder);
+            sortOrders[j] = sortIndex;
+         } 
+        Arrays.sort(sortOrders);
+       orderedSortNames = new String [sortNames.length]; 
+        for (int n=0; n<sortOrders.length; n++) {
+            orderedSortNames[n] = (String)order2sortName.get("" + sortOrders[n]);
+        }
+        
+     
+    // if use default sorting order,, do nothinh 
+        if ( orderedSortNames[0].equals("saName")) 
+        isDefaultSort = true; 
+        
+    
+        if ( !isDefaultSort) {
+                int [] attributeIndexes = new int [sortNames.length]; 
+              int attributeIndex= -1;
+             //find indexes of the selected attributes    
+            
+              if ( orderedSortNames[0].equals("saName")) 
+            attributeIndexes = new int [sortNames.length-1]; 
+            
+              int count =0; 
+              for (int j=0; j< orderedSortNames.length; j++) {
+                  //if first order is  by sample Id, skip
+                if (j==0 &&  orderedSortNames[j].equals("saName")) 
+                continue;             
+                String attIndex  = (String)displayOrder.get(orderedSortNames[j]);
+                
+                if ( attIndex != null) 
+                attributeIndex = Integer.parseInt( attIndex );             
+                attributeIndexes[count] = attributeIndex;  
+                count++; 
+             } 
+            
+             String [] firstUvalues = null; 
+            HashMap sortName2OrderArray = new HashMap (); 
+            HashMap firstValue2Samples = new HashMap (); 
+            for( int n=0; n<orderedSortNames.length;  n++) { 
+                
+                HashMap value2samples = new HashMap(); 
+                ArrayList uniqValues = new ArrayList ();
+            // out.println("<br>sorting " + orderedSortNames[n]);
+                  
+          // created a value  to sample hashmap , and find uniq attribute values of the sorting attributes in all samples 
+               
+              
+                for (int j=0; j<samples.length; j++) {                  
+                // find the values of the sorting attributes in sample j     
+                    Attribute [] attributes = samples [j].getAttributes();
+                    String value = null; 
+                    int attIndex =  attributeIndexes[index];
+                   
+                    if (attributes == null || attributes[attIndex] == null || attributes[attIndex].getAttributeValue() == null )                    
+                        value = "zzzzznull";        
+                    else 
+                    value = attributes[attributeIndexes[index]].getAttributeValue() ; 
+                    
+                    // if sorting by sample name
+                    if (orderedSortNames[n].equals("saName")) 
+                      value = samples[j].getSampleName(); 
+                    
+                  // put null value and blank to bottom of array     
+                    value = value.trim(); 
+                    if (value.equals("")) 
+                    value="zzzznull";   
+                    
+                    // get arraylist for samples with same value     
+                    ArrayList sampleList = null; 
+                    if (value2samples.get(value) != null)               
+                    sampleList =(ArrayList) value2samples.get(value);
+                    else 
+                    sampleList = new ArrayList (); 
+                    
+                    // put current sample to the list     
+                    sampleList.add(samples[j]);  
+                    value2samples.put(value, sampleList); 
+                    
+                    
+                    // put the value to the list    
+                    if (!uniqValues.contains(value)) 
+                    uniqValues.add(value); 
+                } 
+
+                    // this is the sorting of string values 
+                    String [] uvalues = (String [])uniqValues.toArray(new String [uniqValues.size()]);  
+                    Arrays.sort(uvalues);
+                    
+                    if (n==0) {
+                        firstUvalues = uvalues; 
+                        firstValue2Samples = value2samples; 
+                    }   
+                    
+                    String value = null; 
+                    ArrayList   sampleList  = null; 
+                    ArrayList sortedList = new ArrayList ();   // sorted list of samples of this round           
+                    for (int j=0; j<uvalues.length; j++) {
+                        value = uvalues[j];      
+                          sampleList = (ArrayList)value2samples.get(value);                
+                        for (int k=0; k<sampleList.size(); k++){
+                            Sample sample = (Sample)sampleList.get(k); 
+                            orderMap.put(""+sample.getSampleId(), "" + j ); 
+                               //  if (k<50)
+                                 //    out.println("<br>sample " + sample.getSampleName() + "  order " + j);
+                        }
+                    }
+                        int [] arr = new int [samples.length];  
+                        for (int m=0; m<samples.length; m++) {
+                            String  indexs =(String) orderMap.get(""+samples[m].getSampleId()); 
+                            arr[m] = Integer.parseInt(indexs);                 
+                        } 
+                        sortName2OrderArray.put(orderedSortNames[n], arr); 
+                      index++;  
+                   
+            }  
+     
+        
+         int currentIndex = 0; 
+         for (int j=0; j<firstUvalues.length ; j++) {   
+         
+              ArrayList sampleList = (ArrayList)firstValue2Samples.get(firstUvalues[j]);
+              if (sampleList != null && sampleList.size() ==1) {
+                  newSamples [currentIndex ] =(Sample) sampleList.get(0); 
+                   currentIndex ++; 
+              }
+              else {
+                  if (sortNames != null && sortNames.length >1){  
+                       
+                      //    out.println("<br><br> start ");
+                        Sample [] tempSamples = orderSamples (sampleList, orderedSortNames, id2index,  sortName2OrderArray,1,  out);                 
+                        
+                     // out.println("<br><br> ");
+                      for (int k=0; k<tempSamples.length; k++) {
+                        newSamples [currentIndex ] =tempSamples [k]; 
+                        currentIndex ++; 
+                        } 
+                  }
+                  else {
+                         for (int k=0; k< sampleList.size(); k++) {
+                        newSamples [currentIndex ] = (Sample)sampleList.get(k);
+                               if ( newSamples [currentIndex ]==null) 
+                     //out.println("<br>sample " + currentIndex + " is null");
+                        currentIndex ++; 
+                    }                       
+                  }
+               }
+          }
+            
+           int [] temp = (int[])sortName2OrderArray.get("saName"); 
+            if (temp!=null) {
+             //for (int n=0; n<temp.length; n++ )
+            //out.println("<br> sa index " +  temp[n]);
+            }
+         
+        samples = newSamples; 
+    }  
+        else {} // do nothing  
+            // 
+
+    }
+// if no sort selected, do nothing    
+   
+%>

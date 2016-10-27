@@ -1,0 +1,159 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 520 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            This tool runs the Whole Genome Shotgun (WGS) Microbiome Pipeline developed by Kevin Riehle at <a href=\"http://brl.bcm.tmc.edu\" target=\"_blank\">BRL</a>.
+            <br>&nbsp;<br>
+            The pipeline comprises of the following steps:
+            <ol>
+              <li><b>Sequence Import</b>: User uploads <a href=\"#addendumAnchor\">sample metadata file</a> along with sequence files to the workbench.</li>
+              <li><b>Taxanomic Abundance</b>: Taxanomic Abundance is computed using MetaPhlAn.</li>
+              <li><b>Digital Normalization, Assembly, and Finding ORFs.</b></li>
+              <li><b>Functional Annotation.</b></li>
+            </ol>
+            <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the metadata file and pipeline are available below in the <a href=\"#addendumAnchor\">addendum</a> section.</i></div>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>metadata</u> file into &quot;Input Data&quot;.'
+        ],
+        :types              => [ ['Files', 'min: 1 ; max: 1'] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database under the Files (under \'WGS Microbiome Pipeline\') area. ' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'WGS Microbiome Pipeline') used to organize result file(s)."],
+          [ 'Import Sequences:<br>',  "" ],
+          [ 'Remove Host Contamination', "Check to remove host contamination."],
+          #[ 'Minimum Quality Score', "Integer value between 0 and 40."],
+          #[ 'Minimum Sequence Length', "Integer value between 0 and 200."],
+          [ 'Genome Version', "Select the genome assembly you wish to run the pipeline against (Currently only Human hg19 is available)."],
+          [ 'Digital Normalization, Assembly and Find ORFs:<br>',  "" ],
+          [ 'Normalization/Filter',  "Select the type of normalization you wish to perform (Currently only Digital Normalization is available)" ],
+          [ 'Assemble',  "Select the assembly program you wish to use (Currently only Velvet-1.2.03 is available)" ],
+          [ 'Find ORFs',  "Select the ORF finding program you wish to use (Currently only MetaGeneMark is available)" ],
+          [ 'Functional Annotation:',  "" ],
+          [ 'KEGG Database', "Currently only Genes v54 Prokaryotes is available."],
+          [ 'E-value cutoff for mapping ORFs', "Floating-point number between 0.0 and 1.0."],
+          [ 'E-value cutoff for mapping unassembled reads', "Floating-point number between 0.0 and 1.0."],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool pipeline developed by Kevin Riehle at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ],
+                                  [ 'Integrated into the Genboree Workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+
+      })
+  %>
+
+  <%# Tool-specific Addendum %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+<%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum' id='addendumAnchor'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>Sample metadata file:</b> (Click <a href=\"/resources/tools/wgsMicrobiomePipeline/wgsMetadata.txt\" target=\"_blank\">here</a> to download an example metadata file)</br>
+          The metadata file should be a tab-delimited file starting with a header line describing the field/attribute names.
+          <br>&nbsp;<br>
+          The following fields are required for your job to run successfully:
+          <ul>
+            <li><b>#name</b>: The name of the sample.</li>
+            <li><b>#FP-1_1</b>: First mate pair file, mate pair 1.</li>
+            <li><b>#FP-1_2</b>: First mate pair file, mate pair 2.</li>
+            <li><b>#HOST</b>: Host machine where the sequence files have been uploaded (genboree.org).</li>
+            <li><b>#GROUP</b>: Name of the group where the sequence files have been uploaded.</li>
+            <li><b>#DB</b>: Name of the database where the sequence files have been uploaded.</li>
+            <li><b>#FOLDER</b>: Name of the folder where the sequence files have been uploaded. Enter either '/' or leave it empty for root folder  or full path if its a subfolder.</li>
+          </ul>
+          The following fields can be provided as optional fields for automatically linking files to samples:
+          <ul>
+            <li><b>#FP-2_1</b>: Second mate pair file, mate pair 1</li>
+            <li><b>#FP-2_2</b>: Second mate pair file, mate pair 2</li>
+            <li>... following the convention of #FP-{mate pair number}_{mate}</li>
+            <li><b>#SRA-1</b>: First SRA file</li>
+            <li><b>#SRA-2</b>: Second SRA file</li>
+            <li>... following the convention of #SRA-{sra file number (order doesn't matter)} </li>
+            <li><b>#SE-1</b>: First single end file</li>
+            <li><b>#SE-2</b>: Second single end file</li>
+            <li>... following the convention of #SE-{single end sequence file number (order doesnt' matter)}-</li>
+          </ul>
+          Optional fields - You can provide other optional fields as metadata for further downstream steps.
+          <br>&nbsp;<br>
+          <b>Pipeline flowchart:</b>
+          <br>&nbsp;<br>
+          <div>
+            <img src=\"/resources/tools/wgsMicrobiomePipeline/4-26-13-WGS_flow-1-scaled.png\" height=\"400\" width=\"450\">
+          </div>
+        "
+      })
+  %>
+</div>

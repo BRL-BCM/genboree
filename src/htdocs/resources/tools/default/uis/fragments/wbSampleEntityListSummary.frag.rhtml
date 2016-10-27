@@ -1,0 +1,28 @@
+<%
+  require 'brl/genboree/rest/helpers/sampleEntityListApiUriHelper'
+%>
+<%
+  @sampleEntityList = [ @sampleEntityList ] unless(@sampleEntityList.is_a?(Array) or @sampleEntityList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@sampleEntityList.nil? or @sampleEntityList.empty?) ? "" : "rowspan='#{@sampleEntityList.size}'") %> ><%= (@label || "Sample Entity List(s)") %>:</th>
+<%  if(@sampleEntityList.nil? or @sampleEntityList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      sampleEntityListApiHelper = BRL::Genboree::REST::Helpers::SampleEntityListApiUriHelper.new()
+      @sampleEntityList.each_index { |ii|
+        item = @sampleEntityList[ii]
+        sampleEntityList = sampleEntityListApiHelper.extractName(item)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== sampleEntityList %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

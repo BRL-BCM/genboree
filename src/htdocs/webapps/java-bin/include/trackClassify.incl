@@ -1,0 +1,545 @@
+<%@ page import="java.sql.Connection,
+    org.genboree.dbaccess.DBAgent,
+    java.sql.SQLException,
+    org.genboree.message.GenboreeMessage,
+    org.genboree.manager.tracks.*,
+    javax.servlet.http.*,
+    java.util.*,
+    java.io.IOException,
+    org.genboree.util.*,
+    java.sql.ResultSet,
+    java.sql.PreparedStatement"
+%>
+<%@ page import="org.genboree.dbaccess.DbFtype" %>
+<%@ page import="org.genboree.dbaccess.DbGclass" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="group.incl" %>
+<%@ include file="sessionGrp.incl" %>
+<%!
+    static String[] btn = new String[]{"submit", "back", " Back ", null};
+    static String[] bkbutton = new String[]{"submit", "btn_bk2mgr", " Back ", null};
+    static final String[] btn_Reset = {"reset", "btn_resetAll", " Reset ", null};
+    static final String[] btn_Save = {"submit", "btn_saveClsButton", " Save ", null};
+    static final String[] btn_Delete = {"submit", "btn_Delete", " Delete ", null};
+    static final String[] btn_Assign = {"submit", "btn_Assign", " Assign ", null};
+    static final String[] btn_Clear = {"button", "btn_Clear", "Clear All", "clearAll();"};
+    static final String[] modeIds =  { "classCreate", "classUpdate", "classDelete", "classAssign" } ;
+    static final String[] modeLabels = { "Create", "Rename", "Delete", "Assign" };
+    static final int MODE_DEFAULT = -1;
+    static final int MODE_CREATE = 0;
+    static final int MODE_RENAME = 1;
+    static final int MODE_DELETE = 2;
+    static final int MODE_ASSIGN = 3;
+    static final int MODE_HELP = 4;
+
+
+%>
+ <%
+    // Get correct path to use in building REDIRECT urls and LINKS.
+    // ** DO NOT HARDCODE /java-bin/foobar.jsp !!! **  This breaks certain older project that have their own path! use relRequestUriPath to build proper links/redirect urls!!
+    String relRequestUriPath = RequestUtils.getRelativeUriPath(request) ;
+
+     // pMode is available only from trackmgr.jsp
+    String pMode = request.getParameter("mode");
+    String classMode =   request.getParameter("classmode");
+    if (pMode == null)
+      pMode = classMode;
+     int iclassMode = -1;
+    // int classmode = -1;
+    if (pMode != null )    {
+        for (int i = 0; i < modeIds.length; i++) {
+            if (pMode.compareTo(modeIds[i]) == 0) {
+                iclassMode = i;
+                break;
+            }
+        }
+    }
+    // default mode
+    if (iclassMode >=0 &&  pMode == null && classMode == null)
+    iclassMode = -1;
+    int startmode = 0;
+    if (iclassMode >= 0)
+    startmode = iclassMode;
+
+    DbGclass[]sharedClasses  = null;
+    Vector vBtn = new Vector();
+    DbFtype[] tracks = null;
+    DbGclass editingClass = null;
+    HashMap name2Track = new HashMap();
+    HashMap shareClass2Tracks = new HashMap();
+    Connection con = null;
+    DbFtype[] localTracks = null;
+    DbFtype[] sharedTracks = null;
+    DbFtype[] selTracks = null;
+    ArrayList selectedTrackNames = null;
+    ArrayList  allClasses = null;
+    String sharedbNames [] = null;
+    DbGclass []localClasses  = null;
+    ArrayList allClassNameList = null;
+    String dbName = null;
+    Refseq rseq = null;
+    String dbNames []= null;
+    DbGclass[] gclasses = null;
+    String clsTrackNames [] = null;
+    ArrayList sharedTrackNameList = null;
+    String editClassName = null;
+    response.addDateHeader( "Expires", 0L );
+    response.addHeader( "Cache-Control", "no-cache, no-store" );
+    GenboreeMessage.clearMessage(mys);
+    String emptyTrackAssign = null;
+    if (mys.getAttribute("emptyTrackAssignSuccess")!= null)
+        emptyTrackAssign= (String)mys.getAttribute("emptyTrackAssignSuccess");
+
+    if (emptyTrackAssign!= null)   {
+        GenboreeMessage.setSuccessMsg(mys, emptyTrackAssign);
+        mys.removeAttribute("emptyTrackAssignSuccess");
+    }
+
+    String destBack = "trackmgr.jsp" ;
+    String backParamStr = request.getParameter("back") ;
+    System.err.println("DEBUG CLASS NAV: backParamStr = " + backParamStr) ;
+    if(backParamStr != null)
+    {
+      String bk2tgrStr = request.getParameter("bk2tgr") ;
+      boolean bk2tgr = (bk2tgrStr.compareTo("-1") == 0) ? true : false ;
+      System.err.println("DEBUG CLASS NAV: bk2tgrStr = " + bk2tgrStr + " ; bk2tgr = " + bk2tgr) ;
+      if(bk2tgr)
+      {
+        GenboreeUtils.sendRedirect(request,response, relRequestUriPath + "/trackmgr.jsp");
+      }
+      else
+      {
+        iclassMode = -1 ;
+        GenboreeUtils.sendRedirect(request,response, relRequestUriPath + "/trackClassify.jsp") ;
+      }
+    }
+
+    boolean no_acs;
+    no_acs = false;
+    userId = Util.parseInt(userInfo[2], -1);
+      // retrive last editted refseq id
+    String sessionRefseqId = SessionManager.getSessionDatabaseId(mys);
+    // get current refseq id
+    String refSeqId = request.getParameter("rseq_id");
+
+    if(refSeqId == null)
+    {
+      refSeqId = sessionRefseqId ;
+    }
+
+    ArrayList errlist = new ArrayList();
+    String newClassName = "";
+    if(mys.getAttribute("newClassName")!= null)
+        newClassName = (String)mys.getAttribute("newClassName");
+
+    String renClassName = "";
+    if(mys.getAttribute("renClassName")!= null)
+        newClassName = (String)mys.getAttribute("renClassName");
+
+
+
+    if(rseqs != null && refSeqId != null)
+    {
+      for(int i = 0; i < rseqs.length; i++)
+      {
+        if(rseqs[i].getRefSeqId().equals(refSeqId))
+        {
+          rseq = rseqs[i];
+          break;
+        }
+      }
+
+
+     if (sessionCleared)
+     {
+        mys.removeAttribute("editingClass");
+        mys.removeAttribute("renClassName");
+        mys.removeAttribute("newClassName");
+        mys.removeAttribute("rseq");
+        mys.removeAttribute("emptyTracks");
+        mys.removeAttribute("selftypes");
+        mys.removeAttribute("gclasses");
+        mys.removeAttribute("emptyTrackAssignSuccess");
+     }
+
+        if(rseq != null) {
+           dbNames = rseq.fetchDatabaseNames(db);
+           dbName = rseq.getDatabaseName();
+            if (dbNames != null && dbNames.length >1) {
+            sharedbNames = new String [dbNames.length-1];
+            int count = 0;
+            for (int i=0; i<dbNames.length; i++)
+                if (dbNames[i].compareTo(dbName) != 0){
+                    sharedbNames [count] = dbNames [i];
+                    count ++;
+                }
+            }
+            con = db.getConnection(dbName);
+
+            // class list is needed for rename. delete, and assign
+            allClassNameList = new ArrayList ();
+            allClasses = new ArrayList ();
+            try {
+                localClasses = ClassManager.retrieveClasses(con, true);
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+                GenboreeUtils.sendRedirect(request, response, "Error happened in database connection." );
+            }
+            sharedClasses  = ClassManager.retrieveShareClasses(sharedbNames, db);
+            con = db.getConnection(dbName);
+
+            if (localClasses != null) {
+                for (int i=0; i<localClasses.length; i++) {
+                  allClassNameList.add(localClasses[i].getGclass());
+                  allClasses.add(localClasses[i]);
+                }
+            }
+
+            if (sharedClasses != null ) {
+                  for (int i=0; i<sharedClasses.length; i++) {
+                      if (!allClassNameList.contains(sharedClasses[i].getGclass())) {
+                          allClassNameList.add(sharedClasses[i].getGclass());
+                          allClasses.add(sharedClasses[i]);
+                      }
+                }
+            }
+
+
+            if (!allClasses.isEmpty()) {
+              gclasses = (DbGclass[]) allClasses.toArray(new DbGclass[allClasses.size()]);
+             gclasses = Utility.alphabeticClassSort(gclasses)  ;
+
+            }
+         }
+        // edit class name needed for create, rename, and assign
+            if ( iclassMode == MODE_RENAME || iclassMode == MODE_ASSIGN ) {
+                // retrive class information
+                editClassName = request.getParameter("gclassName");
+                // in case request class name is null, retrieve class name from session
+                if (editClassName == null) {
+                    editingClass = (DbGclass) mys.getAttribute("editingClass");
+                    if (editingClass != null)
+                        editClassName = editingClass.getGclass();
+                }
+                 // find matching gclass
+                if (editClassName != null && gclasses != null) {
+                    for (int i = 0; i < gclasses.length; i++) {
+                        DbGclass g = gclasses[i];
+                        if (g==null || g.getGclass() == null)  {
+                           }
+
+                       else if (g.getGclass().compareToIgnoreCase(editClassName) == 0) {
+                            editingClass = g;
+                            break;
+                        }
+                    }
+                }
+                 // if page and session class name is null, set to the first class in the list
+                if (editClassName == null && gclasses != null && gclasses.length > 0) {
+                    editingClass = gclasses[0];
+                    editClassName = editingClass.getGclass();
+                }
+              mys.setAttribute("editingClass", editingClass);
+            }
+
+          if (( iclassMode == -1 || iclassMode == MODE_ASSIGN) && (rseq!=null)) {
+              localTracks = DbFtype.fetchAll(con, dbName, userId );
+              if (sharedbNames != null && sharedbNames.length >0)
+                    sharedTracks = ClassManager.retrieveAllSharedTracksSorted(sharedbNames, db, userId);
+              ArrayList  trackNameList = new ArrayList ();
+              ArrayList  allTracks = new ArrayList ();
+              if (localTracks != null && localTracks.length >0) {
+                  for (int i=0; i<localTracks.length; i++) {
+                   trackNameList.add(localTracks[i].toString());
+                   localTracks[i].setDatabaseName(dbName);
+                   allTracks.add(localTracks[i]);
+                  }
+              }
+
+            if (sharedTracks != null && sharedTracks.length >0) {
+                 sharedTrackNameList = new ArrayList ();
+                for (int i=0; i<sharedTracks.length; i++) {
+                  if (!sharedTrackNameList.contains(sharedTracks[i].toString()))
+                    sharedTrackNameList.add(sharedTracks[i].toString());
+                    if (!trackNameList.contains(sharedTracks[i].toString())) {
+                        trackNameList.add(sharedTracks[i].toString());
+                         allTracks.add(sharedTracks[i]);
+                    }
+                }
+            }
+
+             if (!allTracks.isEmpty()  ) {
+                  tracks =  (DbFtype[]) allTracks.toArray(new DbFtype [allTracks.size()]);
+
+
+                 String trackName = null;
+                 for ( int i = 0; i<tracks.length ; i++) {
+                       name2Track.put(trackName, tracks[i]);
+                 }
+
+                 try {
+                 tracks = Utility.alphabeticTrackSort(tracks);
+                 }
+                 catch (Exception e) {
+                     System.err.println(e.getMessage());
+                     System.err.flush();
+
+                 }
+
+             }
+        }
+        }
+
+      selectedTrackNames = new ArrayList ();
+    int i = 0;
+    boolean success = false;
+    switch(iclassMode){
+        case MODE_ASSIGN:
+        if (acs_level < 1) {
+            iclassMode = TrackMgrConstants.MODE_DEFAULT;
+            no_acs = true;
+        }
+        else {
+            if (editingClass != null && rseq != null &&  tracks != null && tracks.length > 0) {
+                vBtn.addElement(TrackMgrConstants.btnApply);
+                vBtn.addElement(TrackMgrConstants.btnReset);
+
+                selTracks = null;
+                clsTrackNames = null;
+
+                if (tracks != null && tracks.length > 0)
+                  selectedTrackNames = TrackAssigner.retrieveClassTracks(db,  dbNames, editingClass,  out);
+                 // get selected tracks
+                 ArrayList listTracks = new ArrayList();
+                 if (tracks != null && selectedTrackNames != null)
+                 for (i = 0; i<tracks.length; i++) {
+                     if (selectedTrackNames  != null && tracks[i] != null &&  selectedTrackNames.contains(tracks[i].toString()) )
+                     listTracks.add(tracks[i]);
+                 }
+
+                  if (!listTracks.isEmpty())
+                     selTracks = (DbFtype[])listTracks.toArray(new DbFtype[listTracks.size()]);
+
+
+                if (request.getParameter(TrackMgrConstants.btnApply[1]) != null) {
+                    clsTrackNames = request.getParameterValues("clsTrackNames");
+                    ArrayList  newselectedTrackNames = new ArrayList();
+                    if (clsTrackNames != null) {
+                    for ( i = 0; i < clsTrackNames.length; i++)
+                        newselectedTrackNames.add(clsTrackNames[i]);
+                    }
+
+                    listTracks = new ArrayList();
+                    if (tracks != null && selectedTrackNames != null){
+                    for (i = 0; i<tracks.length; i++) {
+                    if (newselectedTrackNames.contains(tracks[i].toString()) )
+                    listTracks.add(tracks[i]);
+                    }
+
+                    if (!listTracks.isEmpty())
+                    selTracks = (DbFtype[])listTracks.toArray(new DbFtype[listTracks.size()]);
+                    }
+                    boolean emptyDB = (gclasses == null || gclasses.length==0 || tracks == null || tracks.length==0);
+                    DbFtype [] emptyTracks = TrackAssigner.findEmptyTracks(out, !emptyDB,  selectedTrackNames, newselectedTrackNames, editingClass, name2Track, con, sharedbNames, db );
+
+                    // if hs empty tracks, forward to new page
+                    if (emptyTracks != null && emptyTracks.length > 0)  {
+
+                        mys.setAttribute("rseq", rseq);
+                        mys.setAttribute("emptyTracks", emptyTracks);
+                        mys.setAttribute("selftypes",selTracks);
+                        mys.setAttribute("gclasses", gclasses);
+                       GenboreeUtils.sendRedirect(request,response, relRequestUriPath + "/emptytrack.jsp");
+                    }
+                    else {
+                        TrackAssigner.assignTracks(db, sharedbNames, newselectedTrackNames, selTracks, mys, request, response, con, dbName, tracks, editingClass,  gclasses,  out);
+                    }
+                    selectedTrackNames = TrackAssigner.updateClassMapping(!emptyDB, out, newselectedTrackNames, editingClass,  sharedbNames, db );
+                }
+            }
+        }
+        break;
+
+        case MODE_DELETE:
+            if (acs_level < 1) {
+                iclassMode = TrackMgrConstants.MODE_DEFAULT;
+                no_acs = true;
+            }
+    else {
+        if (rseq != null) {
+            if (gclasses.length >0 && !(gclasses.length == 1  && gclasses [0].getGclass().compareToIgnoreCase("Sequence")==0))
+            vBtn.addElement(btn_Delete);
+
+            if (request.getParameter(btn_Delete[1]) != null) {
+            String[] classids = request.getParameterValues("delclassId");
+            ClassRemover.deleteClass(mys,classids, con, out);
+            success = true;
+            if (editingClass == null)
+                editingClass =(DbGclass) mys.getAttribute("editingClass");
+
+            if (classids != null && editingClass != null)
+            for ( i=0; i<classids.length; i++) {
+                if (classids[i].compareTo(""+editingClass.getGid()) ==0) {
+                mys.removeAttribute("editingClass");
+                break;
+                }
+            }
+            // the following code update gclass array
+            // if a class name exist in shared databse, put it into class list
+            }
+        }
+        else
+        GenboreeMessage.setErrMsg(mys,"No classes are availabe for delete operation.");
+    }
+             break;
+
+        case MODE_RENAME:
+            if (acs_level < 1) {
+                iclassMode = TrackMgrConstants.MODE_DEFAULT;
+                no_acs = true;
+            }
+            else {
+                if (rseq != null) {
+
+                if (gclasses.length >0 && !(gclasses.length == 1  && gclasses [0].getGclass().compareToIgnoreCase("Sequence")==0))
+                    vBtn.addElement(btn_Save);
+
+                    if (gclasses == null || gclasses.length < 1) {
+                        GenboreeMessage.setErrMsg(mys,"No classes are availabe for update.");
+                    }
+                    else{
+                        if (request.getParameter(btn_Save[1]) != null) {
+                            renClassName = request.getParameter("newclass_name");
+
+                            if (renClassName != null)
+                                renClassName = renClassName.trim();
+
+                            if (renClassName == null || (renClassName.compareTo("")==0)) {
+                                errlist = new ArrayList();
+                                errlist.add( "Class name can not be empty");
+                                GenboreeMessage.setErrMsg(mys, "The rename operation failed:", errlist);
+                            }
+                            else  if (renClassName.compareToIgnoreCase("Chromosome")==0 || renClassName.compareToIgnoreCase("Sequence")==0)
+                            {
+                                errlist = new ArrayList();
+                                errlist.add(  "Chromosome and Sequence are reserved class names");
+                                //errlist.add(  "Please choose a different class name");
+                                GenboreeMessage.setErrMsg(mys, "The rename operation failed:", errlist);
+                            }
+                            else {
+                              /*  if (editClassName != null && renClassName.compareToIgnoreCase(editClassName) ==0) {
+                                    errlist = new ArrayList();
+                                    errlist.add("Class \"" + renClassName  +"\" already exists.");
+                                    // errlist.add("Please choose a different class names.");
+                                    GenboreeMessage.setErrMsg(mys, "The rename operation failed:", errlist);
+                                }
+                                else*/
+                                    editingClass = ClassRenamer.renameClass(renClassName, mys, con, editingClass,  gclasses,  editClassName);
+
+                                if ( editingClass != null){
+                                editClassName = editingClass.getGclass();
+                                success = true;
+                                }
+
+                            }
+                            if  (editClassName == null)
+                            editClassName = "";
+                            if (renClassName == null)
+                            renClassName = "";
+                            mys.setAttribute("renClassName", renClassName);
+                        } // has command
+
+
+                    }  // if has gclasses
+                }
+            } // end of owner action
+        break;
+
+    case MODE_CREATE:
+        if (acs_level < 1) {
+            iclassMode = TrackMgrConstants.MODE_DEFAULT;
+            no_acs = true;
+        }
+        else {
+            if (rseq != null) {
+                vBtn.addElement(btn_Save);
+                 if (request.getParameter(btn_Save[1])!= null) {
+                    newClassName = request.getParameter("class_name");
+                     if (newClassName != null)
+                        newClassName = newClassName.trim();
+                     if (newClassName == null || (newClassName.compareTo("")==0)) {
+                        errlist = new ArrayList();
+                        errlist.add( "Class name can not be empty.");
+                        GenboreeMessage.setErrMsg(mys, "The creation of new annotation class failed:", errlist);
+                     }
+                     else {
+                        if (con == null || con.isClosed())
+                            con = db.getConnection(dbName);
+                        DbGclass gclass = ClassCreator.createClass(newClassName, mys,  con);
+
+                        if (gclass != null){
+                             success = true;
+                             mys.setAttribute("editingClass", gclass);
+                        }
+                     }
+                }
+                if (newClassName==null)
+                newClassName = "";
+                mys.setAttribute("newClassName", newClassName);
+            }
+        }
+        break;
+
+    case MODE_HELP:
+    break;
+// }
+}
+    btn[2] = (iclassMode==MODE_DEFAULT) ? "Back to Track Manager" : "Cancel" ;
+    if(iclassMode != MODE_HELP && iclassMode!=MODE_DEFAULT)
+    {
+      vBtn.addElement( btn) ;
+    }
+
+    // If doing class modification AND there is an active database selected (and thus a DB Connection con is available), then get needed class info
+    if((iclassMode==MODE_DELETE || iclassMode==MODE_CREATE || iclassMode==MODE_RENAME  || iclassMode==MODE_ASSIGN))
+    {
+      if(con != null)
+      {
+        localClasses  = ClassManager.retrieveClasses(con, true) ;
+        HashMap map  = new HashMap() ;
+        allClasses = new ArrayList () ;
+        if(localClasses != null)
+        {
+          for(i=0; i<localClasses.length; i++)
+          {
+            map.put(localClasses[i].getGclass(), "y") ;
+            allClasses.add(localClasses[i]) ;
+          }
+        }
+
+        if(sharedClasses != null)
+        {
+          for(i=0; i<sharedClasses.length; i++)
+          {
+            if(map.get(sharedClasses[i].getGclass()) == null)
+            {
+              map.put(sharedClasses[i].getGclass(), "y") ;
+              allClasses.add(sharedClasses[i]) ;
+            }
+          }
+        }
+
+        if(!allClasses.isEmpty())
+        {
+          gclasses = (DbGclass[]) allClasses.toArray(new DbGclass[allClasses.size()]) ;
+          gclasses = Utility.alphabeticClassSort(gclasses) ;
+        }
+      }
+    }
+
+    if(iclassMode==MODE_ASSIGN)
+    {
+      tracks = Utility.alphabeticTrackSort(tracks);
+    }
+%>

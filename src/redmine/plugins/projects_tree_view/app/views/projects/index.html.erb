@@ -1,0 +1,105 @@
+<% content_for :header_tags do %>
+  <%= javascript_include_tag 'projects_tree_view', :plugin => 'projects_tree_view' %>
+  <%= stylesheet_link_tag 'projects_tree_view', :plugin => 'projects_tree_view' %>
+  <%= auto_discovery_link_tag(:atom, {:action => 'index', :format => 'atom', :key => User.current.rss_key}) %>
+<% end %>
+
+<div class="contextual">
+  <%= link_to(l(:label_project_new), {:controller => 'projects', :action => 'new'}, :class => 'icon icon-add') if User.current.allowed_to?(:add_project, nil, :global => true) %>
+</div>
+
+<h2><%= l(:label_project_plural)%></h2>
+
+<p style="float:left; margin: 5px 0px 5px 0px;">
+  <%= link_to(l(:expand_all), "#", :onclick => 'expandAll()')%><span>&nbsp;/&nbsp;</span><%= link_to l(:collapse_all), "#", :onclick => 'collapseAll()' %>
+</p>
+<% if User.current.logged? %>
+<p style="float:right; margin: 5px 0px 5px 0px;">
+  <span class="my-project"><%= l(:label_my_projects) %></span>
+</p>
+<% end %>
+
+<table class="list">
+  <thead>
+    <tr>
+      <th><%= l(:label_project)%></th>
+      <th><%= l(:field_description)%></th>
+    </tr>
+  </thead>
+
+
+  <tbody>
+    <% ancestors = [] %>
+    <% plevel = 0 %>
+    <% pProjVisible = true %>
+    <% project_tree(@projects) do |project, level| %>
+      <%
+        project_id = "%04d" % project.id
+        (plevel - level).times { ancestors.pop } if (level < plevel)
+        has_children = !project.children.empty?
+        # Try to find the "List Project if Public?" ProjectCustomField
+        listProj_customField = project.custom_field_values.find { |cfv| cfv.custom_field.name == 'List Project if Public?' }
+        listProjectIfPublic = ( (listProj_customField and listProj_customField.value == '1') ? true : false)
+        projVisible = (User.current.member_of?(project) or User.current.admin? or (project.is_public and listProjectIfPublic))
+        displayLevel = level
+        unless(displayLevel <= 0 or pProjVisible)
+          displayLevel -= 1
+        end
+
+        if(projVisible)
+      %>
+          <tr id="<%= project_id %>" class="<%= project.css_classes %> <%= "lvl#{level} dlvl#{displayLevel}" %> <%= displayLevel > 0 ? "hide #{ancestors.last}" : cycle("odd", "even") %>">
+            <td class="name" style="padding-left: <%= (18 * displayLevel).to_s %>px">
+              <% if has_children %>
+                <span class="expander" onclick="toggleShowHide(<%= "'#{project_id}'" %>)">&nbsp;</span>
+              <% end %>
+              <span class="<%= 'public_project'.html_safe if(project.is_public)%> <%= 'listed_project'.html_safe if(listProjectIfPublic) %> "><%= project.active? ? link_to_project(project, {:action => 'show'}) : h(project.name) %></span>
+              <span class="empty <%= "my-project" if(User.current.member_of?(project)) %>" title="<%= l(:label_gb_my_project_tooltip) if(User.current.member_of?(project)) %>" >&nbsp;</span>
+              <%
+                # Does this project have boards? If so, we'll provide a direct link to its Forums page
+                if(!project.boards.empty?)
+                  forumsStr = "<a title=\"#{ l(:label_board_plural) }\" href=\"#{url_for({ :controller => 'projects', :action => 'show', :id => project})}/boards\"><span class=\"forumsLink\">" +
+                              image_tag("user_comment.png", :plugin => "projects_tree_view") +
+                              "</span></a>"
+                else
+                  forumsStr = ""
+                end
+                # Does this project have a wiki? If so, we'll provide a direct link to its main Wiki page
+                if(project.wiki)
+                  wikiStr = "<a title=\"#{ l(:label_wiki) }\" href=\"#{url_for({ :controller => 'projects', :action => 'show', :id => project})}/wiki\"><span class=\"wikiLink\">" +
+                            image_tag("page_white_wrench.png", :plugin => "projects_tree_view") +
+                            "</span></a>"
+                else
+                  wikiStr = ""
+                end
+              %>
+              <%= forumsStr.html_safe %> <%= wikiStr.html_safe %>
+            </td>
+            <td><%= textilizable project.short_description.gsub(/\!.+\!/,""), :project => project %></td>
+          </tr>
+      <%
+        end
+        plevel = level # Parent level
+        pProjVisible = projVisible # Parent visible
+        if(has_children)
+          ancestors << project_id
+        end
+      %>
+    <% end %>
+  </tbody>
+</table>
+
+<p style="float:left; margin: 5px 0px 5px 0px;">
+  <%= link_to(l(:expand_all), "#", :onclick => 'expandAll()')%><span>&nbsp;/&nbsp;</span><%= link_to l(:collapse_all), "#", :onclick => 'collapseAll()' %>
+</p>
+<% if User.current.logged? %>
+<p style="float:right; margin: 5px 0px 5px 0px;">
+  <span class="my-project"><%= l(:label_my_projects) %></span>
+</p>
+<% end %>
+<div style="clear:both;"></div>
+<% other_formats_links do |f| %>
+  <%= f.link_to 'Atom', :url => {:key => User.current.rss_key} %>
+<% end %>
+
+<% html_title(l(:label_project_plural)) -%>

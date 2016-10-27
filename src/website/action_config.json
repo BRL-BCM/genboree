@@ -1,0 +1,15 @@
+{
+	"ACTION" :
+	{
+		"splash" : "splash",
+		"about" : "about",
+		"team" : "team",
+		"4DN" : "4DN",
+		"events" : "events",
+		"CMS-DEMO-team_member_page" : "CMS-DEMO-team_member_page",
+		"CMS-DEMO-contact_us" : "CMS-DEMO-contact_us",
+		"clinical-genome-network-allele-search" : "clinical-genome-network-allele-search",
+		"clinical-genome-database-allele-search" : "clinical-genome-database-allele-search",
+		"metagenomics" : "metagenomics"
+	}    
+}

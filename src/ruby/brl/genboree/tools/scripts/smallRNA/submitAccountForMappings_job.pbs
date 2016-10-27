@@ -1,0 +1,13 @@
+#!/bin/bash
+#PBS -q dque
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=24:00:00
+#PBS -l cput=24:00:00
+#PBS -M tandon@bcm.tmc.edu
+#PBS -m ea
+#PBS -N submitAnalyzeReads.rb
+cd $PBS_O_WORKDIR
+
+ruby analyzeReads.rb -r /home1/tandon/smallRNA/Corry-human-may18th2010/s_7_run71_sequence.txt.gz -o /home1/tandon/arpit_test -t /home2/coarfa/work/sequences/reference/Human18/sorted.ref.hg18.fa -k 11 -R /home2/coarfa/hg18.off -L /home2/coarfa/work/sequences/reference/Human18/targets.kg.gr.mir.sno.sca.cpg.piclus.hg18.lff -n 100 -s . -d 100 -G 2 -P 1 -N 1 -l 11 -u T 
+
+sleep 2

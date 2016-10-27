@@ -1,0 +1,287 @@
+/* Format info for BRL::Genboree::Helpers::Sniffer
+ *
+ * * The Sniffer class uses this file to determine what formats it knows about,
+ *     what priority to test a file for, how to get a suitable set of N lines to
+ *     examine, what the base detector command looks like, etc.
+ * * When adding a new format:
+ *   - Ensure you have a URL for other devs to look at for format info.
+ *   - If the detection is cheap (e.g. simple regexp that should match in first few lines)
+ *     make sure the priority is high so it's checked first when auto-sniffing.
+ *   - Make sure there is some sort of 'nRecsCmd' which can be used to get a set
+ *     of N records (usually lines for text formats) to test; often via 'head' although 'tail'
+ *     to check the end or even some way of sampling random lines are all possible
+ *   - When using 'head' or 'tail' DO NOT use LINE MODE (the default). Large 1-line (or large binary
+ *     that happen not to have a 0x0a byte (which is newline in ascii table)) will HANG/LOCK/RUN-FOR-LONG-TIME!
+ *     Instead, use a reasonable -c {numbytes} setting instead.
+ * * Regarding {N_RECS} field:
+ *   - The keyword {N_RECS} in the commands is the number of recs desired out of the command.
+ *     Typically it's the value of the "nRecs" field, but this can be overridden by the dev
+ *     for more custom behaviors.
+ * * Regarding {FILE_PATH} field:
+ *   - The keyword {FILE_PATH} in the commands indicates the appropriate placement of
+ *     the file being tested. The Sniffer object will replace that string appropriately
+ *     when building the command. Make sure you have this field present in your commands
+ *     so it knows where to put the file name--even multiple times--if it needs to!
+ * * Regarding use of "grep -P":
+ *   - This is full Perl-compatible regexp syntax, but you need to be mindful of GREEDY MATCH-ANYTHING operators.
+ *   - A ".*" greedy closure can end up scanning a "single line" file (possibly binary with no 0x0a bytes or possibly
+ *     long single-line ascii) MORE THAN ONCE in its entirety.
+ *   - That's because a greedy .* or .+ can suck up the whole "line" before triggering back-tracking ("what if * or +
+ *     matched one fewer byte?") when the rest of regexp fails to match. This is particularly O(N^2) for .*.
+ *   - Better: don't match greedy with these, compose non-greedy equivalent detector instead by employing
+ *     .*? and .+? where possible.
+ *   - Also: in some cases, insisting on matching the end-of-line ($) can unnecessarily cause similar over-matching
+ *     that is not necessary to detect the format. Try to avoid $ unless absolutely necessary in the detector.
+ *
+ * * NOTE: This code may be useful for designing & adding support for more formats:
+ *   http://www.ncbi.nlm.nih.gov/IEB/ToolBox/CPP_DOC/doxyhtml/format__guess_8cpp_source.html
+ *
+ * POLICY: ===> KEEP FILE ORDERED BY DESCENDING priority!
+ */
+{
+  "zip" :
+  {
+    "description" : "Zip File Format",
+    "url"         : "http://en.wikipedia.org/wiki/Zip_%28file_format%29",
+    "priority"    : 100,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -E 'Zip(64)? archive data' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "xz" :
+  {
+    "description" : "xz File Format",
+    "url"         : "https://en.wikipedia.org/wiki/Xz",
+    "priority"    : 96,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F 'xz compressed data' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "tar" :
+  {
+    "description" : "tar File Format",
+    "url"         : "https://en.wikipedia.org/wiki/Tar_(computing)",
+    "priority"    : 92,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F 'tar archive' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "bz2" :
+  {
+    "description" : "bzip2 File Format",
+    "url"         : "https://en.wikipedia.org/wiki/Bzip2",
+    "priority"    : 88,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F 'bzip2 compressed data' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "7z" :
+  {
+    "description" : "7zip File Format",
+    "url"         : "https://en.wikipedia.org/wiki/7z",
+    "priority"    : 84,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F '7-zip archive data' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "bam" :
+  {
+    "description" : "BAM Format",
+    "url"         : "samtools.sourceforge.net/SAMv1.pdf",
+    "priority"    : 80,
+    "nRecs"       : 120000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "bgzip -d -s 4 {FILE_PATH} 2>/dev/null | hexdump -n 4 -b 2>/dev/null | grep -F \"0000000 102 101 115 001\" 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "tbi" :
+  {
+    "description" : ".tbi Format - Tabix file, itself bgzip-ed but having a constant 4-byte magic number corresponding to \"TBI\\1\". To get/see the \\1 we pipe it through hexdump",
+    "url"         : "http://samtools.sourceforge.net/tabix.shtml",
+    "priority"    : 76,
+    "nRecs"       : 120000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd"  : "bgzip -d -s 4 {FILE_PATH} 2>/dev/null | hexdump -n 4 -b 2>/dev/null | grep -F \"0000000 124 102 111 001\" 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "vcf-bgzipped" :
+  {
+    "description" : "bgzip-ed VCF v4.* file, usually for use with a corresponding .tbi file",
+    "url"         : "http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40",
+    "priority"    : 72,
+    "nRecs"       : 120000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "bgzip -d -s 18 {FILE_PATH} 2>/dev/null | grep -F \"##fileformat=VCFv4\" 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "gz" :
+  {
+    "description" : "gzip File Format",
+    "url"         : "https://en.wikipedia.org/wiki/Gzip",
+    "priority"    : 68,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F 'gzip compressed data' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "sff" :
+  {
+    "description" : "The SFF flowgram sequence format. Nominally binary/non-text.",
+    "url"         : "http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=show&f=formats&m=doc&s=formats#sff",
+    "priority"    : 64,
+    "nRecs"       : 4,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -l -P '^\\.sff$' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "sra" :
+  {
+    "description" : "The SRA flowgram sequence format. Nominally binary/non-text.",
+    "url"         : "http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=toolkit_doc&f=std",
+    "priority"    : 60,
+    "nRecs"       : 8,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -l -P '^NCBI\\.sra$' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "vwig"  :
+  {
+    "description" : "UCSC VariableStep Wiggle format.",
+    "url"         : "https://genome.ucsc.edu/goldenPath/help/wiggle.html",
+    "priority"    : 56,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep --mmap -l -P \"^variableStep\" {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "fwig"  :
+  {
+    "description" : "UCSC FixedStep Wiggle format.",
+    "url"         : "https://genome.ucsc.edu/goldenPath/help/wiggle.html",
+    "priority"    : 52,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep --mmap -l -P \"^fixedStep\" {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "wig"  :
+  {
+    "description" : "UCSC Wiggle format--FixedStep and VariableStep will BOTH match.",
+    "url"         : "https://genome.ucsc.edu/goldenPath/help/wiggle.html",
+    "priority"    : 48,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep --mmap -l -P \"^(?:fixed|variable)Step\" {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "bai" :
+  {
+    "description" : ".bai Format - BAM index file. Has magic number of \"BAI\\1\".",
+    "url"         : "http://samtools.sourceforge.net/samtools.shtml",
+    "priority"    : 44,
+    "nRecs"       : 4,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd"  : "hexdump -n 4 -b {FILE_PATH} 2>/dev/null | grep -F \"0000000 102 101 111 001\" 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "bedGraph"  :
+  {
+    "description" : "UCSC BedGraph format. 4 columns; coordinates are [0,N).",
+    "url"         : "https://genome.ucsc.edu/goldenPath/help/bedgraph.html",
+    "priority"    : 40,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep --mmap -l -P \"^\\S+\\s+\\d+\\s+\\d+\\s+(?:-|\\+)?[0-9]*\\.?[0-9]+([eE](?:-|\\+)?[0-9]+)?\\s*$\" {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "newick"  :
+  {
+    "description" : "Format for representing graph-theoretical trees with edge lengths using parenthesis and commas.",
+    "url"         : "http://en.wikipedia.org/wiki/Newick_format",
+    "priority"    : 36,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "echo `head -c {N_RECS} {FILE_PATH} ` ' ' `tail -c {N_RECS} {FILE_PATH}` 2>/dev/null",
+    "detectorCmd" : "grep --mmap -l -P '^\\s*\\(.+?\\)\\s*;' {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "fastq" :
+  {
+    "description" : "FASTQ file format. Non-text",
+    "url"         : "http://en.wikipedia.org/wiki/FASTQ_format",
+    "priority"    : 32,
+    "nRecs"       : 5000,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -l -Pz '^@.*\\n[A-Za-z\\.\\~\\n]+\\n^\\+.*\\n[\\!#\\$\\%\\&\\(\\)\\*\\+,\\-\\./0-9\\\":;\\`<\\=>\\?\\\@A-Z\\[\\]\\^_\a-z{\\|}\\~'\\'']*\\n' {FILE_PATH}  2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "UTF" :
+  {
+    "description" : "Unicode Transformation Formats",
+    "url"         : "http://en.wikipedia.org/wiki/UTF",
+    "priority"    : 28,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F UTF {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "image" :
+  {
+    "description" : "Image Format (JPEG, GIF, PNG, etc.)",
+    "url"         : "http://en.wikipedia.org/wiki/Digital_image",
+    "priority"    : 24,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F image {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : false
+  },
+  "fa" :
+  {
+    "description" : "FASTA file format",
+    "url"         : "http://en.wikipedia.org/wiki/FASTA_format",
+    "priority"    : 20,
+    "nRecs"       : 65536,
+    "nRecsCmd"    : "head -c {N_RECS} {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -l -Pz '\\A[\\s\\n]*>\\S.*?\\n[A-Za-z\\-\\*\\n]+' {FILE_PATH}  2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  },
+  "ascii" :
+  {
+    /* Generally, should be last one checked. Matches many of the specific formats above.
+     * High false-positive rate in general, even on files not actually ASCII.
+     */
+    "description" : "American Standard Code for Information Interchange",
+    "url"         : "http://en.wikipedia.org/wiki/ASCII",
+    "priority"    : 16,
+    "nRecs"       : 1000,
+    "nRecsCmd"    : "file -L {FILE_PATH} 2>/dev/null",
+    "detectorCmd" : "grep -F ASCII {FILE_PATH} 2>/dev/null",
+    "detectorExitStatuses" : { "0" : true },
+    "ascii"       : true
+  }
+}

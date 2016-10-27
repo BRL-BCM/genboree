@@ -1,0 +1,14 @@
+<%#
+  Just a convenience wrapper for making a tool-specific settings
+  instruction section using the generic wbDialogSection and
+  wbToolSpecificSettingsInstructions fragments.
+%>
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Tool-Specific Settings",
+      :sectionHtml => renderFrag(@toolIdStr, :wbToolSpecificSettingsInstructions,
+      {
+        :instructions       => @instructions
+      })
+    })
+%>

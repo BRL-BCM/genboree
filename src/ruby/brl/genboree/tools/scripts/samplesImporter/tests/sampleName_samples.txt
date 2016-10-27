@@ -1,0 +1,4 @@
+#sampleName	biomaterialState	age	sex	isSick
+eAB1	frozen	36	M	TRUE
+eAB2	frozen	46	M	TRUE
+eAB3	solution	56	F	TRUE

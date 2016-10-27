@@ -1,0 +1,71 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "The signal scores in your query track (the <i>first</i> track) will be compared against
+          the Epigenome Atlas data release. This will identify the samples and marks most
+          similar to your query track.
+          <br>&nbsp;<br>
+          If your x-axis track is from a database based on:
+          <ul>
+            <li><b>Hg19 (NCBI Build 37)</b>, Epigenome Atlas <b>Release #{@genbConf.atlasSimilaritySearchReleaseNum_hg19}</b> (the latest) can be searched.</li>
+            <li><b>Hg18 (NCBI Build 36)</b>, Epigenome Atlas <b>Release #{@genbConf.atlasSimilaritySearchReleaseNum_hg18}</b> tracks can be searched.</li>
+          </ul>
+          <br>&nbsp;<br>
+          The correlation of Epigenome Atlas methylation tracks to your query track will be reported.
+          <br>&nbsp;<br>
+          By default, the comparison occurs at the level of the average signal found in
+          fixed genomic windows.
+          <br>&nbsp;<br>
+          <i>However</i>, by supplying a 'regions-of-interest' track
+          as the <i>second</i> track, the comparison can occur at regions you specify."
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the query <u>track</u> into &quot;Input Data&quot;.',
+          'Optionally, drag a 2nd <u>track</u> with <i>regions-of-interest</i> for the comparison into &quot;Input Data&quot; (otherwise fixed windows will be used).'
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: 2' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this analysis job a unique name. This name will be used to store result files within the Output Database.' ],
+          [ 'Remove No Data Regions?',  "Filter Data by replacing missing values with '0'" ],
+          [ 'Normalization',  "Choose normalization method (Quantile, Gaussian or none)" ],
+          [ "Epigenomic Atlas Score Tracks", "Select the score track you wish to compare your signal track." ],
+          [ 'Aggregating Function', 'Choose between: Avg (default), Median, Sum, Max, Min, Count, Standard Deviation and Average By Length for aggregating scores.' ],
+          [ 'Genomic Windows/Regions of Interest', ' (Available if no ROI Track has been dragged) Allows the user to either select a window size (fixed/custom) or
+            a <i>regions-of-interest</i> track. ' ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed and integrated into the workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

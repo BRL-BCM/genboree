@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "viewHub",
+    "version": "0.1",
+    "releaseStatus": "deprecated",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "groupAccessUri": null,
+    "label": "View Hub",
+    "shortLabel": "[NOT SET]"
+  }
+}

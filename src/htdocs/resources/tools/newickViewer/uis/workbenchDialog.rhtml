@@ -1,0 +1,110 @@
+<%# RENDER HTML %>
+<%
+    width = (@hasAccess ? 500 : 320)
+    height = (@hasAccess ? 300 : 320)
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool can be used for viewing newick files in a variety of drawing styles including horizontal dendograms, rotatable circular dendograms, etc.
+          <br>&nbsp;<br>
+          <b>NOTE:</b> Please use a SVG compliant browser to use this tool (Mozilla Firefox, Internet Explorer 9 and 10, Google Chrome, Opera, and Safari).
+          <br>&nbsp;<br>  
+      "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+    })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => [
+                    { :id => 'dendogram', :label => 'Dendogram Type', :labelWidth => "170px", :type => :select, :options =>
+                      {
+                        :hd => { :label => 'Horizontal Dendogram' },
+                        :cd => {:label => 'Circular Dendogram', :selected => true},
+                        :hdc => {:label => 'Collapsible Horizontal Dendogram'},
+                        :cdr => { :label => "Rotatable Circular Dendogram" }
+                      },
+                      :onchange => "toggleHDCOPts(this.value)"
+                    },
+                    { :id => "startWith", :label => "Start With", :type => :select, :options =>
+                      {
+                        :collapseAll => { :label => "Root and few children (Recommended)", :selected => true } ,
+                        :expandAll => { :label => "All nodes expanded"} 
+                      }
+                    }
+                  ]
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<script type="text/javascript" >
+Ext.QuickTips.init() ;
+Ext.onReady(function(){
+  hideHDCOpts() ;
+}) ;
+function hideHDCOpts()
+{
+  Ext.get('startWith').dom.hidden = true ;
+  Ext.get('startWithLabel').dom.hidden = true ;
+}
+function toggleHDCOPts(value)
+{
+  if(value == 'hdc')
+  {
+    Ext.get('startWith').dom.hidden = false ;
+    Ext.get('startWithLabel').dom.hidden = false ;
+  }
+  else
+  {
+    hideHDCOpts() ;
+  }
+}
+wbGlobalSettings.set('successDialogHeader', "Newick Viewer") ;
+wbGlobalSettings.set('successDialogWidth', 1000) ;
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

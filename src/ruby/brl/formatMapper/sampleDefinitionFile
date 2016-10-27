@@ -1,0 +1,9 @@
+#Test definition file
+Source Op Dest
+"Gene 5" constant classID
+source -> subtype
+feature -> type
+start -> rStart
+end -> rEnd
+attributes regexp:"(?:transgrp=([^;\t\n\r]+))|(?:name=([^;\t\n\r]+))" tName
+

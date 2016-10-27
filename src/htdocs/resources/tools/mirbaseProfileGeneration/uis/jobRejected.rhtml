@@ -1,0 +1,6 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolErrorTitle, { :title => 'miRBase miRNA - Profile Generation' } ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+</div>

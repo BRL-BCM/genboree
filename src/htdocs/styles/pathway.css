@@ -1,0 +1,78 @@
+
+body {
+  font-size: 11pt ;
+}
+span.cat {
+  background: url(/images/silk/folder.png) center left no-repeat ;
+  padding-left: 18px ;
+}
+span.path {
+  background: url(/images/silk/chart_organisation.png) center left no-repeat ;
+  padding-left: 24px ;
+}
+span.kegg {
+  font-size: 0.8em ;
+}
+span.fixed {
+  font-family: Courier New, Fixed, monospaced ;
+}
+span.path a {
+  font-weight: bold ;
+}
+ul {
+  margin: 0px !important ;
+  padding: 0px !important ;
+}
+ul.cat {
+  list-style: none ;
+  margin: 0px !important ;
+  padding-top: 0px !important ;
+  padding-bottom: 0px !important ;
+  padding-left: 30px !important ;
+}
+ul.cat li {
+  margin: 0px !important ;
+  padding: 0px !important ;
+}
+div.msg {
+  background-position: 2px 2px ;
+  background-repeat: no-repeat ;
+  padding: 2px 2px 2px 42px ;
+  min-height: 30px;
+  font-weight: bold ;
+  width: 460px ;
+  text-align: center ;
+}
+div.fail {
+  background-color: #FFE0E0 ;
+  background-image: url(/images/vgpFailure.png) ;
+  border: 2px solid #C64848 ;
+  color: #C64848 ;
+  font-family: sans-serif ;
+  font-size: 11pt ;
+  margin-top: 20px ;
+}
+div.results {
+  border: 1px solid black ;
+  padding: 5px 5px 10px 10px ;
+  margin: 0px ;
+}
+
+div.selectAll {
+  border-top: 1px solid black ;
+  border-left: 1px solid black ;
+  border-right: 1px solid black ;
+  padding: 5px 5px 5px 10px ;
+  margin: 0px ;
+}
+
+div.success {
+  margin: 5px ;
+  padding: 5px 5px 10px 10px ;
+  font-family: sans-serif ;
+  font-size: 11pt ;
+}
+div.success div.title {
+  font-weight: bold ;
+  margin-bottom: 10px ;
+}

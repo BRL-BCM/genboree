@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+
+<project default="jar" basedir=".">
+
+    <property name="src" value="src"/>
+    <property name="lib" value="lib"/>
+    <property name="web" value="web"/>
+    <property name="images" value="images"/>
+    <property name="webxml" value="${web}/WEB-INF/web.xml"/>
+    <property name="classes" value="classes"/>
+    <property name="dist" value="dist"/>
+    <property name="warfile" value="${dist}/baylorsvg.war"/>
+    <property name="GDAS" value="GDASServlet.jar"/>
+
+
+    <path id="cp">
+        <fileset dir="${lib}" includes="*.jar"/>
+    </path>
+
+    <target name="jar" depends="compile">
+	<jar basedir="${classes}"  destfile="${GDAS}"/>
+	<copy tofile="/usr/local/brl/local/apache/htdocs/webapps/java-bin/WEB-INF/lib/GDASServlet.jar" file="${GDAS}"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${classes}"/>
+        <delete dir="${dist}"/>
+        <delete dir="${images}"/>
+	<delete file="${GDAS}"/>
+        <mkdir dir="${classes}"/>
+        <mkdir dir="${dist}"/>
+        <mkdir dir="${images}"/>
+    </target>
+
+    <target name="compile">
+        <javac srcdir="${src}" classpathref="cp" destdir="${classes}" debug="on" deprecation="off">
+        </javac>
+        <copy todir="${classes}">
+            <fileset dir="${src}">
+                <patternset includes="**/*.es,**/*.properties,**/*.css,**/*.txt,**/*.xml"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="war" depends="clean, compile, jar">
+        <copy todir="${dist}/web">
+            <fileset dir="${web}">
+                <patternset excludes="**/CVS/*,**/WEB-INF/**,*dfPackage"/>
+            </fileset>
+        </copy>
+        <copy todir="${dist}/lib">
+            <fileset dir="${lib}">
+                <patternset excludes="**/CVS/*,servlet.jar,*dfPackage"/>
+            </fileset>
+        </copy>
+        <war destfile="${warfile}" basedir="${dist}/web" webxml="${webxml}">
+            <classes dir="${classes}" excludes="**/QT.class"/>
+            <lib dir="${dist}/lib"/>
+        </war>
+        <delete dir="${dist}/web"/>
+        <delete dir="${dist}/lib"/>
+    </target>
+
+    <target name="dist" depends="clean">
+        <copy todir="${dist}/src">
+            <fileset dir="${src}" excludes="**/*dfPackage"/>
+        </copy>
+        <copy todir="${dist}/web">
+            <fileset dir="${web}">
+                <patternset excludes="**/CVS/*,**/WEB-INF/**,*dfPackage"/>
+            </fileset>
+        </copy>
+        <copy todir="${dist}/web/WEB-INF" file="${web}/WEB-INF/web.xml"/>
+        <copy todir="${dist}/lib">
+            <fileset dir="${lib}"/>
+        </copy>
+        <copy todir="${dist}" file="build.xml"/>
+        <zip basedir="${dist}" destfile="baylorsvg.zip"/>
+        <delete dir="${dist}" includes="**/*" includeemptydirs="yes" />
+        <move todir="${dist}" file="baylorsvg.zip"/>
+    </target>
+
+</project>

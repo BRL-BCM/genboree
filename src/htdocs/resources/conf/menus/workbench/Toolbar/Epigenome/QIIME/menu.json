@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Track Entity List Oriented",
+    "tooltip": "Perform QIIME using two or more track entity lists." ,
+    "idStr": "qiimeEntityList"
+  },
+  {
+    "text": "Track Attribute Oriented",
+    "tooltip": "Perform QIIME using track attributes." ,
+    "idStr": "qiimeTrack"
+  }
+]

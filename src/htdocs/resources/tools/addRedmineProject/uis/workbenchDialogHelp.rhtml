@@ -1,0 +1,43 @@
+<%
+  # Define outer div element dimensions
+  width = 500
+  height = 330
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+
+  <%# Overview text %>
+  <%= 
+    renderStaticFrag(@toolIdStr, :wbToolHelpOverview, { :toolHelpOverview =>
+      "
+        This tool will add a Redmine project to the target group.
+        <br>&nbsp;<br>
+      "
+    })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 <u>group</u> into &quot;Output Targets&quot;. This Redmine project will belong to this group.' ],
+        :types              => [ [ 'Group', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Redmine name', 'Select the name of one of the Redmine instances that have been configured for this Genboree instance.'],
+          [ 'Redmine project', 'Enter the name of the Redmine project to associate with the group.'],
+          [ 'Submit', "After making your selections, click submit to finalize the job."]
+        ]
+      })
+  %>
+</div>

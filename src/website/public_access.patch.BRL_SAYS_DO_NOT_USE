@@ -1,0 +1,13 @@
+Index: app/controllers/attachments_controller.rb
+===================================================================
+--- app/controllers/attachments_controller.rb	(revision 13139)
++++ app/controllers/attachments_controller.rb	(working copy)
+@@ -23,6 +23,8 @@
+ 
+   accept_api_auth :show, :download, :upload
+ 
++  skip_before_filter :check_if_login_required, :only => [:show, :download]
++
+   def show
+     respond_to do |format|
+       format.html {

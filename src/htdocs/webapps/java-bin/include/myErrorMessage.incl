@@ -1,0 +1,42 @@
+<HTML>
+<head>
+<title>Succesfully Deleted</title>
+<link rel="stylesheet" href="/styles/jsp.css<%=jsVersion%>" type="text/css">
+<meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+
+</head>
+<BODY>
+<%@ include file="header.incl" %>
+<table width="100%" border="0" cellpadding="2" cellspacing="2">
+<tbody>
+    <tr>
+        <td>
+            <p>&nbsp; <CENTER>
+            <FONT SIZE="4"><B>
+   <br><%=message%><br>
+            </B></FONT>
+          </CENTER><P>
+             <p>&nbsp;</p>
+
+
+                         <P>
+                    <TABLE BORDER="0">
+                    <TR>
+                        <td>
+                            <input type="button" name="btnClose" id="btnClose" value="Close Window"
+                            class="btn" onClick="window.close();">
+                        </td>
+                    </tr>
+                   </TABLE>
+</table>
+
+            </td>
+            <td width=10></td>
+  					<td class="shadow"></td>
+        </tr>
+
+
+<%@ include file="footer.incl" %>
+
+</BODY>
+</HTML>

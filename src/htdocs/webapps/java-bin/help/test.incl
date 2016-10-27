@@ -1,0 +1,124 @@
+
+<P>
+<FONT class="topicText">HELP TOPIC: Uploading Entry Point Definitions</FONT>
+</P>
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">Table Of Contents:</FONT><BR>
+<UL class="compact1_10">
+  <LI>&raquo; <A HREF="#uploadEntrypoints">How to upload entry points</A></LI>
+  <LI>&raquo; <A HREF="#entrypointFormats">Entry point formats</A>
+    <UL class="compact1">
+      <LI>&middot; <A HREF="#fastaFile"><FONT CLASS="tocSmall">Fasta file</FONT></A></LI>
+      <LI>&middot; <A HREF="#3ColumnLFF"><FONT CLASS="tocSmall">3-Column LFF file</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI>&raquo; <A HREF="helpTemplate.jsp?topic=DefineAGenome">Defining A Genome</A></LI>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<P>
+<A NAME="uploadEntrypoints"></A>
+<FONT class="subtopicHeader">Uploading Entry Point Definitions:</FONT><SPAN class="topLink"><A class="invisiLink" HREF="#">[ Top ]</A></SPAN><BR>
+<P>
+To define custom genomic entry points (e.g. chromosomes):<BR>
+<OL>
+  <LI>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+  <LI>Navigate via the menu to <SPAN class="genbLabel">My Databases / Upload Entry Point(s)</SPAN>.</LI>
+  <LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the droplists.</LI>
+  <LI>Below the database information is an interface for uploading entry points, and a list of any existing entry points.</LI>
+  <LI>Select a file on your computer, select a file format, and click <SPAN class="genbLabel">Upload</SPAN>.</LI>
+  <LI>The interface expects one of two types of file: a <SPAN class="genbLabel"><A class="invisiLink" HREF="#fastaFile">Fasta</A></SPAN> file or a <SPAN class="genbLabel"><A class="invisiLink" HREF="#3ColumnLFF">3-column LFF</A></SPAN> file.</LI>
+  <LI>Wait for the file to be transferred to the Genboree server.</LI>
+  <LI>After the file is transferred, it will be processed immediately.</LI>
+</OL>
+<P>
+<HR WIDTH="50%">
+<P>
+<A NAME="entrypointFormats"></A>
+<FONT class="subtopicHeader">Entry Point File Formats:</FONT><SPAN class="topLink"><A class="invisiLink" HREF="#">[ Top ]</A></SPAN><BR>
+<P>
+<A NAME="fastaFile"></A>
+<FONT class="subsubtopicHeader">1) FASTA Sequence File</FONT>
+<P>
+<UL class="compact1">
+<LI>- The best choice if you have chromosomes or scaffolds in a few multi-fasta files.</LI>
+<LI>- The fasta sequences will determine entry point lengths and will be available to users via the Genboree browser.</LI>
+<LI>- Genboree follows the Fasta description available at <A HREF="http://en.wikipedia.org/wiki/Fasta_format">Wikipedia</A>, but makes no attempt to parse application-specific unique identifiers.</LI>
+<LI>- Fasta comment lines will be stripped.</LI>
+</UL>
+<P>
+NOTE: The <U>unique identifier</U> is the first word (series of non-whitespace characters) following the &quot;&gt;&quot; on the defline.
+It determines the entry point name and is case-sensitive.
+<P>
+Thus, a sensible Fasta record for &quot;chr13&quot; might look like:
+<BR><BR>
+<DIV class="uploadExample">
+  <PRE>
+>chr13
+GTCTTTGTGTCACTGACCCCTCGATATGTCCTACGATCCCATGATATGAACTCACCAGATTTTCCAATGG
+AAGGGATAGGAATTCCGAGAGACAGAGAGAAAGGGAGAGAGAGAGAGAGAGAGAAAAGAAAGAGAGAGAG
+atcaaagaaacagagagagagagagtatatatacaaaggaaacagagggatacacacaccccccactaaa
+tgtgatccgaggggctattacagatctcactttgttgaagtgttgcagccaattcaaaacaaactaaaca
+GTCATGATTATGATGACAACGATGGCGACAACACCATNNNNNNNNNNNNNNNNNNNCATCATCATCATCA
+. . .</PRE>
+</DIV>
+<BR CLEAR="all">
+<BR>
+or for &quot;Scaffold_70613&quot; in an unassembled genome:
+<P>
+<DIV class="uploadExample">
+  <PRE>
+>Scaffold_70613
+tgtgatccgaggggctattacagatctcactttgttgaagtgttgcagc
+TTGACCAGCAGAAATAAAGCTCTGTTCACAACCTATTTTCCACACACAT
+GTCATGATTATGATGACAACGATGGCGACAACACCATNNNNNNNNNNNN
+. . .                                                                 </PRE>
+</DIV>
+<BR CLEAR="all">
+<P>
+&nbsp;<P>
+<A NAME="3ColumnLFF"></A>
+<FONT class="subsubtopicHeader">2) 3-Column LFF Entry Point File</FONT>
+<P>
+<UL class="compact1">
+<LI>- The best choice if you don't have sequences for your chromosomes or scaffolds.</LI>
+<LI>- The file format is an extremely simple <B>tab</B>-delimited file with 3 columns per line:
+  <UL class="compact1">
+    <LI>&middot; the entry point name</LI>
+    <LI>&middot; the keyword &quot;Chromosome&quot;</LI>
+    <LI>&middot; the length of the entry point</LI>
+  </UL>
+</UL>
+<P>
+Thus, a 3-column LFF entry point file might look like:
+<BR><BR>
+<DIV class="uploadExample">
+<PRE>
+chr1	Chromosome	246127941
+chr2	Chromosome	243615958
+chr3	Chromosome	199344050
+. . .                                 </PRE>
+</DIV>
+<BR CLEAR="all">
+<BR>
+or
+<P>
+<DIV class="uploadExample">
+<PRE>
+Scaffold10	Chromosome	474987
+Scaffold100	Chromosome	300122
+Scaffold1000	Chromosome	165290
+Scaffold100010	Chromosome	1448
+Scaffold100082	Chromosome	12132
+. . .</PRE>
+</DIV>
+<BR CLEAR="all">
+<P>
+<SPAN class="topLink"><A class="invisiLink" HREF="#">[ Top ]</A></SPAN>

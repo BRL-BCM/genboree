@@ -1,0 +1,47 @@
+{
+  "hashfields" : {
+    "lffChrom" : [ "chrom", "tName", "genoName" ],
+    "lffStart" : [ "chromStart", "tStart", "genoStart", "txStart" ],
+    "lffStop"  : [ "chromEnd", "tEnd", "genoEnd", "txEnd" ],
+    "lffName"  : [ "name", null ],
+    "lffStrand" : [ "strand", null ],
+    "lffPhase"  : [ "phase", null ],
+    "lffScore"  : [ "score", "matches", null ],
+    "lffQstart" : [ "qStart", null ],
+    "lffQstop"  : [ "qStop", "qEnd", null ]
+  },
+
+  "defaultValues" : {
+    "class" : "Class",
+    "name" : ".",
+    "type" : "Type",
+    "subtype" : "SubType",
+    "chrom" : "Chrom",
+    "start" : "0",
+    "stop" : "0",
+    "strand" : "+",
+    "phase" : "0",
+    "score" : "0",
+    "qStart" : ".",
+    "qStop" : ".",
+    "attribute-comments" : "",
+    "sequence" : "",
+    "freeform-comments" : ""
+  },
+   
+  "excludeColumns" : [ "bin", "ix", "n", "reserved", "id", "exonStarts", "exonEnds", "blockStarts", "blockEnds" ],
+  
+  "withEndBlock" : {
+   	"exonCount" : {
+   		"start" : [ "exonStarts" ],
+   		"stop" : [ "exonEnds" ]
+  	}
+  },
+  
+  "withSizeBlock" : {
+  	"blockCount" : {
+  		"start" : [ "tStarts", "chromStarts" ],
+  		"size" : [ "blockSizes" ]
+  	}
+  }
+}

@@ -1,0 +1,6 @@
+<map name="genomeimap">
+<AREA SHAPE="RECT" COORDS="135,189,375,216" HREF="/java-bin/gbrowser.jsp?entryPointId=chr19&amp;refSeqId=78&amp;from=15273344&amp;to=30546688&amp;isPublic=YES">
+<AREA SHAPE="RECT" COORDS="135,162,375,189" HREF="/java-bin/gbrowser.jsp?entryPointId=chr19&amp;refSeqId=78&amp;from=30546688&amp;to=45820032&amp;isPublic=YES">
+<AREA SHAPE="RECT" COORDS="135,216,375,245" HREF="/java-bin/gbrowser.jsp?entryPointId=chr19&amp;refSeqId=78&amp;from=1&amp;to=15273344&amp;isPublic=YES">
+<AREA SHAPE="RECT" COORDS="135,135,375,162" HREF="/java-bin/gbrowser.jsp?entryPointId=chr19&amp;refSeqId=78&amp;from=45820032&amp;to=61093376&amp;isPublic=YES">
+</map>

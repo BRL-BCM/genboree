@@ -1,0 +1,26 @@
+<%@ page import="org.genboree.util.Util,
+org.genboree.util.SessionManager"%>
+<td class="form_header"><strong>Database</strong></td>
+<td class="form_header"><input type="hidden"  name="databaseChanged" id="databaseChanged" value="0">
+<select name="rseq_id" id="rseq_id" onchange=' databaseChanged.value=1; this.form.submit(); '  class="txt" style="width:300"><% String db_pub_label = "PRIVATE";
+boolean hasSessionDB = false;
+boolean groupChanged = false;
+if (grpChangeState!= null && grpChangeState.compareTo("1") ==0 )
+groupChanged = true;
+if (grpChangeState == null && SessionManager.getSessionDatabaseName(mys) == null)
+groupChanged = true;
+if (rseqs != null && rseqs.length >0) {
+for(int ii=0; ii<rseqs.length; ii++ ){
+if(rseqs[ii].getRefSeqId().equals(rseq_id) ){ hasSessionDB = true; break;}}}
+if (!hasSessionDB  )groupChanged = true;
+if (groupChanged && rseqs != null && rseqs.length >0 ) {  %>
+<option value="" selected>--- Please select ----</option><%SessionManager.clearSessionDatabase(mys);}
+if (rseqs != null && rseqs.length >0) {
+    for(int ii=0; ii<rseqs.length; ii++ ){
+        String myId = rseqs[ii].getRefSeqId();
+        String sel = "";
+        if( myId.equals(rseq_id) ){sel = " selected";
+        if (groupChanged) sel = ""; hasSessionDB = true;
+        if (!groupChanged) SessionManager.setSessionDatabaseId(mys, rseq_id);
+        if( pubGrp.belongsTo(rseq_id) ) db_pub_label = "PUBLIC";}%><option value="<%=myId%>"<%=sel%>><%=Util.htmlQuote(rseqs[ii].getRefseqName())%></option><%}}else {
+%><option value="<%="##"%>"<%= " selected"%>><%=" --no databases exists-- "%></option><%}%></select>&nbsp;<font color="#CCCCFF">Access:</font> <%=db_pub_label%></td>

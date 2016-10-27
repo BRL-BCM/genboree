@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "removeSamplesFromSampleSets",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Remove Samples From SampleSets",
+    "shortLabel": "[NOT SET]"
+  }
+}

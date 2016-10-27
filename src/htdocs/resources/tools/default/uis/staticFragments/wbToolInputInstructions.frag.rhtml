@@ -1,0 +1,16 @@
+<%#
+  Just a convenience wrapper for making an inputs instruction section
+  using the generic wbDialogSection and wbToolIOInstructions fragments
+%>
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data",
+      :sectionHtml => renderFrag(@toolIdStr, :wbToolIOInstructions,
+      {
+        :instructionType    => :inputs,
+        :instructions       => @instructions,
+        :types              => @types,
+        :beEmpty            => @beEmpty
+      })
+    })
+%>

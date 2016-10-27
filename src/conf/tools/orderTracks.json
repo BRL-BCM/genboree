@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "orderTracks",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Order Tracks",
+    "shortLabel": "[NOT SET]"
+  }
+}

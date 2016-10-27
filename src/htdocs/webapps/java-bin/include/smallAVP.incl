@@ -1,0 +1,68 @@
+<%@ page import="java.util.Iterator,
+                 org.genboree.util.Util,
+                 java.util.Arrays"%>
+<% if (name2Values != null && !name2Values.isEmpty()) {%>
+<TR>
+     <TD  colspan="2" class="form_body" >
+ <% if (name2Values.size() >3 ) { %>
+     <div id="attributePairsDiv" class="scrollable"  style="overflow:auto;">
+<% }
+  else { %>
+       <div id="attributePairsDiv" class="lowScrollable" style="overflow:auto;">
+       <%}%>
+           <TABLE  width="100%" border="0px" cellpadding="0" cellspacing="0">
+            <TR width="100%">
+                <TD  width="25%"  class="form_body">
+                    <div align="center" class="annotation3" style="width:90%" >
+                         Attribute Name
+                    </div>
+                </TD>
+                <TD width="75%">
+                    <div  align="center" class="annotation3" style="width:90%" >
+                    Attribute Value
+                    </div>
+                </TD>
+            </TR>
+
+        <%
+
+       int numAttributes = name2Values.size();
+
+     String [] avpNames = new String [name2Values.size()];
+        Iterator it = name2Values.keySet().iterator();
+        int m=0;
+        while (it.hasNext()  ){
+        avpNames[m] = (String)it.next();
+            m++;
+        }
+
+       Arrays.sort(avpNames);
+       for (int n=0; n<avpNames.length; n++) {
+         String name = avpNames[n];
+        String value =  (String)name2Values.get(name);
+      //out.println ("<br>value " + value);  
+        if (value != null){
+        value = value.replaceAll(";", " " ) ;
+        value = Util.htmlQuote(value);         
+        }     
+        %>
+    <TR id="attRowId<%=n%>" width="100%">
+        <TD  width="25%"  class="form_body">
+            <div id="nameInputDiv<%=n%>"   class="attributeNameLong" style="display:block;">
+            <input READONLY type="text"  class="attributeNameRO" name="atttxtName<%=n%>" id="atttxtName<%=n%>"  value="<%=name%>" >
+            </div>
+        </TD>
+        <TD width="75%">
+            <div id="valueInputDiv<%=n%>"   class="attributeValue"  style="display:block;">
+            <input READONLY type="text"   name="atttxtValues<%=n%>" id="atttxtValues<%=n%>"  class="attributeNameRO" value="<%=value%>" >
+            </div>
+        </TD>
+    </TR>
+        <% 
+         }
+        %>
+      </TABLE>
+      </div>
+ </TD>
+</TR>
+<%} %>

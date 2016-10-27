@@ -1,0 +1,70 @@
+
+div.message{
+  width:400px;
+  margin-bottom: 0px ;
+  margin-top: 0px ;
+  margin-left: 30px ;
+  margin-right: 0px ;
+  padding-bottom: 1em ;
+  padding-top: 1em ;
+  /*background-color: #f0eafB ; */
+}
+
+
+span.successMsg {
+  color: green;
+  /*font-size: 10pt ;    */
+  font-family: verdana,arial,sans-serif ;
+ /* font-weight: bold ;   */
+ font-size: 100% ;
+}
+
+ 
+#dhtmltooltip {
+position: absolute;
+width: 150px;
+border: 2px solid black;
+padding: 2px;
+background-color: white;
+visibility: hidden;
+z-index: 100;
+/*Remove below line to remove shadow. Below line should always appear last within this CSS*/
+filter: progid:DXImageTransform.Microsoft.Shadow(color=gray,direction=135);
+}
+
+span.errorMsg {
+  color: red;
+ /* font-size: 10pt ;  */
+  font-family: verdana,arial,sans-serif ;
+ font-size: 100% ;
+
+}
+
+
+
+ul.compactMsg {
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 0px ;
+  margin-top: 0px ;
+  margin-right: 0px ;
+  padding-bottom: 0px ;
+  padding-left: 0px;
+  padding-top: 0px ;
+  padding-right: 0px;
+}
+ul.compactMsg li{
+  list-style: none ;
+  margin-bottom: 0px ;
+  margin-left: 1em;
+  margin-top: 0px ;
+  margin-right: 0px ;
+  padding-bottom: 0px ;
+  padding-left: 0px;
+  padding-top: 0px ;
+  padding-right: 0px;
+}
+
+
+
+

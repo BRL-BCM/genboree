@@ -1,0 +1,323 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/apiCaller'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          The signal scores in the 'query' track are compared to
+          the signal scores in the other tracks (the 'target' tracks).
+          <br>&nbsp;<br>
+          The UI will present you with the option of selecting your query track. All the other tracks,
+          apart from the Regions-of-Interest track (if you select one) will be part of the 'target' set of tracks
+          and the correlation of each target track to the query track will be reported.
+          <br>&nbsp;<br>
+          By default, the comparison occurs at the level of the average signal found in
+          fixed genomic windows.
+          <br>&nbsp;<br>
+          <i>However</i>, by supplying a 'regions-of-interest' track
+          the comparison can occur at regions you specify.
+          <br>&nbsp;<br>
+          Note that you can also drag over one or more <u>classes</u> as 'target' tracks.
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+      if(@inputs.size == 2)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @settings['trkList'], :label => "Query/Target" } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Input Tracks:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @settings['trkList'], :label => "Query/Target/ROI" } )
+        })
+      end
+    
+      
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      # Prepare the select list for selecting the query track
+      trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+      scoreTrks = @settings['trkList']
+      scoreTrksSelectList = {}
+      roiSelectList = {}
+      idx = 0
+      scoreTrks.each { |trkUri|
+        if(idx == 0)
+          scoreTrksSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri), :selected => true}
+          roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+        else
+          scoreTrksSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri)}
+          if(idx == scoreTrks.size - 1)
+            roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri), :selected => true }
+          else
+            roiSelectList[:"#{trkUri}"] = {:label => trkApiHelper.extractName(trkUri) }
+          end
+        end
+        idx += 1
+      }
+      widgets = [
+                  { :id => 'analysisName', :label => 'Analysis Name', :labelWidth => "200px", :type => :text , :size => "25", :value => "SigSimSrch-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+                  { :id => 'queryTrack', :label => 'Query Track', :type => :select, :options => scoreTrksSelectList },
+                  { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :type => :checkBox, :checked => true},
+                  { :id => 'normalization', :label => 'Normalization', :type => :select, :options =>
+                      {
+                        :quant   => { :label => 'Quantile', :selected => true },
+                        :none => { :label => 'None'},
+                        :gauss  => { :label => 'Gaussian'},        
+                      }
+                  }
+                ]
+      widgets <<  { :id => 'spanAggFunction', :label => 'Aggregating Function', :type => :select, :options =>
+                    {
+                      :avg   => { :label => 'Avg', :selected => true },
+                      :med => { :label => 'Median'},
+                      :sum  => { :label => 'Sum'},
+                      :count    => { :label => 'Count'},
+                      :max    => { :label => 'Max'},
+                      :min    => { :label => 'Min'},
+                      :stdev    => { :label => 'Standard Deviation'},
+                      :avgByLength  => { :label => 'Avg By Length'}
+                    }
+                  }
+      if(scoreTrks.size == 2) # Only two tracks: both have to be 'score' tracks
+        widgets <<  { :name => 'res', :label => 'Fixed Resolution', :type => :radio , :onClick => "showRadioText('fixedResolution', 'customResolution')", :value => "fixRes" }
+        widgets <<  { :id => 'fixedResolution', :label => "Resolution", :type => :select, :hidden => true, :options =>
+                      {
+                        :high   => { :label => 'High' },
+                        :medium => { :label => 'Medium', :selected => true },
+                        :low    => { :label => 'Low'}
+                      }
+                    }
+        widgets <<  { :name => 'res', :label => 'Custom Resolution', :type => :radio , :onClick => "showRadioText('customResolution', 'fixedResolution')", :value => "cusRes" }
+        widgets <<  { :id => 'customResolution', :label => 'Resolution', :type => :text , :hidden => true, :size => "10", :value => "" }
+      else # Will need to present the user with the option to select an ROI track
+        widgets.push(
+                      { :id => "regionsAdvSec", :type => :advancedSection, :toggleText => "Select Regions", :startWithExpanded => true, :widgets =>
+                        [
+                          { :name => "coordSystem", :id => "coordSystemROITrack", :type => :radio, :label => "ROI Track", :checked => true, :value => "roi", :onchange => "toggleRegions(this.value)" },
+                          { :id => 'roiSection', :type => :indentedSection, :indentWidth => '20px', :border => '', :label => '', :startsHidden => false,
+                            :widgets =>
+                            [
+                              { :id => 'roiTrack', :label => '', :type => :select, :options => roiSelectList, :text => 'Select the track you wish to use as a Regions Of Interest track' }
+                            ]
+                          },
+                          { :name => "coordSystem", :type => :radio, :label => "Genomic Windows", :value => "genomicWindows",  :onchange => "toggleRegions(this.value)" },
+                          { :id => 'windowSection', :type => :indentedSection, :indentWidth => '20px', :border => '', :label => '', :startsHidden => true,
+                            :widgets =>
+                            [
+                              { :name => "windows", :id => "fixedWindowRadioBtn", :type => :radio, :disabled => true, :label => "Fixed", :checked => true, :value => "fixed",  :onchange => "toggleWindows(this.value)" },
+                              { :id => 'fixedResolution', :label => "", :type => :select, :options =>
+                                {
+                                  :high   => { :label => '1000bp' },
+                                  :medium => { :label => '10,000bp', :selected => true },
+                                  :low    => { :label => '100,000bp'}
+                                }, :disabled => true, :hidden => true
+                              },
+                              { :name => "windows", :type => :radio, :label => "Custom", :value => "custom",  :onchange => "toggleWindows(this.value)", :disabled => true },
+                              { :id => 'customResolution', :label => '', :type => :text , :size => "10", :value => "", :disabled => true}
+                            ]
+                          }
+                        ]
+                      }
+                    )
+      end
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Signal Search Settings",
+        :widgets => widgets,
+        :dbu => @dbu
+      })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script>
+<%=  WorkbenchFormHelper.addToFormSettings({'resolution' => 'medium'}) %>
+<%=  WorkbenchFormHelper.addToFormSettings({'useGenboreeRoiScores' => true}) %>
+
+Ext.onReady(function(){
+  document.getElementById('coordSystemROITrack').checked = true ;
+  document.getElementById('fixedWindowRadioBtn').checked = true ;
+}) ;
+
+function toggleResolution(isChecked)
+{
+  resId = document.getElementsByName('res')
+  if(isChecked)
+  {
+    resId[0].disabled = true ;
+    resId[1].disabled = true ;
+    // Also disable the options that the radio buttons control
+    var fixedRes = document.getElementById('fixedResolution') ;
+    fixedRes.disabled = true ;
+    var customRes = document.getElementById('customResolution') ;
+    customRes.disabled = true ;
+  }
+  else
+  {
+    resId[0].disabled = false ;
+    resId[1].disabled = false ;
+    // Also enable the options that the radio buttons control
+    var fixedRes = document.getElementById('fixedResolution') ;
+    fixedRes.disabled = false ;
+    var customRes = document.getElementById('customResolution') ;
+    customRes.disabled = false ;
+  }
+}
+
+function showRadioText(idToShow, idToHide)
+ {
+   // For label of text to show
+   var label = Ext.get(idToShow + "Label") ;
+   label.setStyle('display', '') ;
+   // For text to show
+   var style = Ext.get(idToShow) ;
+   style.setStyle('display', '') ;
+   // For label of text to hide
+   var label = Ext.get(idToHide + "Label") ;
+   label.setStyle('display', 'none') ;
+   // For text to hide
+   var style = Ext.get(idToHide) ;
+   style.setStyle('display', 'none') ;
+
+   // Set value for custom resolution to nothing if show id is fixedResolution
+   var showId = document.getElementById(idToShow) ;
+   if(showId.id == "fixedResolution")
+   {
+     var hideId = document.getElementById(idToHide) ;
+     //document.write(hideId.value) ;
+     hideId.value = '' ;
+   }
+ }
+// For toggling between the 'genomic windows' section and the 'Regions of Interest' section
+function toggleRegions(value)
+{
+  var ii ;
+  if(value == 'genomicWindows')
+  {
+    Ext.get('roiTrack').dom.disabled = true ;
+    Ext.get('fixedResolution').dom.disabled = false ;
+    document.getElementById('windowSection').style.visibility = 'visible' ;
+    document.getElementById('roiTrack').style.visibility = 'hidden' ;
+    document.getElementById('fixedResolution').style.display = '' ;
+    document.getElementById('fixedResolutionLabel').style.display = '' ;
+    var windows = document.getElementsByName('windows') ;
+    for(ii=0; ii<windows.length;ii++)
+    {
+      windows[ii].disabled = false ;
+    }
+  }
+  else
+  {
+    Ext.get('roiTrack').dom.disabled = false ;
+    Ext.get('fixedResolution').dom.disabled = true ;
+    document.getElementById('windowSection').style.visibility = 'hidden' ;
+    document.getElementById('roiTrack').style.visibility = 'visible' ;
+    document.getElementById('fixedResolution').style.display = 'none' ;
+    document.getElementById('fixedResolutionLabel').style.display = 'none' ;
+    Ext.get('customResolution').dom.disabled = true ;
+    var windows = document.getElementsByName('windows') ;
+    for(ii=0; ii<windows.length;ii++)
+    {
+      windows[ii].disabled = true ;
+    }
+  }
+}
+ 
+
+function toggleWindows(value)
+{
+ if(value == 'custom')
+ {
+  Ext.get('fixedResolution').dom.disabled = true ;
+  Ext.get('customResolution').dom.disabled = false ;
+ }
+ else
+ {
+  Ext.get('fixedResolution').dom.disabled = false ;
+  Ext.get('customResolution').dom.disabled = true ;
+ }
+}
+
+function showRadioText(idToShow, idToHide)
+{
+  // For label of text to show
+  var label = Ext.get(idToShow + "Label") ;
+  label.setStyle('display', '') ;
+  // For text to show
+  var style = Ext.get(idToShow) ;
+  style.setStyle('display', 'block') ;
+  // For label of text to hide
+  var label = Ext.get(idToHide + "Label") ;
+  label.setStyle('display', 'none') ;
+  // For text to hide
+  var style = Ext.get(idToHide) ;
+  style.setStyle('display', 'none') ;
+
+  // Set value for custom resolution to nothing if show id is fixedResolution
+  var showId = document.getElementById(idToShow) ;
+  if(showId.id == "fixedResolution")
+  {
+    var hideId = document.getElementById(idToHide) ;
+    hideId.value = '' ;
+  }
+}
+
+
+function hideROI()
+{
+  var roiTracks = Ext.get('tracksSection').dom ;
+  roiTracks.style.visibility = 'collapse' ;
+  var res = Ext.get('resSection').dom ;
+  res.style.visibility = '' ;
+  // Enable the resolution settings
+  fixedRes = Ext.get('fixedResolution').dom ;
+  fixedRes.disabled = false ;
+  customRes = Ext.get('customResolution').dom ;
+  customRes.disabled = false ;
+  // Disable the track list
+  var roiTracks = Ext.get('roiTrack').dom ;
+  roiTracks.disabled = true ;
+}
+
+function hideWindows()
+{
+  var tracksSection = Ext.get('tracksSection').dom ;
+  tracksSection.style.visibility = '' ;
+  var res = Ext.get('resSection').dom ;
+  res.style.visibility = 'collapse' ;
+  // Disable the resolution settings
+  fixedRes = Ext.get('fixedResolution').dom ;
+  fixedRes.disabled = true ;
+  customRes = Ext.get('customResolution').dom ;
+  customRes.disabled = true ;
+  // Enable the track list
+  var roiTracks = Ext.get('roiTrack').dom ;
+  roiTracks.disabled = false ;
+}
+</script>

@@ -1,0 +1,43 @@
+{
+  "inputs" :
+  [
+    "http:\/\/localhost\/REST\/v1\/grp\/EDACC%20-%20Test%20New%20Features\/db\/newSchemaForBlock\/trk\/UCSF-UBC.H3K27ME3%3Avwig?",
+    "http:\/\/localhost\/REST\/v1\/grp\/EDACC%20-%20Test%20New%20Features\/db\/newSchemaForBlock\/trk\/Cyto%3ABand?"
+  ],
+  "outputs" :
+  [
+    "http:\/\/localhost\/REST\/v1\/grp\/EDACC%20-%20Test%20New%20Features\/db\/newSchemaForBlock?"
+  ],
+  "context" :
+  {
+    "apiDbrcKey" : "paithankApi",
+    "jobId" : "wbJob-1287178841_7744512222_test",
+    "toolTitle" : "PatternBrowser",
+    "userLastName" : "Paithankar",
+    "gbConfFile" : "\/cluster.shared\/local\/conf\/genboree\/genboree.config.properties",
+    "userId" : "1400",
+    "gbAdminEmail" : "paithank@bcm.edu",
+    "userEmail": "paithank@bcm.tmc.edu",
+    "gbLockFileKey" : "toolJob",
+    "userFirstName" : "Sameer",
+    "scratchDir" : "\/scratch\/wbJob-1287178841_7744512222_test",
+    "toolIdStr" : "patternBrowser",
+    "userLogin" : "paithank"
+  },
+  "settings" :
+  {
+    "org" : "hg18", 
+    "dataLabel" : "hg18",   
+    "analysisName" : "Something User Gave # 1", 
+    "regionLabel" : "User gives this if they want", 
+    "normType" : "exp",
+    "binSize" : "",    
+    "numBins" : "10",    
+    "statsType" : "regional",   
+    "numClusters" : "1000",        
+    "colLabel" :      
+    [
+      "blue"
+    ]
+  }
+}

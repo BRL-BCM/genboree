@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "rdp",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "RDP",
+    "shortLabel": "RDP"
+  },
+  "cluster": {
+    "walltime": "48:00:00"
+  }
+}

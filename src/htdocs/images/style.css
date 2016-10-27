@@ -1,0 +1,23 @@
+body { background-color: white; 
+       margin-left: 0pt;
+       margin-top: 0pt;
+       margin-width: 0pt;
+       margin-height: 0pt; }
+p,td,th,h1,h2,h3,h4 { font-family: Verdana; }
+table.main { color: white; background-color: #333050; }
+table.navbar { color: #333050; background-color: #e8e3ff; }
+p,td,th { font-size: 10pt; }
+a:link { color: #333050; }
+a:visited { color: #333050; }
+td.main { color: white; background-color: #333050; }
+td.main a:link { color: #c0bbf0; }
+td.main a:visited { color: #c0c0c0; }
+td.navbar { color: #333050; background-color: #e8e3ff; }
+.error { color: white; background-color: red; }
+.light { color: #e8e3ff; }
+.smaller { font-size: 10pt; }
+div.c5 {text-align: center}
+span.c4 {color: yellow}
+b.c3 {color: yellow}
+input.c2 {background:#30b030}
+div.c1 {position:absolute; visibility:hidden; z-index:1000;}

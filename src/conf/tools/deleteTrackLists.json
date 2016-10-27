@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "deleteTrackLists",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Track Lists",
+    "shortLabel": "[NOT SET]",
+    "groupAccessUri": null
+  }
+}

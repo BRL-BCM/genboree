@@ -1,0 +1,89 @@
+<%
+  require 'brl/genboree/rest/wrapperApiCaller'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will allow you to clone/copy all the contents (tracks, files, samples, etc) of an existing database to a new database.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+
+<%# Input summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Database to clone:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @inputs} )
+  })
+%>
+<%# Output summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Target Group:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs} )
+  })
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => "newName", :label => 'New Database Name', :type => :text, :value => '', :size => "20" },
+        { :id => 'advancedSettings', :type => :advancedSection,
+          :width => '460px',
+          :text => '(WARNING: Only change these if you know exactly what the consequences will be.)',
+          :toggleText => "Advanced Options:",
+          :widgets =>
+          [
+            { :id => 'shallowCopy', :label => 'Shallow Copy', :labelStyle => 'width:100px;', :type => :checkbox, :style => 'font-size: 80%', :title => 'Do only a shallow, rather than deep, copy such that the new database has only a link to the sequence and high-density data. [Default: FALSE]'}
+          ]
+        }
+      ]
+    })
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

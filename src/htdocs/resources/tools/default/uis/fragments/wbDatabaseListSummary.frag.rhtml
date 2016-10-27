@@ -1,0 +1,26 @@
+<%
+  @databaseList = [ @databaseList ] unless(@databaseList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@databaseList.empty?) %>
+      <tr>
+        <th><%= (@label || "Track") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @databaseList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+%>
+        <tr>
+          <th><%= (@label || "Database") %>:</th>
+          <td><i><%== db %></i></td>
+          <td class="explain">Group: <i><%== grp %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

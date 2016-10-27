@@ -1,0 +1,92 @@
+
+================================================
+Initial Config/Setup for the ehrSendPdf API Extensions
+================================================
+
+After the usual code deployment of files, the ehrSendPdf extension need configuration.
+
+1. Deploy the conf/ehrSendPdf.json to your API Extension confs dir.
+- Base dir is specified by the "gbApiExtConfsDir" property in your genboree.config.properties
+- Probably /usr/local/brl/local/conf/apiExtensions
+- Make it now if not present and add that property to your genboree.config.properties
+- Create the clingen/ extension subdir under that base dir.
+- Put ehrSendPdf.json in that subdir.
+- You now have something like /usr/local/brl/local/conf/apiExtensions/clingen/ehrSendPdf.json
+
+2. Configure the ehrSendPdf extension's config
+- Edit clingen/examples/conf/ehrSendPdf.json
+- Change the base resource path if you don't like the default
+  . NOTE: if you change the top-level (mount) you MUST configure your nginx
+    proxy server to support the new mount area!
+- The extension needs a particular collection of tagged url docs to work.
+- See below for some basic notes on setting this up.
+- But decide where you will keep this collection and fill in the rest
+  of ehrSendPdf.json accordingly
+- Deploy clingen/conf/ehrSendPdf.json
+
+3. Configure nginx to support your new mount if you don't want this service exposed under /REST-ext
+- Mimic the setup for REST & REST-ext, basically.
+
+4. Create the required collection to support the extension. Populate with some test docs.
+- Do the stuff below in ripl, or make a script out of it. Whatever.
+- Would need to be done in a compliant Genboree environment, as a user who has DBRC_FILE env (and file)
+  set up normally, etc.
+- It's all pretty obvious. Uses the model and test docs in the clingen/examples/ dir to get you going.
+
+
+# Requires - this set should allow any of the operations below
+require 'brl/db/dbrc'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/dbUtil'
+require 'brl/genboree/rest/apiCaller'
+require 'brl/genboree/kb/mongoKbDatabase'
+require 'brl/genboree/kb/kbDoc'
+require 'brl/genboree/kb/validators/docValidator'
+
+# Standard setup stuff
+gbHost = "10.15.55.128" # >>> INFO: YOUR GENBOREE HOST HERE
+grp    = "EHR-API"      # >>> INFO: YOUR GENBOREE GROUP HERE. Where the special coll will live to support this extension.
+kb     = "EHR-API"      # >>> INFO: YOUR GENBOREE KB HERE. Where the special coll will live to support this extension.
+coll   = "EhrSendPdf"   # >>> INFO: YOUR COLLECTION HERE. This is the special coll that will be created to support this extension.
+dbrc = BRL::DB::DBRC.new()
+genbConf = BRL::Genboree::GenboreeConfig.load()
+dbrcRec = dbrc.getRecordByHost(gbHost, :api)
+mongoDbrcRec = dbrc.getRecordByHost(gbHost, :nosql)
+apiCaller = BRL::Genboree::REST::ApiCaller.new(gbHost, "", dbrcRec[:user], dbrcRec[:password])
+
+# Create KB
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/kb/{kb}")
+apiCaller.put( { :grp => grp, :kb => kb } )
+
+# Public-unlock the collection (it's ok that it doesn't exist yet)
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/unlockedResources")
+payload = {
+  "url" => "http://genboree.org/REST/v1/grp/#{CGI.escape(grp)}/kb/#{CGI.escape(kb)}/coll/#{CGI.escape(coll)}",
+  "public" => true                                           #=> #<Net::HTTPOK 200 OK readbody=true>
+}
+apiCaller.put( { :grp => grp }, [ payload ].to_json )
+
+# Create collection using model file provided (it's in our nested tsv format)
+require 'brl/genboree/kb/converters/nestedTabbedModelConverter'
+fileLineReader = File.open( "./clingen/examples/EHRSendPDF.model.tsv" )
+converter = BRL::Genboree::KB::Converters::NestedTabbedModelConverter.new()
+model = converter.parse(fileLineReader)
+mv = BRL::Genboree::KB::Validators::ModelValidator.new()
+modelOK = mv.validateModel(model)
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model")
+apiCaller.put({ :grp => grp, :kb => kb, :coll => coll }, model.to_json) # Replace with your grp, kb and coll
+
+# Put in some sample docs to verify works. You will put in your own real records of course.
+docsTsv = File.read( "./clingen/examples/EHRSendPDF.docs.tsv" )
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?format=tabbed_prop_nesting&docType=data")
+apiCaller.put( { :grp => grp, :kb => kb, :coll => coll }, docsTsv )
+# - verify
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?format=json_pretty&detailed=yes")
+apiCaller.get( { :grp => grp, :kb => kb, :coll => coll } )
+puts apiCaller.respBody
+# - test search works as needed
+props = [ "EHR URL.Tags.Tag.Name", "EHR URL.Tags.Tag.Value" ] #=> ["EHR URL.Tags.Tag.Name", "EHR URL.Tags.Tag.Value"]
+vals = [ "OMIM", "601144" ]
+apiCaller.setRsrcPath("/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProps={props}&matchValues={vals}&matchLogicOp={op}&detailed={det}&format={fmt}")
+apiCaller.get( { :grp => grp, :kb => kb, :coll => coll, :props => props, :vals => vals, :op => "and", :det => true, :fmt => "json_pretty"} )
+puts apiCaller.respBody # Should get back 1 doc

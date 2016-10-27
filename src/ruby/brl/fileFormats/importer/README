@@ -1,0 +1,113 @@
+Function:
+#####################
+The file "BRL_UCSC_importer.rb" takes the user input/selection of remote UCSC track information, and  
+  1) Downloads fosEndPairs table from UCSC and converts it to equivalent LFF version.
+  2) Downloads chain table from UCSC and converts it to equivalent LFF version. 
+
+To run correctly,
+All the files "BRL_UCSC_downloader.rb", "BRL_UCSC_fosmidlff.rb", "BRL_UCSC_chimpchainlff.rb", "BRL_UCSC_importer.rb", and "data_acquisition_data.txt" should be put in the same direcory in a machine with MySQL server installed in order to run them successfully.
+#####################
+
+The input usage info is:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+ruby BRL_UCSC_importer.rb -o host -a assembly -t trackName -y overriding -l className -f fileList -d dDirectoryOutput -v convertName -c cDirectoryOutput -e emailAddr
+ess
+  i.e.
+  ruby BRL_UCSC_importer.rb -o hgdownload.cse.ucsc.edu -a hg18 -t Fosmid:EndPairs -y 1 -l 'End Pairs' -f fosEndPairs.txt.gz -d /users/ybai/work/Project1/test_Downloade
+r -v fosEndPairs_LFF.txt -c /users/ybai/work/Project1/test_Converter -e ybai@ws59.hgsc.bcm.tmc.edu
+  2)
+  ruby BRL_UCSC_importer.rb -o host -a assembly -t trackName -y overriding -l className -f fileList -d dDirectoryOutput -v convertName -c cDirectoryOutput -e emailAddr
+ess -s targetSpecies -q querySpecies
+  i.e.
+  ruby BRL_UCSC_importer.rb -o hgdownload.cse.ucsc.edu -a hg18 -t Alignment:Chain -y 1 -l 'Comparative Genomics' -f chr1_chainPanTro2.txt.gz -d /users/ybai/work/Projec
+t1/test_Downloader -v chr1_chainPanTro2_LFF.txt -c /users/ybai/work/Project1/test_Converter -e ybai@ws59.hgsc.bcm.tmc.edu -s Human -q Chimp
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Other notes:
+--------------------------------------
+The className argument has been fixed (chain data: "Alignment:Chain"; fosmid data: "Fosmid:EndPairs"). 
+
+There are four overriding options for trackName (type:subtype):
+1. Does not allow overriding
+2. Allow type only
+3. Allow subtype
+4. Allow both
+______________________________________
+
+The sample output minutes look like:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(importer) woodstock59 >ruby BRL_UCSC_importer.rb -o hgdownload.cse.ucsc.edu -a hg18 -t Fosmid:EndPairs -y 1 -l 'End Pairs' -f fosEndPairs.txt.gz -d /users/ybai/work/Project1/test_Downloader -v fosEndPairs_LFF.txt -c /users/ybai/work/Project1/test_Converter -e ybai@ws59.hgsc.bcm.tmc.edu
+Tue Dec 18 14:50:10 -0600 2007 BEGIN IMPORT (Mem: 9492 kB)
+Server version: 5.0.45
+==== Operation for table data_acquisition ==================
+A list of remote data (tracks) that are compatible with user selected database - hg18:
+hg18    Alignment:Chain
+hg18    CCDS:Gene
+hg18    Cyto:Band
+hg18    Fosmid:EndPairs
+hg18    GC:CpgIslands
+hg18    Gene:RefSeq
+hg18    Known:Gene
+hg18    Segmental:Dups
+hg18    Variants:TCAG
+==== Operation for table track ==================
+Number of rows inserted: 1
+There is remote track(s) available for this input! The following track can be loaded:
+Fosmid:EndPairs
+==== Operation for table downloader_argument ==================
+Number of rows inserted: 1
+Tue Dec 18 14:50:12 -0600 2007 BEGIN (Mem: 9244 kB)
+Checking connections..
+Checking user name and password...
+Authentification is ok...
+Checking availbility of given assembly on host side....
+Starting downloading....
+Downloading completes! Please check your directory for files, thank you!
+Tue Dec 18 14:50:44 -0600 2007 DONE
+==== Operation for table converter_argument ==================
+Number of rows inserted: 1
+Tue Dec 18 14:50:46 -0600 2007 BEGIN (Mem: 9072 kB)
+Tue Dec 18 14:56:08 -0600 2007 DONE
+==== Operation for Genboree uploads files ==================
+The file to be uploaded into Genboree is: 
+/users/ybai/work/Project1/test_Converter/fosEndPairs_LFF.txt
+Tue Dec 18 14:56:08 -0600 2007 DONE IMPORT
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(importer) woodstock59 >ruby BRL_UCSC_importer.rb -o hgdownload.cse.ucsc.edu -a hg18 -t Alignment:Chain -y 1 -l 'Comparative Genomics' -f chr1_chainPanTro2.txt.gz -d /users/ybai/work/Project1/test_Downloader -v chr1_chainPanTro2_LFF.txt -c /users/ybai/work/Project1/test_Converter -e ybai@ws59.hgsc.bcm.tmc.edu -s Human -q Chimp
+Tue Dec 18 14:58:34 -0600 2007 BEGIN IMPORT (Mem: 9492 kB)
+Server version: 5.0.45
+==== Operation for table data_acquisition ==================
+A list of remote data (tracks) that are compatible with user selected database - hg18:
+hg18    Alignment:Chain
+hg18    CCDS:Gene
+hg18    Cyto:Band
+hg18    Fosmid:EndPairs
+hg18    GC:CpgIslands
+hg18    Gene:RefSeq
+hg18    Known:Gene
+hg18    Segmental:Dups
+hg18    Variants:TCAG
+==== Operation for table track ==================
+Number of rows inserted: 1
+There is remote track(s) available for this input! The following track can be loaded:
+Alignment:Chain
+==== Operation for table downloader_argument ==================
+Number of rows inserted: 1
+Tue Dec 18 14:58:36 -0600 2007 BEGIN (Mem: 9244 kB)
+Checking connections..
+Checking user name and password...
+Authentification is ok...
+Checking availbility of given assembly on host side....
+Starting downloading....
+Downloading completes! Please check your directory for files, thank you!
+Tue Dec 18 14:59:13 -0600 2007 DONE
+==== Operation for table converter_argument ==================
+Number of rows inserted: 1
+Tue Dec 18 14:59:14 -0600 2007 BEGIN (Mem: 9084 kB)
+Tue Dec 18 15:05:11 -0600 2007 DONE
+==== Operation for Genboree uploads files ==================
+The file to be uploaded into Genboree is: 
+/users/ybai/work/Project1/test_Converter/chr1_chainPanTro2_LFF.txt
+Tue Dec 18 15:05:11 -0600 2007 DONE IMPORT
+

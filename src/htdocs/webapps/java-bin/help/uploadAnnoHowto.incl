@@ -1,0 +1,157 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+  <TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+    <FONT class="topicText">HELP TOPIC:</FONT>
+    <FONT class="topicTitle">&quot;4. Uploading Annotations&quot;</FONT>
+  </TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#whatAreAnno">4.1 What Are Annotations?</A></LI>
+  <LI class="compact1_10"><A HREF="#uploadingAnno">4.2 Uploading Annotations</A></LI>
+  <LI class="compact1_10"><A HREF="#fileFormats">4.3 Annotation File Formats</A>
+    <UL class="compact1">
+      <LI><A HREF="#LFF"><FONT CLASS="tocSmall">4.3.1 LFF format</FONT></A></LI>
+      <LI><A HREF="#otherFormats"><FONT CLASS="tocSmall">4.3.2 Other formats</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=definingAGenome">2. Defining A Genome</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadEPhowto">3. Uploading Entry Points</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=lffFileFormat">5. The LFF Annotation Format</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="whatAreAnno">&nbsp;</A><BR>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">4.1. What Are Annotations?</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <P class="body">
+  An <SPAN class="genbLabel">Annotation</SPAN> in Genboree is a coordinate range on a defined
+  <SPAN class="genbLabel"><A class="invisiLink" HREF="showHelp.jsp?topic=definingAGenome">Entry Point</A></SPAN>
+  (such as a chromosome). Examples include: exons,
+  chromosome bands, mapped BACs, repeat regions, promotor sites, base-conservation scores, etc.
+  <P class="body">
+  Genboree also has the concept of <SPAN class="genbLabel">Annotation Groups</SPAN>, which are sets of
+  linked annotations that are best displayed via group-aware drawing styles. For example, the exons of a
+  gene transcript should always grouped together. Other examples include mate-pair reads, the HSPs of
+  a significant BLAST/BLAT hit, etc.
+  <P class="body">More information about <SPAN class="genbLabel">Annotation Groups</SPAN> is
+  provided in the <A HREF="showHelp.jsp?topic=lffFileFormat#name" class="invisiLink">description of the <SPAN class="genbLabel">name</SPAN> column</A>.
+  <P class="body">
+  An <SPAN class="genbLabel">Annotation</SPAN> also has other attributes associated with it, such as an
+  orientation, a type / subtype, a score, and possibly even user-defined attributes. For more information,
+  please refer to <A HREF="showHelp.jsp?topic=lffFileFormat"><SPAN class="helpTopic">&quot;5. The LFF
+  Annotation Format&quot;</SPAN></A>.
+  <HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="uploadingAnno">&nbsp;</A>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">4.2. Uploading Annotations:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+	<P class="body">
+  To upload annotations to your Genboree database:<BR>
+  <OL>
+    <LI class>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+    <LI>Navigate via the menu to <SPAN class="genbLabel">My Databases / Upload Data</SPAN>.</LI>
+    <LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the droplists.</LI>
+    <LI>Click the <SPAN class="genbLabel">Upload Data Tracks</SPAN> button, below the database information.
+    <P class="body">
+    <A NAME="annoUploadImg1"></A>
+    <IMG SRC="/images/uploadAnno1.gif" WIDTH="482" HEIGHT="174" BORDER="0">
+    </LI>
+    <LI>You will be taken to a new page with an interface like the one <A HREF="#annoUploadImg2">below</A>.</LI>
+    <LI>Use the interface to either (a) select an annotation file on your computer or
+    (b) paste properly formatted annotation data into the textbox.</LI>
+    <LI>Select the annotation file/input format from the droplist.
+      <P class="indentBody">
+        <SPAN class="genbLabel">LFF (Genboree format)</SPAN> is <i>highly</i> recommended
+        and will be the most expressive and featureful.</LI>
+      </P>
+    </LI>
+    <LI>Click the <SPAN class="genbLabel">Upload&gt;</SPAN> button at the bottom.</LI>
+    <LI>A progress bar should appear to indicate file transfer progress.</LI>
+    <LI>After the transfer, it will be queued for processing and uploading into the
+    database. You will receive an email when the upload has been completed.</LI>
+    <LI>NOTE: to upload, you must have at least the <SPAN class="genbLabel">Author</SPAN> role in the <SPAN class="genbLabel">Group</SPAN>.
+      <P class="body">
+      <A NAME="annoUploadImg2"></A>
+      <IMG SRC="/images/uploadAnno2.png" WIDTH="405" HEIGHT="219" BORDER="0">
+    </LI>
+  </OL>
+  <CENTER><DIV class="egDiv">
+  NOTE: if you have errors in your file, you will receive an email indicating the offending line numbers and the problem(s) on those lines.
+  </DIV></CENTER>
+  <CENTER><DIV class="egDiv">
+  NOTE: if you have a slow Internet connection, or a huge number of annotations to upload, you may want to (a) split the file and
+  upload each piece and/or (b) compress the file with either Gzip or Zip (e.g. WinZip).
+  </DIV></CENTER>
+  <CENTER><DIV class="egDiv">
+  NOTE: The checkbox indicated by the <SPAN class="redFont">red arrow</SPAN>
+   (<SPAN style="color: red ; font-family: 'courier new', monospace ; font-size: 13pt ;">&larr;</SPAN>)</B></FONT> in the image above,
+  causes <i>ALL</i> the annotation tracks currently in the database to be deleted before your file
+  is processed. This is useful for replacing an entire database with a new set of fresh data in a single step, for example.
+  </DIV></CENTER>
+  <HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="fileFormats">&nbsp;</A>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">4.3. Annotation File Formats:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <!--    SUB-TOPIC -->
+    <!--    Sub-topic header -->
+      <A NAME="LFF">&nbsp;</A>
+      <DIV class="subsubtopicHeader">4.3.1. LFF Annotation Format</DIV>
+    <!--    Sub-topic content -->
+      <P class="body">
+      This is the preferred annotation format, because it is the most expressive and
+      feature-filled for Genboree. Particular fields and values in this format enable several features for capturing
+      and displaying your annotation data in the most complete and customizable way.
+      <P class="body">
+      The Genboree <SPAN class="genbLabel">LFF format</SPAN> is adapted from the LDAS upload format
+      described at <A class="invisiLink" HREF="http://www.biodas.org/">http://www.biodas.org/</A>. Although it is backwards compatible with the original,
+      Genboree <SPAN class="genbLabel">LFF</SPAN> includes some optional fields to support extra annotation
+      information and browser capabilities.
+      <CENTER><DIV class="egDiv">
+      Due to the importance of the <SPAN class="genbLabel">LFF format</SPAN> within Genboree, please
+      read <A HREF="showHelp.jsp?topic=lffFileFormat"><SPAN class="helpTopic">&quot;The LFF File Format&quot;</SPAN></A>
+      for a description of the format and how the columns relate to Genboree.
+      </DIV></CENTER>
+  <!--    SUB-TOPIC -->
+    <!--    Sub-topic header -->
+      <A NAME="otherFormats">&nbsp;</A>
+      <DIV class="subsubtopicHeader">4.3.2. Other formats</DIV>
+    <!--   Sub-topic content -->
+      <P class="body">
+      Genboree also supports some other file formats:<BR>
+      <P class="body">
+      <IMG SRC="/images/annoFormats.png" WIDTH="369" HEIGHT="55" BORDER="0"><BR CLEAR="all">
+      <P class="body">
+      <i>However</i>, such annotations undergo a generic conversion to LFF and may not
+      allow your data to be displayed how you wish or may not capture non-essential data
+      that normally would be accessible.
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

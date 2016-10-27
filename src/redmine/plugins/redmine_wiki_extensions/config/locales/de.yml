@@ -1,0 +1,24 @@
+# German strings go
+de:
+  label_wikiextensions_tags: Tags
+  label_wikiextensions_new: Neu
+  wiki_extensions: Wiki-Erweiterungen
+  label_wikiextensions_tab: Menüpunkt
+  wiki_extensions_add_tab: "Menüpunkte zum Projektmenü hinzufügen:"
+  permission_add_wiki_comment: Wiki-Kommentare hinzufügen
+  permission_delete_wiki_comments: Wiki-Kommentare löschen
+  permission_edit_wiki_comments: Wiki-Kommentare bearbeiten
+  permission_wiki_extensions_settings: Wiki-Extensions verwalten
+  
+  field_auto_preview_enabled: Automatische Vorschau aktivieren
+  field_sidebar_disabled: Sidebar deaktivieren
+  wiki_extensions_vote: vote
+  
+  
+  wiki_page_commented_header: Kommentar zur Wiki-Seite "%{page_title}" des Projektes "%{project_name}" hinzugefügt von %{author}
+  wiki_page_commented_comment_head: 'Kommentar:'
+  wiki_page_commented_url: 'Sie können die Kommentarseite mit folgendem Link ansehen:'
+  label_wiki_comment_added: 'Wiki-Kommentar hinzugefügt'
+  label_wiki_comment_plural: 'Wiki-Kommentare'
+  
+  wiki_extensions_new_wiki_page: 'Neue Seite'

@@ -1,0 +1,27 @@
+# ##############################################################################
+# Input-Related Properties
+# ##############################################################################
+# What minimum score filter to apply?
+input.minScore              = 0
+# Regular expressions that will 'isolate' the actual sequence ID from the
+# sequence name in the pash file
+input.query.baseNameRE      = (.+)
+input.target.baseNameRE     = (.+)
+
+# ##############################################################################
+# LFF-Record Construction Properties
+# ##############################################################################
+# What string to use for the LFF 'class' file
+output.class                = Pash
+# What string to use for the LFF 'type' file
+output.type                 = Pash
+# What string to use for the LFF 'subtype' file
+output.subtype              = Hits
+
+# ##############################################################################
+# Output-Related Properties
+# ##############################################################################
+# Where to put hits of query on target, as LFF
+output.queryFile            = queryOnTarget.lff
+# Where to put hits of target on query, as LFF
+output.targetFile           = targetOnQuery.lff

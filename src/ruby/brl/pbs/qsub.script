@@ -1,0 +1,24 @@
+# declare a name for this job to be sample_job
+#PBS -N ab  
+# request the queue (enter the possible names, if omitted, serial is the default)
+#PBS -q dque     
+# request 1 node
+#PBS -l nodes=1
+# request 48 hours of cpu time
+#PBS -l cput=48:00:00        
+# set wall time
+# request 48 hours of walltime
+#PBS -l walltime=48:00:00
+# mail is sent to you when the job starts and when it terminates or aborts
+#PBS -m bea
+#specify your email address
+#PBS -M rharris1@bcm.tmc.edu
+#PBS -e /home/rharris1/work/pgiMetric/splitPsl/pbsMsg/ab.pbs.err
+#PBS -o /home/rharris1/work/pgiMetric/splitPsl/pbsMsg/ab.pbs.out
+# By default, PBS scripts execute in your home directory, not the 
+# directory from which they were submitted. The following line 
+# places you in the directory from which the job was submitted.  
+cd $PBS_O_WORKDIR
+# run the program
+/home/rharris1/work/pgiMetric/src/blatDeconcat.rhesus.washU.rb -i /home/rharris1/work/pgiMetric/macaque.supercontigs.fa.gz.idx -p /home/rharris1/work/pgiMetric/splitPsl/pgi.reads.fa.22432.psl.match100orMore.ab > /home/rharris1/work/pgiMetric/splitPsl/pbsMsg/ab.out 2> /home/rharris1/work/pgiMetric/splitPsl/pbsMsg/ab.err
+exit 0

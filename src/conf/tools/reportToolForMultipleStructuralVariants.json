@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "reportToolForMultipleStructuralVariants",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/Epigenome%20ToolSet%20Demo%20Input%20Data",
+    "label": "Report Multiple SVs",
+    "shortLabel": "Report Multiple SVs"
+  }
+}

@@ -1,0 +1,57 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will copy/move tracks from one database to another.
+        You can either drag a track class (to copy all tracks within that class) or drag tracks individually into &quot;Input Data&quot;.
+        <br>&nbsp;<br>
+        Review that the correct tracks are going to be copied/moved.
+        "
+        
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>Track(s)</u> and/or <u>Class</u> and/or <u>Database(s)</u> into &quot;Input Data&quot;. You will have the option of selecting the tracks you want to copy.',
+        ],
+        :types              => [ [ 'Tracks', 'min: 0 ; max: any' ], [ 'Class', 'min: 0 ; max: any' ], [ 'Database', 'min: 0 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The tracks will uploaded in that database' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]], 
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Copy Tracks?',    'Check this to just copy the tracks to the destination database (This will NOT remove the tracks from the source databases). ' ],
+          [ 'Move Tracks? (Delete from Source)',    'Check this to move the tracks to the destination database (This will remove the tracks from the source databases). ' ],
+          [ 'Submit', "Once you've reviewed the input tracks and the output destination database, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+</div>

@@ -1,0 +1,170 @@
+<%
+  # TODO escape output path (experiment name) to exclude directory operations, etc
+  require 'open-uri'
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  require 'brl/genboree/toolPlugins/tools/tools'
+  include BRL::Genboree
+  include BRL::Genboree::ToolPlugins
+  include BRL::Genboree::ToolPlugins::Util
+
+  # Helper Methods
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+  end
+
+  # CGI/Apache variables
+  cgi = CGI.new
+  @req = Apache.request
+  @resp = $stdout
+  @err = nil
+
+  # Get group/database X-Headers *incoming* from Genboree.
+  # Test genboree syncing of group/db (when genboree fixed, this should be
+  # used to set group/db in UI)
+  currGroupId = getGroupIdXHeader(@req).to_i
+  currDatabaseId = getDatabaseIdXHeader(@req).to_i
+  currGroupName = getGroupNameXHeader(@req)
+  currDatabaseName = getDatabaseNameXHeader(@req)
+
+  # Key global vars
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  userId = cgi['userId'].to_i.untaint
+  groupId = cgi['groupId'].to_i.untaint
+  groupId = currGroupId if(groupId == 0)
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  refSeqId = currDatabaseId if(refSeqId == 0)
+  expname = cgi['expname'].strip.dup
+  tool = cgi['tool'].strip.dup.untaint
+  nameSort = cgi['nameSort'].empty? ? false : true
+  directDownload = (not cgi['download'].empty?)
+  groups = wrapper.getGroups( userId )
+  groupId = groups.first[0].to_i if(groupId == 0)
+  databases = wrapper.getDatabases( userId, groupId )
+
+  [ expname, tool ].each { |xx| xx.gsub!(/\.\./, '') ; xx.gsub!(/\\/, '') ; xx.gsub!(/\~/, ''); xx.gsub!(/\//, '_') } # Prevent path injection attacks, sort of.
+
+	# Get experiments for which there are results
+	results = BRL::Genboree::ToolPlugins::InnerWrapper.getExpsWithResults(groupId, refSeqId, tool)
+	resultKeys = results.keys
+  unless(resultKeys.empty?)
+  	unless(nameSort)
+      resultKeys.sort! { |aa, bb| results[bb].mtime <=> results[aa].mtime }
+    else
+      resultKeys.sort! { |aa, bb| results[aa].baseFileName <=> results[bb].baseFileName }
+    end
+  end
+
+  unless(directDownload)
+    # Set group/database X-Headers *outgoing* to Genboree to reflect any changes:
+    setGroupIdXHeader(@req, groupId)
+    setDatabaseIdXHeader(@req, refSeqId)
+
+    prepForHtml()
+
+%>
+    <font color="#5947B3" size="+0"><strong>Locate &amp; Display Results From a Completed Job:</strong></font>
+    <P>
+    <form name="usrfsq" id="usrfsq" action="/java-bin/toolPluginsResults.jsp" method="post">
+    <input type="hidden" name="userId" value="<%= userId %>">
+    <table border="0" cellpadding="4" cellspacing="2" width="100%">
+    <tr>
+    	<!-- Select Group -->
+      <td class="form_header" style="width: 80px;">
+      	<B>Group</B>
+      </td>
+      <td class="form_header">
+      	<select name="groupId" id="groupId" onchange='this.form.expname.value="nil";this.form.submit()' class="txt" style="width:300">
+        	<option <%= " selected" if(groupId == 0) %> value="">Select Group</option>
+          <% groups.each { |group| %>
+            	<option value="<%= group[0] %>"<%= " selected" if((groupId.to_s == group[0].to_s) or (currGroupId == group[0].to_s)) %>><%= group[1] %></option>
+          <% } %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+    	<!-- Select Database -->
+      <td class="form_header">
+      	<B>Database</B>
+      </td>
+      <td class="form_header">
+        <select name="refSeqId"	class="txt" id="refSeqId" style="width:300" onChange='handleSubmit(event)'>
+        	<option <%= " selected" if(refSeqId == 0) %> value="" >Select Database</option>
+          <% 	unless(groupId == 0)
+             		databases.each { |db|
+          %>
+          				<option value="<%= db[3] %>"<%= " selected" if((refSeqId.to_s == db[3].to_s) or (currDatabaseId == db[3].to_s)) %>><%= db[2] %></option>
+          <% 		} %>
+          <%	end %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+    	<!-- Select Tool (actually a function) -->
+      <td class="form_body" width="100">
+      	<B>Select Tool</B>
+     	</td>
+      <td class="form_body" >
+        <select name="tool" id="tool" onChange="handleSubmit(event)">
+          <option value="" <%= "selected" if(tool.empty?) %>>Select a Tool</option>
+          <%
+            toolList = BRL::Genboree::ToolPlugins::Tools.list()
+            toolOrder = BRL::Genboree::ToolPlugins::Tools.order()
+            toolOrder.each{ |toolSym| # each registered tool
+              toolClass = BRL::Genboree::ToolPlugins::Tools.list[toolSym]
+              toolClass.functions.each_key { |functionName|  # each function within tool
+                functionDisplayName = toolClass.functions[functionName][:displayName]
+                functionValueName = toolClass.functions[functionName][:internalName]
+          %>
+              <option value="<%= functionValueName %>" <%= "selected" if(tool == functionValueName) %>><%= functionDisplayName %></option>
+          <%
+              }
+            }
+          %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+    	<td colspan="2" style="height:12"></td>
+    </tr>
+    <tr>
+    	<!-- Select Job to View -->
+      <td class="form_body" style="width: 80px;">
+      	<B>Job Name</B>
+      </td>
+      <td class="form_body" valign="top">
+        <select name="expname" class="txt" id="expname" style="width:300;margin-bottom:2px;" onChange='this.form.submit()'>
+        	<option value="" <%= "selected " if(expname.empty?) %>>Select Job</option>
+          <%
+              resultKeys.each { |resultKey| %>
+          			<option value="<%= resultKey %>" <%= "selected" if(expname==resultKey) %>><%= resultKey.to_s %></option>
+          <% 	} %>
+          </select>
+          &nbsp;&nbsp;
+          <input type="checkbox" id="nameSort" name="nameSort" value="true" style="margin-bottom:2px;" onchange="$('usrfsq').submit()" <%= "checked" if(nameSort) %>>Sort by name, rather than date.</input>
+      </td>
+    </tr>
+    </table>
+<%
+  end
+
+	# Get the output presentation from the output.rhtml of the tool
+	# THIS SHOULD BE DONE DIFFERENTLY--not memory intensive open.read but open.readline or buffered version
+	output = nil
+  if( groupId != 0 and refSeqId != 0 and !tool.empty? and !expname.empty? and BRL::Genboree::ToolPlugins::Tools.list().key?(tool.to_sym) )
+    outputArgs = ENV['QUERY_STRING'] # pass through everything
+		output = "/#{tool}/output.rhtml?#{outputArgs}".dup.untaint
+  end
+
+  unless(directDownload)
+%>
+    <div style="text-align: center; color: red;"><%= @err.nil? ? "" : @err %></div>
+<%
+  end
+%>
+<%= output ? open( ("http://#{@req.hostname}/genboree/toolPlugins" + output).dup.untaint ).read : "" %>

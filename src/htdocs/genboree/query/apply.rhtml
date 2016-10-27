@@ -1,0 +1,195 @@
+<%# THIS FILE USES erubis %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/conf/headerFooterConfig.rb'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+$VERBOSE = false
+@cgi = CGI.new()
+@req = Apache.request
+@serverName = @cgi.host
+@context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+@context.title = "Apply Boolean Queries"
+
+########################################################################################
+# Utility method to easily make an inquiry to the REST API
+# This method will either return the apiData structure or exit in failure mode
+# * Arguments :
+#  - +String+ -> The REST URI to query
+########################################################################################
+def getRestData(uri)
+  apiCaller = ApiCaller.new(@context.genbConf.apiHost || "localhost", uri, @cgi["userLogin"].strip(), @cgi["passwd"].strip())
+
+  httpResp = apiCaller.get()
+  if(apiCaller.failed?)
+    errorText = ""
+    if(httpResp.nil?)
+      # Exception happened
+      errorText << "<div class=\"feedback\"><div class=\"failure\">ERROR: The REST resource that is required is currently unavailable. "
+      errorText << "Please try again later or contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+      errorText << "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>"
+      errorText << "Detailed Error Information: #{apiCaller.error.inspect}</div></div>"
+    else
+      # An API related error
+      apiCaller.parseRespBody()
+      errorText << "<div class=\"feedback\"><div class=\"failure\">An error has occurred while attempting to process your request.<br>"
+      errorText << "Please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">#{@context.genbConf.gbTechEmail}</a> for assistance."
+      errorText << "<br><br>"
+      errorText << "<em>REST API Error</em>: An error occurred while communicating with the REST interface!<br>"
+      errorText << "<em>Status Code</em>: #{apiCaller.apiStatusObj["statusCode"]}<br><em>Message</em>: #{apiCaller.apiStatusObj["msg"]}"
+      errorText << "</div></div>"
+    end
+
+    puts errorText
+    exit
+  end
+
+  apiCaller.parseRespBody()
+  return apiCaller.apiDataObj
+end
+
+# Basic error checking for required params, should never happen but if so, this error messages is better than HTTP 500
+unless(@cgi.has_key?("userPwdDigest") && @cgi.has_key?("userLogin") && @cgi.has_key?("userId"))
+  # Login & password digest are required components, if we don't get these from the JSP, internal error occurred
+  err = "<div class=\"feedback\"><div class=\"failure\">An internal system error has occurred, please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+  err += "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>\nERROR: A required parameter was missing!</div></div>\n"
+  puts err
+
+  exit
+end
+
+# Get a list of groups (and the databases for the first selected group)
+groups = getRestData("/REST/v1/usr/#{CGI.escape(@cgi["userLogin"])}/grps").map { |grp| grp["text"] }
+dbs = getRestData("/REST/v1/grp/#{CGI.escape(groups[0])}/dbs").map { |db| db["text"] }
+tracks = getRestData("/REST/v1/grp/#{CGI.escape(groups[0])}/db/#{CGI.escape(dbs[0])}/trks").map { |track| track["text"] }
+queries = getRestData("/REST/v1/grp/#{CGI.escape(groups[0])}/db/#{CGI.escape(dbs[0])}/queries").map { |query| query["text"] }
+
+# Map over our arrays to easily write them out to our javascript
+groups.map! { |grp| "'" + grp.gsub("'", "\\\\'") + "'" } 
+dbs.map! { |db| "'" + db.gsub("'", "\\\\'") + "'" }
+tracks.map! { |track| "'" + track.gsub("'", "\\\\'") + "'" }
+queries.map! { |query| "'" + query.gsub("'", "\\\\'") + "'" }
+
+@context.addHeadData = "<script type=\"text/javascript\" src=\"/javaScripts/query/BooleanQueryUI.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/apply.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/help.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script>\n"
+@context.addHeadData << "  BHI = new BooleanQueryUI() ;\n"
+@context.addHeadData << "  BHI.setGroups([#{groups.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setDbs([#{dbs.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setTracks([#{tracks.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setQueries([#{queries.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setQueryMode('apply') ;\n"
+@context.addHeadData << "  BHI.setQueryUserId('#{@cgi["userId"]}') ;\n"
+@context.addHeadData << "  BHI.setUserId('#{@cgi["userId"]}') ;\n"
+@context.addHeadData << "  BHI.setUserEmail('#{@cgi["userEmail"]}') ;\n"
+@context.addHeadData << "</script>\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/statusInfo.css?#{@context.jsVerStr}\">\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/query.css?#{@context.jsVerStr}\">\n"
+# ---------------------------------------------------------------------------
+
+begin
+  @context['hostedSite'] = hostedSite = @cgi['hostedSite'] or "default"
+  @context['hdrFtrConf'] = hdrFtrConf = BRL::Genboree::Conf::HeaderFooterConfig.load()
+  @context.prepForHtml()
+# TODO: 
+# 4. Change to apply query button
+%>
+<!-- Header -->
+<%= @context.includeFile("/genboree/workbench/header.rhtml") %>
+<div id="toolbar"></div>
+<div id="content">
+  <fieldset>
+    <legend>
+      Available Queries
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.listQueries.text, helpMessages.listQueries.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction">
+      Select the query to apply by specifying the Group, Database and Query
+    </div>
+    <ul class="options" id="querySelect">
+      <li class="header">
+        Select the group and database:
+      </li>
+      <li>
+        <label for="groupCombo">Group:</label>
+        <div id="grps"></div>
+      </li>
+      <li>
+        <label for="dbCombo">Database:</label>
+        <div id="dbs"></div>
+      </li>
+      <li class="header">
+        Select the query:
+      </li>
+      <li>
+        <label for="queriesCombo">Query:</label>
+        <div id="queries"></div>
+        <img id="queryLoading" src="/images/ajaxLoader.gif" alt="Loading Queries..." style="display: none ; " />
+      </li>
+    </ul>
+  </fieldset>
+  <fieldset>
+    <legend>
+      Apply Query
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.applyQuery.text, helpMessages.applyQuery.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction">
+      <div>
+        A query can be applied to a Resource within a particular Group and Database. To apply the above specificed query, first select a 
+        Group and Database then the desired Resource to query on. 
+      </div>
+      <div>
+        If the selected resource is "Annotation in a Track", you will also have to specify the track.
+      </div>
+    </div>
+    <ul class="options" id="applyOpts">
+      <li class="header">
+        Select the group and database:
+      </li>
+      <li>
+        <label for="applyGrpsCombo">Group:</label>
+        <div id="applyGrps"></div>
+      </li>
+      <li>
+        <label for="applyDbsCombo">Database:</label>
+        <div id="applyDbs"></div>
+        <img id="applyDbLoading" src="/images/ajaxLoader.gif" alt="Loading DBs..." style="display: none ; " />
+      </li>
+      <li class="header">
+        Select the resource:
+      </li>
+      <li>
+        <label for="rsrcCombo">Resource: </label>
+        <div id="rsrc"></div>
+      </li>
+      <li id="trackInfo" style="visibility: hidden ;">
+        <label for="trackCombo">Track: </label>
+        <div id="tracks"></div>
+        <img id="trackLoading" src="/images/ajaxLoader.gif" alt="Loading Tracks..." style="display: none ; " />
+      </li>
+    </ul>
+  </fieldset>
+  <div id="buttons">
+    <input type="button" value="Apply Query" onclick="applyQuery() ;"/>
+    <img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- Footer -->
+<%= @context.includeFile("/genboree/workbench/footer.rhtml") %>
+<%
+end # begin-rescue-ensure
+%>

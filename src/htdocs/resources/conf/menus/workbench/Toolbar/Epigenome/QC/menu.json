@@ -1,0 +1,7 @@
+[
+  {
+    "text": "Calculate Percentile Quality Scores",
+    "idStr": "epigenomePercentileQC",
+    "tooltip": "Performs QC of epigenomic methylation data via a percentile-based method.<br>&nbsp;<br>Mapped reads are provided by specifying a BED file which already has been transferred to Genboree." 
+  }
+]

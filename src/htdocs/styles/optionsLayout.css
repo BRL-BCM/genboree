@@ -1,0 +1,147 @@
+ul, select 
+{
+  padding: 0 ;
+}
+
+ul li, ol li
+{
+  border: 1px solid #BBB ;
+  padding: 3px ;
+  /*height: auto ;*/
+  margin: 5px 0 ; 
+  background: #FFF ;
+  list-style-type: none ;
+}
+
+fieldset
+{
+  padding: 5px ;
+  margin: 3px 0 ;
+}
+
+fieldset legend
+{
+  color: #4C3D99 ;
+}
+
+.checkbox
+{ 
+  /** IE Hacks **/
+  width: 13px ;
+  height: 13px ;
+  margin-bottom: 2px ;
+}
+  
+.radio
+{
+  vertical-align: bottom ;
+  margin-right: 5px ;
+}
+
+.optionsGroup
+{
+  padding: 5px ; 
+  overflow: auto ;
+}
+
+a.advancedLink
+{
+  clear: left ;
+  float: left ;
+  padding-left: 16px ;
+  background-image: url(/images/vgpPlus.gif) ;
+  background-repeat: no-repeat ;
+  background-position: 2px 50% ;
+}
+  
+.option
+{
+  overflow: auto ;
+  overflow-y: hidden ; /** Hack for firefox 3 on mac to hide needless vertical scroll **/
+  margin-bottom: 5px ;
+  clear: left ;
+}
+
+.option label
+{
+  /*display: block ;*/
+  float: left ;
+  width: 30em ;
+}
+
+.optionInput
+{
+  float: left ;
+  width: 45% ;
+}
+
+.colorInput
+{
+  height: 1.8em ;
+  position: relative ;
+}
+
+.colorLink
+{
+  position: absolute ;
+  bottom: 0 ;
+}
+
+.advancedOptions
+{
+  margin: 5px 15px ; 
+  border: 1px solid #EDEDED ; 
+  background-color: #FBFBFB ;
+  clear: left ;
+  zoom: 1 ; /* Sadly, an IE hack to fix a hasLayout bug */
+}
+
+.advancedOptions label
+{
+    width: 10em ;  
+}
+
+.advancedOptions div .smallOption
+{
+  left: 7em ;
+  width: 50% ;
+}
+
+.dataList
+{
+  overflow: auto ;
+  margin: 5px 0 ;
+  padding: 5px ;
+  border: 1px solid #DDD ;
+  background-color: #FBFBFB ;
+}
+
+.buttonPanel
+{
+    clear: both ;
+}
+
+.even
+{
+  background-color: #EAE6FF ;
+  border: none ;
+}
+
+.odd
+{
+  background-color: #FFF ;
+  border: none ;
+}
+
+.disabled
+{
+    color: #999 ;
+}
+
+.swatch
+{
+  width: 1.6em ; height: 1.6em ;
+  border: 1px solid #B5B8C8 ;
+  margin-right: 5px ;
+  float: left ;
+}

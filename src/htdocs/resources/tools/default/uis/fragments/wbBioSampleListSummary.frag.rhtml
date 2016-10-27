@@ -1,0 +1,32 @@
+<%
+require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+%>
+
+<%
+  @bioSampleList = [ @bioSampleList ] unless(@bioSampleList.is_a?(Array) or @bioSampleList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@bioSampleList.nil? or @bioSampleList.empty?) ? "" : "rowspan='#{@bioSampleList.size}'") %> ><%= (@label || "Sample") %>:</th>
+<%  if(@bioSampleList.nil? or @bioSampleList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      sampleHelperObj = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new()
+      @bioSampleList.each_index { |ii|
+        item = @bioSampleList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        sample = sampleHelperObj.extractName(item)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== sample %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

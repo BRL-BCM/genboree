@@ -1,0 +1,32 @@
+<TR><TD colospan="4">
+<table width="100%"><TR><TD  align="left" width="43%" colspan="2" align="left" >Page<% ntemp = 0; 
+if (numPages <= maxDisplay ) {
+for (int  n=0; n<numPages; n++) { ntemp = n+1;
+if (currentPageIndex == n) {%> <a href="#" id="ntemp"  onClick="setViewPage(<%=n%>, '', 'viewForm');">
+<font color="green"> <%=ntemp%></font></a>&nbsp;&nbsp;
+<%  } 
+else {%> <a href="#"  id="ntemp"   onClick="setViewPage(<%=n%>, '', 'viewForm');"> <font color="black"> <%=ntemp%></font></a>&nbsp;&nbsp;
+<% }
+}
+}
+else { 
+    if (endPageNum > (numPages -1))
+        endPageNum = numPages -1; 
+    for (int  n=startPageNum; n<=endPageNum; n++) { ntemp = n+1; if (currentPageIndex == n)  {
+%><a href="#"  id="ntemp"  onClick="setViewPage(<%=n%>, '', 'viewForm');"><font color="green"><%=ntemp%></font></a>&nbsp;&nbsp;
+<%  }else {  %>
+<font color="black"><a href="#"  id="ntemp"  onClick="setViewPage(<%=n%>, '', 'viewForm');"><%=ntemp%></font></a>&nbsp;&nbsp;
+<%}
+    }
+  if (endPageNum < (numPages -1)) {
+%>
+<a  href="#"  name="morePages"  id="morePages" onClick="setViewPage(<%=endPageNum%>, 'morePages', 'viewForm');"> 
+<font color="black">more</font></a>
+<%}}%></TD><TD width="30"  colspan="2" align="right"  ><nobr><B> Annotations/Page: </B>
+<select  id="app"  name="app" BGCOLOR="white" onChange="this.form.submit();   " >
+<% for (int j=0; j<dispNum.length; j++) { String sel = "";
+if (dispNum[j]==displayNum) sel = " selected ";%><option  value="<%=dispNum[j]%>" <%=sel%>> <%=dispNum[j]%></option><%}%></select>&nbsp; &nbsp;<INPUT SIZE="14"  name="home" id="home" TYPE="button"  VALUE="<<"  onclick="setViewPage(<%=currentPageIndex%>, 'home', 'viewForm');" >
+<INPUT SIZE="14"  name="previous" id="previous" TYPE="button"  VALUE="<" onclick="setViewPage(<%=currentPageIndex%>, 'previous', 'viewForm');" >
+<INPUT SIZE="14"  name="next" id="next" TYPE="button"  VALUE=">" onclick="setViewPage(<%=currentPageIndex %>, 'next', 'viewForm');" >
+<INPUT SIZE="14"  name="last" id="last" TYPE="button"  VALUE=">>"  onclick="setViewPage(<%=currentPageIndex%>, 'last', 'viewForm');" >
+</nobr></TD></tr></table></TD></TR>

@@ -1,0 +1,91 @@
+<% # THIS IS AN ERUBY FILE
+
+require 'cgi'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+eps = Array.new()
+1.upto(22) { |num| eps.push("chr#{num}") }
+eps.push("chrX")
+eps.push("chrY")
+
+%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>Cytoband Drawing - Testing</title>
+    <script src="/javaScripts/prototype.js"></script>
+    <script>
+      function requestImage()
+      {
+        var img = document.createElement('img') ;
+        var imgUrl = '/genboree/cytoband.rhtml?ep=' + $F('eps') + '&epStart=' + $F('epStart') + '&epStop=' 
+          + $F('epStop') + '&orientation=' + $F('orientation') + '&width=' + $F('width') + '&height=' + $F('height') ;
+
+        img.onload = function(event) {
+          $('thumb').src = imgUrl ;
+        }
+
+        img.src = imgUrl
+        return false ;
+/*        new Ajax.Updater('thumb', '/genboree/cytoband.rhtml',
+          {
+            parameters : { ep : $F('eps'), epStart : $F('epStart'), epStop : $F('epStop'), orientation : $F('orientation'), width : $F('width'), height : $F('height') }
+          }
+        ) ;
+      
+        return ;
+*/
+      }
+    </script>
+  </head>
+  <body>
+    <div style="padding: 10px ; border: 1px solid #AAA ; margin: 20px ;">
+      <div style="border: 1px dashed #999 ; padding: 5px ; background-color: #DDD ;">
+        Create a thumbnail for an entry point from below
+      </div>
+      <ul id="options" style="list-style-type: none ; padding: 0 ;">
+        <li>
+          <label for="eps">Entry Point: </label>
+          <select id="eps">
+<%
+  eps.each { |ep|
+%>
+            <option value="<%=ep%>"><%=ep%></option>
+<%
+  }
+%>
+          </select>
+        </li>
+        <li>
+          <label for="epStart">Start:</label>
+          <input id="epStart" type="text" style="width: 10em ;">
+        </li>
+        <li>
+          <label for="epStop">Stop:</label>
+          <input id="epStop" type="text" style="width: 10em ;">
+        </li>
+        <li>
+          <label for="orientation">Orientation:</label>
+          <select id="orientation">
+            <option value="0">Horizontal</option>
+            <option value="1">Vertical</option>
+          </select>
+        </li>
+        <li>
+          <label for="width">Width:</label>
+          <input id="width" type="text">
+        </li>
+        <li>
+          <label for="height">Height:</label>
+          <input id="height" type="text">
+        </li>
+      </ul>
+      <input type="button" value="Generate Image" onclick="requestImage() ;">
+      <div id="cytoband" style="margin-top: 20px ; background-color: #FCC ; padding: 10px ;">
+        <img id="thumb" src="/genboree/cytoband.rhtml?ep=chr1&epStart=&epStop=">
+      </div>
+    </div>
+  </body>
+</html>

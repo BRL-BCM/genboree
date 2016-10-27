@@ -1,0 +1,9 @@
+hg18	CCDS:Gene	Gene
+hg18	Cyto:Band	Marker
+hg18	GC:CpgIslands	GC
+hg18	Gene:RefSeq	Gene
+hg18	Known:Gene	Gene
+hg18	Segmental:Dups	Duplication
+hg18	Variants:TCAG	Structural Variants
+hg18	Fosmid:EndPairs	End Pairs
+hg18	Alignment:Chain	Comparative Genomics

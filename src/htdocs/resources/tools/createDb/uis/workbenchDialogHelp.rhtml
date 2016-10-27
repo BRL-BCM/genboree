@@ -1,0 +1,48 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will create/add a new database in the target <u>Group</u>. Note that the database to be created should NOT already exist in the group.
+          <br>&nbsp;<br>
+        "
+
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>group</u> into &quot;Output Targets&quot;. The new database will be created in this group. After your destination group is in &quot;Output Target&quot;, select <code>Data </code> &raquo; <code>Databases </code> &raquo; <code>Create Database </code>' ],
+        :types              => [ [ 'Group', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Reference Sequence', "Select the genome assmebly the database will use. "],
+          [ 'Database Name', "The name of the database to be created/added. [REQUIRED]"],
+          [ 'Description', "A line or two describing the database. [OPTIONAL]"],
+          [ 'Species', "Automatically selected based on Reference Sequence. [OPTIONAL]"],
+          [ 'Version', "Automatically selected based on Reference Sequence. [OPTIONAL]"],
+          [ 'Submit', "Once you've reviewed the name of the new database to be created, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+
+</div>

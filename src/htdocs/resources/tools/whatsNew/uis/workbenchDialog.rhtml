@@ -1,0 +1,157 @@
+<%# RENDER HTML %>
+<div style="height: 390px; width: 550px; " class="wbDialog wbHelp" >
+  <h4 align="center" class="wbTitle">What's New?</h4>
+  <b>Jump To:</b><br>
+  <ul>
+    <li><a href="#improvements">Improvements</a></li>
+    <li><a href="#features">Features</a></li>
+  </ul>
+  <br>
+  <ul class="wbIntro">
+    <li class="wbIntro">
+      <b><a name="improvements">IMPROVEMENTS</a></b>:
+      <ul>
+        <li><b>Improved:</b> <code>[workbench menu]</code> Tools previously ear-marked for removal have been removed, following a 6 month feedback &amp; grace period.</li>
+        <li><b>Improved:</b> <code>[workbench menu]</code> The Genboree navigation bar at the top of the Workbench page has been removed. Selected items have been migrated into the tool menu where appropriate.</li>
+        <li><b>Improved:</b> <code>MakeSignal for ChromHMM</code> now has two new options: run chromHMMBinarize Signal and chromHMM LearnModel jobs.</li>
+        <li><b>Improved:</b>  <code> BWA</code> - BWA tool now allows two options for reference sequence index: use existing index from user or repository databases or make new index using the new IndexBowtie tool.</li>
+        <li><b>Improved:</b>   <code>Getting Started</code> - Added FAQ links to some basic Workbench tasks. Also added icons have been added to various data entities.</li>
+        <li><b>Improved:</b>  <code>Getting Started</code> - Cleaned the links next to the <code>Welcome to Genboree Workbench</code>, which were redundant with the same items listed in the <code>Help</code> menu and which were adding too many little text adornments next to the sub-title. Instead, added a useful &quot;Watch Intro Video&quot; link which is not immediately available in the <code>Help</code> menu.</li>
+        <li><b>Improved:</b>  <code>What's New</code> - Convenience links to &quot;Improvements&quot; and &quot;Features&quot; allow you to jump to either of the 2 types of Workbench updates.</li>
+        <li><b>Improved:</b> <code>[workbench menu]</code> - Icons have been added to various menu and sub-menu items.</li>
+        <li><b>Fixed:</b>  <code>[all tools]</code> - Tool settings dialogs should not say &quot;Help:&quot; in their titles.</li>
+        <li><b>Fixed:</b>  <code>[various]</code> - Job accepted dialog will now show the Genboree admin email properly.</li>
+        <li><b>Improved:</b>  <code> Bowtie, RSEQtools</code> - Both tools now allow two options for reference sequence index: use existing index from user or repository databases or make new index using the new IndexBowtie tool.</li>
+        <li><b>Improved:</b>  <code>[various] </code> - Project URLs in the email sent by various tools will now show up above the "Genboree Team" signature.</li>
+        <li><b>Improved:</b>  <code>Workbench Menu</code> - Items that are often used together under <code>Data</code> menu have been grouped, with horizontal spacers separating the groups. </li>
+        <li><b>Fixed:</b> <code>Launch UCSC Genome Browser</code> - Applied a workaround to avoid recent changes at UCSC that broke the existing URL-based integration. This tool works as intended once again.</li>
+        <li><b>Improved:</b> <code>Edit Samples</code> - You no longer need to click outside of the cell containing the sample attribute being edited before clicking Save for your edits to be committed.</li>
+        <li><b>Fixed:</b> <code>Upload Track Annotations</code> - Fixed a bug in the uploadTrackAnnos tool which caused files uploaded with magic numbers coincidentally matching those of Bio-Rad PICs to fail.</li>
+        <li><b>Improved:</b> <code>Workbench Menu</code> - Items that are often used together under <code>Data</code> menu have been grouped, with horizontal spacers separating the groups. </li>
+        <li><b>Fixed:</b> <code>Upload Track Annotations:</code> Changed default coordinate system to automatically be determined by Genboree with an option for user override.</li>
+        <li><b>Fixed:</b> <code>Job Summary:</code> The Job Summary tool now correctly displays Transfer File jobs. Before, these jobs were not shown.</li>
+        <li><b>Fixed:</b> <code>Qiime</code> -  Due to improper passing of folder names to server-side scripts, Qiime jobs would fail when text with special characters was used. </li>
+        <li><b>Fixed:</b> <code>[various]</code> - Certain tools using project pages to expose images, reports, PDFs, etc, could fail to make the project content properly when the project name or analysis name had special characters. </li>
+        <li><b>Improved:</b> <code>FastQC</code> - Now attempts to determine up-front if input file is indeed a FastQ file. Various bugs addressed. </li>
+        <li><b>Improved:</b> <code>Bowtie</code> - Bowtie has moved to a more sensible location in the menu: <code>Genome &raquo; Map Sequenced Reads</code> </li>
+        <li><b>Improved:</b> <code>Import Samples</code>: Import Samples now has 4 options addressing the import of samples that already exist in a database. See the Import Samples tool help for more information.</li>
+        <li><b>Improved:</b> <code>Bowtie</code>: Bowtie has 2 new options: 1. Report up to N alignments per read. 2. Suppress SAM records for unaligned reads. </li>
+        <li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code>: The correlation plots now draw sensibily even when one or both track lists are quite large; the labels will no longer overlap and be unreadable. Labels are black instead of bright red.</li>
+        <li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code>: The Graphlan row &amp; column circular dendrograms are now dynmaically sized, thus avoiding cut-off labels and inappropriately sized images. Images also now available as SVG for zooming and panning.</li>
+        <li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code> would fail at the correlation plot stage if only a row dendrogram or only a column dendrogram was requested.</li>
+        <li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code>: Heatmap dimensions are now proportional to and suitable for the number of rows and number of columns, rather than being fixed. Labels thus will not be truncated, and several other issues related to using a fixed non-dynamic image size have be resolved.</li>
+        <li><b>Improved:</b> <code>Compute Similarity Matrix (heatmap)</code> circular dendrograms now use a much larger fixed size to avoid cropping large dendrograms. The underlying tool (Graphlan) doesn't seem to auto-size so we are investivating alternative work-arounds.</li>
+        <li><b>Improved:</b> <code>Compute Similarity Matrix (heatmap)</code> correlation plots use the same row and column order as produced by the clustering that generated your heatmap. Thus, they are now a correctly matched pair.</li>
+        <li><b>Improved:</b> The <code>Heatmap</code>, <code>Data Slice</code>, and <code>LIMMA</code> tools now have advanced options allowing you to configure exactly how ROI regions without score track data should be treated in the analysis.</li>
+        <li><b>Improved:</b> The <code>Link to Project</code> that appears in the <code>Details</code> panel now opens the project in a new window/tab.</li>
+        <li><b>Fixed:</b> <code>Upload Track Annotations</code> Uploaded tracks were ending up in both the default class and the user-provided class, and high-density score tracks were ending up in two default classes. LThis has been largely fixed although high-density tracks still don't support custom class upon upload.</li>
+        <li><b>Fixed:</b> <code>Copy/Move Tracks</code> Copied tracks were not attempting to copy the class information. Largely fixed although high-density tracks still don't support non-default classes.</li>
+        <!-- li><b>Fixed:</b> <code>Projects</code> Fixed rare project page rendering bugs stemming from JSON representations of date/time objects. Now uses RFC822 string representation of time.</li -->
+        <!-- li><b>Fixed:</b> <code>Remove/Delete Remote Access Info</code> was not crashing when remote Genboree hosts were removed.</li -->
+        <!-- li><b>Fixed:</b> <code>Remove/Delete Remote Access Info</code> would fail to remove a remote host if its IP address had changed.</li -->
+        <!-- li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code> help in settings and help screens.</li -->
+        <!-- li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code> incorrectly filtered data in certain cases.</li -->
+        <!-- li><b>Fixed:</b> <code>Compute Similarity Matrix (heatmap)</code> was not doing Quantile Normalization when asked, but rather a gaussian distribution based normalization. Now you can choose to do either one, or none.</li -->
+        <!-- li><b>Fixed:</b> <code>File Copier</code> was allowing file <i>folders</i> to be used as inputs when this is not actually supported. Now it is not allowed, and we are working on this limitation.</li -->
+        <!-- li><b>Fixed:</b> The output target(s) for tools must be on the <i>same</i> host as the Workbench you are using. Previously, running tools on one Workbench and uploading results to a different Genboree host would crash in many cases. We are working on this limitation.</li -->
+        <!-- li><b>Fixed:</b> <code>Upload Track Annotations</code> was not properly parsing '.' alleles in multi-sample VCF files and was not allowing unknown chromosomes to be ignored.</li -->
+        <!-- li><b>Fixed:</b> <code>Upload Track Annotations</code> had several bugs when dealing with multi-sample VCF files, especially when identifying the particular ALT allele a given sample possesses.</li -->
+        <!-- li><b>Fixed:</b> <code>MACS</code> had not been updated to request bed files without a track header line.</li -->
+        <!-- li><b>Fixed:</b> The <code>LIMMA</code> now consistently identify the metadata header line via the standard comment character '<code>#</code>'.</li -->
+        <!-- li><b>Fixed:</b> <code>LIMMA</code> tools now have the correct "GeneViewer" URL on results web pages.</li -->
+        <!-- li><b>Fixed:</b> <code>Find Differences By Regression</code> was not constructing direct-download links in the email correctly.</li -->
+        <!-- li><b>Fixed:</b> <code>Find Differences By Regression</code> could not be run on tracks in publicly available databases.</li -->
+        <!-- li><b>Fixed:</b> Certain corner-case bugs related to value escaping for database queries.</li -->
+        <!-- li><b>Fixed:</b> <code>Upload Track Annotations</code> was not correctly converting GFF3 AVP values containing escape sequences.</li -->
+        <!-- li><b>Fixed:</b> <code>Transfer File</code> tool is now NOT activated with a file in the 'Input Data' panel.</li -->
+        <!-- li><b>Fixed:</b> <code>Download Track</code> gave 2 header lines in certain cross-host download scenarios.</li -->
+        <!-- li><b>Fixed:</b> <i>All Jobs</i> in some cases would not run their post-job execution commands.</li -->
+        <!-- li><b>Fixed:</b> <code>Track Grid</code> not allowing track lists to be saved to databases other than Hg19.</li -->
+        <!-- li><b>Fixed:</b> <code>Track Grid</code> not allowing track lists to be saved when tracks selected have an empty value for the X and/or Y attribute.</li -->
+        <!-- li><b>Fixed:</b> <code>Array Data Importer</code> only looking for relevant probe locations track for only Hg18 &amp; Hg19 (but no new probe tracks on other genomes are available).</li -->
+        <li><b>Improved:</b> <code>File Copy/Move</code> and <code>Track Copy/Move</code> made the copy vs move options more clear and added confirmation dialogs for 'move'.</li>
+        <li><b>Improved:</b> <code>Upload Track Annotations</code> is now 25-30% faster for heavy-weight annotations (e.g. LFF, GFF3, VCF).</li>
+        <li><b>Improved:</b> <code>View Sample Grid</code> now checks assembly versions if there are data tracks associated with the samples, better shows grid lines, and improves feedback when samples have no data tracks.</li>
+        <li><b>Improved:</b> The <code>Data Slice</code> tools can now take tracks or track lists, the email now indicates result locations, the tool better validates assembly version compatibility, and has appropriate instruction changes.</li>
+        <li><b>Improved:</b> <code>LIMMA</code> using a <code>User Supplied Data Matrix</code> UI is now a bit faster when the data matrix file is large. It now determines the metadata field by only reading the first line, rather than the whole file file.</li>
+        <li><b>Improved:</b> <code>LIMMA</code> tools now treat the failure-to-find-a-classification outcome as a success. It is valid analysis outcome.</li>
+        <!-- li><b>Improved:</b> Various tools which upload track data following analysis now will only result in a single email. Previously two emails were sent and users were more likely to use in-progress tracks before they were fully populated.</li -->
+        <!-- li><b>Improved:</b> <code>Upload Track Annotations</code> help has links to file format specs, and both better explains and validates 0-based half-open formats.</li -->
+        <!-- li><b>Improved:</b> <code>Cuffdiff</code> more robust in face of non-alphanumeric user text.</li -->
+        <!-- li><b>Improved:</b> <code>Array Data Importer, Upload Track Annotations, Set Track Metadata, Samples Importer and Machine Learning - User Supplied OTU table</code> now support Mac/Dos formatted files.</li -->
+        <!-- li><b>Improved:</b> <code>Upload Track Annotations</code> more clearly communicates problems in WIG formatted data in the email.</li -->
+        <!-- li><b>Improved:</b> <code>View Track Grid</code> now checks genome compatibility to catch issues prior to displaying the grid page.</li -->
+        <!-- li><b>Improved:</b> <code>Track Grid</code> page itself also correctly detects compatibility in case URLs are being made manually by users.</li -->
+        <!-- li><b>Improved:</b> <code>Upload Track Annotations</code> better detects, and for some automatically deals with, certain BED file format violations.</li -->
+        <!-- li><b>Improved:</b> <code>Upload Track Annotations</code> correctly detects invalid score column values, such as '+'.</li -->
+        <!-- li><b>Improved:</b> <code>Job Summary</code> no longer shows so-called utility jobs in the job summary list. Only analysis jobs will now be displayed in the job summary list.</li -->
+        <!-- li><b>Improved:</b> <code>Help Dialogs</code>: Now non-modal. Opening up the help dialog of any tool does not mask the workbench page anymore leaving you to interact with the page while keeping the help open.</li -->
+      </ul>
+    </li>
+    <li class="wbIntro">
+      <b><a name="features">FEATURES</a></b>:
+      <ul>
+        <li><b>New:</b> <code>Help/Citing Genboree</code> is added to the toolbar.</li>
+        <li><b>New:</b> <code>Create Hub </code> is added to the Genboree workbench. This tool creates a new hub in a Genboree Group.</li>
+        <li><b>New:</b> <code>View Hub </code> is added to the Genboree workbench. This tools launches UCSC and WashU genome browsers for viewing Genboree track hubs.</li>
+        <li><b>New:</b> <code>Delete Hubs </code> is added to the Genboree workbench. This tool deletes one or more track hubs from a Genboree group.</li>
+        <li><b>New:</b> <code>Rename Hub </code> is added to the Genboree workbench. This tool renames a track hub.</li>
+        <li><b>New:</b> <code>Text File Viewer</code> is added to the Genboree workbench.  This tool allows the user to view a specified portion of a text file from a database.
+        <li><b>New:</b> <code>Image File Viewer</code> is added to the Genboree workbench.  This tool allows the user to view an image file from a database.
+        <li><b>New:</b> <code>Create Hub</code> is added to the Genboree workbench as a Beta tool. This tool creates/adds a track hub to a Genboree group.</li>
+        <li><b>New:</b> <code>IndexBwa</code> is added to the Genboree workbench as a Beta tool. This tool builds BWA index for reference genome sequences.</li>
+        <li><b>New:</b> <code>MakeSignal for ChromHMM</code> is added to the Genboree workbench as a Beta tool. This tool generates signal files for ChromHMM analysis.</li>
+        <li><b>New:</b> <code>smallRNA-seq Pipeline</code> is added to the Genboree workbench as a Beta tool. This tool performs smallRNA-seq data analysis for exRNA profiling.</li>
+        <li><b>New:</b> <code>IndexBowtie</code> is added to the Genboree workbench as a Beta tool. This tool builds Bowtie2 index for reference genome sequences.</li>
+        <li><b>New:</b> <code>ChromHMM BinarizeSignal</code> is added to the Genboree workbench as a Beta tool. This tool converts signal data files into binarized data files.</li>
+        <li><b>New:</b> <code>ChromHMM LearnModel</code> is addded to the Genboree workbench as a Beta tool. This tool learns and characterizes chromatin states in a genome.</li>
+        <li><b>New:</b> <code>Tool Map</code> tool is added to Genboree. Tool Map provides a list of all tools available in the Genboree Workbench.</li>
+        <li><b>New:</b> <code>Legend</code> tool is added to Genboree. Legend tool provides a list of all icons and their meanings present in the Genboree workbench.</li>
+        <li><b>Enhanced:</b> <code>RSeqTools</code> - Now has FastQC functionality as part of the tool. </li>
+        <li><b>Enhanced:</b> <code>Import Samples</code>: Import Samples options have been renamed for clarity. The tool now also provides an option for a renaming pattern to follow when samples are to be renamed with the &quot;Create New Record&quot; import behavior.</li>
+        <li><b>Enhanced:</b> <code>Delete Samples</code>: Delete Samples now supports Sample Sets, Sample Entity Lists, and Databases as input types. Samples within these &quot;containers&quot; will be deleted, not the container itself. Users may select which samples they wish to delete.</li>
+        <li><b>Enhanced:</b> <code>Edit Samples</code>: The Edit Samples Dialog now allows users to sort samples based on any of the attribute columns. These sorting options are avaiable by clicking the arrow that appears when the mouse is hovered over the right side of any column.</li>
+        <li><b>Enhanced:</b> <code>Prepare Archive</code>: The Prepare Archive tool now provides a mapping file map.txt that appears in the archive when the Preserve Directory Structure option is not selected. Further, when Preserve Directory Structure is not selected, files that would have the same name in the archive are renamed to avoid the conflict. The mapping file is useful to identify the original files.</li>
+        <li><b>New:</b> <code>BWA - Burrows-Wheeler Alignment Tool </code> is added to Genboree as a Beta tool. BWA aligns short and long low-divergent sequenced reads against a reference genome.</li>
+        <li><b>New:</b> <code>RNA-Seq Data analysis using RSeqTools</code> has been made public as a Beta tool. This is a new pipeline for analyzing RNA-Seq data using different modules in RSeqTools.</li>
+        <li><b>New:</b> <code>Edit Samples</code> tool is now available under <code>Data/Samples & Sample Sets/Samples</code> which allows users to edit sample attributes from within Genboree.</li>
+        <li><b>New:</b> <code>Bowtie</code> has been made public as a Beta tool. Bowtie 2 is an ultrafast and memory-efficient tool for aligning sequencing reads to long reference sequences.</li>
+        <li><b>New:</b> <code>Prepare Archive</code> tool is now available under <code>Data/Files</code> which simplifies the process of downloading many files from Genboree by allowing users to create a zip file from many different files. See the tool help for more information.</li>
+        <li><b>New:</b> <code>Delete Samples</code> tool is now available under <code>Data/Samples & Sample Sets/Samples</code> which allows users to remove samples from databases.</li>
+        <li><b>New:</b> <code>Set Track Url, Url Label and Description</code> has been made public as a Beta tool. It can be used to set the source URL, URL Label and description information of one or more tracks in a database.</li>
+        <li><b>New:</b> <code>Compute Similarity Matrix (heatmap)</code>: You can now use Spearman correlation, in addition to Pearson correlation, for determining the similarity of 2 tracks.</li>
+        <li><b>New:</b> <code>Compute Similarity Matrix (heatmap)</code>: You can tweak the appearance of the heatmap image: (a) can hide the legend, (b) can change how score distribution is drawn on the legend, (c) can determine which dendrograms to draw, (d) can choose one of several alternative color palettes.</li>
+        <li><b>New:</b> <code>Compute Similarity Matrix (heatmap)</code>: Although the heatmap image is proportionally sized to the number of rows vs columns, you can force the heatmap image to be square, even when number of rows and number of columns are not the same.</li>
+        <li><b>New:</b> <code>Newick Viewer</code> has been made public as a Beta tool. The tool can be used to visualize newick data in four different types of dendograms.</li>
+        <li><b>New:</b> <code>Compare by LIMMA &raquo; User Supplied Data Matrix</code> has been made public as a Beta tool.</li>
+        <li><b>Enhanced:</b> <code>Combine Tracks</code>: Added option to remove duplicates.</li>
+        <li><b>New:</b> <code>HOMER</code>'s find-motif commands have been exposed as tools for the first time. It analyze the regions in a track you provide and give access to the complete HOMER result web pages and files.</li>
+        <li><b>New:</b> <code>Create Track Lists from Newick Tree</code>: Can be used to make track lists from a Newick file made from the Heatmap tool.</li>
+        <li><b>New:</b> <code>Combine Tracks</code>: New track utility tool for combining two or more tracks.</li>
+        <li><b>New:</b> <code>Set Track Order</code>: New track utility tool for setting track order.</li>
+        <li><b>New:</b> <code>Set Style and Color</code>: New Track Utility tool for setting colors and styles for tracks.</li>
+        <li><b>New:</b> <code>Create BAI</code>: New tool under Data/Files/ for creating BAI files for BAM/SAM files.</li>
+        <li><b>New:</b> <code>Inputs/Outputs panels</code>: Remove All button to input and output areas.</li>
+        <li><b>New:</b> <code>Compute Similarity Matrix (heatmap)</code>: Newick files for row and column dendrograms are now created and uploaded.</li>
+        <li><b>Enhanced:</b> <code>Compute Similarity Matrix (heatmap)</code> now allows easy self-comparison of track lists; simply drag a single Track Entity List rather than two.</li>
+        <li><b>Enhanced:</b> The tool overview text is now hidden by default for all tool 'Settings' dialog. This allows more efficient use of the Settings dialog. You can easily view the text by clicking the <i>Tool Overview</i> link.</li>
+        <li><b>New:</b> <code>Rename Tracks</code>: New tool for renaming tracks in a database.</li>
+        <li><b>Enhanced:</b> <code>Upload Track Annotations</code>: Added option to skip chromosomes/entrypoints not present in the target genome assembly.</li>
+        <li><b>Enhanced:</b> <code>Upload Track Annotations</code>: Added option to upload annotations as 1 based and fully closed for bed and bedgraph.</li>
+        <li><b>Enhanced:</b> <i>API</i>: Initial support for automated job auditing.</li>
+        <li><b>New:</b> <code>Job Summary</code>: Can now download the job summary table as a tab-delimited text file. Can be imported into Excel or can be used to get recent <code>Unique Job IDs</code>.</li>
+        <li><b>New:</b> <code>Download Track</code>: New tool for downloading a track.</li>
+        <li><b>Enhanced:</b> <code>Transfer File</code>: Added option to convert uploaded files to unix.</li>
+        <li><b>Enhanced:</b> <code>TopHat</code>, <code>Cufflinks</code>, and <code>Cuffdiff</code> based tools now use the 2.0 versions for faster and better results. Note: as a result, some TopHat options are no longer available.</li>
+        <!-- li><b>New:</b> <code>Sample Entity List</code>, tools <code>Create Sample Entity List</code>, <code>Copy/Move Sample Entity List</code>, <code>Delete/Remove Sample Entity List</code>, <code>Rename Sample Entity List</code>, <code>Add Samples to Sample Entity List</code>, and <code>Remove Samples from Sample Entity List</code> are now available as <code>Data/Entity Lists</code> tools for manipulating Sample Entity Lists.</li -->
+        <!-- li><b>New:</b> <code>Add Files to Entity List</code> and <code>Remove Files from Entity List</code> tools are now available under <code>Data/Entity Lists/File Entity List</code> and provide support for modifying File Entity Lists.</li -->
+
+
+        <!-- li><b>Enhanced:</b> <code>MACS</code>: Added option to use MACS version 2.0.10.</li -->
+        <!-- li><b>Enhanced:</b> <code>Array Data Importer</code>: Multi-column file support added for Array Data Importer. See tool help for more information.</li -->
+        <!-- li><b>New:</b> <code>Job Summary</code>: Get a live report of all the jobs you have launched from the workbench using the new Job Summary Report tool.</li -->
+        <!-- li><b>Enhanced:</b> <code>Help Dialogs</code>: Added a &quot;Configure Tool&quot; button to help dialogs. You can now open up the configuration/settings dialog of a tool from its help dialog.</li -->
+      </ul>
+    </li>
+  </ul>
+</div>

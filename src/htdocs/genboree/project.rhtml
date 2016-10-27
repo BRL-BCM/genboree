@@ -1,0 +1,88 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'json'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/projectManagement/projectMainPage'
+
+  $VERBOSE = true
+  @req = Apache.request
+  @serverName = @req.server_name
+  @serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+
+  begin
+    context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+    # Context In variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    context[:userId] = context.cgi['userId']
+    context[:groupId] = context.cgi['groupId']
+    context[:errCode] = OK
+    context[:err] = nil
+    context[:timer] = timer
+    context[:req] = @req
+    context[:isPublicAccess] = (context.cgi['isPublic'] and context.cgi['isPublic'] =~ /^YES|TRUE$/i) ? true : false
+    publishMode = context[:publishMode] = (!(context.cgi['publishMode'].nil? or context.cgi['publishMode'].empty?) ?  context.cgi['publishMode'] : false)
+    projName = context.cgi['projectName'].strip
+    if(projName.nil? or projName.empty?) # then try X-HEADER
+      projName = getProjectNameXHeader(context.cgi)
+    end
+    revertMode = (context.cgi['revert'] =~ /yes/i) ? true : false
+    editMode = (revertMode or publishMode or context.cgi['edit'] =~ /yes/i) ? true : false
+    postChanges = (editMode && (context.cgi['postChanges'] =~ /yes/i)) ? true : false
+    # Create Project Main Page instance
+    mainPage = BRL::Genboree::ProjectMainPage.new(projName, editMode, context)
+    if(mainPage.projectObj.exists?())
+      if(revertMode)
+        mainPage.projectObj.restoreBackup()
+      elsif(publishMode)
+        mainPage.projectObj.updatePublication(publishMode)
+      elsif(postChanges)
+        mainPage.postChanges(projName, context)
+      end
+      # Get it to process main page data files
+      mainPageContent = mainPage.generate()
+      mainPage.clear()
+    else
+      mainPageContent = "<font color='red'><b>The project specified in the URL</b> (<i>#{CGI.escapeHTML(mainPage.projectObj.projName)})</i> <b>does not exist</b>.</font>"
+    end
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+%>
+    <%= mainPageContent %>
+<%
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating main project page from pieces.\n" +
+                  "- Project: #{projName.inspect}\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generate the main project page for this project.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

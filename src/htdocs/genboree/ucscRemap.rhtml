@@ -1,0 +1,261 @@
+<%# THIS FILE USES eruby %>
+
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/util/textFileUtil'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/genboreeContext'
+	require 'brl/genboree/dbUtil'
+	require 'brl/genboree/fdataSearch'
+	include BRL::Genboree
+
+  cgi = CGI.new()
+  PARAM_OK, PARAM_MISSING, PARSE_OK, HTTP_OK, SCONF_OK, SCONF_BAD, HTTP_BAD, PARSE_FAIL	=
+		0,1,2,3,4,5,6,7,8,9,10,11,12
+  # If we're brl.bcm.tmc.edu, then hop over to www.genboree.org (special case)
+	# Otherwise we're a test server or www.genboree.org itself, so strip any port (generic case)
+	if((cgi.host =~ /^brl\.bcm\.(?:tmc\.)?edu$/) or (cgi.host =~ /^www\.brl\.bcm\.(?:tmc\.)?edu$/))
+		GENBOREE_DOMAIN = 'www.genboree.org'
+	else
+		GENBOREE_DOMAIN = cgi.host
+	end
+	GENBOREE_BROWSER = '/java-bin/gbrowser.jsp?'
+	GENBOREE_SEARCH = '/java-bin/genboreeSearchWrapper.jsp?'
+	UCSC_DOMAIN = 'genome.ucsc.edu'
+	UCSC_SEARCH = '/cgi-bin/hgTracks?'
+	TOO_MANY_FREFS = 120
+
+  def clear(context)
+	  context[:dbu].clear() unless(context[:dbu].nil?)
+	  context[:searcher].clear() unless(context[:searcher].nil?)
+	  context[:validFrefs] = {} # cache these
+  end
+
+  def paramCheck(context)
+    retVal = PARAM_MISSING
+  	# Check that correct params were provided
+  	# - REQUIRED: ucscUrl
+  	# - REQUIRED: refSeqId
+  	# - OPTIONAL: isPublic=YES
+  	unless(	context.cgi['ucscUrl'].empty? or context.cgi['refSeqId'].empty?	)
+  		context[:ucscUrl] = context.cgi['ucscUrl'].strip
+  		context[:refSeqId] = context.cgi['refSeqId'].strip
+  		context[:isPublic] = (context.cgi['isPublic'] =~ /yes/i) ? true : false
+  		context[:ucscUrl] =~ /position=([^&]+)/
+  		context[:keyword] = $1
+  		retVal = PARAM_OK	# Ok so far
+  	end
+  	return retVal
+  end
+
+	def init(context)
+    context[:refSeqId] = nil
+    context[:ucscUrl] = nil
+    # Parse params
+    paramStatus = paramCheck(context)
+    return paramStatus unless(paramStatus == PARAM_OK)
+    # Get valid Fref names
+	  context[:validFrefs] = {}
+	  # 1) Get name of anno database
+		context[:dbu] = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil, nil)
+		annoDbName = context[:dbu].selectDBNamesByRefSeqID(context[:refSeqId]).first()['databaseName']
+		context[:dbu].setNewDataDb(annoDbName)
+    # @timer << "   - got db names by refseq ID"
+		# 2) Count number of frefs
+		countFrefResult = context[:dbu].countFrefs()
+    numFrefs = countFrefResult[0]
+		# 3) Get all fref records if cheap to do so
+		if(numFrefs < TOO_MANY_FREFS)
+      frefRecs = context[:dbu].selectAllRefNames()
+      frefRecs.each { |rec|
+        context[:validFrefs][:refname] = rec
+      }
+		end
+		# Get search config record
+		# Get the scid for the refSeq, if any.
+		# - create fdata search instance if needed
+		context[:searcher] = BRL::Genboree::FdataSearch.new(context[:refSeqId], context.genbConf.dbrcFile) if(context[:searcher].nil?)
+		scidList = context[:searcher].getScids()
+		configRecs = context[:searcher].getSearchConfigByScid(scidList.first)
+		return SCONF_BAD if(configRecs.nil? or configRecs.empty? or configRecs.size > 1) # never configured/there can be only one
+    context[:mapInfo] = [
+                          configRecs.first['scid'],
+                          configRecs.first['ucscOrg'].to_s,
+                          configRecs.first['ucscDbName'].to_s,
+                          configRecs.first['ucscHgsid'].to_s,
+                          configRecs.first['epPrefix'].to_s,
+                          configRecs.first['epSuffix'].to_s
+                        ]
+	  return context[:validFrefs]
+	end
+
+	def validFref?(chrName, context)
+    retVal = false
+    if(context[:validFrefs].key?(chrName))
+      retVal = true
+    else
+      # Maybe not cached yet (e.g. since too many to get all), retrieve from database
+      frefRecs = context[:dbu].selectFrefByName(chrName)
+      # Add to cache
+      frefRecs.each { |rec|
+        context[:validFrefs][:refname] = rec
+      }
+      retVal = (frefRecs.size > 0)
+    end
+    return retVal
+	end
+
+	def getUCSCpage(context)	# visit UCSC page
+    begin
+      http = Net::HTTP.new(UCSC_DOMAIN, 80)
+      http.read_timeout = 900
+      http.start
+      context[:ucscResp] = http.get(context[:ucscUrl])
+      http.finish
+      raise unless(context[:ucscResp].kind_of?(Net::HTTPOK)) # Caller must decide to ignore or display or what
+    rescue Timeout::Error => context[:err]
+      context[:ucscResp] = nil
+      return HTTP_BAD
+    rescue Exception => context[:err]
+      return HTTP_BAD
+    end
+		return HTTP_OK
+	end
+
+	def parseResp(context)	# parse a ucsc query response, storing nec. data
+    retVal = PARSE_FAIL
+		unless(context[:ucscResp].nil?)
+      # There's a couple of possibilities for the result of the refining search including an actual image page
+      # from which we can extract a link, or yet another intermediate result page.
+      if(context[:ucscResp].body =~ /<FONT SIZE=5><B>UCSC Genome Browser on/i) # then got page with browser image
+        return PARSE_FAIL unless($' =~ /<INPUT TYPE=TEXT NAME="position" SIZE=30 VALUE="(?:chr|#{context[:mapInfo]['epPrefix']}|scaffold|contig)_?([^:]+):([^\-]+)-([^\" ]+)">/i) ## No Comment '
+        entryPointID, from, to = $1, $2, $3
+        fullEPName = context[:mapInfo]['epPrefix'] + entryPointID.strip + context[:mapInfo]['epSuffix']
+        return PARSE_FAIL unless(validFref?(fullEPName, context))
+        context[:landmark] = [ fullEPName, from.gsub(',', '_').to_i,  to.gsub!(',', '_').to_i ]
+        retVal = PARSE_OK
+      elsif(context[:ucscResp].body =~ /HREF=\"hgTracks\?position=/i) # must be intermediate results page
+        # There may be multiple sections and multiple locations on this intermediate results page
+        # So the most straight forward way to handle this is to have Genboree re-search but based on this intermediate
+        # term--the Genboree search will categorize the results it finds as usual.
+        context[:landmark] = [nil, nil, nil] # We'll be making a genboree search URL
+        retVal = PARSE_OK
+  		end
+  	end
+		return retVal
+	end
+
+	def makeGenboreeURL(context)
+    retVal = nil
+		# genboreeURL = "http://#{GENBOREE_DOMAIN}#{GENBOREE_BROWSER}refSeqId=#{context[:refSeqId]}&entryPointId=#{ep}&from=#{from}&to=#{to}"
+		unless(context[:landmark][0].nil? or context[:landmark][1].nil? or context[:landmark][2].nil?)
+      genboreeURL = "http://#{context.cgi.host}#{GENBOREE_BROWSER}refSeqId=#{context[:refSeqId]}&entryPointId=#{context[:landmark][0]}&from=#{context[:landmark][1].to_i-5000}&to=#{context[:landmark][2]+5000}"
+      genboreeURL += "&isPublic=YES" if(context[:isPublic])
+      retVal = genboreeURL
+    else # Rather than image page we got an intermediate result page for the clicked keyword. Research with Genboree using keyword.
+      genboreeURL = "http://#{context.cgi.host}#{GENBOREE_SEARCH}refSeqID=#{context[:refSeqId]}&query=#{context[:keyword]}"
+      genboreeURL += "&isPublic=YES" if(context[:isPublic])
+      retVal = genboreeURL
+    end
+		return (context[:genboreeUrl] = retVal)
+	end
+
+	# ---------------------------------------------------------------------------
+	# DO CHECK/LOAD/CHECK (hierarchical checking)
+	# ---------------------------------------------------------------------------
+  begin
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+    paramStatus = paramCheck(context)
+    if(paramStatus == PARAM_OK)
+      # initialize what we need (db, frefs, search config, etc)
+      initStatus = init(context)
+      # @timer << "protoSearch.rhtml => DONE: retrieved search config and fref names"
+      unless(initStatus == SCONF_BAD)
+        queryStatus = getUCSCpage(context)
+        if(queryStatus == HTTP_OK)	# then go ahead an parse UCSC response
+          parseStatus = parseResp(context)
+          if(parseStatus == PARSE_OK)
+            makeUrlStatus = makeGenboreeURL(context)
+          end
+        end
+      end
+    end
+  rescue => context[:err]
+  end
+%>
+
+<html>
+<head>
+  <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <title>Genboree Redirect From UCSC Browser View</title>
+</head>
+<body bgcolor="white">
+  <script type="text/javascript" src="/javaScripts/prototype.js?<%=context.jsVerStr%>"></script>
+  <script type="text/javascript" src="/javaScripts/util.js?<%=context.jsVerStr%>"></script>
+<%
+  unless(makeUrlStatus.nil?) # then ok
+%>
+    <script type="text/javascript">
+      setCookie("GB_INBROWSER", "true") ;
+      var tgt = "<%= context[:genboreeUrl] %>" ;
+      window.location = tgt ;
+    </script>
+<%
+  else # ---- NOT OK ----
+%>
+		<SPAN CLASS="hdr">CAN'T FIND LOCATION ERROR</SPAN>
+  	<P>
+		We encountered a problem trying to find the location in your Genboree database that corresponds to the search result.
+		<P>
+		Please contact <A HREF="mailto:<%= context.genbConf.gbAdminEmail %>">our admin (<%= context.genbConf.gbAdminEmail %>)</A>
+		with the following information to help resolve this problem:
+    <UL>
+      <LI>refSeqId: <%= CGI.escapeHTML(context[:refSeqId].inspect) %></LI>
+      <LI>refUrl: <%= CGI.escapeHTML(context[:ucscUrl].inspect) %></LI>
+    </UL>
+		<UL>
+			<LI>Error Type:
+<%
+        if(context[:err])
+					errMsg = "Exception thrown. (#{CGI.escapeHTML(context[:err].message)})<P>#{context[:err].backtrace.map{|xx| CGI.escapeHTML(xx)}.join('<BR>')}<P>"
+        elsif(initStatus == SCONF_BAD)
+					errMsg = "Could not load resource map for this database (not configured?). (#{initStatus})"
+        elsif(paramStatus != PARAM_OK)
+					errMsg = "Bad/missing parameters provided. (#{paramStatus})"
+				elsif(queryStatus != HTTP_OK)
+					if(queryStatus == HTTP_BAD)
+						errMsg = "An exception occurred (#{queryStatus}):"
+						errMsg << "
+              <UL>
+								<LI>#{CGI.escapeHTML(context[:err].message)}</LI>
+								<LI>#{context[:err].backtrace.map{|xx| CGI.escapeHTML(xx)}.join('<BR>')}</LI>
+							</UL>
+						"
+					end
+				elsif(makeUrlStatus.nil?)
+          errMsg = "Failed to construct sensible Genboree URL from search record result."
+        else
+          errMsg = "
+						Unknown Error (?)
+						<UL>
+							<LI>error:<BR>#{context[:err].inspect}</LI>
+						</UL>
+					"
+        end
+%>
+      <%= errMsg %>
+			</LI>
+			<LI>Request string: <%= CGI.escapeHTML(context.env['REQUEST_URI']) %></LI>
+			</UL>
+<%
+  end
+%>
+</body>
+</html>

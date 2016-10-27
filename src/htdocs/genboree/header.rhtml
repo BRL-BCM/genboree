@@ -1,0 +1,53 @@
+<%# Uses erubis %>
+<%# assumes the binding it is evaluated in includes a 'context' variable that is an ErubisContext %>
+<%# - the ErubisContext.includeFile(<path>) function does this automatically %>
+
+<%# THIS COMES RIGHT AFTER YOUR <title>, any special <link> or <style> or <meta> stuff, but
+     before you close your <head> (it will do that) %>
+<LINK REL="stylesheet" TITLE="genboree" HREF="http://<%= context.getServerName() %>/styles/jsp.css?<%= context.jsVerStr %>" TYPE="text/css">
+<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+<STYLE TYPE="text/css">
+	.hdr {
+    font-size: 11pt;
+    font-weight: bold;
+  }
+</STYLE>
+</HEAD>
+<BODY BGCOLOR="#DDE0FF">
+
+<table cellpadding="0" cellspacing="0" border="0" bgcolor="white" width="700" class='TOP'>
+<tbody>
+  <!-- SPACER AT TOP OF PAGE -->
+  <tr>
+    <td width="10"></td>
+    <td height="10"></td>
+    <td width="10"></td>
+    <td width="10" class="bkgd"></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <!-- TOP LEFT BANNER LOGO -->
+        <td width="484">
+          <a href="http://<%=context.env['HTTP_HOST']%>">
+            <img src="/images/genboree.jpg" width="484" height="72" border="0" alt="Genboree">
+          </a>
+        </td>
+        <!-- TOP RIGHT LOGO -->
+        <td align="right">
+          <a href="http://www.bcm.edu">
+            <img src="/images/logo_sm.gif" width="151" height="80" alt="BCM" title="BCM" border="0">
+          </a>
+        </td>
+      </tr>
+      </table>
+    </td>
+    <td width="10"></td>
+    <td class="shadow"></td>
+  </tr>
+	<TR>
+    <td width="10"></td>
+    <!-- PAGE CONTENT (SHOULD BE CLOSED BY footer.rhtml) -->
+    <TD style="padding-left: 10px;" id="pageContentTd" name="pageContentTd" >

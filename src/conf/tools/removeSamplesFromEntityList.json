@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "removeSamplesFromEntityList",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Remove Samples from Entity List",
+    "shortLabel": "[NOT SET]"
+  }
+}

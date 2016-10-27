@@ -1,0 +1,129 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileEntityListApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 750 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%
+   # We need all the files in a hash to allow selection of multiple input files 
+  fileHash = {}
+  @inputs.each { |input|
+    fileHash[input] = true
+  }
+  numberOfFiles = fileHash.length
+  sectionText = "Input Files: #{numberOfFiles}"
+%>
+  
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :includeToolVersion => true }) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        The exceRpt small RNA-seq Post-processing tool will process results from any number of exceRpt small RNA-seq pipeline runs (single runs included) and condense valuable information into an easy-to-read format.
+        <br><br>
+        You can use this tool to process results created by either 4th generation or 3rd generation exceRpt. All input files <b>must</b> have (exactly) matching version numbers. For example, you cannot run this tool using 1 result archive from exceRpt v4.2.1 and 1 result archive from exceRpt v4.1.9.
+        <br><br>
+      "
+    })
+%>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:" ,
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMultiSelectInputList, { :multiSelectInputHash => fileHash, :label => "Choose input files:", :type => "files", :divWidth => "#{width-50}px" })
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # Options for ERCC PI
+    erccPI = @settings['piName']
+    erccGrantNumbers = @settings['grantNumbers']
+    erccGrantOptions = {}
+    erccGrantNumbers.each { |currentGrant|
+      currentGrantLabel = currentGrant.clone()
+      currentGrant.insert(0, "0_") if(currentGrant.include?("Primary"))
+      erccGrantOptions[currentGrant] = { :label => currentGrantLabel}   
+    }
+    # Options for anticipated data repository 
+    anticipatedDataRepos = @settings['anticipatedDataRepos'] 
+    anticipatedDataRepoOptions = {}
+    anticipatedDataRepos.each { |currentOption|
+      currentAnticipatedDataRepoLabel = currentOption.clone()
+      currentOption.insert(0, "0_") if(currentOption.include?("None"))
+      anticipatedDataRepoOptions[currentOption] = { :label => currentAnticipatedDataRepoLabel }
+    }
+    # Options for submission categories for data repository submission (DCC or not DCC)
+    submissionCategoryOptions = {}
+    submissionCategoryOptions[:"DCC Submission"] = { :label => "Submission Meant for DCC" }
+    submissionCategoryOptions[:"Samples Not Meant for Submission to DCC"] = { :label => "Submission Not Meant for DCC" }
+    # Options for whether PI has registered project with dbGaP (Yes / No / Not Applicable)
+    dbGaPOptions = {}
+    dbGaPOptions[:"Yes"] = { :label => "Yes - Project Registered with dbGaP"}
+    dbGaPOptions[:"No"] = { :label => "No - Project Not Registered with dbGaP"}
+    dbGaPOptions[:"Not Applicable"] = { :label => "Not Applicable", :selected => true}
+    # Options for remote storage areas
+    remoteStorageAreas = @settings['remoteStorageAreas']
+    remoteStorageOptions = {}
+    remoteStorageAreas.each { |currentOption|
+      remoteStorageOptions[currentOption] = { :label => currentOption }
+    }
+    remoteStorageOptions["None Selected"] = { :label => "None Selected", :selected => true }
+    widgets = []
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "30", :value => "PPR-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'postProcessedResults_v4.6.3\' or \'postProcessedResults_v3.1.0\') used to organize processed pipeline results.' },
+                { :id => 'erccSubmissionOptions', :toggleText => "ERCC Submission Options", :type => :advancedSection, :startWithExpanded => true, :text => "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter.", :widgets =>
+                  [
+                    { :id => 'piName', :label => 'ERCC PI', :type => :text, :size => "30", :readOnly => true, :value => erccPI, :title => "This box contains the name of your PI."},
+                    { :id => 'grantNumber', :label => 'ERCC Grant Number', :title => 'Choose the appropriate grant number for your submission.', :type => :select, :options => erccGrantOptions },
+                    { :id => 'anticipatedDataRepo', :label => 'Anticipated Data Repository', :title => 'Choose the appropriate option for your anticipated data repository.', :onChange => "showDataRepoOptions(this.value)", :type => :select, :options => anticipatedDataRepoOptions },
+                    { :id => 'otherDataRepo', :label => 'Other Data Repository', :hidden => true, :type => :text, :size => "30", :title => "If you are submitting to a data repository that is not dbGaP / GEO, put that data repository here."},
+                    { :id => 'dataRepoSubmissionCategory', :label => 'Submission Category', :hidden => true, :title => 'Choose the appropriate option to indicate whether your samples are intended for the DCC or not.', :type => :select, :options => submissionCategoryOptions },
+                    { :id => 'dbGaP', :label => 'Project Registered with dbGaP?', :hidden => true, :title => 'Choose the appropriate option to indicate whether this project has been registered with dbGaP by your PI.', :type => :select, :options => dbGaPOptions },
+                  ]
+                },
+                { :id => 'advancedOptions', :toggleText => "Advanced Options", :type => :advancedSection, :startWithExpanded => true, :text => 'Below, you can select your preference for advanced options that don\'t fit into the other categories above. The \'Remote Storage Area\' option will allow you to choose a remote storage (FTP) area where your result files will be uploaded. You can learn more by visiting the <a href=\'http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Using_Remote_%28FTP%29_Storage_for_exceRpt\' target=\'_blank\'>tutorial</a>.', :widgets =>
+                  [
+                    { :id => 'remoteStorageArea', :'label' => 'Remote Storage Area', :type => :select, :options => remoteStorageOptions, :title => "If you've used the 'Create Remote Storage Area' tool to create a remote storage (FTP) area, you can choose an area where your results will be uploaded. Default: 'None Selected'."}                            
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "exceRpt small RNA-seq Post-processing Settings",
+      :widgets => widgets
+    })
+  %>
+  
+ <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+</script>

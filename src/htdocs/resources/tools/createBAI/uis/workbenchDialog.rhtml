@@ -1,0 +1,40 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" onsubmit="return submitToolJob(this) ; " style="width: 472px; height: 300px;" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => GenboreeRESTRackup.toolIdMap[@context['toolIdStr']] } ) %>
+  <%# Overview text %>
+  <%
+    fontSize = 'font-size:9pt;'
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows you to generate BAI (index) files for SAM/BAM files.
+          <br>&nbsp;<br>
+          The resultant BAI (.bai) files will be created in the same folder(s) as your input SAM/BAM file(s) and will overwrite pre-existing BAI files if present.
+          <br>&nbsp;<br>
+          NOTE: If your input file is a SAM file, a corresponding BAM file will first be generated to create the BAI file. Both the BAI and the BAM files will then be copied over
+          to the same folder as that of the SAM file.
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Inputs:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "BAM/SAM file(s)" } )
+      })
+  %>
+
+  <%# Submit button first submits a request to touch the file, then starts upload. %>
+
+
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit}, { :type => :cancel} ]
+      })
+  %>
+</form>

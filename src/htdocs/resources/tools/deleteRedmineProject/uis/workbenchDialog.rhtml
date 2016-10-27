@@ -1,0 +1,40 @@
+<%
+  # Define outer form tag and its dimensions
+  width = 500
+  height = 330
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%=
+  # Tool title
+  renderStaticFrag(@toolIdStr, :wbToolTitle) 
+%>
+
+<%=
+  # Overview text
+  renderStaticFrag(@toolIdStr, :wbToolOverview,
+  { :toolOverview =>
+    "
+      This tool will deregister a Redmine project from a Genboree group
+      <br>&nbsp;<br>
+    "
+  })
+%>
+
+<%=
+  # Output summary
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Outputs",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbListSummary, { :wbList => @outputs, :label => "Redmine Project" } )
+  })
+%>
+<%= 
+  # Submit, Cancel buttons
+  renderStaticFrag(@toolIdStr, :wbToolButtons, {
+    :buttons => [ { :type => :submit }, { :type => :cancel} ]
+  })
+%>
+</form>

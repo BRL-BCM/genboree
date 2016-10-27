@@ -1,0 +1,20 @@
+<table cellpadding="0" cellspacing="0" border="0" bgcolor="white" width="550">
+<tbody>
+  <tr>
+    <td width="10"></td>
+    <td height="10"></td>
+    <td width="10"></td>
+    <td width="10" class="bkgd"></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td align="left">
+	    <a href="defaultGbrowser.jsp">
+      <img src="/images/genboree.jpg" width="242" height="36" border="0" alt="Genboree"></a>
+    </td>
+    <td width=10></td>
+    <td class="shadow"></td>
+  </tr>
+  <tr>
+    <td></td>
+  	<td valign="top">

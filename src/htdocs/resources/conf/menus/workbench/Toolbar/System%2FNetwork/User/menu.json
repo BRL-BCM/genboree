@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Edit Profile",
+    "idStr": "editProfile",
+    "tooltip": "Edit your profile settings including your login name, first and last name, institution, telephone and email."
+  },
+  {
+    "text": "Change Password",
+    "idStr": "changePass",
+    "tooltip": "Change your login password."
+  }
+]

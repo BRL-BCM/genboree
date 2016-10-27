@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "svd",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Single Value Decomposition",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,20 @@
+<% require 'brl/genboree/rest/helpers/databaseApiUriHelper' %>
+
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>    
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <% @dbHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new%>
+    The following tracklists were created successfully in the database:<br><br>
+    <b><%= @dbHelper.extractName(@outputs.first) %></b>
+    <br/>
+    <ul>
+      <li>Selected leaf list: <i><%= @settings["selectListName"] %></i></li>
+      <li>List with remaining leaves: <i><%= @settings["restListName"] %></i></li>
+    </ul>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>

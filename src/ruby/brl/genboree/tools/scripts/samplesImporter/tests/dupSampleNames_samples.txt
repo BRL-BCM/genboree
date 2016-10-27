@@ -1,0 +1,4 @@
+#sampleName	biomaterialState	age	sex	isSick
+kAB1	frozen	36	M	TRUE
+kAB1	frozen	46	M	TRUE
+kAB3	solution	56	F	TRUE

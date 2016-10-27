@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "signalDataComparisonAtlas",
+    "releaseStatus": "deprecated",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Analyze Signals in the Context of Epigenome Atlas -> Find Signal Differences by Regression",
+    "shortLabel": "Epigenome Atlas - Signal Differences by Regression"
+  }
+}

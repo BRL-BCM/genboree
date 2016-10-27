@@ -1,0 +1,53 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "pvalue": [
+        "^(?:(?:1\\.0+)|(?:\\+?0.[0-9]+(?:[eE][-+]?[0-9]+)?))$",
+        "The p-Value must be a positive number between 0.0 and 1.0."
+      ],
+      "genome": [
+        "\\S",
+        "The genome to use for QC must be provided and cannot be empty or only whitespace."
+      ],
+      "assay": [
+        "\\S",
+        "An assay type must be provided and cannot be empty or only whitespace."
+      ],
+      "fdr": [
+        "^(?:(?:1\\.0+)|(?:\\+?0\\.[0-9]+(?:[eE][-+]?[0-9]+)?))$",
+        "The False Discover Rate (FDR) must be a positive number between 0.0 and 1.0."
+      ],
+      "experimentName": [
+        "\\S",
+        "The Analysis Name can not be empty or only whitespace."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

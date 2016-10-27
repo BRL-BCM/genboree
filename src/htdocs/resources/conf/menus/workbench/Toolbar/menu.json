@@ -1,0 +1,33 @@
+[
+  {
+    "text": "System/Network"
+  },
+  {
+    "text": "Data"
+  },
+  {
+    "text": "Genome"
+  },
+  {
+    "text": "Transcriptome"
+  },
+  {
+    "text": "Cistrome"
+    , "hidden": true
+  },
+  {
+    "text": "Epigenome"
+    , "hidden": true
+  },
+  {
+    "text": "Metagenome"
+    , "hidden": true
+  },
+  {
+    "text": "Visualization"
+    , "hidden": true
+  },
+  {
+    "text": "Help"
+  }
+]

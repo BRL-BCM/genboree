@@ -1,0 +1,25 @@
+<map name="genomeimap">
+  <AREA SHAPE="RECT" COORDS="601,208,629,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=19">
+  <AREA SHAPE="RECT" COORDS="261,143,289,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=8">
+  <AREA SHAPE="RECT" COORDS="230,133,258,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=7">
+  <AREA SHAPE="RECT" COORDS="508,187,536,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=16">
+  <AREA SHAPE="RECT" COORDS="539,194,567,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=17">
+  <AREA SHAPE="RECT" COORDS="415,168,443,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=13">
+  <AREA SHAPE="RECT" COORDS="45,65,73,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=1">
+  <AREA SHAPE="RECT" COORDS="137,107,165,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=4">
+  <AREA SHAPE="RECT" COORDS="570,197,598,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=18">
+  <AREA SHAPE="RECT" COORDS="75,67,103,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=2">
+  <AREA SHAPE="RECT" COORDS="292,152,320,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=9">
+  <AREA SHAPE="RECT" COORDS="385,155,413,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=12">
+  <AREA SHAPE="RECT" COORDS="477,180,505,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=15">
+  <AREA SHAPE="RECT" COORDS="724,139,752,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=X">
+  <AREA SHAPE="RECT" COORDS="323,152,351,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=10">
+  <AREA SHAPE="RECT" COORDS="446,175,474,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=14">
+  <AREA SHAPE="RECT" COORDS="663,221,691,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=21">
+  <AREA SHAPE="RECT" COORDS="199,124,227,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=6">
+  <AREA SHAPE="RECT" COORDS="632,208,660,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=20">
+  <AREA SHAPE="RECT" COORDS="354,151,382,259" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=11">
+  <AREA SHAPE="RECT" COORDS="107,101,135,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=3">
+  <AREA SHAPE="RECT" COORDS="168,116,196,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=5">
+  <AREA SHAPE="RECT" COORDS="693,219,721,260" HREF="/java-bin/chromWrap.jsp?&amp;svgType=full&amp;specieId=7&amp;chromosome=22">
+</map>

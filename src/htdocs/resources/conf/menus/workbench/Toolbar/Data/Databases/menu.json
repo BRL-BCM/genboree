@@ -1,0 +1,37 @@
+[
+  {
+    "text": "Create Database",
+    "idStr": "createDb",
+    "tooltip": "Create a new database in a target group."
+  },
+  {
+    "text": "Rename Database",
+    "idStr": "renameDb",
+    "tooltip": "Rename an alerady existing database."
+  },
+  {
+    "text": "Delete Database",
+    "idStr": "deleteDb",
+    "tooltip": "Permanently delete an existing database."
+  },
+  {
+    "text": "Edit Database Info",
+    "idStr": "editDbInfo",
+    "tooltip": "Edit information of an existing database (description, species, etc)."
+  },
+  {
+    "text": "Clone/Copy Database",
+    "idStr": "copyDb",
+    "tooltip": "Clone all the contents of an existing database by creating a new database."
+  },
+  {
+    "text": "Unlock/Lock Database",
+    "idStr": "unlockDb",
+    "tooltip": "Unlocking the database allows you to expose database resources to the public. Once unlocked, you can use the key to view data without requiring authentication."
+  },
+  {
+    "text": "Publish/Retract Database",
+    "idStr": "publishDb",
+    "tooltip": "Publishing the database allows you to expose database resources to the public. Once published, the contents of the database can be viewed or exported by anyone without logging into Genboree."
+  }
+]

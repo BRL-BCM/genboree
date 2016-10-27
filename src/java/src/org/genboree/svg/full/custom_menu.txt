@@ -1,0 +1,16 @@
+<defs>
+    <!-- remove the text enabled="no" to enable a menu item -->
+    <menu id="popMenu">
+        <header>Adobe SVG Viewer</header>
+        <item action="Quality" id="Quality">Higher Quality</item>
+        <separator/>
+        <item action="Copy" id="Copy">Copy Selected Text</item>
+        <item action="CopySVG" id="CopySVG">Copy SVG</item>
+        <item action="ViewSVG" id="ViewSVG">View SVG</item>
+        <item action="ViewSource" id="ViewSource">View Source</item>
+        <item action="SaveAs" id="SaveAs">Save SVG As...</item>
+        <separator/>
+        <item action="Help" id="Help">Help</item>
+        <item action="About" id="About">About Adobe SVG Viewer...</item>
+    </menu>
+</defs>

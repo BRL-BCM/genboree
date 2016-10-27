@@ -1,0 +1,101 @@
+@CHARSET "ISO-8859-1";
+
+.topNavigationAnchor {
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: white;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+}
+
+.dropDown {
+  margin: 0px;
+  padding: 10px 0px 0px 0px;
+  height: 30px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: white;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  display: inline;
+  list-style-type: none;
+  position: relative;
+  float: left;
+  width: 180px;
+  cursor: pointer;
+  cursor: hand;
+}
+
+.nonDropDown {
+  margin: 0px;
+  padding: 0px 0px 0px 0px;
+  height: 30px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: white;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  display: inline;
+  list-style-type: none;
+  position: relative;
+  float: left;
+  width: 225px;
+  cursor: pointer;
+  cursor: hand;
+}
+
+#releaseDropDown {
+  background-color: #4A7CE0;
+  height: 60px;
+  width: 215px;
+  bottom: -8px;
+  position: relative;
+  display: none;
+  opacity: 0.90;
+  -ms-filter: "alpha (opacity=90)";
+  filter: alpha (opacity=90);
+  z-index: 5;
+  text-align: left;
+  font-size: 10pt;
+  padding: 5px;
+}
+
+#releaseDropDown a:hover {
+  color: black;
+}
+
+#informaticsDropDown {
+  background-color: #4A7CE0;
+  height: 120px;
+  width: 215px;
+  bottom: -8px;
+  position: relative;
+  display: none;
+  opacity: 0.90;
+  -ms-filter: "alpha (opacity=90)";
+  filter: alpha (opacity=90);
+  z-index: 5;
+  text-align: left;
+  font-size: 10pt;
+  padding: 5px;
+}
+
+.informaticsDropDownAnchor {
+  font-size: 10pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: left;
+  color: white;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+}
+
+#informaticsDropDown a:hover {
+  color: black;
+}

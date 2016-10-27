@@ -1,0 +1,284 @@
+<%# THIS FILE USES erubis %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/conf/headerFooterConfig.rb'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+$VERBOSE = false
+@cgi = CGI.new()
+@mode = "create"
+@req = Apache.request
+@serverName = @cgi.host
+@context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+@context.title = "Manage Boolean Queries"
+outputGrp = ""
+outputDb = ""
+queryName = ""
+queryUri = ""
+
+########################################################################################
+# Utility method to easily make an inquiry to the REST API
+# This method will either return the apiData structure or exit in failure mode
+# * Arguments :
+#  - +String+ -> The REST URI to query
+########################################################################################
+def getRestData(uri)
+  apiCaller = ApiCaller.new(@context.genbConf.apiHost || "localhost", uri, @cgi["userLogin"].strip(), @cgi["passwd"].strip())
+
+  httpResp = apiCaller.get()
+  if(apiCaller.failed?)
+    errorText = ""
+    if(httpResp.nil?)
+      # Exception happened
+      errorText << "<div class=\"feedback\"><div class=\"failure\">ERROR: The REST resource that is required is currently unavailable. "
+      errorText << "Please try again later or contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+      errorText << "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>"
+      errorText << "Detailed Error Information: #{apiCaller.error.inspect}</div></div>"
+    else
+      # An API related error
+      apiCaller.parseRespBody()
+      errorText << "<div class=\"feedback\"><div class=\"failure\">An error has occurred while attempting to process your request.<br>"
+      errorText << "Please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">#{@context.genbConf.gbTechEmail}</a> for assistance."
+      errorText << "<br><br>"
+      errorText << "<em>REST API Error</em>: An error occurred while communicating with the REST interface!<br>"
+      errorText << "<em>Status Code</em>: #{apiCaller.apiStatusObj["statusCode"]}<br><em>Message</em>: #{apiCaller.apiStatusObj["msg"]}"
+      errorText << "</div></div>"
+    end
+
+    puts errorText
+    exit
+  end
+
+  apiCaller.parseRespBody()
+  return apiCaller.apiDataObj
+end
+
+# Basic error checking for required params, should never happen but if so, this error messages is better than HTTP 500
+unless(@cgi.has_key?("userPwdDigest") && @cgi.has_key?("userLogin") && @cgi.has_key?("userId"))
+  # Login & password digest are required components, if we don't get these from the JSP, internal error occurred
+  err = "<div class=\"feedback\"><div class=\"failure\">An internal system error has occurred, please contact <a href=\"mailto:#{@context.genbConf.gbTechEmail}\">"
+  err += "#{@context.genbConf.gbTechEmail}</a> for assistance.<br><br>\nERROR: A required parameter was missing!</div></div>\n"
+  puts err
+
+  exit
+end
+
+# Priming - Check if we were passed any values to preload, if so hold them in javascript so we can select them on create
+if(@cgi.has_key?('queryUri'))
+  captures = @cgi['queryUri'].match(%r{^/REST/v\d/grp/([^/\?]+)/db/([^/\?]+)/query/([^/\?]+)(?:$|/(ownedBy)(?:$|/([^/\?]+)$))}).captures()
+
+  # Query URI should have only been sent to us if it matches, but for safety, check
+  if(captures.length() >= 3)
+    outputGrp = captures[0]
+    outputDb = captures[1]
+    queryName = captures[2]
+    queryUri = @cgi['queryUri']
+  end
+end
+
+# Get a list of groups, dbs, tracks and the initial user access for the selected group
+groups = getRestData("/REST/v1/usr/#{CGI.escape(@cgi["userLogin"])}/grps").map { |grp| grp["text"] }
+outputGrp = groups[0] if(outputGrp.empty?)
+dbs = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/dbs").map { |db| db["text"] }
+outputDb = dbs[0] if(outputDb.empty?)
+queries = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/db/#{CGI.escape(outputDb)}/queries").map { |query| query["text"] }
+initialAccess = getRestData("/REST/v1/grp/#{CGI.escape(outputGrp)}/usr/#{CGI.escape(@cgi["userLogin"])}/role")["role"]
+templates = getRestData("/REST/v1/queryable").map { |tmpl| JSON.generate(tmpl) }
+
+# Map over our arrays to easily write them out to our javascript
+groups.map! { |grp| "'" + grp.gsub("'", "\\\\'") + "'" } 
+dbs.map! { |db| "'" + db.gsub("'", "\\\\'") + "'" }
+queries.map! { |query| "'" + query.gsub("'", "\\\\'") + "'" }
+
+# Get our query if provided one - Our query URI comes unescaped, escape the individual parts then get the REST data
+queryObj = getRestData(queryUri.split('/').map { |el| CGI.escape(el) }.join('/')) unless(queryUri.empty?)
+
+@context.addHeadData = "<script type=\"text/javascript\" src=\"/javaScripts/query/BooleanQueryUI.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/manage.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/query/help.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/ext-2.2/ux/RemoteValidator.js?#{@context.jsVerStr}\"></script>\n"
+@context.addHeadData << "<script>\n"
+@context.addHeadData << "  BHI = new BooleanQueryUI() ;\n"
+@context.addHeadData << "  BHI.setGroups([#{groups.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setDbs([#{dbs.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setQueries([#{queries.join(',')}]) ;\n"
+@context.addHeadData << "  BHI.setTemplates([#{templates.join(',')}]) ; \n"
+@context.addHeadData << "  BHI.setGroup('#{outputGrp.gsub("'", "\\\\'")}') ;\n"
+@context.addHeadData << "  BHI.setDb('#{outputDb.gsub("'", "\\\\'")}') ;\n"
+@context.addHeadData << "  BHI.setQueryMode('#{(queryUri.empty?) ? "create" : "edit"}') ;\n"
+@context.addHeadData << "  BHI.setQueryUserId(#{(queryObj.nil?) ? @cgi["userId"].to_s : queryObj["userId"].to_s}) ;\n"
+@context.addHeadData << "  BHI.setQueryDetails({'name': '#{queryObj["name"]}', 'shared': #{queryObj["shared"]}}) ;\n" unless(queryObj.nil?)
+@context.addHeadData << "  BHI.setUserLogin('#{@cgi["userLogin"]}') ;\n"
+@context.addHeadData << "  BHI.setUserId('#{@cgi["userId"]}') ;\n"
+@context.addHeadData << "  BHI.setUserEmail('#{@cgi["userEmail"]}') ;\n"
+@context.addHeadData << "  BHI.setUserAccess('#{initialAccess}') ;\n"
+@context.addHeadData << "</script>\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/statusInfo.css?#{@context.jsVerStr}\">\n"
+@context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/query.css?#{@context.jsVerStr}\">\n"
+# ---------------------------------------------------------------------------
+
+begin
+  @context['hostedSite'] = hostedSite = @cgi['hostedSite'] or "default"
+  @context['hdrFtrConf'] = hdrFtrConf = BRL::Genboree::Conf::HeaderFooterConfig.load()
+  @context.prepForHtml()
+%>
+<!-- Header -->
+<%= @context.includeFile("/genboree/workbench/header.rhtml") %>
+<div id="toolbar"></div>
+<div id="content">
+  <fieldset>
+    <legend>
+      Mode
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.queryMode.text, helpMessages.queryMode.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction" style="margin-bottom: 10px ;">
+      Select whether to create a new query or update an existing query. If updating an existing query, select the 
+      Group, Database and Query to modify. Note that only queries that you have access to modify will be displayed
+    </div>
+    <div id="mode"></div>
+    <ul class="options" id="modeOpts">
+      <li>
+        <label for="queryGrpCombo">Group:</label>
+        <div id="queryGroup"></div>
+        <div id="queryGrpAccess" class="accessError" <%= 'style="display: none ;"' if(initialAccess.downcase() != "subscriber" or @mode == "create") %>>You do not have access to write to this Group</div>
+      </li>
+      <li>
+        <label for="queryDbCombo">Database:</label>
+        <div id="queryDb"></div>
+      </li>
+      <li>
+        <label for="queryCombo">Query:</label>
+        <div id="query"></div>
+        <img id="queryLoading" src="/images/ajaxLoader.gif" alt="Loading Queries..." style="display: none ;" />
+      </li>
+    </ul>
+  </fieldset>
+  <fieldset>
+    <legend>
+      Query Properties
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.queryProps.text, helpMessages.queryProps.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction" style="margin-bottom: 10px ;">
+      Specify attributes about the new query and where the query should be saved. Note that you must have write permission 
+      of a group to save a query to it
+    </div>
+    <ul id="queryOpts" class="options">
+      <li>
+        <label for="qName">Query Name:</label>
+        <input type="text" id="qName" style="width: 205px ;" />
+      </li>
+      <li>
+        <label for="templateCombo">Query Template:</label>
+        <div id="tmpls"></div>
+      </li>
+      <li>
+        <div id="sharedEdit">
+          <label for="qShared">Share this query:</label>
+          <div id="qShared"></div>
+        </div>
+      </li>
+      <li>
+        <ul id="savedLocEdit">
+          <li class="header">
+            Save this query to:
+          </li>
+          <li>
+            <label for="grpCombo">Group:</label>
+            <div id="grps"></div>
+            <div id="grpAccess" class="accessError" <%= 'style="display: none ;"' if(initialAccess.downcase() != "subscriber" or @mode == "edit") %>>You do not have access to write to this Group</div>
+          </li>
+          <li>
+            <label for="dbCombo">Database:</label>
+            <div id="dbs"></div>
+            <img id="dbLoading" src="/images/ajaxLoader.gif" alt="Loading DBs..." style="display: none ;" />
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </fieldset>
+  <fieldset>
+    <legend>
+      Query
+      <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.defineQuery.text, helpMessages.defineQuery.title);">
+        <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+      </a>
+    </legend>
+    <div class="instruction" style="margin-bottom: 10px ;">
+      Create boolean clauses for the query.
+    </div>
+<%
+  if(queryUri.empty?)
+%>
+    <div id="queryCode">
+      &lt;No clauses specified&gt;
+    </div>
+    <ul id="clauseList">
+      <li id="clause1" class="clauseContainer">
+        <div id="clause1Tools" class="clauseTools">
+          <a href="#" onclick="return false ;" class="disabled nestButton" title="Nest Clause">N</a>
+          <a href="#" onclick="return false ;" class="disabled unnestButton" title="Unnest Clause">U</a>
+          <a href="#" onclick="BHI.insertClause('clause1') ; return false ;" class="addClauseButton" title="Add Clause">A</a>
+          <a href="#" onclick="return false ;" class="disabled deleteClauseButton" title="Delete Clause">D</a>
+        </div>
+        <div id="clause1Specs" class="clauseSpecs">
+          <div id="clause1Attr"></div>
+          <a id="clause1Not" href="#" onclick="Ext.get(this).toggleClass('selected') ; return false ;" class="not">NOT</a>
+          <div id="clause1Op"></div> 
+          <input type="text" id="clause1Val" size="21" />
+          <div id="clause1Contains" class="contains" style="display: none ;">
+            <a id="clause1Left" href="#" class="lBrace" onclick="BHI.toggleBrace(Ext.get(this)); return false;" >[</a>
+            <input type="text" id="clause1Start" size="5" style="margin-right:5px" />
+            <span id="clause1Comma" style="line-height:24px; margin-right:3px;">,</span>
+            <input type="text" id="clause1Stop" size="5" />
+            <a id="clause1Right" href="#" class="rBrace" onclick="BHI.toggleBrace(Ext.get(this)); return false;">]</a>
+          </div>
+          <div id="clause1Case" class="checkbox"></div>
+        </div>
+        <div id="clause1Bool" class="boolOps">
+          <div id="clause1BoolDyn" style="display: none ;">
+            <a href="#" style="margin-right: 0 ;" id="clause1And" class="and selected" onclick="BHI.setBoolOp('clause1') ; return false ;">AND</a>
+            <a href="#" id="clause1Or" class="or" onclick="BHI.setBoolOp('clause1') ; return false ;">OR</a>
+          </div>
+          <img id="clause1BoolStat" src="/images/query/and_disabled.png" alt="AND" style="display: none ;">
+        </div>
+      </li>
+    </ul>
+    <a href="#" class="appendClauseButton" onclick="BHI.appendClause('clauseList', true) ; return false ;">+ Append Clause</a>
+<%
+  else
+%>
+  <div id="queryCode">
+    Loading query...
+  </div>
+  <ul id="clauseList">
+  </ul>
+  <a href="#" class="appendClauseButton" onclick="BHI.appendClause('clauseList', true) ; return false ;">+ Append Clause</a>
+<%
+  end
+%>
+  </fieldset>
+  <div id="buttons">
+    <input id="createButton" type="button" value="Create Query" onclick="BHI.createQuery(false) ;"/>
+    <input id="updateButton" type="button" value="Update Query" disabled="disabled" onclick="BHI.updateQuery() ;"/>
+    <input id="deleteButton" type="button" value="Delete Query" disabled="disabled" onclick="deleteSelectedQuery() ;" />
+    <img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- Footer -->
+<%= @context.includeFile("/genboree/workbench/footer.rhtml") %>
+<%
+end # begin-rescue-ensure
+%>

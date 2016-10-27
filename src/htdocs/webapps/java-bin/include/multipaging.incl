@@ -1,0 +1,123 @@
+
+<%       
+   
+      
+   
+   
+   
+    if (paging && totalNumAnnotations >0) {   
+         page2Annotations = new HashMap();
+        numPages  =totalNumAnnotations/displayNum;
+        if ((totalNumAnnotations % displayNum) != 0)
+            numPages +=1;
+        
+        int baseIndex = 0;     
+        String [][] fatts  = null; 
+        AnnotationDetail [] annos  = null; 
+        for (int k=0; k<numPages; k++) {
+            baseIndex = k*displayNum;
+            if ((totalNumAnnotations - k * displayNum) >= displayNum){
+                if (isLargeSamples) {      
+                
+                fatts  = new String [displayNum][numSortNames + 1];
+                    
+                for (int m=0; m<displayNum; m++){
+                if (baseIndex + m < fidAttributes.length)     
+                fatts[m] = fidAttributes[baseIndex+m];
+                 }
+                page2Annotations.put("" + k, fatts);
+                } 
+                else {  
+                annos = new AnnotationDetail[displayNum];
+                for (int m=0; m<displayNum; m++)
+                annos[m] = totalAnnotations[baseIndex+m];
+                page2Annotations.put("" + k, annos);
+                }
+            }
+            else {
+                int remainNum = totalNumAnnotations - k * displayNum;
+                if (remainNum > 0 ) {
+                if (isLargeSamples) {               
+                fatts = new String [remainNum][numSortNames + 1];
+                for (int m=0; m<remainNum; m++)
+                fatts[m] = fidAttributes[baseIndex+m];
+                page2Annotations.put("" + k, fatts);
+                } 
+                else {    // small num                             
+                annos = new AnnotationDetail[remainNum];
+                for (int m=0; m<remainNum; m++)
+                annos[m] = totalAnnotations[baseIndex+m];  
+                page2Annotations.put("" + k, annos);
+                }           
+                }               
+            }  
+        }
+
+        
+        
+    if (request.getParameter("currentPage") != null) {
+        String indexPage  = request.getParameter("currentPage");
+        if (indexPage != null) {
+            int tempN = Integer.parseInt(indexPage);
+            currentPageIndex = tempN;
+            if (currentPageIndex <0)
+            currentPageIndex = 0;
+            
+            if (currentPageIndex > (numPages -1))
+            currentPageIndex = numPages -1;   
+            
+            currentPage = "" + currentPageIndex;               
+            mys.setAttribute("lastPageIndex", currentPage  ); 
+            
+            if (numPages >maxDisplay) {
+            modNum  =  currentPageIndex % maxDisplay;
+            if (modNum == 0) {
+            startPageNum = currentPageIndex;
+            endPageNum = currentPageIndex + (maxDisplay-1);
+            if (endPageNum > (numPages -1))
+            endPageNum = numPages -1;
+            
+            mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            }
+            else {
+            startPageNum = (currentPageIndex/maxDisplay) * maxDisplay;
+            endPageNum = startPageNum + (maxDisplay-1);
+            if (endPageNum > (numPages -1))
+            endPageNum = numPages -1;
+            
+            mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            }
+            
+            }
+            else {
+            endPageNum = numPages -1;
+            startPageNum = 0;
+            mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            }
+        }
+    }
+    else {
+    currentPageIndex = 0;
+    currentPage = "0";    
+    mys.setAttribute("lastStartPageNum", "" +  0);     
+    }
+    
+        
+    mys.setAttribute("page2Annotation_AV", page2Annotations);
+  
+                            
+    doPaging = false;  
+          
+ }        
+ else 
+       page2Annotations = (HashMap )mys.getAttribute("page2Annotation_AV");   
+  
+  if (!initPage) 
+       page2Annotations = (HashMap )mys.getAttribute("page2Annotation_AV"); 
+      
+     mys.setAttribute("numPages", "" + page2Annotations.size());  
+  
+     %> 

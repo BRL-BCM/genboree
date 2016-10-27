@@ -1,0 +1,259 @@
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+          <p>LIMMA uses linear models to  assess differential expression data from microarray experiments (which genes are differentially expressed or differentially methylated). Empirical Bayesian methods are used to provide stable results even when the number of samples is small.  LIMMA enables comparison of epigenomic signal tracks across selected sample attributes (i.e. body site, etc).</p>
+
+
+          <p>To set up the LIMMA analysis:</p>
+
+
+        Populate <strong>Input Data</strong>
+          <ul>
+          <li>Define samples of interest using: <code>Data</code> &raquo; <code>Samples &#38; Sample Sets</code> &raquo; <code>Import Samples</code></li>
+            <li>Associate epigenomic signal tracks with imported samples using: <code>Data</code> &raquo; <code>Tracks Import</code> &raquo; <code>Track Metadata</code></li>
+            <li>Drag a database containing samples of interest into <strong>Input Data</strong>.  Please note, the samples being compared must reside in the<br />    same database</li>
+            <li>Drag the epigenomic signal tracks (or entity lists) to be compared into <strong>Input Data</strong></li>
+            <li>Drag a 'region-of-interest' (ROI) track into <strong>Input Data</strong>.</li>
+          </ul>
+
+
+        Populate <strong>Output Targets</strong>
+          <ul>
+          <li>Drag a database into <strong>Output Targets</strong> (the data will be deposited into this database)</li>
+          </ul>
+
+
+        Configure &#38; Submit the LIMMA Job
+          <ul>
+          <li>Select <code>Epigenome</code> &raquo; <code>Analyze Signals</code> &raquo; <code>Compare by LIMMA</code> &raquo; <code>Track with Sample Metadata</code></li>
+            <li>Select the sample attributes (i.e. body site, individual, etc) for which the comparisons will be performed</li>
+            <li>Use default or select new tool settings</li>
+            <li>Click <code>Submit</code></li>
+          </ul>
+
+
+        LIMMA will compare the average signal values for each epigenomic signal track over the ROIs provided, and output the following:
+          <ul>
+            <li><em>raw.results.zip</em> containing raw LIMMA output in the files area of the output database
+          <ul>
+          <li>(under Files within the database provided in <strong>Output Targets</strong>)</li>
+          </ul></li>
+          </ul>
+
+      "
+    })
+%>
+<%# Input data help %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Inputs:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbMixedListSummary, { :list => @inputs, :label => "Input Items"} )
+  })
+
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs } )
+    })
+%>
+<%=
+    attributes = @settings['attributes']
+    widgets = [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "EpigenomeCompLimma-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique analysis name. " },
+                { :id => 'sampleIdAttribute', :label => 'Sample Id Attribute', :type => :text , :size => "25", :value => "SampleName", :title => "Track attribute which contains name/id of associated sample." },
+                { :id => 'roiTrkSelect', :label => 'Select ROI Track', :type => :selectEntityFromList , :setAs => 'roiTrack', :inputs => @inputs, :addEntityListContents => false, :rackEnv => @rackEnv, :title => "Select the Regions of Interest (ROI) track you wish to run the tool with.", :userId => @context['userId'], :entityType => :trk },
+                { :id => 'attributesForLimma', :label => 'Sample Attributes for LIMMA', :type => :selectWithToggle , :size => (attributes.size > 5 ? 5 : attributes.size), :options => attributes, :multiSelect => true, :toggleAllButton => true, :title => "Select the sample attributes used to group the data for LIMMA. Each attribute will be processed separately." },
+                { :id => 'minPval', :label => 'Min. P Value', :type => :text , :size => "25", :value => "0.05", :title => "Minimum p-value in which to allow for in filtered table results for the pair-wise comparisons. [FLOAT]" },
+                { :id => 'minAdjPval', :label => 'Min. Adjusted P Value', :type => :text , :size => "25", :value => "0.05", :title => "Minimum p-value in which to allow for in filtered table results for the pair-wise comparisons as well as the minimum p-value used to filter the decideTests (aka. multi-wise comparisons) [FLOAT]" },
+                { :id => 'minFoldChange', :label => 'Min. Fold Change', :type => :text , :size => "25", :value => "10.00", :title => "Minimum value to allow for fold change in filtered table results (decideTests only). This value is converted to its absolute value in order to account for sign change. [FLOAT]" },
+                { :id => 'multiplier', :label => 'Multiplier', :type => :text , :size => "25", :value => "100.0" },
+                { :id => 'testMethod', :label => "Test Method", :type => :select, :style => "width: 100px", :options =>
+                  {
+                    :separate         =>  { :label => 'Separate', :selected => true },
+                    :global           =>  { :label => 'Global'},
+                    :hierarchical     =>  { :label => 'Hierarchical'},
+                    :nestedF          =>  { :label => 'Nested F'}
+                  },
+                  :title => "Character string specifies how probes and contrasts are to be combined in the multiple testing strategy. Choices are 'separate', 'global', 'hierarchical', 'nestedF' or any partial string."
+                },
+                { :id => 'adjustMethod', :label => "Adjust Method", :type => :select, :style => "width: 100px", :options =>
+                  {
+                    :BH           =>  { :label => 'BH', :selected => true },
+                    :fdr          =>  { :label => 'fdr'},
+                    :BY           =>  { :label => 'BY'},
+                    :holm         =>  { :label => 'holm'},
+                    :hochberg     =>  { :label => 'hochberg'},
+                    :hommel       =>  { :label => 'hommel'},
+                    :bonferroni   =>  { :label => 'bonferroni'},
+                    :none         =>  { :label => 'None'}
+                  },
+                  :title => "Method used to adjust the p-values for multiple testing. Options, in increasing conservatism, include 'none', 'BH', 'BY' and 'holm'. See 'p.adjust' for the complete list of options. A 'NULL' value will result in the default adjustment method, which is 'BH'."
+                },
+                { :id => 'spanAggFunction', :label => "Span Agg Function", :type => :select, :style => "width: 100px", :options =>
+                  {
+                    :avg          =>  { :label => 'Average', :selected => true },
+                    :avgByLength  =>  { :label => 'Average By Length'},
+                    :med          =>  { :label => 'Median'},
+                    :sum          =>  { :label => 'Sum'},
+                    :count        =>  { :label => 'Count'},
+                    :max          =>  { :label => 'Max'},
+                    :min          =>  { :label => 'Min'},
+                    :stdev        =>  { :label => 'Standard Deviation'}
+                  },
+                  :title => "Select the aggregate function to perform the anlaysis with."
+                },
+                { :id => 'normalize', :label => "Normalize", :type => :select, :options =>
+                      {
+                        :Quantile      =>  { :label => 'Quantile Normalization', :selected => true },
+                        :Percentage    =>  { :label => 'Percentage Normalization'},
+                        :None          =>  { :label => 'None'}
+                      }
+                },
+                { :id => "naAdvSec", :type => :advancedSection, :toggleText => "No Data Regions", :startWithExpanded => false,
+                  :widgets =>
+                  [
+                    { :id => 'replaceNAValue', :label => 'No Data Value', :type => :text , :size => "6", :value => "0" },
+                    { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :labelWidth => "200px", :type => :checkBox, :checked => true, :onchange=>"toggleVisibility('naSection');"},
+                    { :id => 'naSection', :type => :indentedSection, :indentWidth => '20px', :spanFullRow => true, :border => '', :label => '',
+                      :widgets =>
+                      [
+                        { :name=>"naGroup", :id => 'anyTrack', :value=>"0", :label => 'If ANY track has no data for that region', :labelWidth => "300px", :labelStyle => "font-weight:normal; font-size: 0.82em;", :type => :radio, :checked => true, :onchange => "clearAndDisable('naPercentage');" },
+                        { :name=>"naGroup", :id => 'allTracks',:value=>"100", :label => 'If ALL tracks have no data for that region', :labelWidth => "300px", :labelStyle => "font-weight:normal; font-size: 0.82em;", :type => :radio, :onchange => "clearAndDisable('naPercentage');" },
+                        { :name=>"naGroup", :id => 'custTracks',:value=>"custom", :label => 'If % of tracks with no data for that region &ge;', :labelWidth => "300px", :labelStyle => "font-weight:normal; font-size: 0.82em;", :type => :radio, :onchange => "toggleDisabled('naPercentage');"},
+                        { :id => 'percentageSection', :type => :indentedSection, :indentWidth => '40px', :spanFullRow => true, :border => '', :label => '',
+                          :widgets =>
+                          [
+                            { :id => 'naPercentage', :label => '(%)', :labelWidth => "15px", :labelStyle => 'color: #A4A4A4; font-weight:normal; font-size: 0.82em; text-align: right;', :type => :text , :size => "5", :value => "", :disabled => true }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit, :onClick => "return removeSelectedEntity('roiTrkSelect');" }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+
+function toggleDisabled(elementId)
+{
+  var element = Ext.get(elementId) ;
+  var elementLabel = Ext.get(elementId + "LabelTh") ;
+  if(element)
+  {
+    if(element.getAttribute("disabled"))
+    {
+      elementLabel.setStyle("color", "black") ;
+      element.dom.enable() ;
+    }
+    else
+    {
+      elementLabel.setStyle("color", "#A4A4A4") ;
+      element.dom.disable() ;
+    }
+  }
+}
+
+function toggleVisibility(elementId)
+{
+  var element = document.getElementById(elementId) ;
+  if(element)
+  {
+    if(element.attributes.getNamedItem("hidden"))
+    {
+      element.hidden = false ;
+    }
+    else
+    {
+      element.hidden = true ;
+    }
+  }
+}
+
+function clearAndDisable(elementId)
+{
+  var element = Ext.get(elementId) ;
+  var elementLabel = Ext.get(elementId + "LabelTh") ;
+  if(element)
+  {
+    elementLabel.setStyle("color", "#A4A4A4") ;
+    element.dom.value = "" ;
+    element.dom.disable() ;
+  }
+}
+
+function displayTrackName(checked)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var wigTracklabel = Ext.get("trackNameLabel") ;
+  if(checked)
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    lffType.style.visibility = '' ;
+    lffSubType.style.visibility = '' ;
+    wigTracklabel.setStyle('display', '') ;
+  }
+  else
+  {
+    lffType.style.visibility = 'hidden' ;
+    lffType.disabled = true ;
+    lffSubType.style.visibility = 'hidden' ;
+    lffSubType.disabled = true ;
+    wigTracklabel.setStyle('display', 'none') ;
+  }
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

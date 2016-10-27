@@ -1,0 +1,201 @@
+<%# RENDER HTML %>
+<%
+    require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+    if(@inputs.size == 0)
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+    else
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+    end
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "<img src='/images/workbench/Atlas-SNP2Logotype180Wide.png' style='float:right; width:181px; height:154px; margin: 0px 3px 0px 3px;'>
+        Atlas-SNP2 is aimed at detecting single nucleotide polymorphisms (SNPs) from whole-genome
+        resequencing data sets produced by second generation sequencing technologies.
+        <br>&nbsp;<br>
+        It will find substitution SNPs. If you are interested in finding insertions/deletions (indels) as well, please try our <code>Atlas-Indel2</code> tool.
+        <br>&nbsp;<br>
+        It will operate on a
+        <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file you provide. While the SAM file can be compressed or
+        plain text, the BAM file should not be as it is already gzip-compressed data. Neither the SAM nor BAM need be sorted.
+        <br>&nbsp;<br>
+        A detailed list of putative SNPs will be output
+        in <a href='http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40'>VCF</a> format.
+        <br>&nbsp;<br>
+        You optionally have these uploaded into Genboree as a track for visualization or use as inputs to other tools other tools.
+        <br>&nbsp;<br>
+        <b>Prior to Job Submission Review the Inputs and Settings:</b><br>
+        <ul>
+          <li>You have selected the correct <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file to process</li>
+          <li>You've given this analysis job a meaningful name (it will be used as a folder name to store all output files)</li>
+          <li>You've indicated whether the data is from an Illumina, 454/Roche platform, or ABI SOLiD</li>
+          <li>If uploading the track, make sure the track name is meaningful and preferably doesn't already contain data.</li>
+          <li>You've provided a sample name from which this data was obtained; this sample name will appear as a column header in the VCF output file.</li>
+        </ul>
+        <br>
+        The <code>Advanced Settings</code> section contains parameters you can use to tweak prior probabilities and alignment filters. Currently,
+        the defaults are set for all these options according to the selected platform.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details are available in the Help dialog.</i></div>
+        <br>
+        <center><span class='footnote'>[ Atlas-SNP2 is described in <a href='http://www.ncbi.nlm.nih.gov/pubmed/20019143'>this journal article</a>. ]</span></center>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      if(@outputs[0] =~ /\/files?/)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Location:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Location:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      end
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets1 = []
+    if(@inputs.size == 0)
+        widgets1 =
+                  [
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                    { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                  ]
+    end
+    widgets2 =
+            [
+              { :id => 'studyName', :label => 'Study Name', :type => :text , :size => "25", :value => "AtlasTools-Study-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder used to organize related Atlas2 Suite Tool results.' },
+              { :id => 'jobName', :label => 'Job Name', :type => :text , :size => "25", :value => "AtlasSNP2-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'Give this Atlas-SNP2 job a unique name.' },
+              { :id => 'platformType', :label => 'Platform', :type => :select, :onchange => "displayAdvOptions(this.value)", :options =>
+                {
+                  :'454flx' => { :label => '454 (GS FLX)', :selected => true },
+                  :'454titanium' => {:label => '454 (Titanium)'},
+                  :illumina => { :label => 'Illumina' },
+                  :solid => { :label => 'SOLiD'}
+                },
+                :title => 'Select the sequencing platform the data came from. This will affect what Advanced Settings are available and the appropriate default settings.'
+              },
+              { :id => 'sampleName', :label => 'Sample Name', :type => :text, :size => "25", :value => "", :style => 'font-size: 80%', :onblur => "fillTrackName(this.value)", :title => 'Provide the name of the sample the reads came from. This will be used in formatting the output VCF file.'},
+              { :id => 'uploadSNPTrack', :label => 'Upload as a Track ?', :type => :checkbox, :onClick => "toggleTrackNameDisplay(this.checked)", :checked => true, :title => 'Check this to upload the SNPs as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.'},
+              { :id => 'removeDup', :label => 'Remove Clonal Duplicates', :type => :checkbox, :checked => true, :title => 'Removes mappings that appear to be due to clonal duplicates, using Picard.'},
+              #{ :id => 'keepOnlyUniqueMappings', :label => 'Keep Only Unique Mappings', :type => :checkbox, :checked => true, :title => 'If checked, any read which has been mapped to more than one location will be removed. This will leave only the uniquely mapped reads for downstream analysis.'},
+              { :id => 'trackName', :label => 'SNPs Track Name', :type => :gbTrackName, :defaultType => '', :defaultSubtype => '', :title => 'If uploading the SNPs as a track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+              { :id => 'advancedSettings', :type => :advancedSection,
+                :width => '450px',
+                :text => '(The default values for these settings are what will be used if you do not change them.)',
+                :widgets =>
+                [
+                  { :id => 'separateSNPs', :label => 'Separate SNPs Passing QC', :type => :checkbox, :labelStyle => 'width:250px;', :checked => true, :title => 'If checked, the initial output VCF file will be separated into two VCF files: one with SNPs that passed QC (FILTER: PASS) and the other file with any other value for the FILTER column. This will also include 2 seperate tracks representing SNPs that passed QC and ones which didn\'t. For clarification, the prefix \'PASS_\' will be added to the subtype of the track name for SNPs that passed QC'},
+                  { :id => 'minCov', :label => 'Min. Coverage', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "8", :style => 'font-size: 80%', :class => 'advSet', :title => 'Alignment quality filter: minimum coverage for high confidence SNP calls [454, Illumina]'},
+                  { :id => 'maxAlignPileup', :label => 'Max. Pile-Up', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "200", :style => 'font-size: 80%', :class => 'advSet', :title => 'Alignment quality filter: maximum alignment pile-up, for avoiding mapping inaccuracies due to repeats [454, Illumina]'},
+                  { :id => 'maxPercSubBases', :label => 'Max. % Substitutions', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "5.0", :style => 'font-size: 80%', :class => 'advSet', :title => 'Alignment quality filter: maximum amount of substitutions in an aligned read, as a percentage of read length [454. Illumina]'},
+                  { :id => 'maxPercIndelBases', :label => 'Max. % Indels', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "5.0", :style => 'font-size: 80%', :class => 'advSet', :title => 'Alignment quality filter: maximum amount of indels in an aligned read, as a percentage of read length [454. Illumina]'},
+                  { :id => 'insertionSize', :label => 'Insert Size', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0", :style => 'font-size: 80%', :class => 'advSet', :title => 'Alignment quality filter: insert size for paired-end resequencing data; 0 disables paired-end sanity checks [454, Illumina]'},
+                  { :id => 'postProbCutOff', :label => 'Posterior Prob. Cutoff', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.95", :style => 'font-size: 80%', :class => 'advSet', :title => 'Output filter: minimum posterior probablity cutoff [454, Illumina]'},
+                  { :id => 'eCoveragePriori', :label => 'Prior Prob. for Coverage &gt;2', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.1", :style => 'font-size: 80%', :class => 'advSet', :title => 'Prior probability setting: prior(error|c) when variant coverage number is above 2 [454, Illumina]'},
+                  { :id => 'lCoveragePriori', :label => 'Prior Prob. for Coverage &lt;=2', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.9", :style => 'font-size: 80%', :class => 'advSet', :title => 'Prior probability setting: prior(error|c) when variant coverage number is 1 or 2 for 454 data (Default is 0.9) [454]'}
+                ]
+              }
+            ]
+    widgets = widgets1 + widgets2
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Atlas-SNP2 Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<script type="text/javascript">
+function fillTrackName(sampleName)
+{
+  var type = Ext.get('lffType').dom ;
+  var subtype = Ext.get('lffSubType').dom ;
+  if(type.value == '')
+  {
+    type.value = sampleName ;
+  }
+  if(subtype.value == '')
+  {
+    subtype.value = 'SNPs' ;
+  }
+}
+
+function displayAdvOptions(value)
+{
+  var advSettings = document.getElementsByClassName('advSet') ;
+  var advLength = advSettings.length ;
+  var ii ;
+  if(value == 'illumina') // disable only lCoveragePrior
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      if(advSettings[ii].id == 'lCoveragePriori')
+      {
+        advSettings[ii].disabled = true ;
+      }
+      else
+      {
+        advSettings[ii].disabled = false ;
+      }
+    }
+  }
+  else if(value == 'solid') // disable all
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = true ;
+    }
+  }
+  else // 454 enable all
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = false ;
+    }
+  }
+
+}
+
+function toggleTrackNameDisplay(isChecked)
+{
+  var trackType = Ext.get('lffType').dom ;
+  var trackSubType = Ext.get('lffSubType').dom ;
+  if(isChecked)
+  {
+    trackType.disabled = false ;
+    trackSubType.disabled = false ;
+  }
+  else
+  {
+    trackType.disabled = true ;
+    trackSubType.disabled = true ;
+  }
+}
+
+</script>

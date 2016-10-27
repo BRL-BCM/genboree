@@ -1,0 +1,255 @@
+<%
+  # This file replaces do_upload.jsp, but the major change is that this can't use any session information
+  # In order to accomodate big uploads or uploads that take a long time, we cannot rely on the session
+  # Any relevant information must be included in the form and validatation done here.
+  #
+  # The main common functionality is
+  #   1. Initialize vars from POSTed form
+  #   2. Move the Files to the genboreeUpload location
+  #   3. Uncompress
+  #   4. Prepare command for import tool
+  #   5. Kick off the relevant import tool.
+  #       The four main sections are
+  #         -EPs fasta - uses java importer
+  #         -EPs 3col lff - uses java importer
+  #         -Annot (lff, agilent, blast, blat, pash) - uses java importer
+  #         -Annot wig, - uses ruby importer
+  #
+
+
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'fileutils'
+  require 'brl/genboree/constants'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/helpers/fileUploadUtils'
+  require 'brl/genboree/helpers/expander'
+  require 'brl/genboree/helpers/dataImport'
+  require 'brl/cluster/clusterJob'
+  require 'brl/cluster/clusterJobManager'
+
+  @req = Apache.request
+  hostname = @req.server_name
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+  include BRL::Genboree::Constants
+  include BRL::Genboree::Helpers # FileUploadUtils, Expander and DataImport
+
+  begin
+    $stderr.puts "=" * 80
+    # Set up context, includes config file object
+    context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+    useCluster = (context.genbConf.useClusterForGBUpload == "true" || context.genbConf.useClusterForGBUpload == "yes")
+    # Set up database Util object
+    dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil, context.genbConf.dbrcFile)
+    debug = true
+    exitStatus = 500 # exit status returned by the calling the import command and returned.  Only used to catch and report serious errors
+
+    # ---------------------------------------------------------------------------
+    # Set vars from post
+    #
+    # This script handles POSTs from 2 different forms - upload.jsp and myrefseq.jsp
+    # ---------------------------------------------------------------------------
+    refseqId = context.cgi["refseq"].string
+    groupId = context.cgi["groups"].string
+    userId = context.cgi["userId"].string
+    idStr = context.cgi["idStr"].string
+    tmpFilePath = context.cgi["upload_file.path"].string
+    origFileName = context.cgi["upload_file.name"].string
+    inputFormat = context.cgi["ifmt"].string
+    # This comes from the EP upload form in myrefseq.jsp
+    inputFormat = context.cgi["fileFormatSelect"].string if(inputFormat.nil? or inputFormat.empty?)
+
+    $stderr.puts "DEBUG:\n  refseqId => #{refseqId.inspect}\n  groupId => #{groupId.inspect}\n  userId => #{userId.inspect}\n  idStr => #{idStr.inspect}\n  tmpFilePath => #{tmpFilePath.inspect}\n  origFileName => #{origFileName.inspect}\n  inputFormat => #{inputFormat.inspect}" if(debug)
+
+    # ---------------------------------------------------------------------------
+    # Set optional form vars
+    # ---------------------------------------------------------------------------
+    # Arguments for supported formats
+    # - put each *possible* argument to the format converter here
+    # - the web UI is assumed to use the same names for its form fields
+    # - the arguments provided here will be:
+    #   . looked for in the GET/POST parameters
+    #   . if present, it will be added to the argument list for the converter
+    #     like this: --argument
+    #   . if a value is present also, that value will be provided like this:
+    #     --argument=value
+    converterArgs = [
+            # common
+            "class",
+            "type",
+            "subtype",
+            # agilent-specific
+            "histogram",
+            "gainloss",
+            "segmentThresh",
+            "segmentStddev",
+            "minProbes",
+            # wig-specific
+            "trackName",
+            "recordType"]
+
+    # --------------------------------------------------------------------------
+    # Gather optional format specific args and build extraOptions Hash
+    # --------------------------------------------------------------------------
+    extraOptions = {}
+    converterArgs.each { |arg|
+      if(!context.cgi[arg].string.empty?)
+        argValue = context.cgi[arg].string
+        argValue = nil if(argValue == "genbCheckboxOn")
+        extraOptions[arg] = argValue
+      end
+    }
+
+    # ---------------------------------------------------------------------------
+    # Initialize information from the database
+    # ---------------------------------------------------------------------------
+    if(refseqId.empty? or userId.empty?)
+      $stderr.puts("ERROR: refseqId: #{refseqId.inspect} or userId: #{userId.inspect} not initialized")
+    else
+      databaseRows = dbu.selectRefseqById(refseqId);
+      databaseName = databaseRows.first['databaseName']
+      userRows = dbu.getUserByUserId(userId)
+      userName, userEmail = userRows.first['name'], userRows.first['email']
+    end
+
+    #--------------------------------------------------
+    #  Create directories necessary to store the files
+    #---------------------------------------------------
+    directoryToUse = FileUploadUtils.createFinalDir(UPLOADDIRNAME, databaseName, userName)
+    dirToUse = Dir.new(directoryToUse);
+    # ensure inputFormat is valid
+    if(!inputFormat.nil? && inputFormat != '')
+      origFileName.gsub(/[^A-Za-z0-9_\-@%:,.]/, '_')
+      #randStr = ''
+      #10.times { randStr += rand(9).to_s }
+      #newFilePath = "#{dirToUse.path}/genb#{randStr.to_s}.#{inputFormat}"
+      newFilePath = "#{dirToUse.path}/#{origFileName}"
+    else
+      $stderr.puts "ERROR: invalid input format, blank or empty"
+    end
+
+    #------------------------------------------------
+    # Now move the temp file using a system call,
+    # Ensure everything is properly escaped
+    #-------------------------------------------------
+    $stderr.puts("DEBUG:\n  tmpFilePath => #{tmpFilePath.inspect}\n  newFilePath => #{newFilePath.inspect}")
+    if(!tmpFilePath.empty?)
+      mvCmd = "mv -f " + tmpFilePath + " " + newFilePath + " 2>&1";
+      if(debug)
+        $stderr.puts("DEBUG: mvCmd => " + mvCmd.inspect) ;
+      end
+      out = `#{mvCmd}`
+      if(out.empty?)
+        fileToSaveData = File.new(newFilePath)
+        # Need to change permissions,because the tmpfile is 600, and should be 660
+        out = `chmod 660 #{fileToSaveData.path} 2>&1`
+        unless(out.empty?)
+          error = out  
+          $stderr.puts "ERROR: chmod 660 failed for uploaded file: \n#{error.inspect}"
+        end
+      else
+        error = out
+        $stderr.puts "ERROR: mv cmd failed for uploaded file: \n#{error.inspect}"
+      end
+    end
+
+    #----------------------------------------------------
+    # If annotations were pasted in, handle them here
+    #---------------------------------------------------
+    pasteData = context.cgi["paste_data"].string
+    # If we have pasted data { if(!pastData.trim.empty?)
+    if(!pasteData.nil? && !pasteData.empty?)
+      randStr = ''
+      10.times { randStr += rand(9).to_s }
+      newFilePath = "#{dirToUse.path}/genb#{randStr.to_s}.#{inputFormat}"
+      # Data from the paste field is written to a file genb3840748715331423261.lff_FromPasteDataField.txt
+      pasteDataFileName = newFilePath + "_FromPasteDataField.txt"
+      # put the value from paste_data into the file
+      File.open(pasteDataFileName, 'w') {|ff| ff.write(pasteData) }
+      # Need to get the importers to notice the paste file, fileToSaveData is set to the paste file name
+      fileToSaveData = File.new(pasteDataFileName)
+      #nameOfExtractedFile = fileToSaveData.path
+      nameOfExtractedFile = "#{File.dirname(fileToSaveData.path)}/genb.#{Time.now.to_f}.input"
+      inflateCmd = nil # no uncompression to do
+    else
+      #------------------------------------------------------------
+      # Handle compressed files here
+      #------------------------------------------------------------
+      # Not pasted, we have a file which might be compresssed. We will need to build the expander command
+      nameOfExtractedFile = "#{File.dirname(fileToSaveData.path)}/genb.#{Time.now.to_f}.input" # We will use this file name to force the name of the output file from the expander class
+      inflateCmd = "expander.rb -f #{fileToSaveData.path} -o #{nameOfExtractedFile}"
+      $stderr.puts "DEBUG: fileToSaveData.path: #{fileToSaveData.path.inspect}"
+      $stderr.puts("DEBUG: inflateCmd => #{inflateCmd.inspect}") if(debug)
+    end
+
+    #----------------------------------------------------------
+    # Format convertors should go here
+    #
+    # resetting inputFormat and inputFile if they change
+    #----------------------------------------------------------
+
+    #-----------------------------------------------------------
+    # Start EP/Annotation import scripts
+    # ----------------------------------------------------------
+    # All upload types need these
+    #----------------------------------
+    inputFile = fileToSaveData.path # even if not extracted, this will have name
+    $stderr.puts "inputFile: #{inputFile.inspect}"
+    #-----------------------------------
+    # Launch the importer locally if indicated
+    #-----------------------------------
+    # Pass all our possible extra options to the uploader, it will use what it needs (based on the input format)
+    # TODO: For now, set the groupName and refseqName as it appears that are not yet properly handled
+    groupName = ''
+    refseqName = ''
+    miscUploadOpts = {
+      'groupId' => groupId,
+      'trackName' => context.cgi['type'].string + ':' + context.cgi['subtype'].string,
+      'userEmail' => userEmail,
+      'groupName' => groupName,
+      'refseqName' => refseqName,
+      'hostname' => hostname,
+      'inflateCmd' => inflateCmd,
+      'extraOptions' => extraOptions
+    }
+
+    # NOT done on cluster. MUST extract now and then run importer command
+    # First need to extract the file. We'll use the extract() method rather than raw inflateCmd
+    # so as to get the error feedback it provides.
+    # expanderObj.extract() if(inflateCmd and not useCluster)
+
+    # Now our files are all ready, so call upload with the options needed by all input formats, and the misc
+    exitStatus = FileUploadUtils.upload(inputFormat, nameOfExtractedFile, inputFile, userId, refseqId, useCluster, context.genbConf, miscUploadOpts, debug)
+    $stderr.puts(Time.now.to_s + " DEBUG: After launching, exitStatus:" + exitStatus.inspect) if(debug)
+    #---------------------------------------------------------------------------
+    # OUTPUT
+    #
+    # Here we have the option of setting the output process
+    #---------------------------------------------------------------------------
+    $stderr.puts "=" * 80
+  %><%= "{\"status\": #{exitStatus}}" %>
+  <%
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem uploading data file (in upload.rhtml).\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+  %><%= "{\"status\": \"ERROR\"}" %><%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

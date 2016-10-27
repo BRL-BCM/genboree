@@ -1,0 +1,23 @@
+# ----------------------------------------------------
+# Localization Strings for GenboreeKB
+# - only English (en) to start
+# - put other languages in their own files (e.g. fr.yml) like Redmine does
+# - all localization keys for the GenboreeKB plugin must have the gbkb_ prefix
+# - after the gbkb_ prefix, follow usual naming convention of label_ field_ test_ permiission_ etc etc etc
+#   used in Rails and [most] standard plugins.
+# ----------------------------------------------------
+# English strings go here for Rails i18n
+en:
+  # my_label: "My label"
+  gbkb_label_project_settings_tab: GenboreeKB
+  gbkb_label_create_new_kb: Create New GenboreeKB
+  gbkb_label_update_kb: Update GenboreeKB
+  gbkb_label_kb_name: KB Name
+  gbkb_label_kb_description: Description
+  gbkb_label_kb_gbGroup: Genboree Group
+  gbkb_label_kb_gbHost: Genboree Host
+  
+  gbkb_button_create: Create
+  gbkb_button_update: Update
+  
+  

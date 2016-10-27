@@ -1,0 +1,26 @@
+#chromThumbHint {
+  color: green ;
+  font-weight: bold ;
+  font-size: 6.5pt ;
+  margin-left: 5px ;
+  vertical-align: middle ;
+  cursor: default ;
+  padding-top: 0px ;
+  padding-bottom: 0px ;
+  padding-right: 1px ;
+  padding-left: 1px ;
+  border: 1px solid green ;
+  height: 15px ;
+}
+
+#chromThumb {
+  vertical-align: middle ;
+}
+
+#updatedCoords {
+  color : #FFA0A0 ;
+}
+
+#resetCoords {
+  color : #000000 ;
+}

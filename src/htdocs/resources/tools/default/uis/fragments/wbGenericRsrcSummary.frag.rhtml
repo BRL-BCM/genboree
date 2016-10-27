@@ -1,0 +1,23 @@
+<table width="100%">
+<%
+  @rsrcs.each { |item|
+    grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+    db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+    prj = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+    trk = WorkbenchFormHelper.getNameFromURI(:trk, item, true)
+    trimmedUri = WorkbenchFormHelper.simplifyURI(item)
+    queryParams = WorkbenchFormHelper.parseQuery(item)
+%>
+    <tr>
+      <th>Resource:</th>
+      <td><i><%== trimmedUri %></i></td>
+      <td class="explain">
+        <%  queryParams.each_key { |param| %>
+              <%== param %> = <%== queryParams[param].inspect %><br>
+        <%  } %>
+      </td>
+    </tr>
+<%
+  }
+%>
+</table>

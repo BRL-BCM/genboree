@@ -1,0 +1,32 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <br/>
+    Please click the links below to launch the Genome Browsers:
+    <br/>
+    <%
+      genomeSelected = @settings['apiUrl']
+      genomeSelected.each_key { |genome|
+        ucscUrl = genomeSelected[genome][0]
+        washUrl = genomeSelected[genome][1] if(genomeSelected[genome].size() == 2) 
+    %>
+    <br/>
+    <h2>Genome: <%=genome%></h2> 
+    <ul class="wbDialogLinkLauncher">
+      <li><a class="wbDialogLinkLauncher" href="<%=ucscUrl%>" target="_blank"><img class="wbDialogLinkImage" src="/images/ucsc.png" alt="link" ></img>
+        Launch UCSC Browser</a>.</li>
+    <% if(genomeSelected[genome].size() == 2) %>
+      <li><a class="wbDialogLinkLauncher" href="<%=washUrl%>" target="_blank"><img class="wbDialogLinkImage" src="/images/epi.png" alt="link" ></img>
+        Launch WashU Browser</a>.</li>
+    <% end %>
+      <br/>
+   </ul>
+   <%
+     }
+   %>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>
+

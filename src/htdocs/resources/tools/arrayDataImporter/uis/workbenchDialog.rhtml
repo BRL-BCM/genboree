@@ -1,0 +1,179 @@
+<%# RENDER HTML %>
+<% 
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  if(@inputs.size == 0)
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+  else
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  end
+%>
+
+  <%= formTag %>
+
+
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will import array data into a target <u>Database</u>. Note that in order for the file to be imported
+          successfully, the file needs to be in a specific <i>tab-delimited</i> format.
+          We support two file formats for uploading array data:
+          <ul>
+            <li>
+              <b>Multi-column format:</b>
+              <ul>
+                <li>The first line of the file MUST be the header line starting with a '#' with <i>tab-delimited</i> column names. </li>
+                <li>The first column is reserved for the probe/Region of Interest name</li>
+                <li>Column names should be unique to avoid duplicacy of data.</li>
+                <li>Each column will be transformed into a wig track and uploaded into the target database as such.</li>
+                <li>If the column names are not compatible with Genboree track names, a ':' will be added to the column name followed by the subtype of the Regions of Interest (ROI) track.</li>
+                <li>
+                  An example of a multi-column file:</br>
+                  #probe col1 col2 col3</br>
+                  cg18191309	  5.0       10.5     30.2 </br>
+                  cg20970086	  8.0       12.3     2.3  </br>
+                  cg26340088	  7.0       14.3     33.4 </br>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <b>Multi-block format:</b>
+              <ul>
+                <li>The first line of the file may or may not be a pragma containing the track name to be used for the probe/array data until the next pragma with a track name is encountered.</li>
+                <li>If no pragma is present, the track name provided via the UI will be used. If a <i>trackName</i> pragma is present, that name will replace the name provided via the UI. </li>
+                <li>A <i>trackName</i> pragma expample:
+                  <ul>
+                    <li>##trackName=my:track</li>
+                  </ul>
+                </li>
+                <li>If you do not provide a track name via the UI then you MUST provide the track name in the pragma. </li>
+                <li>You can have multiple <i>trackName</i> pragmas in the same file for different blocks of probes/array scores: a wig file will be generated for each block. </li>
+                <li>If a pragma is not present then the the first line of the file MUST be a column header line. It must start with a '<b>#</b>'.</li>
+                <li>The first field MUST be the probe name which should be unique for all records and must be one of the entries in the reference Regions of Interest (ROI) track.</li>
+                <li>The second field MUST be the score associated with that probe.</li>
+                <li>All records MUST have the same number of fields/columns.</li>
+                <li>
+                  An example of a multi-block file:</br>
+                  ##trackName=my:track1</br>
+                  cg18191309	  5.0</br>
+                  cg20970086	  8.0</br>
+                  cg26340088	  7.0</br>
+                  ##trackName=my:track2</br>
+                  cg18191309	  5.0</br>
+                  cg20970086	  8.0</br>
+                  cg26340088	  7.0</br>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <br>&nbsp;<br>
+          You can also use compressed files like .gz or .bz2 or a multi-file archive like .tar or .zip
+          <br>&nbsp;<br>
+          Review that the correct file is going to be imported.
+          <br>&nbsp;<br>
+          You can either drag a file which has already been uploaded via the <u>Transfer File</u> utility or you can select a file to import from your machine.
+          <br>&nbsp;<br>
+          Note that this tool is not multi-host compliant and cannot be used across hosts.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+   <%# Input data help %>
+  <%=
+     renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "File Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database/Files:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      # Get the db uri:
+      dbApiHelperObj =  BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+      dbVer = dbApiHelperObj.dbVersion(@outputs[0]).downcase
+      trkListDBRCKey = @genbConf.arrayDataDBRCKey
+      rcscUri = "#{@genbConf.arrayDataDbUri}#{dbVer}"
+      widgets = []
+      widgets.push({ :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "ArrayDataImporter#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" })
+      if(@inputs.size == 0)
+        widgets.push(
+                      { :id => 'wbContext', :type => :hidden },
+                      { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                      { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                    )
+      end
+      widgets.push(
+                    { :id => "roiTrack", :label =>'Reference ROI Track', :labelWidth => "200px", :userId => @context['userId'],
+                      :rackEnv => @rackEnv, :type => :selectOnAttribute, :size => '5',
+                      :trkListDBRCKey => "#{trkListDBRCKey}", :rcscUri => "#{rcscUri}",
+                    :attributeName => 'gbArrayROITrack', :attributeValue => 'true', :selectByDefault => :none, :multiSelect => false, :toggleAllButton => false},
+                     { :id => "fileFormat", :label => "File Format", :type => :select, :onchange => "hideTrackName(this.value)",
+                      :options =>
+                      {
+                        :tracksAsCols => { :label => "Multi-column", :selected => true },
+                        :tracksAsBlocks => { :label => "Multi-block"}
+                      }
+                    },
+                    { :id => 'trackName', :label => 'Output Track Name', :type => :gbTrackName, :defaultType => 'Array', :defaultSubtype => 'Scores' },
+                    { :id => 'deleteDupTracks', :label => 'Delete Pre-existing Tracks', :type => :checkbox, :checked => true, :title => "Check this to delete existing tracks in the target database and replace them with newly created ones if the names match. Non matching tracks will not be changed in anyway. This will avoid duplicacy of imported data [Default: Checked]." },
+                    { :id => 'ignoreColsWithKeyword', :label => 'Ignore Columns with Keyword', :type => :text, :title => "Enter a keyword or a comma separated list of keywords that will be used for removing columns if any of the keywords is part of the column name [OPTIONAL]." },
+                    { :id => "keywordType", :label => "Include instead of Exclude?", :type => :checkbox, :title => "Check this to only include columns that contain the keyword(s).", :checked => false}
+                  )
+
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Settings",
+        :widgets => widgets,
+        :dbu => @dbu
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<script type="text/javascript">
+
+Ext.onReady(function() {
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  lffType.disabled = true ;
+  lffSubType.disabled = true ;
+}) ;
+
+function hideTrackName(fileFormat)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var ignoreKey = Ext.get('ignoreColsWithKeyword').dom ;
+  var keywordType = Ext.get('keywordType').dom ;
+  if(fileFormat == 'tracksAsCols')
+  {
+    lffType.disabled = true ;
+    lffSubType.disabled = true ;
+    ignoreKey.disabled = false ;
+    keywordType.disabled = false ;
+  }
+  else
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    ignoreKey.disabled = true ;
+    keywordType.disabled = true ;
+  }
+}
+</script>

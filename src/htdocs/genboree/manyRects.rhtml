@@ -1,0 +1,57 @@
+<html>
+<head>
+  <script type="text/javascript" src="/javaScripts/prototype-1.6.js"></script>
+  <script type="text/javascript" src="/javaScripts/ext-2.2/adapter/prototype/scriptaculous.js"></script>
+  <script type="text/javascript" src="/javaScripts/ext-2.2/adapter/prototype/ext-prototype-adapter.js"></script>
+  <script type="text/javascript" src="/javaScripts/ext-2.2/adapter/ext/ext-base.js"></script>
+  <script type="text/javascript" src="/javaScripts/ext-2.2/ext-all-debug.js"></script>
+  <script type="text/javascript" src="/javaScripts/manyRects.js"></script>
+  <script type="text/javascript">
+    regions = new Array() ;
+<%
+    256.times { |ii|
+      x1 = ii * 10 ;
+      x2 = x1 + 10 ;
+      256.times { |jj|
+        y1 = jj * 10 ;
+        y2 = y1 + 10 ;
+%>
+        <%= "regions.push(new Rect(#{x1}, #{y1}, #{x2}, #{y2})) ;" %>
+<%
+      }
+    }
+%>
+    var points = new Array() ;
+    for(var ii=0; ii < 30; ii++)
+    {
+      points.push( [ Math.floor(Math.random()*2560), Math.floor(Math.random()*2560) ] ) ;
+    }
+
+    Ext.onReady( function()
+    {
+      for(var ii=0; ii<points.length; ii++)
+      {
+        var rectMatch = false ;
+        var point = points[ii] ;
+        var pX = point[0];
+        var pY = point[1] ;
+        for(var jj=0; jj<regions.length; jj++)
+        {
+          rectMatch = regions[jj].containsPoint(pX, pY) ;
+          if(rectMatch)
+          {
+            break ;
+          }
+        }
+        if(!rectMatch)
+        {
+          console.debug("No rect found for point %s, %s", pX, pY) ;
+        }
+      }
+    }) ;
+  </script>
+</head>
+<body>
+No body :)
+</body>
+</html>

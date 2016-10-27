@@ -1,0 +1,158 @@
+/*Placement of the div elements*/
+.bvrTitleContainer {
+    width:98%;
+    position: absolute;
+    margin:1%;
+    top:25px;
+}
+
+.bvrTitle {
+    width:90%; 
+    font-size: 24px;
+    color: #3A9EE0;
+    text-align:center;
+    font-weight: bold;
+    font-family: 'Roboto',"Helvetica Neue",Helvetica,Arial,sans-serif;
+    margin-left:auto;
+    margin-right:auto;
+}
+.panelContainer {
+   position: absolute;
+   top:25px;
+   left:60px;
+}
+
+.buttonTable {
+    width:98%; 
+    margin:1%;
+    position: absolute;
+    bottom:110px;
+}
+
+table.tbl {
+  text-align:center;
+  width:90%; 
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.outerContainer{
+  position:fixed;
+  left:50%;
+}
+
+.image{
+  bottom:5px;
+  left:80px;
+}
+
+.outerContainer .mainContainer{
+  position:relative; 
+  left:-50%;
+  top: 80px; 
+  /*popup-styles*/
+  background-color:white;
+  /*border:solid 2px #eeeeee;*/
+  border-radius:10px;
+  width:1200px;
+  height:500px;
+}
+
+.gvRefresh {
+  background-image: url('/clinGenGrid/images/Refresh_16x16.png') !important;
+}
+.variantNode {
+  padding: 1px; !important;   
+}
+.x-panel.mainPanel {
+  border: 2px solid #F89829;
+  
+}
+.x-panel-header {
+  background: #eeeeee no-repeat 0 -1px;
+}
+/*
+.x-panel-header-text.x-panel-header-text-default {
+  text-align: center;
+}*/
+
+/*Panel header*/
+.x-component.x-component-default.x-box-item {
+  height: 30px;
+}
+/*Toobar header*/
+.x-component.x-component-default.x-box-item.x-toolbar-item {
+  height: 20px;
+}
+ 
+.mainPanel .x-panel-header-text {
+  color: #3A9EE0;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: 'center' !important;
+  font-family: 'Roboto',"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+.x-toolbar.gvToolBar {
+  background: #eeeeee no-repeat 0 -1px;
+  font-family: 'Roboto',"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+.x-btn-default-toolbar-small .x-btn-inner {
+ color: #3A9EE0;
+ font-size: 12px;
+ font-weight: bold;
+}
+
+.popGrid {
+  background-color: #FFFFFF;
+}
+
+.largehtml_custom_tool .x-tool-largehtml{
+  background-image: url('/clinGenGrid/images/external-link-14x14Blue.png') !important;
+  padding:5px !important;
+}
+
+.x-column-header-text {
+  font-weight: bold;
+  color: #3A9EE0;
+  font-family: 'Roboto',"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 12px;
+  text-align: 'center';
+}
+.x-column-header-inner {
+  text-align: center;
+}
+.largeWin ul {
+  list-style-type: disc;
+  font-size: 11px;
+   margin-left: 1.2em ;
+}
+
+
+.largeWin li {
+  margin-left: 1.6em ;
+  list-style-type: circle ;
+  font-size: 11px;
+}
+
+a.button-link {
+    -moz-border-bottom-colors: none;
+    -moz-border-left-colors: none;
+    -moz-border-right-colors: none;
+    -moz-border-top-colors: none;
+    background: repeat-x scroll 0 0 #3a9ee0;
+    border-color: #a52a2a !important;
+    border-image: none;
+    border-radius: 3px;
+    border-style: solid;
+    border-width: 1px;
+    color: white;
+    display: inline-block;
+    font-family: "Helvetica Neue",Helvetica,Arial,"Lucida Grande",sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1em;
+    padding: 20px 20px 20px 20px;
+    text-decoration: none;
+}

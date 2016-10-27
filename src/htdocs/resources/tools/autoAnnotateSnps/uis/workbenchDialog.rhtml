@@ -1,0 +1,70 @@
+<%# RENDER HTML %>
+<%
+    require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+    formTag = ""
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileDirOrTrackListSummary, { :fileOrTrackList => @inputs, :label => "Folder/Track:" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Location:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :label => 'Project/Database', :projectOrDatabaseList => @outputs } )
+    })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    radius = @settings['maxInsertSize'] ? @settings['maxInsertSize'] : 0
+    widgets =
+    [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "GenomicEpigenomicChanges-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}" },
+        { :id => 'upload', :label => 'Upload as a Track ?', :type => :checkbox, :onClick => "toggleTrackNameDisplay(this.checked)", :checked => true, :title => 'Check this to upload the filtered SNPs as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.'},
+        { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => '', :defaultSubtype => '', :title => 'If uploading the filtered SNPs as a track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+        { :id => 'widgetHeader1', :value => 'Annotate Using Known SNP Sources:', :type => :wbSimpleWidgetHeader },
+        { :id => 'dbSnp', :label => 'dbSNP', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => '1000Genomes', :label => '1000 Genomes', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'gwas', :label => 'GWAS', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'widgetHeader2', :value => 'Annotate Using Genomic Features:', :type => :wbSimpleWidgetHeader },
+        { :id => 'genes', :label => 'Gene Components', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'smallRNA', :label => 'Small RNAs', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'cpgIslands', :label => 'CpG Islands', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'repeats', :label => 'Repeats', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" },
+        { :id => 'widgetHeader3', :value => 'Also Annotate Based on Effect:', :type => :wbSimpleWidgetHeader },
+        { :id => 'synNonSyn', :label => 'Synon. vs Non-Synon.', :type => :checkbox, :size => "25", :value => false, :labelWidth => "200px" }
+    ]
+
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+  <%= WorkbenchFormHelper.toggleTrackNameDisplayFunction() %>
+</script>

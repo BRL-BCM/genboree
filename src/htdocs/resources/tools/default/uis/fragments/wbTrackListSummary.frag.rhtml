@@ -1,0 +1,27 @@
+<%
+  @trackList = [ @trackList ] unless(@trackList.is_a?(Array) or @trackList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@trackList.nil? or @trackList.empty?) ? "" : "rowspan='#{@trackList.size}'") %> ><%= (@label || "Track") %>:</th>
+<%  if(@trackList.nil? or @trackList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @trackList.each_index { |ii|
+        item = @trackList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        trk = WorkbenchFormHelper.getNameFromURI(:trk, item, true)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== trk %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

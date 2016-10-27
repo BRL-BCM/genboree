@@ -1,0 +1,29 @@
+<%
+  require 'cgi'
+  require 'fileutils'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/apiCaller'
+  include BRL::Genboree::REST
+
+  @cgi = CGI.new()
+  epName = "#{@cgi['ep']}:#{@cgi['epStart']}#{(@cgi.has_key?('epStart') or @cgi.has_key?('epStop')) ? "-" : ""}#{@cgi['epStop']}"
+  orient = @cgi['orientation'].to_i 
+  width = @cgi['width'].to_i if(@cgi.has_key?('width') and !@cgi['width'].empty?)
+  height = @cgi['height'].to_i if(@cgi.has_key?('height') and !@cgi['height'].empty?)
+  if(width.nil?)
+    width = (orient == 0) ? 400 : 40
+  end
+  if(height.nil?)
+    height = (orient == 0) ? 40 : 400
+  end
+  
+  begin
+    @cgi.header("image/png")
+    uri = "/REST/v1/grp/#{CGI.escape("Public")}/db/#{CGI.escape("Hg18")}/trk/#{CGI.escape("Cyto:Band")}/annos?format=chr_band_png&landmark=#{CGI.escape(epName)}&orientation=#{orient}&pxHeight=#{height}&pxWidth=#{width}"
+    apiCaller = ApiCaller.new("localhost", uri, "msmith", "gmfttk85")
+    apiCaller.get()
+    puts apiCaller.respBody()
+  rescue => e
+    puts e
+  end
+%>

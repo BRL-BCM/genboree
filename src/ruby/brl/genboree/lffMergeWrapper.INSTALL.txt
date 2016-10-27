@@ -1,0 +1,40 @@
+-----------------------------------------------------------------------
+Setup of VGP Merge on Alanine:
+-----------------------------------------------------------------------
+
+1) Check out latest ruby genboree stuff as andrewj.
+
+p4 sync ~andrewj/workDir/brl/src/ruby/brl/genboree/...
+p4 sync -f ~andrewj/workDir/brl/src/ruby/brl/util/...
+
+2) Copy necessary ruby scripts to the ruby lib dir used by apache.
+
+cp -f ~andrewj/workDir/brl/src/ruby/brl/genboree/*.rb /usr/local/brl/local/apache/ruby/brl/genboree/
+cp -f ~andrewj/workDir/brl/src/ruby/brl/util/*.rb /usr/local/brl/local/apache/ruby/brl/util/
+
+chown brlweb:brlwebgrp /usr/local/brl/local/apache/ruby/brl/genboree/*.rb
+chown brlweb:brlwebgrp /usr/local/brl/local/apache/ruby/brl/util/*.rb
+
+3) Copy the config (properties file) to the ruby conf areas used by apache.
+
+cp -f ~/workDir/brl/src/ruby/brl/genboree/*.properties /usr/local/brl/local/apache/ruby/conf/
+
+chown brlweb:nobody /usr/local/brl/local/apache/ruby/conf/*properties
+chmod 640 /usr/local/brl/local/apache/ruby/conf/*properties
+
+4) Edit the properties file to point to actual locations of helper scripts, output dirs (if any), etc
+
+For merger, making sure these lines are correct is vital:
+
+program.sizeChecker           = /usr/local/brl/local/apache/ruby/brl/genboree/lffSizeChecker.rb
+program.merger                = /usr/local/brl/local/apache/ruby/lffMerger_multiLevel.VGP.rb
+
+5) Set up workspace where lff file will reside and the output file will be written:
+
+mkdir /usr/local/brl/data/lffMerge
+chown brlweb:nobody /usr/local/brl/data/lffMerge
+chmod 2770 /usr/local/brl/data/lffMerge
+ln -s /usr/local/brl/data/lffMerge /usr/local/brl/local/apache/htdocs/temp
+
+6) Double check that mod_ruby config is correct in httpd.conf file. This should already be ok.
+

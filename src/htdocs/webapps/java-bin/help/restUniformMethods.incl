@@ -1,0 +1,1218 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;8.B REST API &ndash; Methods&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#intro">8.B.1 Introduction</A>
+  <LI class="compact1_10"><A HREF="#methods">8.B.2 Uniform Methods</A>
+    <UL class="compact1">
+      <LI><A HREF="#methodsTable"><FONT CLASS="tocSmall">8.B.2.1 Supported Methods Table</FONT></A></LI>
+    </UL>
+  </LI>
+  <LI class="compact1_10"><A HREF="#retVals">8.B.3 Return Values (HTTP Codes) Table</A></LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAPIOverview">8. REST API &ndash; Overview</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restResourceIDs">8.A REST API &ndash; Resource IDs</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restRepresentations">8.C REST API &ndash; Representations</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAuthorization">8.D REST API &ndash; Authorization</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="intro">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.B.1. Introduction:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <P class="body">
+      A small set of methods, uniform for all resources, is a cornerstone of REST. Other
+      approaches to web services can amount to complex ways of performing many varied operations
+      on resources; i.e. they implement remote procedure calls (RPCs) of object-specific methods on
+      remote objects, which is not at all uniform.
+    <p class="body"> The Genboree API makes use of the small set of methods defined by HTTP for manipulating
+      resources on the web. These methods let you <i>retrieve</i> resources, <i>create</i> new resources and
+      <i>update</i> existing ones, and <i>delete</i> existing resources. This 'C.R.U.D.' set of fundamental
+      operations is also using in the database world, which similarly focusses on the storage and retrieval
+      of data resources.
+    </p>
+<HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="methods">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.B.2. Uniform Methods</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <P class="body">
+      The operations supported on Genboree resources are those of HTTP, and are
+      made via the <i>request method</i> in the HTTP request to the API URL.
+    <p class="body">
+      <ul class="compact2">
+        <li>- <span class='genbField'>GET</span> &raquo; <i>get</i> a representation of the resource.</li>
+        <li>- <span class='genbField'>PUT</span> &raquo; <i>put</i> a new resource or put a change to an existing resource on the server.</li>
+        <li>- <span class='genbField'>DELETE</span> &raquo; <i>delete</i> an existing resource.</li>
+        <li>- <span class='genbField'>POST</span> &raquo; (currently unused, but reserved for appropriate ROA-founded extension)</li>
+      </ul>
+    <p class="body">
+      Many resources do not support ALL of the methods; this may be because the method is not
+      implemented yet for that resource, or the method is inappropriate for the resource, or the method
+      has been judged too dangerous to expose in the API. In all cases, however, the supported methods
+      are a subset of those of HTTP.
+    <p class="body">
+      <a href="#retVals">Section 8.B.3 below</a> discusses the <i>return values</i> of the methods.
+    <p class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="methodsTable">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.B.2.1. Supported Methods Table
+        </DIV>
+      <!--   Sub-topic content -->
+      <p class="body">
+        The table below indicates the supported methods for the resources exposed in the current version of the Genboree REST API.
+        The resources are indicated by their <span class="genbField">rsrcPath</span> component.
+        New methods (and resources) will be added over time, so check back often. If you wish to request exposure
+        of certain Genboree data entities, please <a href="mailto:andrewj@bcm.edu?subject=REST%20API%20Request">
+        contact us</a>.
+      <p class="body">
+        Descriptions of the resources can be found in <a href="/java-bin/showHelp.jsp?topic=restResourceIDs#rsrcPathsTable">Section 8.A.2.1 - Resource Paths Table</a>.
+      <p class="body">
+        <table class="resources" width="100%">
+          <!-- RESOURCE: USERS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_usrs'>&nbsp;</a>Resource: Users</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Currently Supported Methods</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grps
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of user's groups
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; group
+							</div>
+            </td>
+          </tr>
+          <!-- RESOURCE: GROUPS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_grps'>&nbsp;</a>Resource: User Groups</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <!-- /REST/v1/grps should be for -all- groups in Genboree, accessible only by Genboree Admins or something -->
+          <!--
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grps
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of groups for <font color="blue"><b>gbLogin</b></font>
+							</div>
+            </td>
+          </tr>
+          -->
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; group
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; create a new group or update existing group (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/dbs
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of databases
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prjs
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of projects
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new project (in request body) into group
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usrs
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of users
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; existing users (in request body) into group as subscriber
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; existing user into group as subscriber
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; remove user from group
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>/role
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user role in group
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; existing user into group with role (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; remove user from group
+							</div>
+            </td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>/unlockedResources
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of unlocked resources for the group
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; resources to be unlocked (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; remove a resource from the unlocked resources 
+							</div>
+            </td>
+          </tr>
+					
+					
+					
+          <!-- RESOURCE: DATABASES -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: User Databases</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; database
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new database
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/eps
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of entrypoints (chromosomes)
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new entrypoints
+							</div>
+					  </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/trks
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of tracks
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/seq
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; sequence
+							</div>
+            </td>
+          </tr>
+          
+					
+          <!-- RESOURCE: DATABASES -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: Database Files</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/files
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of files
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; file properties
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new file properties
+							</div>            
+              <div class="genbMethodDesc">
+								DELETE &raquo; deletes the file
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/data
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; file contents
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new file contents
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/description
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; file description property
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new file description
+							</div>            
+              <div class="genbMethodDesc">
+								DELETE &raquo; remove file description
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/date
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; file date
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new file date
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/label
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; file label
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; new file label
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/archived
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; true/false
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; true/false
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/autoArchive
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; true/false
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; true/false
+							</div>            
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/hide
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; true/false
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; true/false
+							</div>            
+            </td>
+          </tr>
+          
+          
+          <!-- RESOURCE: PROJECTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_prjs'>&nbsp;</a>Resource: User Projects</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; project
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new project into group or a new name for existing project [rename], or copy a project (referece to source project in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/title
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; project title
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new project title (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/description
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; project description
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new project description (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/customContent
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; project custom content
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new project custom content (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/news
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of ALL project news items
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new collection of news items (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/links
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of ALL project links
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new collection of project links (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>/quickLinks
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of ALL project quick links
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new collection of quick links (in request body)
+							</div>
+            </td>
+          </tr>
+          <!-- RESOURCE: ENTRYPOINTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_eps'>&nbsp;</a>Resource: Entrypoints (e.g. chromosomes)</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/ep/<span class="genbField">{ep}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; entrypoint
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new entrypoint into database or new entrypoint name (in request body) for existing entrypoint
+							</div>
+            </td>
+          </tr>
+          <!-- RESOURCE: TRACKS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_trks'>&nbsp;</a>Resource: Annotation Tracks</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new track into database or new track name (in request body) for existing track
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/url
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track URL
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new track URL (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; track URL
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/urlLabel
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track URL label text
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new track URL label text(in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; track URL label text
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/description
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track description
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new track description 
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; track description
+							</div>
+            </td>
+          </tr>
+					
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateUrl
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track URL from template genome
+							</div>
+            </td>
+          </tr>
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateUrlLabel
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track URL label text from template genome
+							</div>
+            </td>
+          </tr>					
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateDescription
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; track description from template genome
+							</div>
+            </td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/classes
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of classes/categories
+							</div>
+            </td>
+          </tr>
+
+
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annoAttributes
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of user-defined annotation attributes/properties
+							</div>
+            </td>`
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/style
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user-defined style for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new style for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; user-defined style for track
+							</div>
+				    </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/color
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user-defined color for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new color for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; user-defined color for track
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/display
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user-defined display for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new display for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; user-defined display for track
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/rank
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; user-defined rank for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new rank for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; user-defined rank for track
+							</div>
+            </td>
+          </tr>
+
+
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultStyle
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; default style for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new default style for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; default style for track
+							</div>
+				    </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultColor
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; default color for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new default color for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; default color for track
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultDisplay
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; default display for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new default display for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; default display for track
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultRank
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; default rank for track
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new default rank for track (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; default rank for track
+							</div>
+            </td>
+          </tr>
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/links
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of links
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new collection of links (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; collection of links
+							</div>
+            </td>
+          </tr>
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateLinks
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of links from template genome
+							</div>
+            </td>
+          </tr>
+					
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/bigBed
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; the file
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; start the process to create the file
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; the file
+							</div>
+            </td>
+          </tr>					
+
+					<tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/bigWig
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; the file
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; start the process to create the file
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; the file
+							</div>
+            </td>
+          </tr>					
+
+          <!-- RESOURCE: TRACK ATTRIBUTES -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Track Attributes</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attributes
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; collection of user-defined track attributes
+							</div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/value
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; The value of a user-defined track attribute
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new value for the track attribute (in request body)
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; the track attribute
+							</div>						
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/display
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; The user-defined display settings for a track attribute 
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; New user-defined display settings for a track attribute 
+							</div>
+              <div class="genbMethodDesc">
+								DELETE &raquo; User-defined display settings for a track attribute (restores group default)
+							</div>						
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/defaultDisplay
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; The group default display settings for a track attribute 
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; New group default display settings for a track attribute 
+							</div>
+            </td>
+          </tr>
+
+
+          <!-- RESOURCE: ANNOTATIONS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Annotations</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annos
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; annotations in track, falling within <span class="genbParam">landmark</span> if any
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trks/annos
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; annotations in tracks (in request body), falling within <span class="genbParam">landmark</span> if any
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annos/count
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; count of annotations in track 
+							</div>
+            </td>
+          </tr>
+         
+
+          <!-- RESOURCE: LAYOUTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_layouts'>&nbsp;</a>Resource: Layouts</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos/layouts
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; a list of all of the saved tabular layouts for this database
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; insert a new tabular layout into this database (in request body)
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos/layout/<span class="genbField">{layout}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; a saved tabular layout definition
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; insert a new tabular layout or update existing (in request body)
+							</div>
+              <div class="genbMethodDesc">
+                DELETE &raquo; delete saved tabular layout
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos/layout/<span class="genbField">{layout}</span><br>
+              /attribute/<span class="genbField">{attribute}</span>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; a specific attribute about a saved tabular layout
+							</div>
+              <div class="genbMethodDesc">
+								PUT &raquo; a new value for the attribute (userId, created, and modified are read-only)
+							</div>
+            </td>
+          </tr>
+
+          <!-- RESOURCE: QUERYABLE -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_layouts'>&nbsp;</a>Resource: Queryable</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="41%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/queryable<br><br>
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; a list of all of the queryable resources in the API as well as
+                their specific attributes
+							</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="41%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/<span class="genbField">{*}</span>/queryable
+            </td>
+            <td class="genbFixed">
+              <div class="genbMethodDesc">
+								GET &raquo; all of the information about a single queryable resource
+                specified by the path <span class="genbField">{*}</span>
+							</div>
+            </td>
+          </tr>
+        </table>
+      <p class="body">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="retVals">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.B.1. Return Values (HTTP Codes):</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      We will differentiate between method <i>return values</i>, which all methods have,
+      and <i>resource representations</i>, which methods that retrieve or send data representations need.
+      Successful method calls, whether they retrieve or modify data, generally return some kind
+      <i>representation</i> even if it's the result of creating or updating the resource; deletion
+      generally does <i>not</i> return a representation.
+    <p class="body">
+      The <i>return value</i> of a method indicates success or the type of failure encountered and can
+      be found in the <i>HTTP response code</i>. Genboree uses a subset of the standard HTTP response
+      codes, but whose definitions have high fidelity to those of the HTTP standard.
+    <p class="body">
+      Success can
+      be nuanced, but the most common success code is <span class="genbLabel">200</span> ('OK'). Various
+      types of failures are possible, and the HTTP code plus any information in the response body helps indicate
+      what went wrong. Failures are either <i>client-side errors</i> or <i>server-side errors</i>.
+    <p class="body">
+      <table class="resources" width="100%">
+        <!-- CODES: SUCCESS -->
+        <tr>
+          <td class="category" colspan="3"><a name='codesTable_success'>&nbsp;</a>SUCCESS CODES</td>
+        </tr>
+        <tr>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Code</td>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Text</td>
+          <td class="colHeader" align="left">Indication</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">200</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">OK</font></td>
+          <td class="genbFixed" align="left">Request to obtain, alter, or delete resource succeeded.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">201</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Created</font></td>
+          <td class="genbFixed" align="left">Created a new resource.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">203</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Accepted</font></td>
+          <td class="genbFixed" align="left">Long-running resource alteration/creation/deletion accepted for processing.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">301</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Moved Permanently</font></td>
+          <td class="genbFixed" align="left">Request to rename resource succeeded. Now has new resource URL.</td>
+        </tr>
+        <!-- CODES: CLIENT ERROR -->
+        <tr>
+          <td class="category" colspan="3"><a name='codesTable_clientError'>&nbsp;</a>CLIENT-SIDE ERROR CODES</td>
+        </tr>
+        <tr>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Code</td>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Text</td>
+          <td class="colHeader" align="left">Indication</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">400</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Bad Request</font></td>
+          <td class="genbFixed" align="left">Request could not be understood as made (URL escaped improperly?).</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">403</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Forbidden</font></td>
+          <td class="genbFixed" align="left">Bad authentication info or not authorized to perform method on resource.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">404</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Not Found</font></td>
+          <td class="genbFixed" align="left">Resource specified by URL doesn't exist (URL escaped improperly?)</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">405</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Method Not Allowed</font></td>
+          <td class="genbFixed" align="left">Resource doesn't support the method [yet]; other methods are allowed.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">409</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Conflict</font></td>
+          <td class="genbFixed" align="left">Creating/altering resource causes conflict with other existing resource(s). (e.g. resource name already taken)</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">415</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Unsupported Media Type</font></td>
+          <td class="genbFixed" align="left">Representation format parameter or representation itself from client is not valid for the resource.</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">501</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Not implemented</font></td>
+          <td class="genbFixed" align="left">No methods implemented [yet] for this resource.</td>
+        </tr>
+        <!-- CODES: SERVER ERROR -->
+        <tr>
+          <td class="category" colspan="3"><a name='codesTable_serverError'>&nbsp;</a>SERVER-SIDE ERROR CODES</td>
+        </tr>
+        <tr>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Code</td>
+          <td class="colHeader" align="center" width="17%">HTTP<br>Status Text</td>
+          <td class="colHeader" align="left">Indication</td>
+        </tr>
+        <tr>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">500</font></td>
+          <td class="genbFixed" align="center" width="17%"><font color="maroon">Internal Server Error</font></td>
+          <td class="genbFixed" align="left">Unexpected server error encountered performing method on resource.</td>
+        </tr>
+      </table>
+    </p>
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

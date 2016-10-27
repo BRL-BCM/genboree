@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Track Entity List Oriented",
+    "tooltip": "Perform Random Forest using two or more track entity lists." ,
+    "idStr": "randomForestEntityList"
+  },
+  {
+    "text": "Track Attribute Oriented",
+    "tooltip": "Perform Random Forest using track attributes." ,
+    "idStr": "randomForestTrack"
+  }
+]

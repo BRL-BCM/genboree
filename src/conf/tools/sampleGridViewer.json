@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "sampleGridViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "View Sample Grid",
+    "shortLabel": "[NOT SET]"
+  }
+}

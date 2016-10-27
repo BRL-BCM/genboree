@@ -1,0 +1,5 @@
+Place this file tree on the data partition.
+Usually something like:
+
+/usr/local/brl/data/genboree/toolPlugins/resources/nameSelector
+

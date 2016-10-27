@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "setUrlDesc",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Set Track URL, Description and Label",
+    "shortLabel": "[NOT SET]"
+  }
+}

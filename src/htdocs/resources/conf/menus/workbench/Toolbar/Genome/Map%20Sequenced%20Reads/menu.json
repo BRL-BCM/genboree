@@ -1,0 +1,13 @@
+[
+ {
+    "text" : "Map Reads by Bowtie",
+    "tooltip" : "Bowtie 2 is an ultrafast and memory-efficient tool for aligning sequencing reads to long reference sequences.",
+    "idStr" : "bowtie"
+  },
+  {
+    "text": "Map Reads by BWA",
+    "tooltip": "BWA is an alignment tool for mapping low-divergent sequences against a large reference genome",
+    "idStr": "bwa"
+  }
+]
+

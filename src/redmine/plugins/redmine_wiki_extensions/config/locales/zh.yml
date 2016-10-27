@@ -1,0 +1,24 @@
+# Simplified Chinese strings go here
+zh:
+  label_wikiextensions_tags: 标签
+  label_wikiextensions_new: 新建
+  wiki_extensions: Wiki Extensions
+  label_wikiextensions_tab: 标签
+  wiki_extensions_add_tab: "增加标签到项目菜单栏."
+  permission_add_wiki_comment: 增加Wiki注释
+  permission_delete_wiki_comments: 删除Wiki注释
+  permission_edit_wiki_comments: 编辑Wiki注释
+  permission_wiki_extensions_settings: 管理Wiki Extensions
+
+  field_auto_preview_enabled: 打开自动预览
+  field_sidebar_disabled: 禁止侧栏
+  wiki_extensions_vote: 投票 
+
+  
+  wiki_page_commented_header: 用户 %{author} 对项目 "%{project_name}" 的Wiki "%{page_title}" 评论已创建。
+  wiki_page_commented_comment_head: '评论:'
+  wiki_page_commented_url: '您可以按以下链接查看相关评论：'
+  label_wiki_comment_added: 'Wiki 评论已添加'
+  label_wiki_comment_plural: 'Wiki comments'
+  
+  wiki_extensions_new_wiki_page: 'New page'

@@ -1,0 +1,129 @@
+
+Follow this guide to install Redmine the first time.
+
+The order of the steps is appropriate.
+
+The caveats/notes are key.
+
+It defers to more specific docs when appropriate.
+
+
+A. This assumes you're working from out SVN Redmine snapshot
+- And thus have a known Redmine code base, patches, plugins, etc.
+- And are operating in a Genboree context.
+
+svn://histidine.brl.bcmd.bcm.edu/brl-repo/rails/redmine/genbKB_dev/
+
+
+B. Install Guide
+
+1. Check out the dir-tree mentioned above.
+
+2. Open genbKB_dev/INSTALL.BRL
+  2.a. Make sure you have the "PREREQUISITES" listed. If you have Genboree, you probably do.
+  
+3. Open the reference URL mentioned in "SETUP". For reference only. Go back to "SETUP".
+
+4. Follow steps 1-4 in SETUP
+  4.a. Probably you want some other dedicated rails dir. Not "redmine_genbKB_dev"
+  4.b. If you had a separate, and larger, data partition then step 3 in SETUP is worth doing.
+  4.c. Yes, step 4 in SETUP is slightly different than Redmine's install instructions.
+       . We don't use the "redmine" mysql account. We use genboree's.
+
+5. Examine step 5 of SETUP carefully
+  5.a. Change the data name to match that of step 4. Probably "redmine_genbKB" is best in both.
+  5.b. Change "{PASSWORD}" to be the mysql password for the 'genboree' mysql account
+  5.c. Socket path ok? If separate database machine, remove this.
+       . Fill in FQDN "host" and probably "port : 3306" also in this case
+         
+6. Follow step 6 of SETUP.
+  6.a. While this has caused us a few problems, because you've checked out a working version,
+       you just need to fill in your smpt server info, etc. If your smtp server requires login or
+       encryption, this can be where some tuning is needed.
+  6.b. Email sending is VERY IMPORTANT in Redmine. This must work before you are done. Make sure to
+       test email is working once up and running the first time!
+
+7. Follow steps 7-11 of SETUP. Very basic command line setup stuff.
+
+8. Check or blindly do the tasks mentioned in step 12 of SETUP
+ 
+9. Apply BRL patches. Purpose & instructions are found in doc/BRL/ dir. Review & apply.
+  - DO NOT START/RESTART Redmine yet, even if docs mention it.
+  9.a. doc/BRL/BRL.Patch.PluginsLocales
+  9.b. doc/BRL/BRL.Patch.ExposeActivitiesRoles
+
+10. Delete the "genboree_kbs" plugin. Not supported at this time. Any KB issues/breakages are your problem.
+  10.a. cd plugins/
+  10.b. rm -rf genboree_kbs/
+  
+11. Configure the BRL "genboree_customizations" plugin
+    - DO NOT START/RESTART Redmine yet, even if docs mention it.
+    - This plugin applies a number of BRL-specific little tweaks to Readmine via the plugin mechanism
+      (rather than hacking at core Redmine code as was done previously or resorting to patches
+      when unnecessary)
+  11.a. Read plugins/genboree_customizations/README.brl
+  11.b. Check that your config/settings.yml has the new property mentioned, set to the default value.
+        - You will be able to customize the content in the UI (not in this settings.yml !!)
+
+12. Configure the BRL "genboree_auth" plugin.
+    - DO NOT START/RESTART Redmine yet, even if docs mention it.
+    - This configures Redmine to use Genboree as the main (and really: ONLY) authentication source
+      rather than its own Redmine user-auth tables.
+    - This allows Genboree users to use the same login & password for BOTH services.
+      . It does not enable single-sign-in. Not the same thing.
+    12.a. Read plugins/genboree_auth/README.brl
+
+13. Installation of 3rd Party Plugins
+    - The SVN dir-tree should have come with several 3rd party plugins.
+    - These are the ones that don't begin with "genboree_".
+  13.a. Run any plugin "migrations"
+        . These will add/change your database tables to support the plugins, if needed.
+        . Cmd in the rails dir:
+            rake redmine:plugins:migrate RAILS_ENV=production
+  13.b. For "redmine_google_calendar" plugin, you will need to configure a "Custom field" once
+        your Redmine is up and running. See "CONFIG.BRL" for UI steps, as mentioned in #15 below.
+  13.c. Also for "redmine_google_calendar" you should have our patched version of their init.rb from SVN.
+        . Old original code won't work with new Rails/Redmine.
+        . And some softlinks are needed.
+        . And some route definitions appear to be needed.
+        . Our SVN version has ALL this.
+        . BUT if you re-downloaded this [old] plugin from GitHub or something, you will need to apply our .patch files
+          to fix the deprecated logger method.
+              cd plugins/redmine_google_calendar/
+              patch -p0 < fixLoggerError.patch
+              patch -p0 < fixCalendarShow.patch
+              patch -p0 < fixSettingsDisplay.patch
+              ln -s plugins/redmine_google_calendar/app/views/settings/_googlecalendar_settings.rhtml plugins/redmine_google_calendar/app/views/settings/_googlecalendar_settings.html.erb              
+              ln -s plugins/redmine_google_calendar/app/views/google_calendar/show.rhtml plugins/redmine_google_calendar/app/views/google_calendar/show.html.erb
+        
+14. ROUGH/QUICK Start of Redmine and Initial Config in the UI.
+    - Step 13 in SETUP section of INSTALL.brl describes how to rough-start your Redmine for INITIAL CONFIG
+      purposes. i.e. In a non-production, low  performance, unsupported way.
+  14.a. Now is the time to do some of the UI-settings related stuff mentioned by patches/plugins.
+  14.b. "plugins/genboree_auth/README.brl"
+        . Go to bottom of those instructions.
+        . Do test of Genboree user, then configure this Genboree user as a Redmine admin.
+        . Use that Genboree user for all further steps, not Redmine default admin account.
+  14.c. "plugins/genboree_customizations/README.brl"
+        . Do what it says in section "C" to set your "Email subject prefix"
+  14.d. "plugins/redmine_issue_checklist/"
+        . Go to this plugin's UI config page and check "Save changes to issue log":
+            Administration => Plugins => [CHECK: Save changes to issue log] => [Apply]
+  14.e. Note changing of admin password. Do this, otherwise anyone can login as Redmine-wide admin account.
+       . Really, don't use this account anyway. ONLY for getting started.
+       . Use it to make other Genboree accounts Redmine Administrators. Like say _yours_ and possible some other
+         real Genboree admin types as backups.
+           Administration => Users => New user
+       . Make sure to set the "Authentication mode" to "Genboree" for any new user you add!
+       . Anyway, obviously do this after Genboree based authentication is up and running!
+  14.f. Note the test of sending email. Step 14 gives some pointers to helping with this.
+       . Including some other gems to roll back to, etc.
+       
+15. UI-Based 1st Time Config
+    - Now that you're up with a temporary server, login using
+      the *Genboree* account who is a Redmine admin.
+    - Refer to instructions in "CONFIG.BRL" for 1st-time setup.
+
+16. Boot-Time Service Config & Nginx Forwarding
+    - See init.d/README.BRL
+

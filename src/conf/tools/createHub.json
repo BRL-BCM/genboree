@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "createHub",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "12gb",
+    "mem" : null,
+    "vmem" : null,
+    "queue": "gbDevTest"
+  },
+  "ui": {
+    "label": "Create Hub",
+    "shortLabel": "create hub",
+    "groupAccessUri": null 
+  }
+}

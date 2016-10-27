@@ -1,0 +1,38 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/files/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(/files(/[^/ \\t\\n]+)*)?(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 0
+  }
+}

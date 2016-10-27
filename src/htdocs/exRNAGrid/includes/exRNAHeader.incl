@@ -1,0 +1,10 @@
+ 
+<div id="header">
+  <div id="headerLeft">
+   <div id="exrnaLogo">
+     <a href="/java-bin/exRNAAtlas.jsp">
+     <img border="0" style="float:left;height:120px" src="/exRNAGrid/images/exRNAatlas.png"" alt="exRNA Atlas">
+     </a>
+   </div>
+  </div>
+</div> <!-- End header -->

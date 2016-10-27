@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "wgsMicrobiomeDigNorm",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 7,
+    "pvmem": "2929mb",
+    "mem" : null,
+    "vmem" : null,
+    "queue": "teddy",
+    "nodes": 1
+  },
+  "ui": {
+    "label": "WGS Microbiome Pipeline - Digital Normalization, Assembly, and Find ORFs",
+    "shortLabel": "WGS Microbiome Pipeline - Digital Normalization, Assembly, and Find ORFs",
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/BRL-Tools-Access"
+  }
+}

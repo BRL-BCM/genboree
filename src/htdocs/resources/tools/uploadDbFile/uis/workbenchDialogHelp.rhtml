@@ -1,0 +1,77 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          Use this interface to transfer raw files to Genboree for storage. Those files can be used as inputs for certain processing tools (in which case, of course, they should be in the correct format). All such files are stored in the <u>Files</u> section of a given <u>Database</u>.
+          <br>&nbsp;<br>
+          <i>This tool <b>only</b> transfers the file to Genboree. No validation, conversion or database uploading will occur.</i>
+          <br>&nbsp;<br>
+          You can organize your files in any number of nested sub-folders if desired.
+          <br>&nbsp;<br>
+          You can select if the file you are going to upload/transfer needs to be extracted or converted into a unix-compatible file.
+          Supported formats include:
+          <ul>
+            <li>tar.gz/gzip</li>
+            <li>tar.bz2/bzip2</li>
+            <li>tar.xz/xz</li>
+            <li>zip</li>
+          </ul>
+          <br>&nbsp;<br>
+          If you choose to extract or convert the file being uploaded, this post-processing operation will be launched on our cluster to avoid overwhelming our web-server and you will receive an email once the transferred file
+          has been processed (extracted/converted to unix).
+          If, however, you choose to skip the post-processing steps, the file will be available for further use immediately after the transfer is complete.
+          <br>&nbsp;<br>
+          Please note that converting to unix format is not supported for multi file archives.
+          <br>&nbsp;<br>
+          <span style='font-size: 80%'><i>Note: depending on your web browser and version, you may not be able to upload files &gt;2GB or &gt;4GB due to bugs in the browser's code.</i> We have found Opera not to have such arbitrary file upload limits. We recommend transferring gzipped-compressed files which will: (a) help avoid browser limitations, (b) decrease file transfer time, and (c) not occupy excessive amounts of shared Genboree storage.</i></span>
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about output files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+        "
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ "Drag 1 destination <u>Database</u>, or the <u>Files</u> folder within a database, or any sub-folder existing under a <u>Files</u> folder into &quot;Output Targets&quot;. This is used to set the <span class='wbHelpMono'>Sub-Folder</span> setting, which determines the exact path to your file." ],
+        :types              => [ [ 'Files Folder or Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Create in Sub-Folder', "This is the path to your file. If blank, your file will be at the top, directly underneath the <u>Files</u> folder. Otherwise, it will be in the indicated sub-folder beneath the <u>Files</u> folder. If the sub-folder doesn't exist yet, you can type it here and it will be created. Specify nested sub-folders as a path: <nobr><code>subdir1/subdir2/subdir3</code></nobr>" ],
+          #[ 'Unpack/Extract', 'Check to unpack an archive file (Supported archive formats: tar.gz, tar.bz2, tar.xz, zip).' ],
+          [ 'Convert to Unix?', 'Check this to convert the uploaded file to unix format. This should be checked for files created on Windows/Macintosh systems.' ],
+          [ 'Description', 'Provide an optional description for the file here.' ]
+        ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>A. Context Within the Microbiome Workbench</b><br>
+          Within the context of preparing data for use within the Microbiome Workbench suite of tools, this step <u>transfers .SRA or .SFF sequence files</u> with Sample-specific sequence records. You will then associate these .SFF and .SRA files with specific samples using <span class='wbHelpMonoEntity'>Data &raquo; Samples &raquo; File Linker</span>:<br>
+          <div style='width:100%; text-align: center; font-size: 12pt; font-weight: bold; margin: 10px 2px 0px 2px;'>
+            Microbiome Workbench Flow
+          </div>
+          <img src='/images/workbench/help/microbiomeWorkbench/flow_transferSeqFiles.png' style='margin:2px 2px 10px 2px; display:block; margin-left:auto; margin-right:auto; width:497; height:198;'>
+        "
+      })
+  %>
+</div>

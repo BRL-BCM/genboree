@@ -1,0 +1,100 @@
+<%# RENDER HTML %>
+<%# Set html widths %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 520px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <a href='http://qiime.sourceforge.net/'>
+            <img src='/images/workbench/help/microbiomeWorkbench/qiimeLogo.png' style='margin-right:8px;width:96;height:50;' align='left'>
+          </a>
+          Using the filtered FASTA data you prepared in a prior <span class='wbHelpMonoEntity'>Analysis &raquo; Microbiome Workbench &raquo; Microbiome Sequence Import</span> step, this tool will run the <a href='http://qiime.sourceforge.net/'>QIIME</a> (Quantitative Insights Into Microbial Ecology) pipeline to perform tasks listed below:
+          <img src='/images/workbench/help/microbiomeWorkbench/qiime_pcoa.png' style='clear:right;width:96;height:97;margin-top:8px;margin-bottom:8px;' align='right'>
+          <br>&nbsp;<br>
+          <ul>
+            <li>OTU and representative set picking</li>
+            <li>Taxonomy assignment with RDP classifier</li>
+            <li>Sequence alignment</li>
+            <li>Phylogenetic tree reconstruction</li>
+            <li>PCoA  figure generation</li>
+          </ul>
+          <br>
+          The output of Qiime can also be used in subsequence analysis tools, such as the <span class='wbHelpMono'>Machine Learning</span> and <span class='wbHelpMono'>&alpha;-diversity</span> tools.
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+          "
+      })
+  %>
+   <%# Input data summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files Directory:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @inputs } )
+      })
+  %>
+  <%# Output database summary %>
+  <%= if(@outputs.size == 1)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database/Project:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+      end
+
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # Check if input folder is part of the "QIIME" tree
+    inputFolderPath = @inputs[0]
+    if(inputFolderPath !~ /\/MicrobiomeData\//)
+      wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', "MISSING_DIRECTORY: Input folder/directory for QIIME needs to be part of the 'MicrobiomeData' folder ")
+      raise wue
+    end
+    # for width, should only style input tags with attribute type=text, not checkboxes, radio buttons, etc.
+    # setting labelWidth and setting width should leave about 50px spare room for formatting according to fiddling
+    # labelWidth defaults to 150px and most forms are set to 520px
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'studyName', :label => 'Study Name', :type => :text , :style => "width: 320px", :value => "", :title => "The output folder for the QIIME results" },
+        { :id => 'jobName', :label => 'Job Name', :type => :text , :style => "width: 320px", :value => "Qiime-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique name" },
+        { :id => 'removeChimeras', :label => 'Remove Chimeras?', :type => :checkbox , :title => "Chimeric sequences can be formed and amplified as part of the pyrosequencing of the PCR-amplified 16S rRNA ribosomal subunit. These sequences are formed as hybrid products between multiple parents, which are interpreted as novel organisms. The occurrence of these false hybrid organisms can be responsible for artificially increasing diversity. Chimera Slayer is a chimera detection algorithm that works on sequences produced from 454 Roche sequencers. (Note: This step may add an additional couple of hours to your analysis.)" },
+        {  :id => 'qiimeVersion', :label => 'qiimeVersion', :type => :text, :hidden => true, :value => '1.2', :newline => false},
+        {  :id => 'otuFastMethod', :label => 'otuFastMethod', :type => :text, :hidden => true, :value => 'prefix_suffix', :newline => false},
+        {  :id => 'otuSlowMethod', :label => 'otuFastMethod', :type => :text, :hidden => true, :value => 'cdhit', :newline => false},
+        {  :id => 'betaMetrics', :label => 'betaMetrics', :type => :text, :hidden => true, :value => 'binary_chord,binary_euclidean,binary_hamming,binary_jaccard,binary_lennon,binary_ochiai,binary_pearson,binary_sorensen_dice,bray_curtis,canberra,chisq,chord,euclidean,gower,hellinger,kulczynski,manhattan,morisita_horn,pearson,soergel,spearman_approx,specprof,unifrac_G,unifrac_G_full_tree,unweighted_unifrac,unweighted_unifrac_full_tree,weighted_normalized_unifrac,weighted_unifrac', :newline => false},
+        {  :id => 'alphaMetrics', :label => 'alphaMetrics', :type => :text, :hidden => true, :value => 'shannon,berger_parder_d,brillouin_d,chao1,chao1_confidence,dominance,doubles,equitability,fisher_alpha,heip_e,kempton_taylor_q,margalef,mcintosh_d,mcintosh_e,menhinick,michaelis_menten_fit,observed_species,osd,reciprocal_simpson,robbins,simpson,simpson_e,singles,strong,PD_whole_tree', :newline => false},
+        {  :id => 'assignTaxonomyMethod', :label => 'assignTaxonomyMethod', :type => :text, :hidden => true, :value => 'rdp', :newline => false},
+        {  :id => 'assignTaxonomyMinConfidence', :label => 'assignTaxonomyMinConfidence', :type => :text, :hidden => true, :value => '0.85', :newline => false},
+        {  :id => 'alignSeqsMinLen', :label => 'alignSeqsMinLen', :type => :text, :hidden => true, :value => '150', :newline => false},
+        {  :id => 'runAlphaDiversityFlag', :label => 'runAlphaDiversityFlag', :type => :text, :hidden => true, :value => '0', :newline => false},
+        {  :id => 'runBetaDiversityFlag', :label => 'runBetaDiversityFlag', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'createPhylogeneticTreeFlag', :label => 'createPhylogeneticTreeFlag', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'createOTUtableFlag', :label => 'createOTUtableFlag', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'createHeatmapFlag', :label => 'createHeatmapFlag', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'createOTUnetworkFlag', :label => 'createOTUnetworkFlag', :type => :text, :hidden => true, :value => '0', :newline => false},
+        {  :id => 'createTaxaSummaries', :label => 'createTaxaSummaries', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'runLoopWithNormalizedDataFlag', :label => 'runLoopWithNormalizedDataFlag', :type => :text, :hidden => true, :value => '1', :newline => false},
+        {  :id => 'alignmentMethod', :label => 'alignmentMethod', :type => :text, :hidden => true, :value => 'pynast', :newline => false},
+        {  :id => 'makeTreeMethod', :label => 'makeTreeMethod', :type => :text, :hidden => true, :value => 'fasttree', :newline => false}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

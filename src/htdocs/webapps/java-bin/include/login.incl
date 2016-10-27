@@ -1,0 +1,254 @@
+<%@ page import="javax.servlet.http.*, org.apache.commons.io.FilenameUtils, org.genboree.dbaccess.*, org.genboree.util.Util,
+                 org.genboree.util.GenboreeUtils" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="common.incl" %>
+<%
+    response.addDateHeader( "Expires", 0L );
+    response.addHeader( "Cache-Control", "no-cache, no-store" );
+
+    //    System.err.println("=======login.incl========");
+    //    System.err.println("  => CURRENT SESSION ID: " + mys.getId() ) ;
+    boolean err_login = false;
+    boolean logged_in = false;
+    String uName = null;
+    String cmd = request.getParameter("rm");
+    String loginCancel = request.getParameter("loginCancel") ;
+    String tgt = (String) mys.getAttribute( "target" ); // Check if we are coming from this page *again* (eg login failure)
+    String tgtParam = request.getParameter("target") ; // Can alternatively use the "target" parameter
+    String previousPage = request.getHeader("Referer");
+    String reqUri = request.getRequestURI();
+    String thisPageName = reqUri.substring( reqUri.lastIndexOf("/") + 1);
+    String tryintLoginName  = request.getParameter("username");
+    String tryintLoginPassword  = request.getParameter("password");
+    GenboreeUser myself = null;
+    String[] userInfo = new String[3];
+    String[] verifyInfo = new String[3];
+    GenboreeGroup[] grps = null;
+    Refseq[] rseqs = null;
+    mys = request.getSession( true );
+    uName = (String)mys.getAttribute("username");
+    boolean uNameIsNull = (uName == null);
+    boolean cmdIsNull = (cmd == null);
+    boolean actionLogOut = ((!cmdIsNull && cmd.equals("logout")) || (loginCancel != null && loginCancel.equalsIgnoreCase("cancel")));
+    boolean publicLogin = (!cmdIsNull && cmd.equals("view"));
+    boolean tryLoggin = (tryintLoginPassword != null);
+    String tempRefSeq = "";
+    boolean isPublicDb = false;
+
+    boolean accessDenied = false ;
+    String accessDeniedStr = (String)mys.getAttribute("accessDenied") ;
+    // Get accessDenied session attribute, if present. This lets us know whether
+    // the user has TRIED to access a protected resource and is NOW being
+    // prompted for a login.
+    if( (accessDeniedStr != null) && (accessDeniedStr.equalsIgnoreCase("true")) )
+    {
+      accessDenied = true ;
+    }
+
+    //System.err.println("DEBUG -> previousPage: " + previousPage) ;
+    if(previousPage == null) // no previous page?
+    {
+      // Is there a known target saved in the session, is there a "target" URL param,
+      // is there a GenboreeUser object in the session....if so, then don't redirect to /site/ landing page
+      // but allow Genboree .jsp code to handle things.
+      if(tgt == null && tgtParam == null && myself == null && !thisPageName.equals("index.jsp")) // && accessDenied )
+      {
+        // @todo make this landing page mount config/setting not hard-coded
+        GenboreeUtils.sendRedirect(request, response, "/site/" ) ;
+        return ;
+      }
+    }
+    else
+    {
+      URL parsedPreviousPage = new URL(previousPage) ;
+      String prevPath = parsedPreviousPage.getPath() ;
+      //System.err.println("DEBUG -> prevPath: " + prevPath) ;
+
+      if(prevPath != null && prevPath.equals("/index.html")) // not right anymore ; came from old browser cached version of index.html!
+      {
+        // @todo make this landing page mount config/setting not hard-coded
+        GenboreeUtils.sendRedirect(request, response, "/site/" ) ;
+        return ;
+      }
+    }
+
+    // If no saved target URL in session, check for one from URL params
+    if( tgt == null)
+    {
+      if(tgtParam != null)
+      {
+        tgt = tgtParam ;
+        // Has the user logged in and thus we have a GenboreeUser object in the "myself" session key?
+        //System.err.println("DEBUG -> myself: " + myself) ;
+        GenboreeUser existingMyself = (GenboreeUser) mys.getAttribute("myself") ;
+        if(existingMyself == null) // then user not logged in ; trigger plan login via accessDenied
+        {
+          mys.setAttribute("accessDenied", "true") ;
+        }
+        // else logged in and we don't mess with that
+      }
+    }
+
+    // Save the target in the session if there is one.
+    if( tgt != null )
+    {
+      mys.setAttribute( "target", tgt );
+
+      tempRefSeq = tgt.replaceAll("^.*gbrowser\\.jsp\\?refSeqId=", "");
+      tempRefSeq = tempRefSeq.replaceAll("&.*", "");
+      int checkRefSeq = Util.parseInt(tempRefSeq, -1);
+      if(checkRefSeq > 0)
+      {
+        isPublicDb  = Refseq.isPublished(db, tempRefSeq ) ;
+      }
+    }
+
+    if( actionLogOut ) // User is logging out
+    {
+      //      System.err.println("  => User is being logged out and session INVALIDATED") ;
+      tgt = null;
+      logged_in = false;
+      // Invalidate the current session and get a new one.
+      mys = GenboreeUtils.invalidateSession(mys, request, response, true) ;
+      //GenboreeUtils.sendRedirect(request, response,  "/java-bin/login.jsp" ) ;
+      // @todo: make this landing page mount come from config/setting not hard-coded
+      GenboreeUtils.sendRedirect(request, response,  "/site/" ) ;
+      return ;
+    }
+    else if( publicLogin ) // Special type of public login (mostly obsolete)
+    {
+      //      System.err.println("  => Doing special type of public login that uses the view= name-value pair") ;
+      mys.setAttribute( "username", "Public" );
+      mys.setAttribute( "pass", "" );
+      mys.setAttribute( "userid", "0" );
+      if( tgt == null ) // Send them to the browser-config page
+      {
+          tgt = "/java-bin/defaultGbrowser.jsp";
+          mys.setAttribute( "target", tgt );
+      }
+
+      logged_in = true ;
+      // remove the accessDenied session flag, since access is allowed here
+      mys.removeAttribute("accessDenied") ;
+      GenboreeUtils.sendRedirect(request,response, tgt );
+      return ;
+    }
+    else if(tryLoggin) // Definitely trying to do a login.
+    {
+      //      System.err.println("  => Doing tryLoggin") ;
+      userInfo[0] = tryintLoginName;
+      userInfo[1] = tryintLoginPassword;
+      userInfo[2] = null;
+      String pass = db.setUserInfo( userInfo );
+      if( userInfo[2] != null )
+      {
+        mys.setAttribute( "username", userInfo[0] );
+        mys.setAttribute( "pass", userInfo[1] );
+        mys.setAttribute( "userid", userInfo[2] );
+        myself = new GenboreeUser();
+        myself.setUserId( (String)mys.getAttribute("userid") );
+        myself.fetch( db );
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+          return;
+
+        myself.fetchGroups( db );
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+          return;
+        mys.setAttribute( "myself", myself );
+
+        grps = GenboreeGroup.recreateteGroupList(db, myself.getUserId());
+                //GenboreeGroup.fetchAll( db, myself.getUserId() );
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+          return;
+        if( grps == null )
+          grps = new GenboreeGroup[0];
+        for( int i=0; i<grps.length; i++ )
+        {
+          grps[i].fetchRefseqs( db );
+          grps[i].fetchUsers( db );
+        }
+
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+          return;
+//        mys.setAttribute( "GenboreeGroups", grps );
+        rseqs = Refseq.fetchAll( db, grps );
+        if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+          return;
+        if( rseqs == null )
+          rseqs = new Refseq[0];
+//        mys.setAttribute( "RefSeqs", rseqs );
+
+        logged_in = true;
+        //        System.err.println( "  => User " + userInfo[0] + " logged in at " + (new java.util.Date()).toString() );
+        //        System.err.println("     . redirect to target?") ;
+        // If there is a saved target in the session, we need to redirect to there now because user is logged in.
+        if( tgt != null )
+        {
+          System.err.println(" -> YES, redirecting to " + tgt) ;
+          // Remove target from session, since we are going there now
+          mys.removeAttribute("target") ;
+          // Make sure to clear any accessDenied setting
+          mys.removeAttribute("accessDenied") ;
+          GenboreeUtils.sendRedirect(request,response,  tgt ) ;
+          return;
+        }
+        //        System.err.println(" ->   NO, tgt is null");
+      }
+      else
+      {
+        err_login = true;
+      }
+    }
+    else // User *looks* like they are logged in, but don't have access? verify this.
+    {
+      //      System.err.println("  => User appears logged in already (perhaps as Public) but probably doesn't have access to the page. Verifying.") ;
+      // Check that uName is set to something real (as a page-wide variable it will be used in other code)
+      if(uName != null)
+      {
+        //        System.err.println("  => YES, they are actually logged in (uName is " + uName + ")" );
+        verifyInfo[0] = uName;
+        verifyInfo[1] = (String)mys.getAttribute("pass");
+        String verified = db.setUserInfo( verifyInfo ) ;
+        //        System.err.println("  => verified user? " + verified) ;
+        // The "allowPublicAccess" flag is from the .jsp including this file.
+        // Those pages are currently: login.jsp (false) and index.jsp (true).
+        // The flag indicates whether the "Public" user can view the page (because
+        // normally the Public use means that verified==null). It's like an override.
+        if(verified != null || allowPublicAccess) // then allowed access to page
+        {
+          myself = (GenboreeUser)mys.getAttribute( "myself");
+          logged_in = true;
+          // If there is a saved target in the session, we need to redirect to there now that user is logged in.
+          if(tgt != null)
+          {
+            //            System.err.println("  => redirecting to tgt: " + tgt) ;
+            // Remove the target from the session (because we are going there)
+            mys.removeAttribute("target") ;
+            // Make sure to clear any accessDenied setting
+            mys.removeAttribute("accessDenied") ;
+            GenboreeUtils.sendRedirect(request, response, tgt);
+            return;
+          }
+        }
+        else // Not actually logged in or not allowed access.
+        {
+          //          System.err.println("  => NO, user is NOT VERIFIED AS LOGGED IN AFTER ALL, wipe session (and set the new session's target)" +
+          //                             "\n     - target saving is: " + tgt +
+          //                             "\n     - uName is: " + uName ) ;
+          logged_in = false;
+          err_login = true;
+          // Invalidate current session and get a new one.
+          mys = GenboreeUtils.invalidateSession(mys, request, response, true) ;
+          // Save the current target in the session.
+          mys.setAttribute( "target", tgt );
+          if(tgt != null) // as long as they actually were trying to get somewhere real (not just login.jsp itself, say).
+          {
+            mys.setAttribute( "accessDenied", "true" ) ;
+          }
+          // Redirect to login.jsp. Target has been saved in the session
+          GenboreeUtils.sendRedirect(request, response,  "/java-bin/login.jsp" ) ;
+          return ;
+        }
+      }
+    }
+%>

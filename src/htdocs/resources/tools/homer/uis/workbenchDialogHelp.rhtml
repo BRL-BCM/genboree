@@ -1,0 +1,143 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            HOMER (Hypergeometric Optimization of Motif EnRichment) is a suite of tools for Motif Discovery and ChIP-Seq analysis
+            <br>&nbsp;<br>
+            It is a collection of command line programs for unix-style operating systems written in mostly perl and c++.
+            Homer was primarily written as a de novo motif discovery algorithm that is well suited for finding 8-12 bp motifs in large scale genomics data
+            <br>&nbsp;<br>
+            For more information on HOMER, please visit: <a href=\"http://biowhat.ucsd.edu/homer/introduction/basics.html\" target=\"_blank\">http://biowhat.ucsd.edu/homer/introduction/basics.html</a>
+            <br>&nbsp;<br>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>track</u> with the genes/peaks of interest into &quot;Input Data&quot;.'
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ "Drag a destination <u>database</u> into &quot;Output Targets&quot;. The result data will end up in that database under the 'HOMER' folder .",
+                                 'Drag a <u>project</u> into &quot;Output Targets&quot for creating a link to the results html page created by HOMER' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] , [ 'Project', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'HOMER') used to organize HOMER results."],
+          [ 'Genome Version', "Automatically Selected based on the target database."],
+          [ 'Run against Genome/Run against Promoters', "Perform genome wide analysis or against a selected subset of genes."],
+          [ 'Basic Settings:<br>',  "" ],
+          [ 'Mask Repeats', ""],
+          [ 'Motif Length', "(motif length, default=8,10,12) [NOTE: values greater 12 may cause the program to run out of memory - in these cases decrease the number of sequences analyzed or try analyzing shorter sequence regions (i.e. -size 100)]."],
+          [ 'Fragment Size', "(fragment size to use for motif finding, default=200) -size <#,#> (i.e. -size -100,50 will get sequences from -100 to +50 relative from center) -size given (uses the exact regions you give it) [Only available when running against genome]."],
+          [ 'Number of motifs to optimize', "[Default: 25]."],
+          [ 'Global Optimization', "[Default: 2 for comparing against genome and 1 when comparing against promoters]."],
+          [ 'No Rev strand search', "Don't search reverse strand for motifs [Default: unchecked]."],
+          [ 'No de novo motif enrich.', "Don't search for de novo motif enrichment [Default: unchecked]."],
+          [ 'Output RNA motif logos.', "Output RNA motif logos and compare to RNA motif database, automatically sets No rev strand search [Dfeault: unchecked]."],
+          [ 'Start Offset from TSS.', "(offset from TSS, default=-300) [max=based on Promoter Set] [Only available when running against promoters]."],
+          [ 'End Offset from TSS.', "(offset from TSS, default=-50) [max=based on Promoter Set] [Only available when running against promoters]."],
+          [ 'Advanced Settings:<br>',  "" ],
+          [ 'Use hypergeometric',  "Use hypergeometric for p-values (binomial is default) [Only available when running against genome]" ],
+          [ 'Num Sequences for motif finding',  "(Number of sequences to use for motif finding, default=max(50k, 2x input) [Only available when running against genome]" ],
+          [ 'Local Background', 'Use local background, # of equal size regions around peaks to use i.e. 2. [Only available when running against genome]'],
+          [ 'Remove redundant sequences',  'Remove redundant sequences matching greater than # percent, i.e. 0.5 [Only available when running against genome]'],
+          [ 'Randomize', 'Randomize labels for target and backgound sequences'],
+          [ 'Analyze ind. oligo enrich.',  "Perform analysis of individual oligo enrichment"],
+          [ 'Dump Fasta Files',  "Dump fasta files for target and background sequences for use with other programs"],
+          [ 'Pre parse', "Force new background files to be created [Only available when running against genome]"],
+          [ 'Number of randomizations',  'Calculate empirical FDR for de novo discovery #=number of randomizations.'],
+          [ 'Use binomial', 'Use binomial distribution to calculate p-values, hypergeometric is default [Only available when running against promoters]'],
+          [ 'NO GO search',  "Don't search for gene ontology enrichment [Only available when running against promoters]"],
+          [ "Normalization", "Chose between GC and CpG normalization."],     
+          [ 'No CG correction',  "No CG enrichment"],
+          [ "Don't remove pre-det red. prom/seq",  "Don't remove predetermined redundant promoters/sequences [Only available when running against promoters]"],
+          [ "Produce Peaks",  "Will produce peak file of promoters to use with findMotifsGenome.pl [Only available when running against promoters]"],
+          [ 'Min Seq Length', 'Remove sequences shorter than #, default: 0. [Only available when running against promoters]'],
+          [ 'Max Seq Length', 'Remove sequences longer than #, default: 1e10. [Only available when running against promoters]'],
+          [ 'Len of low-order oligos', 'Length of lower-order oligos to normalize in background, default: 3'],
+          [ 'Max Normalization iter.', 'Max normalization iterations, default: 160'],
+          [ 'Lower-order oligo norm.',  "Lower-order oligo normalization for oligo table, use if 'Len of low-order oligos' isn't working well"],
+          [ 'Max exp motif.',  'Maximum expected motif instance per bp in random sequence, default: 0.01'],
+          [ 'Min logp Score',  'Stop looking for motifs when seed logp score gets above #, default: -10'],
+          [ 'Known Motif Options/Visualization:<br>',  "" ],
+          [ 'Check against motif collects',  "[Default: auto] (select between vertebrates|insects|worms|plants|yeast|all)" ],
+          [ 'Basic',  "Just visualize de novo motifs, don't check similarity with known motifs [Default: unchecked]" ],
+          [ 'Scale Seq logos',  "Scale sequence logos by information content, default: doesn't scale [Default: unchecked (doesn't scale)]" ],
+          [ 'No Check',  "Don't search for de novo vs. known motif similarity [Default: unchecked]" ],
+          [ 'No known',  "Don't search for known motif enrichment [Default: unchecked (known)]" ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [
+                                    "Heinz S, Benner C, Spann N, Bertolino E, et al. <i>Simple Combinations of Lineage-Determining Transcription Factors Prime
+                                    cis-Regulatory Elements Required for Macrophage and B Cell Identities.</i> Mol Cell 2010 May 28;38(4):576-589.
+                                    <span style=\"font-size: 78%;\">[<a href=\"http://www.ncbi.nlm.nih.gov/pubmed?Db=Pubmed&term=20513432%5BUID%5D\" target=\"_blank\">PubMed</a>]</span>"
+                                  ],
+                                  [ 'Integrated into the Genboree Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu" target=\"_blank\">BRL</a>.', nil ]
+                                ]
+
+      })
+  %>
+
+  <%# Tool-specific Addendum %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

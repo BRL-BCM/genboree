@@ -1,0 +1,153 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # LIBRARIES
+  # ---------------------------------------------------------------------------
+  $VERBOSE = nil
+  $DEBUG = true
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  # Constants
+  OK = 0
+
+  # ---------------------------------------------------------------------------
+  # METHODS
+  # ---------------------------------------------------------------------------
+  def paramCheck(context)
+  end
+
+  def init(context)
+  end
+
+  def clear(context)
+  end
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  context = nil
+  timer = nil
+
+begin
+  timer = BRL::Util::TimingUtil.new()
+  timer.vMsgs.first << " (menuBar.vert.test.rhtml) "
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+  context[:errCode] = OK
+  context[:err] = nil
+  context[:timer] = timer
+
+  # ---------------------------------------------------------------------------
+  # DO CHECK/LOAD/CHECK (hierarchical checking)
+  # ---------------------------------------------------------------------------
+  # 1) Grab Params
+  paramCheck(context)            # Check. Security hole 1 plugged.
+  timer << "- DONE: paramCheck"
+  if(context[:errCode] == OK)
+    # 2) Initdb connections and data
+    #    - dbh
+    #    - get databaseName from refseqId & connect
+    #    - get fref info
+    #    - get ftypeid
+    init(context)
+  end
+rescue => err
+  dputs "DPUTS: " + err.message
+  dputs err.backtrace.join("\n")
+  context[:err] = err
+ensure
+  # Free stuff that use the DB (not needed after this, all work is done)
+	clear(context)
+	timer << "- DONE: clear"
+
+	# ---- OK? ----
+	cgi = context.cgi
+	err = context[:err]
+	errCode = context[:errCode]
+	unless(false)
+
+
+%>
+
+<html>
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=iso-8859-1'>
+  <title>Dialog/Menu Test</title>
+</head>
+<body >
+  <!-- BEGIN: Extjs: Split Button Support -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/prototype.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/scriptaculous.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/ext-prototype-adapter.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/ext-all.js?<%=context.jsVerStr()%>"></script>
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/resources/css/ext-all.css?<%=context.jsVerStr()%>">
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/resources/css/ytheme-genboree.css?<%=context.jsVerStr()%>">
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/ux/menuBar.css?<%=context.jsVerStr()%>">
+  <script type="text/javascript" src="/javaScripts/extjs/examples/examples.js?<%=context.jsVerStr()%>"></script>
+  <script type="text/javascript" src="/javaScripts/extjs/ux/menuBar.js?<%=context.jsVerStr()%>"></script>
+  <!-- Set a local "blank" image file; default is a URL to extjs.com -->
+  <script type='text/javascript'>
+    Ext.BLANK_IMAGE_URL = '/javaScripts/extjs/resources/images/genboree/s.gif';
+  </script>
+
+  <!-- END -->
+  <!-- BEGIN: Genboree Specific -->
+  <script type="text/javascript" src="/javaScripts/util.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <link rel="stylesheet" href="/styles/jsp.css?<%=context.jsVerStr()%>" type="text/css">
+  <!-- END -->
+
+<div id="app-menubar"></div>
+
+<h1>Hello world!</h1>
+<p>
+
+    <a href="http://extjs.com/forum/showpost.php?p=36260&postcount=62">Animal's final base</a><br />
+
+    + <a href="http://extjs.com/forum/showpost.php?p=36260&postcount=63">timb's plain fix</a><br />
+    + <a href="http://extjs.com/forum/showpost.php?p=36260&postcount=68">medusadelft css fix</a><br />
+    + <a href="http://extjs.com/forum/showpost.php?p=36260&postcount=71">JorisA onclick modification</a><br />
+    + <a>Changed css a bit to make it work in containers as well.</a><br />
+    + <a>Added hide items function example (hide items with level higher then item.level, maybe usefull for login/logout stuff)</a><br />
+
+    + <a>Added additional mouseover functionality (XP like menus). Think some classes/vars/functions could be better named.</a>
+</p>
+<p>
+    Issues:<br />
+    - 'Need' something to align items (and submenu) right.<br />
+    - ?<br />
+</p>
+
+<p>
+    <input type="button" onclick="HideItems(aspicioMenuBar, 0);" value="Hide Items >0" /><br />
+    <input type="button" onclick="HideItems(aspicioMenuBar, 1);" value="Hide Items >1" /><br />
+    <input type="button" onclick="HideItems(aspicioMenuBar, 2);" value="Hide Items >2" /><br />
+    <input type="button" onclick="HideItems(aspicioMenuBar, 3);" value="Hide Items >3" /><br />
+</p>
+
+<div style="margin: 30px auto; width: 500px; border: 1px solid #6593CF; border-bottom: 0;">
+    <p>This is a container with a menubar</p>
+    <div id="container-menubar" style=""></div>
+</div>
+
+<%
+  else # Error to report!
+  end
+%>
+
+
+</BODY></HTML>
+    <!-- END: COMMON HTML FOOTER -->
+<%
+
+end # begin-rescue-ensure
+%>

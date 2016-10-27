@@ -1,0 +1,68 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 580px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          "Drag either your already-uploaded SNP track OR a Files folder corresponding to a run of the Atlas-SNP2 or Atlas-Indel2 tools into &quot;Input Data&quot;."
+        ],
+        :types              => [ [ 'Files Dir', 'min: 0 ; max: 1' ], [ 'Tracks', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>Genomic Epigenomic Changes</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Analysis Name</span> will be used as a sub-folder under the sub-folder <u>Auto-Annotate SNPs</u> to store result files.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ], # Can also give db/{db}/Files as the output destination
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder used to organize related Cancer Analysis results." ],
+          [ 'Upload as Track', "Check this if you would like to upload your annotated SNPs as a Genboree track for later visualization, download of annotated data, and use within other tools."],
+          [ 'dbSNP', "Check this if you want annotate your SNPs using dbSNP." ],
+          [ '1000 Genomes SNPs', "Check this if you want to annotate your SNPs using 1000 Genomes SNPs." ],
+          [ 'GWAS SNPs', "Check this if you want to annotate your SNPs using GWAS SNPs." ],
+          [ 'Gene Elements', "Check this if you want to know how your SNPs fall into various components of genes (i.e. into exons, introns, UTRs, promotor regions, etc)." ],
+          [ 'Small RNAs', "Check this if you want to know how your SNPs fall into various types of small RNAs (i.e. uRNA, piRNA, snoRNA, etc)." ],
+          [ 'CpG Islands', "Check this if you want to know how your SNPs fall into CpG Islands." ],
+          [ 'Repeats', "Check this if you want to know how your SNPs fall into various types of repeats (Alu, SINE, etc)" ],
+          [ 'Synon. vs Non-Synon.', "Check this if you want to annotate your SNPs concerning whether they cause are synonymous/non-synonymous mutations." ],
+          [ 'Submit', "Once you've reviewed the input folder and tracks, the output destination database, and your settings, click &quot;Submit&quot;." ]
+        ]
+      })
+
+
+          [ 'Gene Components', "Check this if you want to know how your SNPs fall into various components of genes (i.e. into exons, introns, UTRs, promotor regions, etc)." ],
+          [ 'Small RNAs', "Check this if you want to know how your SNPs fall into various types of small RNAs (i.e. uRNA, piRNA, snoRNA, etc)." ],
+          [ 'CpG Islands', "Check this if you want to know how your SNPs fall into CpG Islands." ],
+          [ 'Repeats', "Check this if you want to know how your SNPs fall into various types of repeats (Alu, SINE, etc)" ],
+
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                ]
+      })
+  %>
+
+</div>

@@ -1,0 +1,38 @@
+<%# Render radio buttons %>
+<%# This widget should be used for rendering a table with one column as the radio button since it supports a javaScript event for only one column (the column with the radio button) %>
+<%
+  @fontSize = '11px' unless(@fontSize)
+  jsEvent = @jsTag || ""
+  buff = %Q^<table style="width:100%;overflow-y:scroll;padding-top:5px;">^
+  if(@header and @header.is_a?(Array))
+    buff << %Q^<tr>^
+    @header.each { |header|
+      buff << %Q^<th style="font-size:#{@fontSize};">#{header}</th>^
+    }
+  end
+  ii = 0
+  @rows.each { |row|
+    buff << "<tr>"
+    jj = 0
+    row.each { |hashItem|
+      field = hashItem.keys[0] # Outer hash should have only one key
+      if(hashItem[field][:radio])
+        # Start of with the first one checked
+        checked = ""
+        if(ii == 0 and jj == 0)
+          checked = "checked='checked'"
+        end
+        buff << %Q^<td><input type="radio"  name="#{@name}" #{checked} value='#{hashItem[field][:value]}' #{jsEvent}/></td>^
+        jj += 1
+      else
+        buff << %Q^<td style="font-size:#{@fontSize};">#{hashItem[field][:value]}</td>^
+      end
+
+    }
+    buff << "</tr>"
+    ii += 1
+  }
+  buff << %Q^</table>^
+  
+%>
+<%=buff%>

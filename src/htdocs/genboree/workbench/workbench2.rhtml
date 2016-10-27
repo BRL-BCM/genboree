@@ -1,0 +1,151 @@
+<%# THIS FILE USES erubis %>
+<%
+# ==================================================================
+# REQUIRED LIBS
+# ==================================================================
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/conf/headerFooterConfig'
+require 'brl/genboree/tools/workbenchRulesHelper'
+# ==================================================================
+# SETUP CONVENIENT ENVIRONMENT
+# ==================================================================
+$VERBOSE = false
+@cgi = CGI.new()
+@req = Apache.request
+@serverName = @cgi.host
+
+# ==================================================================
+# INITIALIZE
+# ==================================================================
+@groupId = @cgi['group_id'].strip
+@userId = @cgi['userId'].strip
+@userLogin = @cgi['userLogin'].strip
+@userEmail = @cgi['userEmail'].strip
+@userFirstName = @cgi['userFirstName'].strip
+@userLastName = @cgi['userLastName'].strip
+
+# ==================================================================
+# HELPER METHODS
+# ==================================================================
+# Helper Methods
+def prepForHtml()
+  # Tell apache we're going to make some html
+  @req.content_type = "text/html"
+  @req.status = 200
+  @req.send_http_header()
+end
+
+# Initialize a context object for this page.
+# - include adding of key header-related properties for this page (so it's available in header.rhtml)
+def initContext()
+  context = BRL::Genboree::GenboreeContext.new(@cgi, ENV)
+  # Page title (set in header)
+  context.title = "Workbench"
+  # Get workbench tool rules as Prototype Javascript Hash. Will add to script tag below.
+  rulesHelper = BRL::Genboree::Tools::WorkbenchRulesHelper.new(nil, context.genbConf)
+  rulesHashJavascript = rulesHelper.buildRuleJavascriptHash('wbRulesHash')
+  # Meta tag stuff (belongs in header's <head> tag):
+  context.addHeadData = ''
+  #context.addHeadData << "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=EmulateIE7\" />"
+  # Script tag stuff (belongs in header's <head> tag):
+  # - Files with helper functions first
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/rules.js?#{context.jsVerStr}\"></script>\n"
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/helpers.js?#{context.jsVerStr}\"></script>\n"
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/nodeHelpers.js?#{context.jsVerStr}\"></script>\n"
+  # - Globals & Namespaces next
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/globals.js?#{context.jsVerStr}\"></script>\n"
+  # - Odds & ends (ajax stuff, misc)
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/ajax.js?#{context.jsVerStr}\"></script>\n"
+  # - Panels, Toolbars, Dialogs, and other component creation next
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/panels.js?#{context.jsVerStr}\"></script>\n"
+
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/REST/v1/genboree/ui/menu/workbench?gbKey=rektjxdd&readable=yes\"></script>\n"
+
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/dialogs.js?#{context.jsVerStr}\"></script>\n"
+  # - LAST: init() components (render(), doLayout(), layout() calls, etc, now that components in place.
+  context.addHeadData << "<script type=\"text/javascript\" src=\"/javaScripts/workbench/init.js?#{context.jsVerStr}\"></script>\n"
+
+  # WORKBENCH CSS:
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/misc.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/layouts.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/toolbars.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/panels.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/dialogs.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/fragments.css?#{context.jsVerStr}\">\n"
+  # MENUBAR CSS:
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/menubar.css?#{context.jsVerStr}\">\n"
+  # IE-ONLY FIXES CSS (use sparingly!):
+  context.addHeadData << "<!--[if IE]>\n<style type=\"text/css\" media=\"all\">\n@import \"/styles/workbench/ie.css?#{context.jsVerStr}\"\n</style><![endif]-->\n"
+  # In-Page Script:
+  context.addHeadData << "<script type=\"text/javascript\">\n"
+  context.addHeadData << "  serverName = '#{@serverName}';\n"
+  context.addHeadData << "  userLogin = '#{@userLogin}';\n"
+  context.addHeadData << "  clientContext = { userLogin:'#{@userLogin}', userId:'#{@userId}',\n"
+  context.addHeadData << "                    userFirstName:'#{@userFirstName}', userLastName:'#{@userLastName}',\n"
+  context.addHeadData << "                    userEmail:'#{@userEmail}', gbAdminEmail:'#{context.genbConf.gbAdminEmail}' };\n"
+  context.addHeadData << "  wbHash.set('context', new Hash(clientContext));\n"
+  context.addHeadData << "  #{rulesHashJavascript}"
+  context.addHeadData << "</script>\n"
+  # Other important properties
+  context['hostedSite'] = hostedSite = (@cgi['hostedSite'] or "default")
+  context['hdrFtrConf'] = hdrFtrConf = BRL::Genboree::Conf::HeaderFooterConfig.load()
+  return context
+end
+
+# ==================================================================
+# RENDER PAGE
+# ==================================================================
+begin
+  # Initialize a context object to get the genbConf and jsVerStr() and such
+  context = initContext()
+  prepForHtml()
+%>
+  <%#<!-- Page Header -->%>
+  <%= context.includeFile("/genboree/workbench/header.rhtml") %>
+
+  <!-- Page Content -->
+  <div id="wbToolbarDiv"></div>
+  <h4 class="wbTitle">Welcome to the Genboree Workbench!</h4>
+  <ul class="wbIntro">
+    <li>
+      The <b>Data Selector</b> tree on the left
+      shows the data entities to which you have access.
+    </li>
+    <li>
+      Drag items to be used as tool <i>inputs</i> over to the <b>Input Data</b> area.
+    </li>
+    <li>
+      Drag items to be used as <i>output destinations</i> for tool results over to the
+      <b>Output Targets</b> area.
+    </li>
+    <li>
+      Tools which can be run on your selections will be highlighted in <span class="greenToolHighlight">green</span>.
+    </li>
+    <li>
+      Unsure about what kinds of items a particular tool needs in the <b>Input Data</b> and <b>Output Targets</b> ??
+      <ul style="margin-left: 20px;">
+        <li style="list-style-type: circle">Just click the tool button when it is <i>not highlighted</i> to see help information.</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="wbColumn left">
+    <div class="wbWrapper left">
+      <div id="wbMainTreeDiv"></div>
+    </div>
+  </div>
+  <div class="wbColumn right">
+    <div class="wbWrapper right">
+      <div id="wbDetailsGridDiv"></div>
+      <div id="wbInputsTreeDiv" class="wbSelectionContainer"></div>
+      <div id="wbOutputsTreeDiv" class="wbSelectionContainer"></div>
+    </div>
+  </div>
+  <div style="clear: both;"></div>
+  <!-- Page footer -->
+  <%= context.includeFile("/genboree/workbench/footer.rhtml") %>
+<%
+end # begin-rescue-ensure
+%>

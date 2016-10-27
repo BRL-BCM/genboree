@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "qiime",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "QIIME",
+    "shortLabel": "QIIME"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "pvmem": "6gb"
+  }
+}

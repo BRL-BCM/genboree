@@ -1,0 +1,153 @@
+<%
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/util/util'
+  require 'brl/util/textFileUtil'
+  require 'brl/genboree/toolPlugins/tools/trackCopier/trackCopierTool'
+  include BRL::Genboree
+  include BRL::Genboree::ToolPlugins::Util
+  include BRL::Genboree::ToolPlugins
+
+  def prepForText() # We're dump html, true, but to an external ruby rhtml page (so just text)
+      return if(@prepped4output)
+      @req.headers_out['Content-Type'] = @req.content_type = 'text/plain'
+      @req.headers_out['Accept-Ranges'] = 'bytes'
+      @req.status = 200
+      @req.send_http_header
+      @prepped4output = true
+      # Remove Apache buffering on the response object...else apache buffers until
+      # the request is done. Generally we avoid this, but for D/L it can be good.
+      @resp.sync_output = true
+  end
+
+  # CGI/Apache variables
+  cgi = CGI.new
+  @prepped4output = false
+  @req = Apache.request
+  @resp = $stdout
+  @err = nil
+
+  # Constants
+  exts = [ 'tracks2Copy.lff.gz' ]
+  descs = [ 'Track Copying Results (LFF format)' ]
+
+  # Key global vars
+  groupId = cgi['groupId'].to_i.untaint
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  tool = cgi['tool'].strip.dup.untaint
+  expname = cgi['expname'].strip.dup.untaint
+  directDownload = cgi['download'].empty? ? false : true
+  extension = cgi['ext'].empty? ? nil : cgi['ext'].strip.dup.untaint
+
+  [ expname, tool ].each { |xx| xx.gsub!(/\.\./, '') ; xx.gsub!(/\\/, '') ; xx.gsub!(/\~/, ''); xx.gsub!(/\//, '_') } # Prevent path injection attacks, sort of.
+
+  prepForText()
+
+  # Locate the file(s) using the supplied info
+  cleanExpName = expname.gsub( BAD_CHARS_RE, BAD_CHARS_REPLACEMENT )
+  resultsFileBase = "#{RESULTS_PATH}/#{groupId}/#{refSeqId}/#{tool}/#{cleanExpName}"
+
+  # Make sure we have what we need
+   if(groupId != 0 and refSeqId != 0 and !tool.empty? and !expname.empty?)
+    # This output.rhtml displays links to the actual files available.
+    #   - THIS PAGE feeds the file that was clicked.
+    # Other output.rhtml can display the contents directly within the box
+    # or decide to display contents or links based on file number and size.
+
+    if(directDownload) # then user clicked a link to download the results directly
+      resultsFileName = "#{resultsFileBase}.#{extension}"
+      # FEED THE FILE
+      if(File::exists?(resultsFileName))
+        reader = IO.popen( "gunzip -c #{resultsFileName.gsub(/ /, '\ ')}" )
+        reader.each { |line| puts line }
+        reader.close()
+      end
+    else # display list of files that can be selected
+      # First, though, get params file
+      inputs = BRL::Genboree::ToolPlugins::Tools::TrackCopierTool::TrackCopierClass.functions()[:trackCopier][:input]
+      paramsHash = BRL::Genboree::ToolPlugins::Util.loadParamData("#{resultsFileBase}")
+      unless(paramsHash.nil?) # then no param file was found...oops, was it saved in your tool?
+        # nil values are 'false' for all params in this tool:
+        paramsHash.each_key { |kk| paramsHash[kk] = false if(paramsHash[kk].nil?) }
+      end
+%>
+      <div id="results" name="results" style="padding:2px; margin-left:5px;margin-top:10px;height:200px;width:660px;overflow:auto;border:black 1px solid;">
+        <B>Job Parameters:</B>
+        <P>
+        <table border="0" width="100%" cellspacing="5" cellpadding="0">
+        <tr>
+          <td><b>Parameter:</b></td><td><b>Value:</b></td>
+        </tr>
+<%
+        unless(paramsHash.nil?)
+          inputs.keys.sort{|aa,bb| inputs[aa][:paramDisplay] <=> inputs[bb][:paramDisplay]}.each { |kk|
+            next if(inputs[kk][:paramDisplay] < 0)
+%>
+            <tr>
+              <td valign="top">
+                <NOBR><%=CGI.escapeHTML(inputs[kk][:desc].to_s).gsub(/ /, "&nbsp;")%></NOBR>
+              </td>
+              <td>
+                <%= (kk == :tracksToCopyParamStr) ?
+                    CGI.escapeHTML(CGI.unescape(paramsHash[kk].to_s)).gsub(/\r?\n|\r(?!\n)/, "<BR>\n").gsub(/ /, "&nbsp;") :
+                    CGI.escapeHTML(CGI.unescape(paramsHash[kk].to_s)).gsub(/\r?\n|\r(?!\n)/, "<BR>\n")
+                %>
+              </td>
+            </tr>
+<%
+          }
+        else # no param file found
+%>
+          <tr>
+            <td>
+              <NOBR>No Parameters Saved For This Job!</NOBR>
+            </td>
+            <td>
+              (Perhaps job was run under a previous Genboree release?)
+            </td>
+          </tr>
+<%
+        end
+%>
+        </table>
+      </div>
+      <P>
+      <div id="results" name="results" style="white-space: nowrap ;padding:2px; margin-left:5px;margin-top:10px;width:660px;height:500px;overflow:auto;border:black 1px solid">
+        <B>Job Output Files:</B>
+        <P>
+        <table cellspacing="5" cellpadding="5" border="0" width="100%">
+        <tr>
+        <td>
+          <ul style="margin-left: 2em; padding-left: 2.5em; text-indent: -3.25em ; list-style-type: none;">
+<%
+          fcount = 0
+          exts.each_index { |ii|
+            ext = exts[ii]
+            rFile = "#{resultsFileBase}.#{ext}"
+            if(File::exists?(rFile))
+              fcount += 1
+%>
+              <li style="margin-bottom: 20px; ">
+<%
+                if((rFile =~ /\.gz$/ and BRL::Util::Gzip.empty?(rFile)) or (File.size(rFile) < 1)) # No output made!
+%>
+                <img src="/images/noDoc.png" width="15" height="18" border="0">&nbsp;<B><%=fcount%>. <%=descs[ii]%></B><br> <font color="red">Sorry, your job did not output this kind of data </font><br>- You may want to adjust your parameters if this was unexpected.<br>
+<%            else %>
+                <A HREF='<%="/java-bin/toolPluginsDownloadResult.jsp?groupId=#{groupId}&refSeqId=#{refSeqId}&tool=#{CGI.escape(tool)}&expname=#{CGI.escape(expname)}&ext=#{CGI.escape(ext)}&download=#{directDownload.to_s}"%>'>
+                  <img src="/images/docIcon1.png" width="15" height="18" border="0">&nbsp;<%=fcount%>. <%= "Non-" if(fcount == 1 and paramsHash[:nonFlanking] == "on")%><%= descs[ii]%>
+                </A>
+<%            end %>
+              </li>
+<%
+            end
+          }
+%>
+          </ul>
+        </td>
+        </tr>
+        </table>
+      </div>
+<%
+    end
+  end
+%>

@@ -1,0 +1,224 @@
+<%# INIT %>
+<%
+  # We need to determine what to use for our template group/db AVP search
+  template = @inputs[0] || @outputs[0]
+%>
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width:725px; height:605px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Create A Boolean Query" }) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+          'Use this interface to create a boolean query that can be saved and applied to any queryable resource.'
+      })
+  %>
+  <%# Output targets summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Save Query in Database",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific settings user provides/reviews %>
+  <table class="wbFieldSet" width=100%>
+    <tr>
+      <td colspan=2>
+        <div class="wbFieldSetLegendDiv">
+          <span class="wbFieldSetLegend">
+            Design Query
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.defineQuery.text, helpMessages.defineQuery.title);">
+              <img src="/images/gHelp1.png" border="0" width="12" height="12" style="margin-left:5px;">
+            </a>
+          </span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan=2>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          1. Choose a type of resource against which your query will typically be applied. This will affect what fields are automatically available
+             as you add new clauses to your query
+        </div>
+        <ul class="options" style="overflow: auto ; margin-bottom: 10px ;">
+          <li>
+            <label for="templateCombo">Query Template:</label>
+            <div id="tmpls"></div>
+          </li>
+        </ul>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          2. Create boolean clauses for the query
+        </div>
+        <div id="queryPreview">
+          <span style="font-weight: bold">Query Preview:</span>
+          <div id="queryCode">()</div>
+        </div>
+        <ul id="clauseList">
+          <li id="clause1" class="clauseContainer">
+            <div class="clauseTools">
+              <div id="clause1Opts">
+                <a href="#" onclick="BHI.nestClause('clause1') ; return false ;" class="nestButton" title="Nest Clause">N</a>
+                <a href="#" onclick="BHI.unnestClause('clause1') ; return false ;" class="unnestButton" title="Unnest Clause">U</a>
+                <a href="#" onclick="BHI.insertClause('clause1') ; return false ;" class="addClauseButton" title="Add Clause">A</a>
+                <a href="#" onclick="BHI.deleteClause('clause1') ; return false ;" class="deleteClauseButton" title="Delete Clause">D</a>
+              </div>
+              <div id="clause1Case" class="checkbox"></div>
+            </div>
+            <div id="clause1Specs" class="clauseSpecs">
+              <div id="clause1Attr"></div>
+              <a id="clause1Not" href="#" onclick="Ext.get(this).toggleClass('selected') ; BHI.updateQuerySummary() ; return false ;" class="not" title="Inverse the operator">NOT</a>
+              <div id="clause1Op"></div>
+              <div id="clause1Val"></div>
+              <div id="clause1Contains" class="contains" style="display: none ;">
+                <a id="clause1Left" href="#" class="lBrace" onclick="BHI.toggleBrace(Ext.get(this)); BHI.updateQuerySummary() ; return false;" >[</a>
+                <div id="clause1Start" style="margin-right:5px"></div>
+                <span id="clause1Comma" style="line-height:24px; margin-right:3px;">,</span>
+                <div id="clause1Stop"></div>
+                <a id="clause1Right" href="#" class="rBrace" onclick="BHI.toggleBrace(Ext.get(this)); BHI.updateQuerySummary() ; return false;">]</a>
+              </div>
+            </div>
+            <div id="clause1Bool" class="boolOps">
+              <div id="clause1BoolDyn" style="display: none ;">
+                <a href="#" style="margin-right: 0 ;" id="clause1And" class="and selected" onclick="BHI.setBoolOp('clause1') ; return false ;">AND</a>
+                <a href="#" id="clause1Or" class="or" onclick="BHI.setBoolOp('clause1') ; return false ;">OR</a>
+              </div>
+              <img id="clause1BoolStat" src="/images/query/and_disabled.png" alt="AND" style="display: none ;">
+            </div>
+          </li>
+        </ul>
+        <a href="#" class="appendClauseButton" onclick="BHI.appendClause('clauseList') ; return false ;">+ Append Clause</a>
+      </td>
+    </tr>
+  </table>
+  <table class="wbFieldSet" width=100%>
+    <tr>
+      <td colspan=2>
+        <div class="wbFieldSetLegendDiv">
+          <span class="wbFieldSetLegend">
+            Query Properties
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.queryProps.text, helpMessages.queryProps.title);">
+              <img src="/images/gHelp1.png" border="0" width="12" height="12" style="margin-left:5px;">
+            </a>
+          </span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          Assign your query a name, location and decide if they query should be shared with other group members.
+          Note that you must have write permission in the group to save a query to it
+        </div>
+        <ul id="queryOpts" class="options">
+          <li>
+            <label for="qName">Name:</label>
+            <div id="qName"></div>
+            <img id="nameLoadingInd" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ; float: left ;" />
+          </li>
+          <li>
+            <label for="qDesc">Description:</label>
+            <div id="qDesc"></div>
+          </li>
+          <li>
+            <div id="sharedEdit">
+              <label for="qShared">Share Query:</label>
+              <div id="qShared"></div>
+            </div>
+          </li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons =>
+        [
+          {
+            :type     => :submit,
+            :id       => 'createButton',
+            :value    => 'Create',
+            :onClick  => 'return prepareQuery() ;',
+            :disabled => true
+          },
+          { 
+            :type => :cancel,
+            :postambleHTML => '<img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />'
+          }
+        ]
+      })
+  %>
+  <div class="feedback" id="feedback"></div>
+</form>
+<%# Tool-specific javascript and css %>
+<%= renderStaticFrag(@toolIdStr, :wbCssSrcs,
+    {
+      :srcs =>
+      [
+        '/styles/statusInfo.css',
+        '/styles/query.css'
+      ],
+      :genbConf => @genbConf
+    })
+%>
+<script>
+<%=
+  # Putting these declarations in a static fragment would make them cached from load to load, these need to be variable
+  # since fileUri will change as the user selects different nodes from the workbench
+  WorkbenchFormHelper.addToFormContext({'group' => WorkbenchFormHelper.getNameFromURI(:grp, @outputs[0], true)}) +
+  WorkbenchFormHelper.addToFormContext({'db' => WorkbenchFormHelper.getNameFromURI(:db, @outputs[0], true)}) +
+  WorkbenchFormHelper.addToFormContext({'tmplGroup' => WorkbenchFormHelper.getNameFromURI(:grp, template, true)}) +
+  WorkbenchFormHelper.addToFormContext({'tmplDb' => WorkbenchFormHelper.getNameFromURI(:db, template, true)}) +
+  ((@context['tmpl'].nil?) ? '' : WorkbenchFormHelper.addToFormContext({'tmpl' => @context['tmpl']}))
+%>
+<%
+  # To avoid asynchronous loading of external scripts by Ext, we need to provide all our query js as inline here 
+  [
+    "#{@genbConf.resourcesDir}/query/BooleanQueryUI.js",
+    "#{@genbConf.resourcesDir}/query/RemoteValidator.js",
+    "#{@genbConf.resourcesDir}/query/help.js",
+    "#{@genbConf.toolViewRoot}/createQuery/uis/create.js"
+  ].each { |src|
+    if(File.exists?(src))
+      File.open(src) { |file|
+        file.each_line { |line| 
+%>
+<%= "  #{line}" =%>
+<%
+        }
+      }
+    end
+  }
+%>
+
+  function prepareQuery()
+  {
+    // Finalize all our values in the wbFormContext and wbFormSettings so they can be properly serialized
+    if((typeof(BHI) === 'undefined') || !BHI)
+    {
+      Ext.fly('feedback').update('<div class="failure">An internal error has occurred on this page. Please contact your Genboree administrator!</div>') ;
+      return false ;
+    }
+
+    // Cannot submit with errors
+    if(Ext.query('.x-form-invalid').length > 0)
+    {
+      var fbDiv = Ext.get('feedback') ;
+      fbDiv.update('<div class="failure">Please correct the highlighted errors above before attempting to create a query.</div>') ;
+      fbDiv.scrollIntoView(wbDialogWindow.body) ;
+      
+      return false ;
+    }
+
+    // set the query obj string
+    wbFormSettings.set('queryObjStr', Ext.util.JSON.encode(BHI.createQueryObj())) ;
+
+    // Disable our buttons and indicate we are doing something
+    if(Ext.fly('loadingImg'))
+    {
+      Ext.fly('loadingImg').setVisibilityMode(Ext.Element.DISPLAY).show() ;
+    }
+
+    return true ;
+  }
+</script>

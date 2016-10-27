@@ -1,0 +1,551 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH DIALOG RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+/* Dialog-wide styling: */
+#wbToolSettingsWin .x-window-mc {
+  background-color: #FCFEFE  ;
+}
+
+#wbToolSettingsHelpWin .x-window-mc {
+  background-color: #FCFEFE  ;
+}
+
+.wbDialog {
+  margin-left: 10px ;
+  margin-top: 2px ;
+  margin-right: 1px ;
+  margin-bottom: 2px ;
+  padding: 2px 2px 2px 10px ;
+  height: 500px ;
+  background-color: #FFFFFF ;
+  font-size: 10pt ;
+}
+
+.wbDialogAcceptedNewickViewer {
+  margin-left: 10px ;
+  margin-top: 2px ;
+  margin-right: 1px ;
+  margin-bottom: 2px ;
+  padding: 2px 2px 2px 10px ;
+  height: auto ;
+  background-color: white ;
+  font-size: 10pt ;
+}
+
+/* Mainly for IE which doesn't inherit font properly for tables: */
+.wbDialog table,th,td {
+  font-size: 10pt ;
+}
+
+.wbDialog br {
+	clear:left;
+}
+
+/* Styling for tool title in dialogs: */
+.wbDialog div.wbToolTitleInDialog {
+  font-size: 1.4em ;
+  font-weight: bold ;
+  margin-left: auto ;
+  margin-right: auto ;
+  text-align: center ;
+}
+
+div.wbToolDialogInfo {
+  margin-top: 0px ;
+  margin-bottom: 10px ;
+}
+
+/* Fix extjs cleared-things for help text div only*/
+div.wbToolDialogInfo strong {
+  font-weight: bold ;
+}
+div.wbToolDialogInfo em {
+  font-style: italic ;
+}
+div.wbToolDialogInfo code {
+  font-size: 0.88em ;
+}
+div.wbToolDialogInfo ul {
+  margin-bottom: 10px ;
+}
+div.wbToolDialogInfo blockquote {
+  border-left: 3px solid #E0E0E0;
+  font-style: italic;
+  margin-left: 2.4em;
+  padding-left: 0.6em;
+}
+
+/* Styling for tool Help dialog (if tool UI, then will be form.wbDialog, not this) */
+div.wbDialog {
+  width: 500px ;
+}
+
+/* Styling for tool UI dialog form & form widgets: */
+form.wbDialog {
+  width: 600px ;
+}
+
+/** Styling for entity-specific icons within Help instructions. */
+.entityIcon {
+  margin: 0px ;
+  padding: 0px ;
+  width: 16px ;
+  height: 16px ;
+  display: inline ;
+  vertical-align: bottom ;
+}
+
+.usrEntityIcon {
+  background-image: url("/images/silk/group.png") !important;
+}
+.grpsEntityIcon {
+  background-image: url("/images/silk/folder_user.png") !important;
+}
+.grpEntityIcon {
+}
+.dbsEntityIcon {
+  background-image: url("/images/silk/folder_database.png") !important;
+}
+.dbEntityIcon {
+  background-image: url() !important;
+}
+.trksEntityIcon {
+  background-image: url("/javaScripts/ext-3.2.1/resources/images/default/tree/folder.gif");
+}
+.filesEntityIcon {
+  background-image: url("/images/silk/folder_table.png") !important;
+}
+.fileEntityIcon {
+  background-image: url("/images/silk/table.png") !important;
+}
+.qrysEntityIcon {
+  background-image: url("/images/silk/folder_find.png") !important;
+}
+.qryEntityIcon {
+  background-image: url("/images/silk/find.png") !important;
+}
+
+/** Styling for fieldset & widgets within wbDialogs */
+.wbDialog fieldset {
+  background-color: #F8F8FF ;
+  border-color: #000 ;
+  border-width: 1px ;
+  border-style: solid ;
+  padding: 15px 10px 8px 10px ;
+  margin: 5px 0px 8px 0px ;
+}
+
+.wbDialog fieldset.warningInfoSection
+{
+  background-position: 2px 2px ;
+  background-repeat: no-repeat ;
+  background-color: #FFF0D8 ;
+  background-image: url("/images/vgpWarning.png");
+  min-height: 30px ;
+  padding: 2px 2px 2px 42px ;
+  border: 2px solid #C64848 ;
+  color: #C64848 ;
+  font-family: sans-serif;
+  font-size: 10pt;
+  font-weight: normal !important;
+  margin: 20px auto;
+}
+
+.wbDialog input,select {
+  margin: 0px 0px 4px 0px ;
+}
+
+.wbDialog input.chkbox {
+  margin: 0.1em 0px 2px 0px ;
+}
+
+.wbDialog input, form.wbDialog select {
+	width:auto ;
+}
+
+.wbDialog div.wbButtons {
+  margin-left: auto ;
+  margin-right: auto ;
+  text-align: center ;
+}
+
+.wbDialog .wbButton {
+  margin: 5px 5px 5px 0px ;
+}
+
+/* Styling for using tables and labels to format tool UI forms & help: */
+.wbDialog th {
+  font-weight: bold ;
+  vertical-align: top ;
+  width: 25% ;
+  font-size: 10pt ;
+  padding-right: 10px ;
+}
+
+.wbDialog td {
+  vertical-align: top ;
+}
+
+.wbDialog td.explain {
+  font-size: 80% ;
+  width: 40% ;
+}
+
+.wbDialog table.propTable {
+  margin-top: 10px ;
+}
+
+/** IE doesn't know how to draw the backgrounds of fieldset legends properly.
+ * Solution uses the usual Holly-Hack/Tan-Hack approach so it only applies to IE.
+ */
+* html fieldset {
+  position: relative ;
+  padding-top: 0.75em ;
+}
+* html legend {
+  position: absolute ;
+  top: -0.5em ;
+  left: 0.5em ;
+}
+
+/* Firefox seems to be applying this to th/td NOT in a propTable specific table too. wrong */
+/*.wbDialog table.propTable th,td {
+  font-size: 0.86em ;
+*/}
+
+.wbDialog dd,li,dt {
+  font-size: 10pt ;
+}
+
+
+.wbDialog dl {
+  margin-top: 4px ;
+  margin-bottom: 4px ;
+  font-size: 10pt ;
+}
+
+.wbDialog dt {
+  list-style-type: disc ;
+  display: list-item ;
+  font-family: courier new, sans-serif, monospace ;
+  font-weight: bold ;
+  margin-left: 1.2em ;
+}
+
+.wbDialog dd {
+  margin-bottom: 0 ;
+  margin-left: 2em ;
+  font-size: 80% ;
+}
+
+.wbDialog ul {
+  list-style-type: disc ;
+  font-size: 10pt ;
+}
+
+.wbDialog ol {
+  list-style-type: decimal ;
+  font-size: 10pt ;
+}
+
+.wbDialog li {
+  margin-left: 1.2em ;
+}
+
+.wbDialog li.helpInfo {
+  font-size: 80% ;
+}
+
+.wbDialog span.contact {
+  font-size: 0.86em ;
+}
+
+/* Styling for submit-acknowledgement messages in dialog (MessageBox's mainly): */
+.wbDialog div.wbSubmitMsg {
+  margin-left: -45px ;
+}
+
+.wbDialog div.wbDialogFeedback {
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  min-height: 2.5em ;
+  padding: 8px 10px 8px 42px ;
+  margin: 5px 5px 5px 5px ;
+}
+
+.wbDialog div.wbDialogSuccess {
+  background-color: #E8FFEE ;
+  background-image: url(/images/vgpCheckmark.png) ;
+  border: 2px solid #58A263 ;
+}
+ 
+.wbDialog img.wbDialogLinkImage {
+  vertical-align: middle ;
+}
+
+.wbDialog a.wbDialogLinkLauncher {
+  color: #0000FF ;
+  font-weight: bold ;
+  font-size: 12pt ;
+}
+
+.wbDialog div.wbDialogFail {
+  background-color: #FFE0E0 ;
+  background-image: url(/images/vgpFailure.png) ;
+  border:2px solid #C64848 ;
+  color: #C64848 ;
+}
+
+.wbDialog div.wbDialogWarning {
+  background-color: #FFF0D8 ;
+  background-image: url(/images/vgpWarning.png) ;
+  border: 2px solid #C64848 ;
+  color: #C64848 ;
+}
+
+.wbDialog div.wbDialogFail .wbErrorMsg {
+  font-weight: bold ;
+  color: #C64848 ;
+}
+
+/* Table implemented to look like fieldset */
+.wbDialog table.wbFieldSet {
+	background-color: #FAFAFF ;
+	border: 1px solid #000000 ;
+	margin: 16px 0 20px 0 ;
+	padding:10px 5px 10px 5px ;
+}
+
+.wbDialog div.wbFieldSetLegendDiv {
+	margin-top: -23px ;
+	padding: 0 10px ;
+	position:relative ;
+	width:100% ;
+}
+
+.wbDialog span.wbFieldSetLegend {
+	color: #0052DC ;
+	border: black solid 1px ;
+	font-size: 11pt ;
+	font-weight: bold ;
+	padding:0 2px 2px 2px ;
+	background: #FAFAFF ;
+}
+
+table.wbFormWidgets {
+	padding-top: 3px ;
+}
+
+table.wbFormWidgets th, table.wbFormWidgets td {
+	padding-top: 3px ;
+  padding-right: 10px ;
+}
+
+.wbDialogAlert .x-window-mc {
+  background: solid url(/javaScripts/ext-2.2/resources/images/genboree/window/top-bottom-no-border.png) repeat scroll 0 0 !important ;
+}
+.wbDialogAlert .x-window-ml {
+  background: solid url(/javaScripts/ext-2.2/resources/images/genboree/window/left-border-only.png) repeat-y scroll 0 0 !important ;
+  padding-left: 2px ;
+}
+.wbDialogAlert .x-window-mr {
+  background: solid url(/javaScripts/ext-2.2/resources/images/genboree/window/right-border-only.png) repeat-y scroll right 0 !important ;
+  padding-right: 2px ;
+}
+.wbDialogAlert .x-window-body {
+  padding: 0px 0px 0px 14px ;
+}
+
+.wbDialogAlert .wbDialog {
+  padding: 0 ;
+  margin: 0 ;
+  background: none ;
+  /* height: auto ; */
+  /* width: auto ; */
+}
+
+.wbDialogAlert .wbDialogFeedbackTitle {
+  font-size: 1.3em ;
+  font-weight: bold ;
+  margin-bottom: 1em ;
+}
+
+.wbDialogAlert .wbDialog div.wbSubmitMsg {
+  margin: 0 ;
+}
+
+.wbDialogAlert .x-panel-btns-ct {
+  margin: 0px 5px 5px 5px ;
+  padding: 0px 5px 5px 5px ;
+}
+
+div.journalRef {
+  padding: 2px ;
+  margin: 2px 2px 5px 10px ;
+  border: 1px solid lightgray ;
+}
+
+span.footnote {
+  font-size: 82% ;
+}
+
+/* The following classes are used for the 'Configure Tool' button on the help window of a tool */
+
+.wbDialog .wbHelpWindowBtn td.x-btn-tl {
+  background-position: -0px 0px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-tc {
+  background-position: 0px -6px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-tr {
+  background-position: -3px 0px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-ml {
+  background-position: -0px -24px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-mc {
+  background-position: 0px -1096px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-mr {
+  background-position: -3px -24px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-bl {
+  background-position: -0px -3px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-bc {
+  background-position: 0px -15px;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-br {
+  background-position: -3px -3px;
+}
+
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-tl {
+  background-position: -6px 0px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-tc {
+  background-position: 0px -9px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-tr {
+  background-position: -9px 0px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-ml {
+  background-position: -6px -24px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-mc {
+  background-position: 0px -2168px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-mr {
+  background-position: -9px -24px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-bl {
+  background-position: -6px -3px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-bc {
+  background-position: 0px -18px;
+}
+.wbDialog .wbHelpWindowBtn .x-btn-over td.x-btn-br {
+  background-position: -9px -3px;
+}
+
+
+.wbDialog .wbHelpWindowBtn .x-btn-text {
+  height: 20px !important ;
+  padding-top: 1px ;
+}
+
+.wbDialog .wbHelpWindowBtn td.x-btn-left {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) no-repeat scroll 0 0 ;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-center {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) repeat-x scroll 0 -42px ;
+}
+.wbDialog .wbHelpWindowBtn td.x-btn-right {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/default/button/btn-sprite.gif) no-repeat scroll 0 -21px ;
+}
+
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-left {
+  background:  url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) no-repeat 0 0 ;
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-center {
+  background: url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) repeat-x 0 -42px ;
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-right {
+  background:  url(/javaScripts/ext-2.2/resources/images/genboree/toolbar/tbBtnSpriteGreen.gif) no-repeat 0 -21px ;
+}
+
+/* When tool gets activated */
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-tl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px 0px;
+/*  background-position: -12px 0px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-tc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -9px;
+/*  background-position: 0px -12px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-tr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px 0px;
+/*  background-position: -15px 0px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-ml {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -24px;
+/*  background-position: -12px -24px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-mc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -2168px;
+/*  background-position: 0px -3240px; */
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-mr {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -24px;
+/*  background-position: -15px -24px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-bl {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -6px -3px;
+/*  background-position: -12px -3px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-bc {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: 0px -18px;
+/*  background-position: 0px -21px;*/
+}
+.wbDialog .wbHelpWindowBtn .wbHelpWindowBtnReady td.x-btn-br {
+  background:  url(/javaScripts/ext-3.2.1/resources/images/genboree/button/btn-green.gif) ;
+  background-position: -9px -3px;
+/*  background-position: -15px -3px;*/
+}
+
+/* ---------------------------------------------------------
+   TOOL-SPECIFIC DIALOG CSS
+   --------------------------------------------------------- */
+.wbDialog.citing ol.refs li {
+  margin-top: 20px ;
+}
+.wbDialog.citing span.keywords {
+  font-size: 0.72em ;
+  display: table-row ;
+  width: 500px ;
+  min-width: 500px ;
+}
+.wbDialog.citing span.keywords span.label {
+  text-decoration: underline ;
+  display: table-cell ;
+  width: 90px ;
+  min-width: 90px ;
+  padding-left: 20px ;
+}
+.wbDialog.citing span.keywords span.words {
+  display: table-cell ;
+  width: 450px ;
+  min-width: 450px ;
+  padding-left: 20px ;
+  padding-top: 6px ;
+}
+

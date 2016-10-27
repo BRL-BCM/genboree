@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "renameDb",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Rename Database",
+    "shortLabel": "[NOT SET]"
+  }
+}

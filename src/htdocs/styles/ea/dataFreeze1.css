@@ -1,0 +1,237 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1400px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeader {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  background-image: url("../images/dataFreezeHeader_background.png");
+  background-repeat: no-repeat;
+  width: 1400px;
+  height: 140px;
+}
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 279px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial; 
+}
+
+.sample
+{
+background-color: #ffe271;
+padding: 1px;
+height : inherit;
+}
+.sampleText
+{
+font:12px verdana,sans-serif;
+color:#7b3d00;
+}
+
+.sampleTextBold
+{
+font:bold 12px verdana,sans-serif;
+color:#7b3d00;
+}
+
+ul
+{
+padding-left:20px;
+}
+
+ul.li
+{
+list-style-type: disc;
+}
+
+.legendBold10
+{
+font:10px verdana,sans-serif;
+padding: 1px;
+}
+
+.legendBold12
+{
+font:bold 12px verdana,sans-serif;
+padding: 1px;
+}
+.broad
+{
+  background-color: #4f81bd;
+}
+
+.ucsd
+{
+  background-color: #f79646;
+}
+
+.ucsf
+{
+  background-color: #c0504d;
+}
+
+.uw
+{
+  background-color: #9bbb59;
+}
+
+.broad-selected
+{
+  background-color: #aabad7;
+}
+
+.ucsd-selected
+{
+  background-color: #f7d1b1;
+}
+
+.ucsf-selected
+{
+  background-color: #c79190;
+}
+
+.uw-selected
+{
+  background-color: #b2c494;
+}
+
+
+.remc
+{
+
+padding: 1px;
+font:12px verdana,sans-serif;
+color: White;
+}
+
+.firstCell
+{
+  width: 300px;
+  border-bottom : 1px solid black;
+}
+
+.topBlockRow
+{
+  border-top: 20px solid black;
+}
+
+.header-image
+{
+  height: 140px;
+  width: 1108px;
+}
+
+.expt
+{
+  width: 30px;
+  height: inherit;
+  user-select:none;
+   -moz-user-select: none;
+   -khtml-user-select: none;
+}
+
+.exptClass1
+{
+
+  width: 30px;
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-top:2px solid black;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+
+.exptClass2
+{
+  width: 31px;
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.exptClass3
+{
+  width: 30px;
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.imageCell
+{
+vertical-align:bottom;
+}
+
+.textarea
+{
+  width: 1300px;
+}
+
+.filler
+{
+  width: 100px;
+}
+
+.selected
+{
+background-color: #214c8b;
+}
+
+.button
+{
+font:bold 12px verdana,sans-serif;
+background-color:#f2f2f2;
+border:3px solid #2c5cbc;
+cursor:pointer;
+}

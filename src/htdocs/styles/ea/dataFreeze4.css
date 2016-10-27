@@ -1,0 +1,352 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1200px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeaderContainer {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  width: 1200px;
+  height: 140px;
+}
+
+#dataFreezeHeaderLeft{
+  background-image: url("../images/headerSliver.png");
+  background-repeat: repeat;
+  width: 940px; /*dfHeaderContainer.width - 260(width of bcm logo image border figure)*/
+  height: 140px;
+  float:left;
+}
+
+
+#dataFreezeHeaderRight{
+  background-image: url("../images/headerCurve.png");
+  background-repeat: no-repeat;
+  float:right;
+  height: 140px;
+  width: 260px;
+}
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 279px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+.legend10
+{
+font:10px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold10
+{
+font:bold 10px sans-serif,verdana;
+padding: 1px;
+}
+
+
+.legend12
+{
+font:12px sans-serif,verdana;
+padding: 1px;
+}
+
+
+.legendBold12
+{
+font:bold 12px sans-serif,verdana;
+padding: 1px;
+}
+
+.empty
+{
+  background-color: #ffffff;
+}
+
+.empty-selected
+{
+background-color: #d3d3d3;
+}
+
+.firstCell
+{
+  width: 300px;
+  border-bottom : 1px solid black;
+}
+
+.topBlockRow
+{
+  border-top: 20px solid black;
+}
+
+.header-image
+{
+  height: 130px;
+  width: 990px;
+}
+
+.expt
+{
+  width: 33px;
+  height: inherit;
+  user-select:none;
+   -moz-user-select: none;
+   -khtml-user-select: none;
+}
+
+.exptClass1
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-top:1px solid black;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+
+.exptClass2
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.exptClass3
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.imageCell
+{
+vertical-align:bottom;
+}
+
+.textarea
+{
+  width: 1300px;
+}
+
+.filler
+{
+
+}
+
+.selected
+{
+background-color: #214c8b;
+}
+
+.button
+{
+font:bold 12px verdana,sans-serif;
+background-color:#f2f2f2;
+border:3px solid #2c5cbc;
+cursor:pointer;
+}
+
+.parentWidth{
+  height:160px;
+}
+
+     .x-grid3-hd-row
+     {
+      height:160px;
+     }
+     .x-grid3-td-tracks
+     {
+      height:100% !important;
+     }
+     .x-grid3-hd-tracks
+     {
+      width:100% !important;
+      height:100% !important;
+      padding:0;
+     }
+.x-grid3-col-firstCell
+{
+  width:100% !important;
+}
+   .rightClass
+   {
+      background-image: url("/images/workbench/right-arrow.gif") !important;
+   }
+   .downClass
+   {
+      background-image: url("/images/workbench/down-arrow.gif") !important;
+   }
+   .clearClass
+   {
+      background-image: url("/images/silk/cancel.png") !important;
+   }
+
+   .viewClass
+   {
+      background-image: url("/images/silk/eye.png") !important;
+   }
+   .clearClass
+   {
+      background-image: url("/images/silk/cancel.png") !important;
+   }
+   .ucscClass
+   {
+      background-image: url("/images/ucsc.png") !important;
+   }
+   .agbClass
+   {
+      background-image: url("/images/agb.png") !important;
+   }
+   .toglClass
+   {
+      cursor:pointer;
+      padding-left:20px;
+      background-image:url('/epigenomeatlas/images/toggle.gif');
+      background-repeat: no-repeat;
+   }
+   .dwnldClass
+   {
+    cursor:pointer;
+    padding-left:20px;
+    background-image:url('/epigenomeatlas/images/download.png');
+    background-repeat: no-repeat;
+   }
+
+   .metadClass
+   {
+    cursor:pointer;
+    padding-left:20px;
+    background-image:url('/images/silk/page.png');
+    background-repeat: no-repeat;
+   }
+
+   .x-grid3-col-tracks
+   {
+      padding:1px;
+      height:17px;
+      width:100%;
+   }
+.menu-title {
+    background: none repeat scroll 0 0 #D6E3F2;
+    border-color: #DAE6F4 #99BBE8 #99BBE8 #DAE6F4;
+    border-style: solid;
+    border-width: 1px;
+    color: #15428B;
+    display: block;
+    font: bold 10px tahoma,arial,verdana,sans-serif;
+    margin: -2px -2px 0;
+    padding: 3px;
+}
+
+.rotateText
+{
+filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);
+-webkit-transform: rotate(-90deg);
+-moz-transform: rotate(-90deg);
+-o-transform: rotate(-90deg);
+}
+
+  .cellSelected{
+   background-color: #DFE8F6;
+   }
+
+ ul.cat {
+  list-style: none outside none;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+  padding-top: 0 !important;
+}
+
+div.results {
+  border: 1px solid black;
+  margin: 0;
+  padding: 5px 5px 10px 10px;
+  overflow:auto;
+}
+
+div.success {
+  font-family: sans-serif;
+  font-size: 11pt;
+  margin: 5px;
+  padding: 5px 5px 10px 10px;
+}
+
+.mdExpt
+{
+margin-left: 30px !important;
+padding-left:20px;
+background-image:url('/images/expt.png');
+    background-repeat: no-repeat;
+}
+
+.mdRemc
+{
+
+padding-left:20px;
+background-image:url('/images/silk/building.png');
+background-repeat: no-repeat;
+}
+
+.mdTrack
+{
+  margin-left: 40px;
+  padding-left:15px;
+}
+
+.pageList
+{
+  padding-left:10px;
+}
+ul.pageList li
+{
+  list-style-type: disc;
+}

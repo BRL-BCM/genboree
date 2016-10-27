@@ -1,0 +1,18 @@
+[
+  {
+    "text": "Array Data",
+    "tooltip": "Import array data into Genboree as a high density track.",
+    "idStr": "arrayDataImporter"
+  },
+  {
+    "text": "Track Metadata",
+    "tooltip": "Set the metadata for one or more tracks in a database.",
+    "idStr": "setTrackMetaData"
+  },
+  {
+    "text": "Upload Track Annotations",
+    "tooltip": "Import track data into a Genboree database.",
+    "idStr": "uploadTrackAnnos"
+  }
+]
+

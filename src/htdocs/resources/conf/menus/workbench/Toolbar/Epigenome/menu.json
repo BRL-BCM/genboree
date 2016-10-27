@@ -1,0 +1,41 @@
+[
+  {
+    "text" : "Random Forest",
+    "hidden": true
+  },
+  {
+    "text" : "QIIME",
+    "hidden": true
+  },
+  {
+    "text" : "QC",
+    "idStr" : "epigenomeQcMenu",
+    "hidden": true
+  },
+  {
+    "text": "Search for Similar Signals by Correlation",
+    "tooltip": "Find the correlation of a query track containing signal data with each of the target tracks you indicate.",
+    "idStr": "signalSimilaritySearch",
+    "hidden": true
+  },
+  {
+    "text" : "Analyze Signals"
+  },
+  {
+    "text" : "Compute Similarity Matrix (heatmap)",
+    "tooltip" : "Compute a similarity matrix between two experiments using data tracks as input.",
+    "idStr" : "epigenomicsHeatmap"
+  },
+  {
+    "text" : "Create Track Lists from Newick Tree",
+    "tooltip" : "Create two complementary track lists using a Newick tree file as input",
+    "idStr" : "newickToTrackList"
+  },
+  {
+    "text" : "Slice Epigenomic Data"
+  },
+  {
+    "text" : "Analyze Signals in the Context of Epigenome Atlas",
+    "hidden": true
+  }
+]

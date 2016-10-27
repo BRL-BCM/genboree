@@ -1,0 +1,13 @@
+[
+  {
+    "text"   : "Job Summary",
+    "idStr"  : "jobSummary",
+    "tooltip": "Get a summary report for jobs that you have launched so far."
+  },
+  {
+    "text": "Cancel Job",
+    "idStr": "cancelJob",
+    "tooltip": "Cancel any unfinished jobs.",
+    "hidden": true
+  }
+]

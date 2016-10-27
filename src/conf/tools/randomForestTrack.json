@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "randomForestTrack",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/BRL-Tools-Access",
+    "label": "Random Forest -> Track Attribute Oriented",
+    "shortLabel": "Random Forest - Track Attribute Oriented"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "walltime": "48:00:00",
+    "pvmem": "5858mb"
+  }
+}

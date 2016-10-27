@@ -1,0 +1,128 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # LIBRARIES
+  # ---------------------------------------------------------------------------
+  $VERBOSE = nil
+  $DEBUG = true
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  # Constants
+  OK = 0
+
+  # ---------------------------------------------------------------------------
+  # METHODS
+  # ---------------------------------------------------------------------------
+  def paramCheck(context)
+  end
+
+  def init(context)
+  end
+
+  def clear(context)
+  end
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  context = nil
+  timer = nil
+
+begin
+  timer = BRL::Util::TimingUtil.new()
+  timer.vMsgs.first << " (avpRedirect.rhtml) "
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+  context[:errCode] = OK
+  context[:err] = nil
+  context[:timer] = timer
+
+  # ---------------------------------------------------------------------------
+  # DO CHECK/LOAD/CHECK (hierarchical checking)
+  # ---------------------------------------------------------------------------
+  # 1) Grab Params
+  paramCheck(context)            # Check. Security hole 1 plugged.
+  timer << "- DONE: paramCheck"
+  if(context[:errCode] == OK)
+    # 2) Initdb connections and data
+    #    - dbh
+    #    - get databaseName from refseqId & connect
+    #    - get fref info
+    #    - get ftypeid
+    init(context)
+  end
+rescue => err
+  dputs "DPUTS: " + err.message
+  dputs err.backtrace.join("\n")
+  context[:err] = err
+ensure
+  # Free stuff that use the DB (not needed after this, all work is done)
+	clear(context)
+	timer << "- DONE: clear"
+
+	# ---- OK? ----
+	cgi = context.cgi
+	err = context[:err]
+	errCode = context[:errCode]
+	unless(false)
+
+
+%>
+
+<html>
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=iso-8859-1'>
+  <title>Dialog/Menu Test</title>
+</head>
+<body>
+  <!-- BEGIN: Extjs: Split Button Support -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/prototype.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/scriptaculous.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/adapter/prototype/ext-prototype-adapter.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <script type="text/javascript" src="/javaScripts/extjs/ext-all.js?<%=context.jsVerStr()%>"></script>
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/resources/css/ext-all.css?<%=context.jsVerStr()%>">
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/resources/css/ytheme-genboree.css?<%=context.jsVerStr()%>">
+  <link rel="stylesheet" type="text/css" href="/javaScripts/extjs/examples/examples.css?<%=context.jsVerStr()%>">
+  <script type="text/javascript" src="/javaScripts/extjs/examples/examples.js?<%=context.jsVerStr()%>"></script>
+  <script type="text/javascript" src="/javaScripts/linkDialog.aj.js?<%=context.jsVerStr()%>"></script>
+  <!-- Set a local "blank" image file; default is a URL to extjs.com -->
+  <script type='text/javascript'>
+    Ext.BLANK_IMAGE_URL = '/javaScripts/extjs/resources/images/genboree/s.gif';
+  </script>
+
+  <!-- END -->
+  <!-- BEGIN: Genboree Specific -->
+  <script type="text/javascript" src="/javaScripts/util.js?<%=context.jsVerStr()%>"></script> <!-- Stuff here used in rest of files... -->
+  <link rel="stylesheet" href="/styles/jsp.css?<%=context.jsVerStr()%>" type="text/css">
+  <!-- END -->
+
+<!--  The dialog is created from existing markup.
+      The inline styles just hide it until it created and should be in a stylesheet -->
+  <div id="dlg" style="visibility:hidden;position:absolute;top:0px;">
+    <div id="dlgHeader" name="dlgHeader" class="x-dlg-hd">Hello Dialog</div>
+    <div id="dlgBody" name="dlgBody" class="x-dlg-bd"></div>
+  </div>
+
+  <a href="#" id="show-dialog-btn" name="show-dialog-btn"> Links </a>
+<%
+  else # Error to report!
+  end
+%>
+
+
+</BODY></HTML>
+    <!-- END: COMMON HTML FOOTER -->
+<%
+
+end # begin-rescue-ensure
+%>

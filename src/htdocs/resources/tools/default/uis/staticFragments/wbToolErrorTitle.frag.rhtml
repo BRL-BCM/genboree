@@ -1,0 +1,10 @@
+<%
+  title = "Error: #{@title}"
+%>
+<script type="text/javascript">
+  <%= WorkbenchFormHelper.addToFormContext({'toolTitle' => @title}) %>
+</script>
+<div width="100%">
+  <div class="wbToolTitleInDialog"><%= CGI.escapeHTML(title) %></div>
+</div>
+<br>

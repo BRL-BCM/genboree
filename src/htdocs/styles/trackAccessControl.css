@@ -1,0 +1,43 @@
+div.error {
+  text-align: center ;
+  color: red ;
+  font-weight: bold ;
+}
+
+div.success {
+  text-align: center ;
+  color: green ;
+  font-weight: bold ;
+}
+
+input.userCheck {
+  margin: 0px 2px 0px 0px ;
+  padding: 0 ;
+}
+
+span.userName {
+  font-style: italic ;
+  font-size: 8pt ;
+  margin: 0 ;
+  padding: 0 ;
+}
+
+table.userTable td {
+  margin: 0 ;
+  padding: 0 ;
+  height: 15px ;
+}
+
+div#usersWithAccess {
+  font-weight: bold ;
+  width: 125px ;
+  float: left ;
+}
+
+div.allNone {
+  float: right ;
+  width: 72px ;
+}
+div.allNone input {
+  padding: 0px ;
+}

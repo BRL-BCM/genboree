@@ -1,0 +1,55 @@
+<%
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileEntityListApiUriHelper'
+  @list = [ @list ] unless(@list.is_a?(Array) or @list.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@list.nil? or @list.empty?) ? "" : "rowspan='#{@list.size+1}'") %> ><%= (@label || "Items") %>:</th>
+<%  if(@list.nil? or @list.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+      dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+      fileApiHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new()
+      sampleSetApiHelper = BRL::Genboree::REST::Helpers::SampleSetApiUriHelper.new()
+      fileEntityListApiHelper = BRL::Genboree::REST::Helpers::FileEntityListApiUriHelper.new()
+      trkEntityListApiHelper = BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper.new()
+      @list.each { |uri|
+        type = nil
+        item = nil
+        item = trkApiHelper.extractName(uri)
+        type = "Track"
+        if(!item)
+          item = trkEntityListApiHelper.extractName(uri)
+          type = "Track Entity List"
+          if(!item)
+            item = fileEntityListApiHelper.extractName(uri)            
+            type = "File Enitity List"
+            if(!item)
+              item = fileApiHelper.extractName(uri)
+              type = "File"
+              if(!item)
+                item = dbApiHelper.extractName(uri)
+                type = "Database"
+              end
+            end
+          end
+        end
+%>
+        <tr>
+          <td><i><%== item %></i> <%="(#{type})"%></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

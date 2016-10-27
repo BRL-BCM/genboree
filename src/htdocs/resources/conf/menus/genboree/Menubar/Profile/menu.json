@@ -1,0 +1,14 @@
+[
+  {
+    "text": "View Profile",
+    "href": "/java-bin/mygenboree.jsp"
+  },
+  {
+    "text": "Edit Profile",
+    "href": "/java-bin/mygenboree.jsp?eP=yes"
+  },
+  {
+    "text": "Change Password",
+    "href": "/java-bin/mygenboree.jsp?cP=yes"
+  }
+]

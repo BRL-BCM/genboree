@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "great",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "walltime": "12:00:00"
+  },
+  "ui": {
+    "label": "GREAT",
+    "shortLabel": "GREAT"
+  }
+}

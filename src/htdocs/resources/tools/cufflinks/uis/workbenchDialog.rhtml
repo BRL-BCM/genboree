@@ -1,0 +1,180 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <p>Cufflinks assembles transcripts, estimates their abundances, and tests for differential expression and regulation in RNA-Seq samples. It accepts aligned RNA-Seq reads and assembles the alignments into a set of transcripts. Cufflinks then estimates the relative abundances of these transcripts based on the number of reads derived from each one, taking into account biases in library preparation protocols.</p>
+
+
+            <p>To set up a Cufflinks analysis:</p>
+
+
+          Populate <strong>Input Data</strong>
+            <ul>
+            <li>Drag one Files Directory with <em>accepted_hits.bam</em> into <strong>Input Data</strong> or,</li>
+              <li>Drag one BAM file into <strong>Input Data</strong></li>
+            </ul>
+
+
+          Populate <strong>Output Targets</strong>
+            <ul>
+            <li>Drag a destination database into <strong>Output Targets</strong></li>
+              <li>Configure &#38; Submit the Cufflinks Job</li>
+            </ul>
+
+
+          Conifigure &#38; Submit Cufflinks Job:
+            <ul>
+            <li>Select <code>Transcriptome</code> &raquo; <code>Analyze RNA-Seq Data</code> &raquo; <code>Assemble and Measure Transcript by Cufflinks</code></li>
+              <li>Click <code>Submit</code></li>
+            </ul>
+
+
+          Cufflinks generates these output files:
+            <ul>
+            <li><em>genes.fpkm_tracking.withGeneName.xls</em> (summed FPKM of transcripts sharing each gene_id)</li>
+              <li><em>isoforms.fpkm_tracking.withGeneName.xls</em> (transcript FPKMs)</li>
+              <li><em>transcripts.withGeneName.gtf</em> (contains Cufflinks’ assembled isoforms with gene name)</li>
+            </ul>
+
+
+          Three raw data files:
+            <ul>
+            <li><em>genes.fpkm_tracking</em> (estimated gene-level expression values in generic FPKM tracking format)</li>
+              <li><em>isoforms.fpkm_tracking</em> (estimated isoform-level expression values in generic FPKM tracking format)</li>
+              <li><em>transcripts.gtf</em> (contains Cufflinks’ assembled isoforms)</li>
+            </ul>
+
+
+          Genboree Job Specification File:
+            <ul>
+            <li><em>jobFile.json</em></li>
+            </ul>
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "File Of Interest" } )
+      })
+  %>
+
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Cufflinks-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => "The top-level output folder used to organize Cufflinks results"},
+        { :id => 'maskFile', :label => 'Mask File', :type => :checkbox, :title => "Ignore all alignment within transcripts in this file"},
+        { :id => 'multiReadCorrect', :label => 'Multi Read Correct', :type => :checkbox, :title => "Use 'rescue method' for multi-reads (more accurate)"},
+        { :id => 'advancedSettings', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them.)',
+          :toggleText => "Advanced Abundance Estimation Options:",
+          :widgets =>
+          [
+            { :id => 'fragLenMean', :label => 'Mean Frag Length', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "200", :style => 'font-size: 80%', :title => 'Average fragment length (unpaired reads only) [ default: 200 ]'},
+            { :id => 'fragLenStdev', :label => 'Frag Length Stdev', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "80", :style => 'font-size: 80%', :title => ' Fragment length std deviation (unpaired reads only)  [ default: 80 ]'},
+            { :id => 'upperQuartileNorm', :label => 'Upper Quart Norm', :labelStyle => 'width:250px;', :type => :checkbox, :style => 'font-size: 80%', :title => 'Use upper-quartile normalization [ default:  FALSE ]'},
+            { :id => 'maxMleIter', :label => 'Max MLE Iterations', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "5000", :style => 'font-size: 80%', :title => 'Maximum iterations allowed for MLE calculation. [Default: 5000]'},
+            { :id => 'numImportSamples', :label => 'Num Importance Samples', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "1000", :style => 'font-size: 80%', :title => 'Number of importance samples for MAP restimation [ default: 1000]'},
+            { :name => 'hitsNorm', :label => 'Compatible Hits Norm', :labelStyle => 'width:250px;', :value => "compHitsNorm", :type => :radio, :size => "6", :style => 'font-size: 80%', :title => 'Count hits compatible with reference RNAs only [ default: FALSE ]'},
+            { :name => 'hitsNorm', :label => 'Total Hits Norm', :labelStyle => 'width:250px;', :type => :radio, :value => "totalHitsNorm",  :size => "6", :checked => true, :style => 'font-size: 80%', :title => 'count all hits for normalization [ default: TRUE ]'},
+
+          ]
+        },
+        { :id => 'advancedSettings2', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them.)',
+          :toggleText => "Advanced Assembly Options:",
+          :widgets =>
+          [
+            { :id => 'label', :label => 'ID Prefix', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "CUFF", :style => 'font-size: 80%', :title => 'Assembled transcripts have this ID prefix [default: CUFF]'},
+            { :id => 'minIsoformFrac', :label => 'Min Isoform Frac', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.10", :style => 'font-size: 80%', :title => 'Suppress transcripts below this abundance level [ default: 0.10 ]'},
+            { :id => 'preMrnaFrac', :label => 'Pre MRNA Frac', :labelStyle => 'width:250px;', :type => :text, :style => 'font-size: 80%', :value => "0.15", :title => 'Suppress intra-intronic transcripts below this level [ default: 0.15 ]'},
+            { :id => 'juncAlpha', :label => 'Junction Alpha', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.001", :style => 'font-size: 80%', :title => 'Alpha for junction binomial test filter  [ default:  0.001]'},
+            { :id => 'minFragsPerTransfrag', :label => 'Min Frags per Transfrag', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "10", :style => 'font-size: 80%', :title => 'Minimum number of fragments needed for new transfrags [ default: 10 ]'},
+            { :id => 'overhangTolerance', :label => 'Overhang Tolerance', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "8", :style => 'font-size: 80%', :title => 'Number of terminal exon bp to tolerate in introns [ default:  8]'},
+            { :id => 'maxBundleLength', :label => 'Max Bundle Length', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "3500000", :style => 'font-size: 80%', :title => 'Maximum genomic length allowed for a given bundle [ default: 3500000]'},
+            { :id => 'maxBundleFrags', :label => 'Max Bundle Frags', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "500000", :style => 'font-size: 80%', :title => "Maximum fragments allowed in a given bundle [ default: 500000]"},
+            { :id => 'minIntronLength', :label => 'Min Intron Length', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "50", :style => 'font-size: 80%', :title => 'Minimum intron size allowed in genome [ default: 50 ]'},
+            { :id => 'trim3AvgCovThresh', :label => 'Trim 3 Avg Cov Thresh', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "10", :style => 'font-size: 80%', :title => 'Minimum avg coverage required to attempt 3\' trimming  [ default: 10]'},
+            { :id => 'trim3DropOffFrac', :label => 'Trim 3 DropOff Frac', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.1", :style => 'font-size: 80%', :title => 'Fraction of avg coverage below which to trim 3\' end  [ default:  0.1]'}
+          ]
+        },
+        { :id => 'advancedSettings3', :type => :advancedSection,
+          :width => '450px',
+          :text => '(The default values for these settings are what will be used if you do not change them.)',
+          :toggleText => "Advanced Reference Annotation Guided Assembly Options",
+          :widgets =>
+          [
+            { :id => 'noFauxReads', :label => 'No Faux Reads', :labelStyle => 'width:250px;', :type => :checkbox, :size => "6", :style => 'font-size: 80%', :title => 'Disable tiling by faux reads  [ default:  FALSE ]'},
+            { :id => 'overhang3Tolerance', :label => '3 Overhang Tolerance', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "600", :style => 'font-size: 80%', :title => "Overhang allowed on 3' end when merging with reference[ default: 600 ]"},
+            { :id => 'intronOverhangTolerance', :label => 'Intron Overhang Tolerance', :labelStyle => 'width:250px;', :type => :text, :value => "30", :size => "6", :style => 'font-size: 80%', :title => 'Overhang allowed inside reference intron when merging [ default: 30]'}
+          ]
+        }
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

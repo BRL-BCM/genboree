@@ -1,0 +1,30 @@
+{
+  "input" :
+  [
+    "/home1/tandon/test/s_8_run71_sequence.txt.gz"
+  ],
+  "output" :
+  [
+    "/home1/tandon/test"
+  ],
+  "settings" :
+  {
+    "runName"  : "test" ,
+    "maxReadLength" : 30,
+    "minReadLength" :10,
+    "trimHomoPolymer" : "true",
+    "minHomoPolymer" : 9,
+    "minReadOccurance" : 5,
+    "kWeight" : 12,
+    "maxMappings" : 1,
+    "diagonals" : 500,
+    "gap": 10,
+    "topPercent" : 1,
+    "kSpan" : 18,
+    "targetGenome" : "/home2/coarfa/work/sequences/reference/Human18/sorted.ref.hg18.fa",
+    "refGenome" :"/home2/coarfa/hg18.off",
+    "lffFile" :"/home2/coarfa/work/sequences/reference/Human18/targets.kg.gr.mir.sno.sca.cpg.piclus.hg18.lff"
+  }
+  
+
+}

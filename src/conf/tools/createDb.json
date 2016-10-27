@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "createDb",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Create Database",
+    "shortLabel": "[NOT SET]"
+  }
+}

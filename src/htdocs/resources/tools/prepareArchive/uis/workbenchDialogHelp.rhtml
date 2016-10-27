@@ -1,0 +1,108 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will create an archive (.zip, .tar.gz, .tar.bz2) of one or more files. 
+        <ul>
+          <li>Please note that the maximum size of an archive is 100 GB! If you try to create an archive bigger than 100 GB, you will receive a failure email after the archive is prepared (which can take some time).</li>
+          <li>If you're trying to compress a huge amount of data, you should submit several smaller Prepare Archive jobs to avoid this issue.</li>
+          <li>Another benefit to creating smaller archives is that you'll be able to download those archives more easily. Downloading a 100 GB archive from the Workbench is likely to fail due to connection fluctuations.</li>
+        </ul>
+        <br>
+        <code>Preserve Directory Structure</code> - When selected, this option will create directories in your archive that mimic Genboree's structure.
+        For example, if a file in the group Examples and Test Data, in the database Bowtie - Example Data, in the file folder Bowtie, and named Bowtie_metrics.txt, is archived by this tool,
+        the file will appear in Archive Name/Examples and Test Data/Bowtie - Example Data/Bowtie_metrics.txt.
+        <br>&nbsp;<br>
+        If you do not select this option, Bowtie_metrics.txt will appear in Archive Name/Bowtie_metrics.txt. Unfortunately, two files with the same name cannot reside in the same folder.
+        So, if you prepare an archive of two or more files named Bowtie_metrics.txt, this tool will rename the files to Bowtie_metrics.txt, Bowtie_metrics_1.txt, Bowtice_metrics_2.txt, etc.
+        The tool will provide a mapping file so you may distinguish which Bowtie_metrics file in your archive relates to that on Genboree. The map.txt file is a tab-delimited file containing
+        6 columns. The first is the &quot;New File Name&quot; that appears in the archive (Bowtie_metrics_1.txt) and the remaining columns describe the original file location on Genboree:
+        &quot;Host&quot;, &quot;Group Name&quot;, &quot;Database Name&quot;, &quot;Sub-folders&quot;, &quot;File Name.&quot; If you ran multiple Bowtie jobs with the same output database, your mapping file might look like the following:
+        <br>&nbsp;<br>
+        #New File Name &nbsp;&nbsp;&nbsp;&nbsp; Host &nbsp;&nbsp;&nbsp;&nbsp; Group Name &nbsp;&nbsp;&nbsp;&nbsp; Database Name &nbsp;&nbsp;&nbsp;&nbsp; Sub-folders &nbsp;&nbsp;&nbsp;&nbsp; File Name <br>
+        Bowtie_metrics &nbsp;&nbsp;&nbsp;&nbsp; genboree.org &nbsp;&nbsp;&nbsp;&nbsp; Examples and Test Data &nbsp;&nbsp;&nbsp;&nbsp; Bowtie - Example Data &nbsp;&nbsp;&nbsp;&nbsp; Bowtie/Bowtie-2013-11-14-13:16:46 &nbsp;&nbsp;&nbsp;&nbsp; Bowtie-2013-11-14-13:16:46_metrics.txt <br>
+        Bowtie_metrics_1 &nbsp;&nbsp;&nbsp;&nbsp; genboree.org &nbsp;&nbsp;&nbsp;&nbsp; Examples and Test Data &nbsp;&nbsp;&nbsp;&nbsp; Bowtie - Example Data &nbsp;&nbsp;&nbsp;&nbsp; Bowtie/Bowtie-2014-02-05-08:37:23 &nbsp;&nbsp;&nbsp;&nbsp; Bowtie-2014-02-05-08:37:23_metrics.txt
+        <br>&nbsp;<br>
+        If you are selecting files from multiple databases whose files share names with each other, it is recommended that you select the &quot;Preserve Directory Structure&quot; option. This option also provides a self-documenting explanation of where each file in your archive came from.
+        <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag at least one <u>file</u>, <u>folder</u>, <u>file entity list</u>, or <u>database</u> into &quot;Input Data&quot;'
+        ],
+        :types              => [
+                                 [ 'Files', 'min: 0 ; max: any' ],
+                                 [ 'Files Folder', 'min: 0 ; max: any' ],
+                                 [ 'File Entity List', 'min: 0 ; max: any' ],
+                                 [ 'Database', 'min: 0 ; max: any' ],
+                               ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets.&quot;' ],
+        :types              => [ [ 'Database', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Settings %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions       =>
+        [
+          ['Archive Name', 'Provide a name for the archive to be created, to be appended by the compression type extension'],
+          ['Compression Type','Select the type of file compression you would like to use for your archive'],
+          ['Preserve Directory Structure','Check if you would like files to be placed in group, database, file folder, etc. directories mimicking those on Genboree.org']
+        ]
+      })
+  %>  
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Aaron Baker at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+        <center><b>Example Data for Prepare Archive</b></center>
+        The example files can be found in the 'Bowtie Example Data' database:
+        <img src='/images/workbench/bowtieTestSet.png' style='float:right; width:247px; height:287px; margin: 0px 3px 0px 3px;'>
+        <br>&nbsp;<br>
+        Under the group 'Examples and Test Data', select the database 'Bowtie - Example Data'. Choose one or more of the following: <br>
+        <ul>
+          <li> <b>Files</b>: Under 'Files', select folder 'testBowtie' or 'Bowtie' and drag the FASTQ files or any of the Files output by the Bowtie tool to Input Data panel</li>
+          <li> <b>Files Folder</b>: Under 'Files', drag the files folder 'testBowtie' or 'Bowtie' to Input Data panel </li>
+          <li> <b>Entity List</b>: Under 'Lists & Selections', 'Lists of Files', drag the entity list 'testBowtieEntityList' to Input Data panel </li>
+          <li> <b>Databases</b>: Under 'Databases' just beneath the 'Examples and Test Data' group drag the database 'Bowtie - Example Data' to the Input Data Panel</li>
+        <ul>
+        <br>&nbsp;<br>
+        Drag a database that you own to the 'Output Targets' panel and run the tool. When the job completes, click the archive it created under 'Files' in your database and in the 'Details' panel click the link to download the file. Unzip the archive with a tool such as Winzip or Winrar that may be installed on your machine.
+        <br>&nbsp;<br>
+        If you selected the 'Preserve Directory Structure' option you will notice that a folder structure has been created that mimics the menus on Genboree.org. For instance, if you selected the database 'Bowtie - Example Data' as Input Data, the files will appear in folders like genboree.org\\Examples and Test Data\Databases\\Files\\testBowtie.
+        "
+      })
+  %>
+</div>

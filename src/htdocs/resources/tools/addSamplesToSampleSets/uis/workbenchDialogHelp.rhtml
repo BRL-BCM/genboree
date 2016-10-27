@@ -1,0 +1,59 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will add samples metadata to a target <u>Sample Set</u>.
+        <br>&nbsp;<br>
+        You have the option of either dragging a sample file or sample(s) or sample set(s). If you do not drag anything in the inputs,
+        you will be prompted to upload a samples file from your machine.
+        <br>&nbsp;<br>
+        The samples file is a simple file with a list of Sample names to be added, one name per line (with no header line). In this case, the samples MUST be in same database as the Sample Set.
+        If however, you have dragged over sample(s) or sample set(s) into &quot;Input Data&quot;, the samples need not be in the same database as the sample set. In this case, the samples will be
+        created (if they do not already exist) in the target database and then linked to the target sample set. 
+        "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Either Drag the <u>File/Sample(s)/SampleSet(s)</u> into &quot;Input Data&quot;, or select a file to be imported from your machine',
+        ],
+        :types              => [ [ 'Files', 'min: 0 ; max: 1' ], [ 'Samples', 'min: 0 ; max: any' ], [ 'SampleSets', 'min: 0 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>SampleSet(s)</u> into &quot;Output Targets&quot;. The sample(s) will be added into the target sampleSet.' ],
+        :types              => [ [ 'SampleSets', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Submit', "Once you've reviewed the input files, the output destination, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+</div>

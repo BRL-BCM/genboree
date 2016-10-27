@@ -1,0 +1,184 @@
+<%# RENDER HTML %>
+<%
+  # Using the UIAccessGroup config setting, determine if the user can see the whole UI or just an inprogress message.
+  width = (@hasAccess ? 578 : 380)
+  height = (@hasAccess ? 425 : 320)
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%= width %>px; height: <%= height %>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <p>Spark is a visualization tool that employs clustering (<em>k</em>-means) of epigenomic data, such as chromatin marks from Chip-Seq experiments.  The visualizations, for example, provide a genomewide perspective of putative binding sites regulated by transcription factors, while also enabling drill-down to supporting data at the level of individual loci.  Spark clusters are generated across a set of user-specified input regions (cis regulatory regions), which may be from public sources, such as the Epigenome Atlas and ENCODE.  Users direct sub-clustering to identify interesting subsets of data in a way that allows them to incorporate their domain-specific knowledge, without being limited by default clustering parameters and the same end <em>k</em> value.</p>
+
+
+          <p>To set up a Spark visualization:</p>
+
+
+          <p>Select the tracks of interest from the Epigenome Atlas:</p>
+
+
+        Populate <strong>Input Data</strong>
+          <ul>
+          <li>Drag the data tracks of interest (up to 20) or entity lists (unlimited) into <strong>Input Data</strong></li>
+            <li>Drag the regions of interest (ROIs) into <strong>Input Data</strong></li>
+          </ul>
+
+
+        Populate <strong>Output Targets</strong>
+          <ul>
+          <li>Drag a destination database into <strong>Output Targets</strong> (the Spark results will be deposited into this database)</li>
+          </ul>
+
+
+        Configure &#38; Submit the Spark Job
+          <ul>
+          <li>Select: <code>Epigenome</code> &raquo; <code>Analyze signals</code> &raquo; <code>Cluster by Spark</code>           </li>
+            <li>Use default settings, or select new Spark settings</li>
+            <li>Note that you must specify different colors for different tracks to facilitate visualization (i.e. you may, for example, choose chromatin modification to be 'blue', and DNA methylation to be 'green').</li>
+            <li>Submit Spark job</li>
+          </ul>
+
+
+          <p>Spark will output results in the Data Selector under Files, in the database designated in <strong>Output Targets</strong>):</p>
+
+
+          <p>Spark will generate a histogram that indicates the number of regions in each cluster.   <br />To view your results in the Spark GUI, download and unzip them and then launch Spark via Java Web Start and open the analysis folder (the job completion email will have links to guide you)</p>
+
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Inputs:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data Tracks/Files" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # calculate width to use depending on length of file name
+    length = 0
+    @inputs.each { |input|
+      fileName = File.basename(input)
+      length = fileName.length if(fileName.length > length)
+    }
+    widthToUse = length > 30 ? "80%" : "620px"
+
+    allTrkEntities = WorkbenchFormHelper.buildEntitiesListMap(@inputs, 'trk', @context['userId'], @rackEnv)
+    trkList = allTrkEntities.values.flatten
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Spark Analysis Settings",
+      :widgets =>
+      [
+        # TODO:
+        # - remove remote stuff for this version
+        # - sample names??
+        # - Need radio button or something for Use Predefined ROI Track vs Use Custom ROI Track"
+        # - Use Predefined only possible if hg18 or hg19
+        # - Make sure colLabel setting not available for custom ROI Track if selected (remove)
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Spark-#{Time.now.strftime('%y-%m-%d-%H.%M').gsub('-0', '-')}", :title => "Provide a name for this analysis run." },
+        { :id => 'roiTrkSelect', :label => 'Select ROI Track', :type => :selectEntityFromList, :setAs => 'roiTrack', :trkSrcAsTitle => true, :inputs => @inputs, :sortInputs => true, :addEntityListContents => true, :rackEnv => @rackEnv, :title => "Indicate which track is your Regions of Interest (ROI) track.", :userId => @context['userId'], :entityType => :trk, :customOnChange => 'applyRoiSelection' },
+        { :id => 'regionsLabel', :label => 'Region Label', :type => :text, :size => "25", :value => "MyROIs", :title => "Provide label text for your regions."},
+        { :id => 'statsType', :label => 'Statistics Type', :type => :select, :title => "Use local and normalized &amp; stdev for each region, or use normalized mean &amp; stdev obtained through global sampling (i.e. inter-regionally, not just intra-regionally).", :options =>
+          {
+            :regional => { :label => 'regional' },
+            :global => { :label => 'global', :selected => true }
+          }
+        },
+        { :id => 'numClusters', :label => '# of Clusters', :type => :text, :size => "3", :value => "3", :title => "Number of clusters to generate." },
+        { :id => 'numBins', :label => '# of Bins: ', :type => :text, :size => "4", :value => "20", :title => "How many bins to divide each region into?" },
+        { :id => 'normType', :type => :hidden, :value => 'exp', :newline => false },
+        { :id => 'labelOnly', :label => 'Data Track Colors:', :type => :wbLabelOnly, :title => "Indicate the color to use for each data track." },
+        { :id => 'indentedTracks', :type => :indentedSection, :indentWidth => '40px', :border => '1px dotted lightgray', :spanFullRow => true,
+          :widgets =>
+          [
+            { :id => 'colLabel', :labelStyle => "font-size:80% ;", :labelWidth => "220px", :style => 'font-size:80% ;', :type => :eachTrkOrFileWithSelect, :set => trkList, :options =>
+              {
+                :blue => { :label => 'blue', :selected => true },
+                :green => { :label => 'green' },
+                :orange => { :label => 'orange' },
+                :pink => { :label => 'pink' },
+                :purple => { :label => 'purple' }
+              }
+            }
+          ]
+        }
+      ],
+      :dbu => @dbu
+    })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit, :onClick => "return removeSelectedEntity('roiTrkSelect');" }, { :type => :cancel} ]
+      })
+  %>
+
+</form>
+<script type="text/javascript">
+  Ext.QuickTips.init() ;
+
+  function applyRoiSelection(roiTrackWidgetId, selectedValue)
+  {
+    var colorSelectElems = Ext.query("*[trkOrFileUri]") ;
+    for(var ii=0; ii < colorSelectElems.length; ii++)
+    {
+      var colorSelectElem = colorSelectElems[ii] ;
+      var colorSelectLabelId = colorSelectElem.id + "Label" ;
+      var colorSelectLabelElem = Ext.get(colorSelectLabelId) ;
+      var trkOrFileUri = colorSelectElem.attributes['trkOrFileUri'].nodeValue ;
+      if(trkOrFileUri == selectedValue)
+      {
+        colorSelectElem.disabled = true ;
+        colorSelectLabelElem.setStyle("text-decoration", "line-through") ;
+      }
+      else
+      {
+        colorSelectElem.disabled = false ;
+        colorSelectLabelElem.setStyle("text-decoration", "none") ;
+      }
+    }
+  }
+</script>
+<%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks you provide.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>A manuscript for this tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <span style='color: red;'>Once the paper is published, the tool will be available for all users.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

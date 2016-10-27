@@ -1,0 +1,43 @@
+<TABLE border="0" cellspacing="0" cellpadding="0">
+    <TR class="helpNav">
+        <TD >
+            <NOBR>
+            <table border="0" cellspacing="0" cellpadding="0">
+            <tr> <td>   <tr>
+                    <td >
+                    <input   type="Submit"  class="btn10" name="doSelected" id="doSelected"  value="Apply Changes"    onClick="<%=confirmSelected%>">
+                    </td>
+                    <td width="40"></td>
+
+                    <td >
+                    <input    type="submit"  class="btn15"  name="SelectAllOnPage" id="SelectAllOnPage"       value="Select All On Page"    onClick="checkAll('true', 'false')">
+                    </td>
+                    <td  >
+                    <input    type="submit"  name="btnSelectAll"   class="btn15"   id="btnSelectAll"    value="Select All In Group"    onClick="<%=selectAll%>">
+                    </td>
+                </tr>
+
+                
+                <tr>
+                    <td >
+                    <input   type="button"  class="btn10" name="btnClose" id="btnClose" value="Cancel"  onClick="processQuit2('<%=aval%>', '<%=aid%>');" >
+                    </td>
+                    <td width="40"></td>
+
+                    <td  >
+                    <input  type="submit"     class="btn15"  name="btnUnAllInPage" id="btnUnAllInPage"  value="Deselect All On Page"      onClick="<%=unSelectAll%>">
+                    </td>
+
+                    <td >
+                    <input  type="submit"   name="btnUnselectAll" class="btn15"  id="btnUnselectAll"  value="Deselect All In Group"      onClick="<%=unSelectAll%>">
+                    </td>
+                </tr>
+            </table>
+            </td> <td align="right">
+                    <a class="helpNav" href="showHelp.jsp?topic=top" target="_helpWin">
+                    Help<IMG class="helpNavImg" SRC="/images/gHelp3.png" BORDER="0" WIDTH="16" HEIGHT="16">
+                    </a> </div> </td></tr>
+            </NOBR>
+        </TD>
+    </TR>
+</TABLE>

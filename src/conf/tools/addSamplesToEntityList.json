@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addSamplesToEntityList",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Samples to Entity List",
+    "shortLabel": "Add Samples to Entity List"
+  }
+}

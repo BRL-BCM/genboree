@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "setStyleAndColor",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Set Style and Color",
+    "shortLabel": "[NOT SET]"
+  }
+}

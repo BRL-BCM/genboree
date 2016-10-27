@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "atlasSNP2Genotyper",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Genotype SNPs by AtlasSNP2-Regenotyper",
+    "shortLabel": "AtlasSNP2-Regenotyper"
+  },
+  "cluster": {
+    "walltime": "12:00:00"
+  }
+}

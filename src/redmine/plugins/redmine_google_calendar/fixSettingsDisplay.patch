@@ -1,0 +1,24 @@
+--- app/views/settings/_googlecalendar_settings.rhtml.ORIG	2014-07-01 14:55:50.637132060 -0500
++++ app/views/settings/_googlecalendar_settings.rhtml	2014-07-01 14:55:50.637132060 -0500
+@@ -1,11 +1,17 @@
+ <% string_fields = ProjectCustomField.find :all %>
+-<% $stderr.puts string_fields.inspect %>
+ 
+ This will allow you to create a tab that references a custom iframe. You will need to go to 'Admin -> Custom fields' and create the following field of the type 'Long text'.
+ 
+ <p>
+   <label>iFrame Text</label>
+-  <%= select_tag 'settings[iframe_text]',
+-                 '<option value="">(Select one)</option>' +
+-                 options_from_collection_for_select(string_fields, :id, :name, @settings['iframe_text'].to_i) %><br />
++  <%= select_tag(
++        'settings[iframe_text]',
++        options_for_select(
++          [
++            [ "(Select one)", "" ]
++          ] +
++          string_fields.collect { |sf| [ sf.name, sf.id] }
++        )
++      )
++   %><br />
+ </p>

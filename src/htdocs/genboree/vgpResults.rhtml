@@ -1,0 +1,225 @@
+<%
+########################################################################################
+# Project: VGP UI Integration
+#   This project creates a new User Interface (UI) to assist users in
+#   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a VGP job with the Genboree environment
+#   and then package the VGP output files and notify the user of job completion.
+#
+# vgpResults.rhtml - This file lists all the VGP results for the logged in user
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2008 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+require 'cgi'
+require 'json'
+require 'brl/genboree/genboreeUtil'
+
+# Config vars
+@genbConf = BRL::Genboree::GenboreeConfig.load()
+cgi = CGI.new()
+
+# Instance vars
+results = Array.new()
+availUsers = Array.new()
+specifiedJob = nil
+
+##
+# Error reporting convenience method
+##
+def reportErrorAndExit(errMsg = "Unknown Error!")
+  err = ""
+  err << "<div class=\"feedback\">"
+  err << "  <div class=\"failure\">"
+  err << "    <p style=\"color: #D53333 ;\">"
+  err << "      There was an error loading your VGP results! Please contact the "
+  err << "      <a href=\"mailto:#{@genbConf.gbTechEmail}\">#{@genbConf.gbTechEmail}</a> and alert them of the error below."
+  err << "    </p>"
+  err << "    <p style=\"color: #D53333 ; margin-top: 10px ;\">"
+  err << "      ERROR: #{errMsg}"
+  err << "    </p>"
+  err << "  </div>"
+  err << "</div>"
+
+  puts err
+  exit
+end
+
+# Some error checks to ensure we have what we need to execute
+reportErrorAndExit("User login was missing from the POST!") unless cgi.has_key?("userLogin")
+reportErrorAndExit("The VGP results directory is not properly configured in the conf file!") if @genbConf.vgpResultsBase.nil? || @genbConf.vgpResultsBase.empty?
+
+if((!cgi.has_key?("group_id") || !cgi.has_key?("rseq_id")))
+  puts "<div>Please select a group and database from above.</div>"
+  exit
+end
+
+
+##
+# HTML Content
+##
+%>
+<h2>VGP Images</h2>
+<div style="margin-top: 0.75em ;">
+  <p>
+    The following VGP results are available for review. The results are listed by Group and Database. 
+    You can view the raw images created as well as review the input files used to create the images. 
+  </p>
+  <p style="margin-top: 1em ;">
+    You can view and save the raw images in their native format. This is an acceptable format 
+    for doing any necessary post processing or sharing images.
+    If you want to see the raw data or need to diagnose a problem, the input files listed below can be of assistance.
+  </p>
+</div>
+<p style="margin: 1em 0 2em 0 ;">
+  Click on the Job ID to see the details and images for the VGP job:
+</p>
+
+<%
+groupDbPath = File.join(@genbConf.vgpResultsBase, cgi["group_id"].strip, cgi["rseq_id"].strip)
+
+# Get the users that have run a VGP job for this group and db
+if(File.exists?(groupDbPath))
+  Dir.chdir(groupDbPath)
+  availUsers = Dir.glob("*").delete_if { |val| !File.directory?(val) }
+end
+
+# By default, we will start by showing results from all users
+availUsers.each { |user|
+  resultsPath = File.join(groupDbPath, user)
+  if(File.exists?(resultsPath))
+    Dir.chdir(resultsPath)
+    Dir.glob("*").delete_if { |val| val.split("_").length != 3 }.each { |jobId|
+      results.push({:jobId => jobId, :owner => user})
+    }
+#    results = results +  Dir.glob("*").delete_if { |val| val.split("_").length != 3 }
+  end
+}
+%>
+
+<p class="instruction">
+  <span style="margin-right: 10px ;">Show VGP results for the following user:</span>
+  <select id="users" onchange="displayUserResults($F(this)) ;">
+    <option value="showAll" selected="selected">Show All</option>
+<%
+availUsers.each { |userLogin|
+%>
+    <option value="<%=userLogin%>"><%=userLogin%></option>
+<%
+}
+%>
+  </select>
+</p>
+<div class="header">
+  <span class="title">VGP Run Details</span>: <span id="numJobs"><%=results.length%> job<%= (results.length == 1) ? "" : "" %> found</span>
+</div>
+<ul id="jobs" class="jobs">
+
+<%
+if(results.length == 0)
+%>
+
+  <li>
+    <div class="jobMessage warning">
+      No VGP results were found for the selected group and database!<br><br>If you think this is an error, 
+      please contact the <a href="mailto:<%=@genbConf.gbTechEmail%>"><%=@genbConf.gbTechEmail%></a> with the Group, 
+      Database and VGP Job ID of the missing run.
+    </div>
+  </li>
+
+<%
+else
+  # Get an array of the jobs and sort them by the date portion of the job ID (reverse chron.) 
+  # Job ID structure : <userId>_<timestamp of run>_<random num for uniqueness>
+  results.sort! { |jobA, jobB| 
+    if(jobA[:jobId].split("_")[1] < jobB[:jobId].split("_")[1])
+      1
+    elsif(jobA[:jobId].split("_")[1] > jobB[:jobId].split("_")[1])
+      -1
+    else
+      0
+    end
+  }.each { |job|
+    specifiedJob = job if(cgi.has_key?("job_id") and specifiedJob.nil? and job[:jobId] == cgi["job_id"].strip())
+%>
+
+  <li>
+    <div style="overflow: auto ;" class="job">
+      <div style="float: left ;">
+        <a href="#" onclick="getResults('<%=job[:jobId]%>', '<%=job[:owner]%>') ; return false ;">
+          <span id="vgpDetails_<%=job[:jobId]%>_status" class="expandable">Job ID:</span>
+          <%# Strip off the userId from the job ID %>
+          <%=job[:jobId][(job[:jobId].index("_") + 1)..job[:jobId].length]%>
+        </a>
+      </div>
+      <div style="float: right ;">
+        <span>Date Run: <%=Time.at(job[:jobId].split("_")[1].to_i).strftime("%a %b %d, %Y  at %I:%M %p")%> by <%=job[:owner]%></span>
+      </div>
+    </div>
+    <div id="vgpDetails_<%=job[:jobId]%>" style="display: none ;"></div>
+  </li>
+
+<%
+  }
+end
+%>
+
+</ul>
+<script type="text/javascript">
+  var grpId = '<%=cgi["group_id"].strip()%>' ;
+  var rseqId = '<%=cgi["rseq_id"].strip()%>' ;
+  var visibleResultsId = null ;
+
+  function displayUserResults(selectedUser)
+  {
+    new Ajax.Updater('jobs', '/genboree/vgpResultsRequestHandler.rhtml',
+      {
+        parameters : { mode : 'listing', options : '{"groupId" : "'+grpId+'", "rseqId" : "'+rseqId+'", "userLogin" : "'+$F('users')+'"}'},
+        evalScripts : true,
+        onComplete : function() {
+        }
+      }
+    ) ;
+  }
+
+  function getResults(jobId, owner)
+  {
+    var resultsId = 'vgpDetails_' + jobId ;
+    if($(visibleResultsId))
+    {
+      $(visibleResultsId + '_status').style.backgroundImage = 'url(/images/vgpPlus.gif)' ;
+      Effect.BlindUp(visibleResultsId, {queue: 'end'}) ;
+      if(visibleResultsId == resultsId)
+      {
+        /* This method will cause an Ajax call to always be made
+           The alternative is to just allow users to open results, not close them */
+        visibleResultsId = null ;
+        return ;
+      }
+    }
+
+    new Ajax.Updater(resultsId, '/genboree/vgpResultsRequestHandler.rhtml', 
+      { 
+        parameters : { mode : 'results', options : '{ "groupId" : "'+grpId+'", "rseqId" : "'+rseqId+'", "jobId" : "'+jobId+'", "userLogin" : "'+owner+'"}'},
+        onComplete : function() { 
+          Effect.BlindDown(resultsId, {queue: 'end'}) ;
+          visibleResultsId = resultsId ;
+          $(visibleResultsId + '_status').style.backgroundImage = 'url(/images/vgpMinus.gif)' ;
+        }
+      }
+    ) ;
+  }
+
+<%
+unless(specifiedJob.nil?)
+%>
+  getResults('<%= specifiedJob[:jobId] %>', '<%= specifiedJob[:owner] %>') ;
+<%
+end
+%> 
+</script>

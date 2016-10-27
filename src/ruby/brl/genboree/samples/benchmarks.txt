@@ -1,0 +1,75 @@
+Notes:
+
+- Profiling shows that the majority of the time is spent on DB accesses.
+I did a few small optimizations to reduce the number of DB calls (caching
+file locations, etc), but nothing else jumps out at me as an easy place
+to optimize.
+
+- If larger than a certain size, DB insertions are chunked.  This is
+handled in dbUtil.rb
+
+- I didn't have specs for the A/V tables, so insertion into those tables
+is not yet implemented.  All of the parsing code is in place, it's just
+a matter of adding a line or two to actually do the insert.
+
+
+======================================================================
+Benchmarks:
+All benchmarks done on ws59, with very little other load 
+(also keep in mind that these are 700 MHz machines)
+
+commands:
+ruby uploadExpSchema.rb -f 100kSchema.txt -s genboreeAlanine -d genboree_r_a08df7a8460e2b9f2c631545090c8fad -r ~/.dbrc -V
+
+ruby uploadExpData.rb -f 100data.txt -o /users/camiller/work/genboree/sampleDB -s genboreeAlanine -d genboree_r_a08df7a8460e2b9f2c631545090c8fad -r ~/.dbrc -V
+
+
+
+Best case - all sampleIds, filelocs, etc are the same
+---------------------------------------------------
+6 columns, all types
+rows:	   time:
+1k	   11s
+10k	   124s
+100k	   1364s
+1M	   13140s
+
+----------------------------------------------------
+5rows, all floats (strings,ints perform similarly)
+cols:	   time:	(schema time)
+100	   1s		neg
+1k	   2s		neg
+10k	   4s		6s
+100k	   39s		55s
+1M	   526s		502s
+
+--------------------------------------------------
+5rows, all dates (worst type of data)
+cols:      time:        (schema time)
+10k	   68s		8s
+100k	   848s		55s
+
+In this worst case secenario, profiling shows that something 
+like 65% of the scripts' time is being spent parsing the date 
+format, which is pretty ugly.  I suspect that this won't be
+much of a problem with real world data, though.  Dates don't 
+comprise the majority of the stuff we'll be storing.
+
+-----------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

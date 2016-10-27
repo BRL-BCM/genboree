@@ -1,0 +1,36 @@
+<%
+require 'brl/genboree/rest/helpers/classApiUriHelper'
+%>
+
+<%
+  $stderr.puts "@classOrTrackList: #{@classOrTrackList.inspect}"
+  @classOrTrackList = [ @classOrTrackList ] unless(@classOrTrackList.is_a?(Array) or @classOrTrackList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@classOrTrackList.nil? or @classOrTrackList.empty?) ? "" : "rowspan='#{@classOrTrackList.size}'") %> ><%= (@label || "Sample") %>:</th>
+<%  if(@classOrTrackList.nil? or @classOrTrackList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      classHelperObj = BRL::Genboree::REST::Helpers::ClassApiUriHelper.new()
+      @classOrTrackList.each_index { |ii|
+        item = @classOrTrackList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        classOrTrk = classHelperObj.extractName(item)
+        unless(classOrTrk)
+          classOrTrk = WorkbenchFormHelper.getNameFromURI(:trk, item, true)
+        end
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== classOrTrk %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

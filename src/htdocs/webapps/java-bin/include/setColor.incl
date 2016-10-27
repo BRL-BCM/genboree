@@ -1,0 +1,44 @@
+<%@ page import="org.genboree.editor.AnnotationEditorHelper"%>
+
+<% String curColor= null;
+  /**
+   * include file for set annotation display color variable curColor
+ *  use annotation color first
+   * if none, then use track color
+   * if both none, set display color to default of browser page(black), but this color should not be saved in 
+   * either annotation or track style
+  */
+    boolean isDefaultColor = false;  
+    int intColor =  annotation.getDisplayColor();
+    // default to white    
+    if (intColor >=0)   {
+    curColor = Integer.toHexString(intColor);
+    String padding="";
+    for (int x=0 ; x<(6-curColor.length()); x++) {
+    padding= padding + "0";
+    }
+    curColor = padding + curColor;     
+   
+    }
+    else { 
+    if (userInfo != null && userInfo [2] != null)
+    curColor = AnnotationEditorHelper.findStyleColor(annotation, con, userInfo[2]);
+   
+    if (curColor == null)     
+    curColor = AnnotationEditorHelper.findStyleColor(annotation, con, "" + 0);
+   
+   
+    isDefaultColor = true; 
+        
+    }
+     
+    //out.println ("" + curColor); 
+    if (curColor == null){
+    isDefaultColor = true; 
+    curColor = "000000";
+    
+    }
+   if (curColor != null) 
+       curColor = curColor.replaceAll ("#" , ""); 
+   %>             
+        

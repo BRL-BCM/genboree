@@ -1,0 +1,189 @@
+<%# INIT %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/resources/databaseFile'
+  
+  # Every input comes as a full URL, need to try to pull off the URI portion
+  @fileUri = URI.parse(@inputs[0]).path()
+  @outputDb = URI.parse(@outputs[0]).path()
+  @grp, @db, @file = @fileUri.match(BRL::REST::Resources::DatabaseFile.pattern()).captures()
+%>
+
+<form id="wbDialogForm" name="wbDialogForm" action="" style="" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Upload Annotations" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview, { 
+    :toolHelpOverview => '<p>Here you can upload the contents of a data file to a Genboree Track as Annotations. After upload the Annotations will be viewable in the Genboree browser.</p>' +
+      '<p>Specify the appropriate format of the data file and set all the necesssary options. Press the <span style="font-style: italic ;">Upload Annotations</span> button to finish the upload.</p>'
+  }) %>
+  <%# Input resource summary%>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Data File",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @fileUri } )
+      })
+  %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Upload Database",
+        :sectionHtml => "<div>Annotations from the data file will be uploaded to the following location:</div>" + renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputDb } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <fieldset>
+    <legend>Upload Options</legend>
+    <div id="uploadInfo">
+      <ul id="uploadOpts">
+        <li>
+          <label for="dataSelect">Input format:</label>
+          <select id="dataSelectHolder">
+            <option value="lff" selected="selected">LFF (Genboree format)</option>
+            <option value="agilent">Agilent Probes</option>
+            <option value="blat">Blat (PSL version 3)</option>
+            <option value="blast">Blast (Tab delimited)</option>
+            <option value="pash">Pash 2.0</option>
+            <option value="wig">Wiggle (fixedStep / variableStep)</option>
+          </select>
+        </li>
+        <li id="trackInfo" style="display: none ;">
+          <div>
+            <label for="saveLoc">Upload annotation to:</label>
+            <select id="saveLocHolder" class="param" <%= (@context['tracks'].size() === 0) ? 'disabled="disabled"' : '' %>>
+              <option value="newTrack" selected="selected">New Track</option>
+              <option value="existingTrack">Existing Track</option>
+            </select>
+          </div>
+          <div id="newTrackOpts">
+            <div>
+              <label for="class">Track Class:</label>
+              <div id="classHolder" class="param"></div>
+            </div>
+            <div>
+              <label for="type">Track Type:</label>
+              <div id="typeHolder" class="param"></div>
+            </div>
+            <div>
+              <label for="subtype">Track Subtype:</label>
+              <div id="subtypeHolder" class="param"></div>
+            </div>
+            <div>
+              <label>Track Name will be:</label>
+              <span id="trackNameSpan" class="param"></span>
+            </div>
+          </div>
+          <div id="existingTrackOpts" style="display: none ;">
+            <div>
+              <label for="tracks">Track:</label>
+              <div id="tracksHolder"></div>
+            </div>
+          </div>
+        </li>
+        <li id="agilentOpts" style="display: none ;">
+          <div>
+            <label for="histogram">Auto-create histogram track?</label>
+            <input type="checkbox" id="histogram" value="genbCheckBoxOn" onclick="uploads.setAgilentOpt('histogram', this.checked) ;"/>
+          </div>
+          <div>
+            <label for="segment">Perform segmentation analysis?</label>
+            <input type="checkbox" id="segment" onclick="uploads.toggleSegOpts(this.checked) ;" />
+          </div>
+          <div>
+            <label for="probes">Minimum # probes per segment:</label>
+            <div id="probesHolder" class="param spinner"></div>
+          </div>
+          <div>
+            <label for="logThresh">Segment log-ratio threshold:</label>
+            <div id="logThreshHolder" class="param spinner"></div>
+          </div>
+          <div>
+            <input type="radio" id="threshAbsolute" name="thresholdType" value="segmentStddev" disabled="disabled" checked="checked" onclick="uploads.setAgilentOpt('segType', this.value) ;" />
+            <span>as how many standard deviations from the global average log-ratio the segment must be OR</span>
+          </div>
+          <div>
+            <input type="radio" id="threshStdDev" name="thresholdType" value="segmentThresh" disabled="disabled" onclick="uploads.setAgilentOpt('segType', this.value) ;" />
+            <span>as an absolute threshold the mean log-ratio must exceed</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </fieldset>
+
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons =>
+        [
+          { 
+            :type   => :submit,
+            :id => 'okBtn',
+            :value  => 'OK',
+            :onClick => 'uploads.setUploadContext() ;'
+          },
+          { 
+            :type   => :cancel,
+            :value  => 'Cancel'
+          }
+        ]
+      })
+  %>
+</form>
+<%# Tool-specific javascript and css %>
+<%= renderStaticFrag(@toolIdStr, :wbCssSrcs,
+    {
+      :srcs =>
+      [
+        '/javaScripts/ext-2.2/ux/Spinner.css',
+        '/styles/uploadAnnotations/uploadAnnotations.css'
+      ],
+      :genbConf => @genbConf
+    })
+%>
+<script>
+<%
+  # To avoid asynchronous loading of external scripts by Ext, we need to provide all our js as inline here
+  [
+    "#{@genbConf.toolViewRoot}/#{@toolIdStr}/uis/Spinner.js",
+    "#{@genbConf.toolViewRoot}/#{@toolIdStr}/uis/SpinnerField.js",
+    "#{@genbConf.toolViewRoot}/#{@toolIdStr}/uis/util.js",
+    "#{@genbConf.toolViewRoot}/#{@toolIdStr}/uis/uploadAnnotations.js"
+  ].each { |src|
+    if(File.exists?(src))
+      File.open(src) { |file|
+        file.each_line { |line|
+%>
+<%= "  #{line}" =%>
+<%
+        }
+      }
+%>
+<%= "\n" =%>
+<%
+    end
+  }
+
+  # Construct our Hash structure that will be passed to the client to complete the uploads
+  uploadOpts = Hash.new()
+  uploadOpts['groupId'] = @context['groupId']
+  uploadOpts['groupName'] = @context['groupName']
+  uploadOpts['refseqName'] = @context['refseqName']
+  uploadOpts['userEmail'] = @context['userEmail']
+%>
+<%=
+  # Putting these declarations in a static fragment would make them cached from load to load, these need to be variable
+  # since fileUri will change as the user selects different nodes from the workbench
+  WorkbenchFormHelper.addToFormContext({'inputFileUri' => @inputs[0]}) +
+  WorkbenchFormHelper.addToFormContext({'refseqId' => @context['refseqId']}) +
+  WorkbenchFormHelper.addToFormContext({'specOpts' => uploadOpts}) +
+  WorkbenchFormHelper.addToFormContext({'tracks' => @context['tracks']})
+%>
+
+  // Our elements are good to go, initialize the Ext components
+  if(typeof(uploads) !== 'undefined')
+  {
+    delete(uploads) ;
+  }
+
+  var uploads = new Genboree.Workbench.UploadAnnotations() ;
+  Ext.onReady(uploads.init, uploads) ;
+</script>

@@ -1,0 +1,219 @@
+<%@ page import="java.util.HashMap,
+                 org.genboree.editor.AnnotationDetail"%>
+<%
+    sstartPageNum = (String )mys.getAttribute("lastStartPageNum");
+    if (sstartPageNum == null)
+        startPageNum = 0;
+    else
+        startPageNum = Integer.parseInt(sstartPageNum);
+    
+    sstopPageNum =  (String)mys.getAttribute("lastEndPageNum");
+    if (sstopPageNum == null)
+        endPageNum = maxDisplay -1;
+    else
+        endPageNum = Integer.parseInt(sstopPageNum);   
+    
+    if (!initPage) { 
+        String pages = (String)mys.getAttribute("numPages");
+        if (pages != null)
+            numPages = Integer.parseInt(pages);
+         
+        String navigator =   request.getParameter("navigator") ;
+         
+     if (navigator != null) {                
+        if (request.getParameter("currentPage") != null) {
+            String indexPage  = request.getParameter("currentPage");
+           
+            if (indexPage != null){
+                int tempN = Integer.parseInt(indexPage);
+                currentPageIndex = tempN;
+                if (currentPageIndex <0)
+                currentPageIndex = 0;
+                if (currentPageIndex > (numPages -1))
+                currentPageIndex = numPages -1;
+                currentPage = "" + currentPageIndex;
+                mys.setAttribute("lastPageIndex", currentPage);
+                 
+                if (numPages >maxDisplay) {
+                    modNum  =  currentPageIndex % maxDisplay;
+                    if (modNum == 0) {
+                    startPageNum = currentPageIndex;
+                    endPageNum = currentPageIndex + (maxDisplay-1);
+                    if (endPageNum > (numPages -1))
+                    endPageNum = numPages -1;
+                    mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+                    mys.setAttribute("lastEndPageNum", "" + endPageNum);
+                    }
+                    else {
+                    startPageNum = (currentPageIndex/maxDisplay) * maxDisplay;
+                    endPageNum = startPageNum + (maxDisplay-1);
+                    if (endPageNum > (numPages -1))
+                    endPageNum = numPages -1;
+                    mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+                    mys.setAttribute("lastEndPageNum", "" + endPageNum);
+                   }
+                }
+                else {
+                    endPageNum = numPages -1;
+                    startPageNum = 0;
+                    mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+                    mys.setAttribute("lastEndPageNum", "" + endPageNum);
+                }
+            }
+        }  
+        
+    if (navigator.compareTo("home") ==0) {
+        currentPage = "0";
+        currentPageIndex = 0;
+        mys.setAttribute("lastPageIndex", currentPage);
+        if (numPages >maxDisplay) {
+        startPageNum = 0;
+        endPageNum =(maxDisplay-1);
+        mys.setAttribute("lastEndPageNum", "" + endPageNum);  }
+        mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+    }
+    else if (navigator.compareTo("last") ==0) {
+        
+        
+        currentPageIndex = numPages-1;
+        currentPage = "" + currentPageIndex ;
+        
+        
+         mys.setAttribute("lastPageIndex", currentPage);    
+        if (numPages >maxDisplay) {
+            endPageNum = numPages -1;
+        modNum  = endPageNum % maxDisplay;
+        if (modNum!= 0)
+            startPageNum = endPageNum - modNum;
+        else
+            startPageNum = (endPageNum/maxDisplay) * maxDisplay ;
+        
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+        }
+    }
+else if (navigator.compareTo("next") ==0) {                     
+    if (currentPageIndex < (numPages -1)) {
+        currentPageIndex ++;
+        currentPage = "" + currentPageIndex;
+        mys.setAttribute("lastPageIndex", currentPage);
+          
+        
+        if (numPages >maxDisplay) {
+            modNum  =  currentPageIndex % maxDisplay;
+            if (modNum == 0) {
+            startPageNum = currentPageIndex;
+            endPageNum = currentPageIndex + (maxDisplay-1);
+            if (endPageNum > (numPages -1))
+            endPageNum = numPages -1;
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            mys.setAttribute("lastStartPageNum", "" + startPageNum);
+            }
+        }
+    }
+    else {
+        currentPageIndex = numPages -1;
+        currentPage = "" + currentPageIndex;
+        mys.setAttribute("lastPageIndex", currentPage);
+        endPageNum = numPages -1;
+        if (endPageNum <=(maxDisplay-1))
+            startPageNum =0;
+        else {
+            startPageNum = endPageNum - (endPageNum %maxDisplay);
+            if (startPageNum == endPageNum )
+            startPageNum = endPageNum -(maxDisplay-1);
+            if (startPageNum <0)
+            startPageNum =0;
+        }        
+        mys.setAttribute("lastEndPageNum", "" + endPageNum);
+        mys.setAttribute("lastStartPageNum", "" + startPageNum);        
+    }
+}
+        else     if (navigator.compareTo("previous") ==0) {        
+            currentPageIndex --;        
+            if (currentPageIndex>=0) {
+            currentPage = "" + currentPageIndex;
+            mys.setAttribute("lastPageIndex", currentPage);
+            if (numPages >maxDisplay) {
+            modNum  =  (currentPageIndex +1) % maxDisplay;
+            if (modNum== 0) {
+            endPageNum = currentPageIndex ;
+            if (endPageNum >(maxDisplay-1))
+            startPageNum = currentPageIndex -(maxDisplay-1);
+            else
+            startPageNum = 0;
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            mys.setAttribute("lastStartPageNum", "" + startPageNum);
+            }
+            }
+            }
+            else {
+            currentPage = "0";
+            currentPageIndex = 0;
+            mys.setAttribute("lastPageIndex", currentPage);
+            startPageNum = 0;
+            endPageNum = (maxDisplay-1);
+            if (endPageNum > (numPages -1))
+            endPageNum = numPages -1;
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+            mys.setAttribute("lastStartPageNum", "" + startPageNum);
+            }        
+        }
+        else if (navigator.compareTo("morePages") ==0) {
+            String lastEndPageNum = (String)mys.getAttribute("lastEndPageNum");            
+            if (lastEndPageNum != null)
+            startPageNum =  Integer.parseInt(lastEndPageNum) + 1;            
+            if (startPageNum > (numPages -1)) {
+            endPageNum = startPageNum -1;
+            modNum  = endPageNum % maxDisplay;
+            if (modNum!= 0)
+            startPageNum = endPageNum - modNum;
+            else
+            startPageNum = endPageNum - (maxDisplay-1);            
+            }
+             if (startPageNum + (maxDisplay-1) <= numPages )
+            endPageNum = startPageNum + (maxDisplay-1);
+            else   if (startPageNum + (maxDisplay-1) > (numPages-1)  && startPageNum < (numPages -1) )
+            endPageNum = numPages -1;
+            
+            if (endPageNum > (numPages-1))
+            endPageNum = (numPages-1);
+            
+            if (endPageNum < startPageNum )
+            endPageNum = numPages -1;
+             currentPageIndex = startPageNum;
+            currentPage = "" + currentPageIndex ;
+            
+            mys.setAttribute("lastPageIndex", currentPage);
+            
+            mys.setAttribute("lastStartPageNum", "" + startPageNum);
+            mys.setAttribute("lastEndPageNum", "" + endPageNum);
+        }
+    }        
+       /* else {
+            if (mys.getAttribute("lastPageIndex")!= null)
+            currentPage = (String)mys.getAttribute("lastPageIndex");
+    
+        if (currentPage != null)
+        currentPageIndex = Integer.parseInt(currentPage);
+        mys.setAttribute("lastPageIndex", currentPage);
+    } */
+    /// mys.setAttribute("lastEndPageNum", "" + endPageNum);
+        
+  
+    } 
+   // else {
+        mys.setAttribute("displayNum", "" + displayNum);
+        mys.setAttribute("lastStartPageNum", "" +  startPageNum);
+        mys.setAttribute("lastEndPageNum", "" + endPageNum);
+   // }
+%>
+
+
+
+
+
+
+
+ 
+ 

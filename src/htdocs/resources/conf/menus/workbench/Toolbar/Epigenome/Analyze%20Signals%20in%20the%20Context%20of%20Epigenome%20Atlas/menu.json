@@ -1,0 +1,27 @@
+[
+  {
+    "text": "Search for Similar Signals by Correlation ",
+    "tooltip": "Find the correlation between your own query signal data and each of the <i>Epigenome Atlas</i> tracks, to find samples and marks highly correlated with your own methylation data.",
+    "idStr": "epigenomeAtlasSimilaritySearch"
+  },
+  {
+    "text": "Find Signal Differences by Regression ",
+    "tooltip": "Compare the signals in your own track against a track in the Epigenome Atlas, or compare the signals in two tracks from the Atlas. Uses positional linear regression, generating an output track containing the level of agreement at each annotation, as well goodness-of-fit metrics.",
+    "idStr": "signalDataComparisonAtlas"
+  },
+  {
+    "text": "Cross-Genome Signal Search - Epigenomic Atlas",
+    "tooltip": "Search a query track on one genome, against multiple signal tracks on another genome using a matching pair of ROI tracks.",
+    "idStr": "comparativeEpigenomeAtlasSimilaritySearch",
+    "disabled": true,
+    "hidden": true
+  },
+  {
+    "text": "Cross-Genome Signal Comparison - Epigenomic Atlas",
+    "tooltip": "Compare two signal-containing tracks, each on different genome, using a matching pair of ROI tracks.",
+    "idStr": "comparativeSignalDataComparisonAtlas",
+    "disabled": true,
+    "hidden": true
+  }
+
+]

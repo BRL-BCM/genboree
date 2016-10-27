@@ -1,0 +1,13 @@
+<table width="100%">
+  <tr>
+    <th>Settings:</th>
+    <td>
+      <dl>
+        <%  @instructions.each { |instruction| %>
+              <dt><%= instruction[0] %></dt>
+                <dd><%= instruction[1] %></dd>
+        <%  } %>
+      </dl>
+    </td>
+  </tr>
+</table>

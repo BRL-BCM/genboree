@@ -1,0 +1,320 @@
+<%
+  ##############################################################################
+  # STANDARD INITIALIZATION
+  ##############################################################################
+  # LOAD LIBRARIES
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # HELPER METHODS
+  def prepForHtml()  # Tell apache we are going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  # NEEDED COMMON VARIABLES
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  @prepped4output = false
+  genbConf = BRL::Genboree::GenboreeConfig.load()
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # GET TRACK LIST FOR SELECTED DATABASE
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  userId = cgi['userId'].to_i.untaint
+  tracks = inner.getTracks(refSeqId, userId)
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation. %>
+<script type="text/javascript">
+var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+var TOOL_PARAM_FORM = 'pdw' ;
+
+var tmpGlobalVal = false ;
+var tmpChecked = null ;
+
+</script>
+
+<link rel="stylesheet" href="/styles/sortableLists.css" type="text/css">
+<link rel="stylesheet" href="/genboree/toolPlugins/nameSelector/nameSelector.css" type="text/css">
+
+<%# NEEDED JS FILES %>
+<script type="text/javascript" SRC="/javaScripts/prototype-1.6.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script src="/javaScripts/scriptaculous-1.8/scriptaculous.js?jsVer=<%= genbConf.jsVer %>" type="text/javascript"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/sortableLists.js?jsVer=<%= genbConf.jsVer %>"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/nameSelector/nameSelector.js?jsVer=<%= genbConf.jsVer %>"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<!-- form name="pdw" id="pdw" action="/genboree/formParams.rhtml" method="post" onSubmit="return validate();" -->
+
+<table border="0" cellpadding="2" cellspacing="2">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <CENTER><FONT SIZE="4"><B>Name-Based Annotation Selection</B></FONT></CENTER>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+    This tool extracts annotations from source tracks if their name matches a name or pattern in the provided list.
+    <P>
+    <UL class="compact4_bigIndent">
+      <LI>&middot; <u>Motivation</u>: extract all the exons (annotations) for specific genes-of-interest from several generic gene tracks.</LI>
+      <LI>&middot; <u>Note</u>: tracks are searched <i>in the order provided</i> and annotations are taken <i>only</i> from the <i>first</i> track with a matching name or alias.</LI>
+      <LI>&middot; <u>Note</u>: all matching annotations within that track will be selected.</LI>
+      <LI>&middot; <u>Note</u>: be careful with patterns that are too general, they may extract more than you wish.</LI>
+      <LI>&middot; <u>Input</u>: each line is a name (e.g. a gene) to look for, optionally with aliases (see below).</LI>
+      <LI>&middot; <u>Output</u>: a new track containing the matching annotations extracted from the input track(s).</LI>
+    </UL>
+    <P>
+    Simple Input Format (exact name match, no pattern matching, no aliases) :<BR>
+    <DIV class="annoExample" id="nameExample1">
+      BRCA2<BR>
+      IL1R2<BR>
+      NM_0011890<BR>
+    </DIV>
+    <P>
+    Using Pattern Format: (<b>*</b> for 'any (1+)' and <b>?</b> for 'one character', no aliases) :<BR>
+    <DIV class="annoExample" id="nameExample2">
+      BRC*<BR>
+      IL?R*<BR>
+      ACT*<BR>
+    </DIV>
+    <P>
+    Using Aliases: (each term has 1+ aliases separated by commas, some are patterns) :<BR>
+    <DIV class="annoExample" id="nameExample3">
+      SERPIND1,D22S673,HC*,HLS2,U64805,AF0050668,BC062429<BR>
+      ARAF,PAFA1,PKS2<BR>
+      GATA1,ERYF?<BR>
+    </DIV>
+    </div>
+    <P>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <A HREF="mailto:brl_admin@bcm.tmc.edu?subject=Select By Name Tool">brl_admin@bcm.tmc.edu</A>.
+    </font>
+    <P>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER SIDE %>
+    <input type="hidden" id="function" name="function" value="selectAnnosByName">
+    <%# END: TOOL DESCRIPTION %>
+
+    <table BGCOLOR="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+    <%# BEGIN: JOB NAME ROW %>
+    <TR>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="expnameLabel"><FONT SIZE="2"><B>Job Name:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('expname');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </TR>
+    <%# END: EXPERIMENT NAME ROW %>
+
+    <%# BEGIN: TRACK SELECTION ROW %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="trackLabel"><FONT SIZE="2"><B>Source Tracks:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+          <UL class="sortable_select_list" id="rearrange_list1" name="rearrange_list1" style="list-style-type:none; ">
+          <%
+              unless(tracks.empty?)
+                maxTimes = Math::log10(tracks.length).floor
+                ii = 0
+                sortedTrackNames.each { |trackName|
+                  mm = ii + 1
+                  track = tracks[trackName]
+                  currTimes = (maxTimes - Math::log10(mm).floor)
+%>
+                  <LI id="item<%=ii%>">
+                    <div class="checkBoxDiv" id="item<%=ii%>_chkdiv" name="item<%=ii%>_chkdiv" onclick="doCheckToggle('item<%=ii%>_chkdiv', 'item<%=ii%>_chkbx');">
+                      <input type="hidden" class="trkOrderChkbx" id="item<%=ii%>_chkbx" name="item<%=ii%>_chkbx" value="false"></input>
+                    </div>
+                    <span style="padding-bottom:5px;"><%=mm%>.<% currTimes.times { |kk| %>&nbsp;<% } %></span>
+                    <span class="handle" <% if(currTimes > 0) then %>style="padding-left:<%= 5*currTimes %>px;"<% end %> style="cursor:move;">Drag</span>
+                    <span><b style="cursor:move">&nbsp;<%= trackName %></b></span>
+                    <input type="hidden" class="trkItemName" id="item_<%=ii%>" name="item_<%=ii%>" value="<%=trackName%>"></input>
+                    <input type="hidden" class="trkOrderInput" id="trackName_<%=ii%>" name="trackName_<%=ii%>" value=""></input>
+                  </LI>
+<%
+                  ii += 1
+                }
+              else
+%>
+                <LI><font color="red"><b>The database is empty. No tracks present. Plug-in cannot be run.</b></font></LI>
+          <%  end %>
+          </UL>
+          </td>
+          <td align="right" valign="top" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('sourceTracks');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: TRACK SELECTION ROW %>
+
+    <%# BEGIN: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="selectMode_lbl" name="selectMode_lbl"><FONT SIZE="2"><B>Selection Mode:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="radio" id="selectMode" name="selectMode" value="exact" onclick="selectModeRadio_checked();">
+            <span id="selectModeExact_lbl" name="selectModeExact_lbl">Exact matches only. No aliases, no patterns. (Fast)</span>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('selectModeExact');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="radio" id="selectMode" name="selectMode" value="isoform" onclick="selectModeRadio_checked();">
+            <span id="selectModeIsoform_lbl" name="selectModeIsoform_lbl">Automatically match all numbered isoforms/versions. (Fast)</span>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('selectModeIsoform');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="radio" id="selectMode" name="selectMode" value="full" onclick="selectModeRadio_checked();">
+            <span id="selectModeFull_lbl" name="selectModeFull_lbl">Use full patterns and aliases to select annotations. (Slow)</span>
+            <BR>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="checkbox" id="useGeneAliases" name="useGeneAliases" value="true" disabled="true">
+            <span id="useGeneAliases_lbl" name="useGeneAliases_lbl">Use known gene aliases for a more comprehensive search?</span>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('selectModeFull');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="annoNames_lbl" name="annoNames_lbl"><FONT SIZE="2"><B>Annotation<BR>Names &amp; Patterns<BR>to Search For:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <textarea id="annoNames" name="annoNames" cols="40" rows="6" wrap="off"></textarea><BR>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('annoNames');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+
+    <%# BEGIN: GENBOREE TRACK-RELATED ROW(S) %>
+    <tr>
+      <TD WIDTH="20%" class="form_body" ALIGN="right">
+        <SPAN id="outputTrack" name="outputTrack"><FONT SIZE="2"><B>Output Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <span id="trackClass_lbl" name="trackClass_lbl">&quot;Class&quot;</span>&nbsp;
+            <input type="text" id="trackClass" name="trackClass" value="Selected" class="txt" size="12">
+            &nbsp;&nbsp;&nbsp;
+            <span id="trackType_lbl" name="trackType_lbl">&quot;Type&quot;:</span>&nbsp;
+            <input type="text" id="trackType" name="trackType" class="txt" size="7">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span id="trackSubtype_lbl" name="trackSubtype_lbl">&quot;Subtype&quot;:</span>&nbsp;
+            <input type="text" id="trackSubtype" name="trackSubtype" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('outputTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: GENBOREE TRACK-RELATED ROW(S) %>
+
+    </table>
+  </td>
+</tr>
+</table>
+<P>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="doExtract" id="doExtract" class="btn" value="Select Annos">&nbsp;
+<input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="toolReset();">&nbsp;
+<P>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the name-based selection job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

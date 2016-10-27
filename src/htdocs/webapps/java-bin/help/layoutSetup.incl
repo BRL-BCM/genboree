@@ -1,0 +1,359 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;7. Tabular View and Layout Design&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLast">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#tabularView">7.1 Tabular View</A>
+    <UL class="compact1">
+      <LI><A HREF="#whatIs"><FONT CLASS="tocSmall">7.1.1 What is the tabular view?</FONT></A></LI>
+      <LI><A HREF="#access"><FONT CLASS="tocSmall">7.1.2 How to Access the Tabular View Tool</FONT></A></LI>
+      <LI><A HREF="#limits"><FONT CLASS="tocSmall">7.1.3 Limitations</FONT></A></LI>
+    </UL>
+  </LI>
+  <LI class="compact1_10"><A HREF="#layouts">7.2 Tabular Layouts</A>
+    <UL class="compact1">
+      <LI><A HREF="#overview"><FONT CLASS="tocSmall">7.2.1 Using the Tabular View Tool</FONT></A></LI>
+      <LI><A HREF="#layouts"><FONT CLASS="tocSmall">7.2.2 Using Layouts</FONT></A></LI>
+      <LI><A HREF="#groupingData"><FONT CLASS="tocSmall">7.2.3 Annotation Groups</FONT></A></LI>
+      <LI><A HREF="#terseVerbose"><FONT CLASS="tocSmall">7.2.4 Terse / Verbose Group Modes</FONT></A></LI>
+    </UL>
+  </LI>
+  <LI class="compact1_10"><A HREF="#special">7.3 Special Features</A>
+    <UL class="compact1">
+      <LI><A HREF="#allowAnnoEdit"><FONT CLASS="tocSmall">7.3.1 Edit button</FONT></A></LI>
+      <LI><A HREF="#graphicView"><FONT CLASS="tocSmall">7.3.2 Graphical Browser link</FONT></A></LI>
+      <LI><A HREF="#sorting"><FONT CLASS="tocSmall">7.3.3 On-demand sorting</FONT></A></LI>
+    </UL>
+</DIV>
+<DIV class="tocLeft">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadAnnoHowto#whatAreAnno">4.1 What are annotations?</A></LI>
+  <li class="compact1_10"><a href="showHelp.jsp?topic=lffFileFormat">5. The LFF Annotation Format</a></li>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13" style="margin-right: 5px;">Help Home</A>
+</UL>
+</DIV>
+<div style="clear: both;"></div>
+<HR>
+<!-- TOPIC -->
+<!-- Topic Header -->
+<A NAME="tabularView">&nbsp;</A>
+<div class="topLabel">
+  <SPAN class="subtopicHeader">7.1. Tabular View</SPAN>
+</div>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="whatIs">&nbsp;</A>
+<div class="subsubtopicHeader">7.1.1. What Is The Tabular View?</div>
+<!--   Sub-topic content -->
+<P class="body">
+The tabular view is an alternative form of annotations display in which the data is
+displayed in a customizable tabular format, as opposed to the customizable graphical
+format created by the Genboree <span class="genbLabel">Genome Browser</span>.
+<P class="body">
+Using this tool, users can create a custom <span class="genbLabel">table layout</span>
+by specifing what data should be displayed and in what order, how the data should be sorted, and whether
+or not the data should be <span class="genblabel">grouped</span>.  These custom layouts
+can be applied to one or more data tracks from a single database and, depending on
+permissions, can be saved and shared with other group members or to be reused on other
+data tracks. In this way, the tool can be used to create &quot;reports&quot; that
+display specific annotation data relevant to the report type.
+<p class="body">
+Temporary layouts can be created by anyone who has read access to a database, for a one-time
+display of data.  For users with write access to a database, multiple layouts can be created, updated,
+and saved for reuse.  These layouts can be applied to any track or combination of tracks
+associated with the original database.  When applying a layout to a track that does not contain
+all of the original data attributes displayed when the layout was created, Genboree will simply
+drop those attributes from the display and / or sort lists.
+<p class="body">
+Both online viewing of the data in the web browser and download of tab-delimited table data are
+supported. Online viewing is most appropriate for small datasets, since the browser can only
+handle so many rows on a page and paging manually through tens or hundreds of thousands of annotations
+is unreasonable. Downloading the data makes it available for import into to other programs you may
+have on your personal computer, such as further analysis and manipulation by local analysis tools.
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="access">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.1.2. How to Access the Tabular View Tool</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+The Tabular View Tool is integrated into the Genboree system.  In order to
+access the tool, you must first log in to the Genboree Browser, it is not
+currently accessible via the Genboree Menu system.  Follow these directions
+in order to access the tool.
+<OL>
+	<LI>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+	<LI>Click on <SPAN class="genbLabel">Browser</SPAN> in the menu.</LI>
+	<LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the drop-down lists.</LI>
+	<LI>Click on a track of interest.<br>
+  <IMG SRC="/images/tview.example1.png" BORDER="0" style="margin: auto;"><br>
+  You will see the pop-up window with a link <SPAN class="genbLabel">&quot;Tabular view of track annotations&quot;</span>.  Click the link to launch the tool.</LI>
+</ol>
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="limits">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.1.3. Limitations</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<p class="body">
+The performance of the tabular layout has been optimized to perform well when dealing with
+large data sets.  Even so, large datasets will require noticeably longer processing times
+than smaller datasets.  Additionally, when user-defined attributes are used as a sort
+parameter, processing times will dramatically increase.  This is a result of the way that
+the data is stored in the Genboree database.  Be advised, it is not recommended to use
+user-defined attributes as a sort parameter unless you cannot achieve the same sort order
+by using the standard annotation attributes.</p>
+<p class="body">
+In any situation where the tool determines that the data processing time is expected to
+exceed a typical execution time, the user will be warned of the expected delay.  If you
+see this warning, please be patient and do not navigate to a different page until the
+table is displayed, or data file begins to download.
+<div style="clear: both;"></div>
+
+
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="layouts">&nbsp;</A>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">7.2 Tabular Views and Layouts</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<P class="body">
+The Tabular View Tool was designed to provide you with an easy to use interface
+for arranging annotations into a Table or Grid within the context of the 
+Genboree System itself.  The columns of this table are user defined out of the
+&quot;Core Annotation Attributes&quot; and any track specific &quot;User-Defined
+Attributes&quot;.  Additionally, you are able to impose a sort order according
+to any of the attibutes of the annotation, even if the attributes are not
+displayed in the Table. Finally, you are able to <a href="#groupingData">group
+annotations</a> according to their names, and their attributes will appear 
+<A href="#terseVerbose">combined</a> in the Table.
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="overview">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.2.1 Using the Tabular View Tool</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+In order to build a Tabular View using the Tabular View Tool, there are two
+easy steps to follow:</p>
+<ol>
+  <li>Selecting the data tracks to be used in the Table</li>
+  <img src="/images/tview.example4.png" border="0" style="margin: auto";>
+  <li>Selecting or creating a layout to apply to the data</li>
+  <img src="/images/tview.example20.png" border="0" style="margin: auto";>
+</ol>
+<br><DIV class="subsubtopicHeader">Step 1</div>
+<p class="body">
+The first step of the process is very straight-forward.  In most cases, after
+you select a data track from the <span class="genLabel">Browser</a>, you can
+continue on to the second step of the process.  Alternatively, you can select
+additional data tracks (Shift/Ctrl + Click, or Shift/Command + Click on a Mac)
+to be used in the Table.  Additionally, you can change your group and database
+from this page if you so desire.</p>
+<p class="body"><em>Note: Currently, you are not able to select multiple data
+tracks from <strong>different</strong> databases.</em></p>
+<p class="body"> 
+After selecting the data tracks to be used in this Table, you can limit the
+annotations based upon location by using the <span class="genLabel">Location</span>
+section.  You can select a single <span class="genLabel">Entry Point</span>
+from the drop-down list, and specify a Start and Stop position if you would like.
+You can leave the Start / Stop textfields empty to simply specify an entire
+<span class="genLabel">Entry Point</span>.
+<p class="body"><em>Note: You must specify either <strong>both</strong> a Start
+and Stop position, or <strong>neither.</strong></em></p>
+<br>
+<DIV class="subsubtopicHeader">Step 2</div>
+<p class="body"> 
+In the second step of this process you can either apply a default or previously
+saved <span class="genLabel">Layout</span> (described in the 
+<a href="#usingLayouts">next section</a>),  or create your own temporary layout.  To
+Apply a default or previously saved layout, simply use the drop-down list in
+the &quot;Layout Name&quot; section.  Changing the selection of this drop-down
+list will auotmatically change the settings in the remainder of the interface.
+After you have selected or created a layout for your Table, press the 
+&quot;Generate Table&quot; button to see your data displayed in the Table.
+Additionally, you may press the &quot;Download Data File&quot; button to
+download your Table as a tab-delimited file.</p>
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<a name="usingLayouts">&nbsp;</a>
+<DIV class="subsubtopicHeader">7.2.2 Using Layouts</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+A layout is a user-defined format of a tabular view of data that allows you to
+specify fields to display as columns, the order of those columns, which 
+attributes to use to sort the rows (and in what order), and how to group the
+data.</p>
+<br><DIV class="subsubtopicHeader">Creating a New Layout</div>
+<p class="body">
+The &quot;Layout Setup&quot; interface shown in &quot;Step 2&quot; can be used
+to create or modify layouts.  This section of the interface has three columns.
+The first column shows all of the &quot;Core Annotation Attributes&quot; common
+to all of the annotations in the Genboree system.  The second column shows the
+&quot;User-Defined Attributes&quot; specific to the data track selection.  Both
+of these columns are used in very similar ways.  Next to each
+<span class="genLabel">Attribute</span> in these columns, there are two
+checkboxes. The <b>first checkbox</b> is used to specify that an 
+<span class="genLabel">Attribute</span> should be displayed as a column in the
+Table.  Selecting this checkbox will make the <span class="genLabel">Attribute</span>
+appear in the third column, in the &quot;Order of Columns&quot; area.</p>
+<div style="text-align: center; width: 100%;">
+  <img src="/images/tview.example5.png" border="0" style="margin: auto";>
+</div>
+<p class="body">
+The <b>second checkbox</b> is used to specify that an <span class="genLabel">Attribute</span>
+should be used to sort the annotations that will appear in the Table.  You can
+even use Attributes that are not displayed in the Table to sort the rows.
+Selecting this checkbox will make this <span class="genLabel">Attribute</span>
+appear in the &quot;Sorting Order&quot; area of the third column.<p>
+<div style="text-align: center; width: 100%;">
+  <img src="/images/tview.example6.png" border="0" style="margin: auto";>
+</div>
+<p class="body">
+After you have selected all of the Attributes that you would like to appear in
+the Table and to be a part of the sort, you can modify the order of the columns
+and the sort by dragging the Attributes appearing in the third column of the
+interface.  The first Attribute in the list under the &quot;Order of Columns&quot;
+section will appear as the left-most column in the Table.  In the 
+&quot;Sorting Order&quot; section of the column, the first Attribute in the list 
+will be used to sort the data except in the case of a tie, where the next item in
+the list will be used to break the tie.</p>
+<p class="body">
+After you have specified the order of your data, you are able to change the
+<a href="#groupingData">grouping</a> mode for your annotations.  You can also
+disable annotation groups from this section of the interface.</p>
+
+<br><DIV class="subsubtopicHeader">Managing Layouts</div>
+Depending on your permissions to the database, you may be able to save, update,
+or delete layouts using the &quot;Layout Name&quot; section of the interface.
+If you have write access to a database, the &quot;Save / Update&quot; button
+will be enabled when you select a layout from the drop-down list, or the
+&quot;Create New Layout&quot; option.  In order to save a new layout, you must
+enter a name for the layout in the &quot;New Layout Name&quot; textfield.  After
+you enter a name in the textfield, you can click the &quot;Save / Update&quot;
+button and the list will be automatically updated, and your layout will be
+selected from the list.</p>
+<p class="body">
+If you have administrator rights on a database, you will be able to delete any
+layouts from the list.  Simply select the layout from the drop-down menu and
+press the &quot;Delete&quot; button.  The list will be automatically updated
+and the &quot;Default Grouped Layout&quot; will be loaded.
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="groupingData">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.2.3. Grouping of Annotation Data</DIV>
+<!--   Sub-topic content -->
+<p class="body">
+Each row in the table can be a specific annotation (e.g. each exon of a gene or each end of a mapped mate-pair) or each row can represent
+a whole annotation group (e.g. the whole gene or the whole mate-pair mapping).
+<p class="body">
+More information on <span class="genbLabel">annotation groups</span>
+can be found in <span class="genbLabel">Help Section 4.1 &quot;What Are Annotations&quot;</span>, but essentially if annotations
+in the same track and on the same chromosome (entry point) share the same name, they are considered part of a group.
+<p class="body">
+When displaying annotation groups:
+<ul class="compact2">
+  <li>- Name, class, type, subtype, and entry point must all be identical in order for a group to be created.</li>
+	<li>- Group <i>start</i> is the smallest coordinate of the annotations in the group.</li>
+	<li>- Group <i>stop</i> is the largest coordinate of the annotations in the group.</li>
+	<li>- Group <i>score</i> is the average score of the annotations in the group.</li>
+	<li>- Group <i>strand</i> is determined by majority vote.</li>
+	<li>- Comments, sequence, phase, and user-defined attributes are either all listed or only identical values are listed	depending on verbosity mode (See <a href="#terseVerbose">section 7.2.4</a>)</li>
+</ul>
+<div style="clear: both;"></div>
+<!-- example -->
+<DIV class="egDiv2" id="egDiv3" style="margin: 15px auto;">
+  <b>Annotation group example:</b>
+  <ul class="compact4_bigIndent">
+    <li>- Gene ADAM15 annotations <i>without</i> grouping (1 row per exon):</li>
+  </ul>
+  <IMG SRC="/images/tview.example2.png" BORDER="0" style="margin: auto;">
+  <br>
+  <ul class="compact4_bigIndent">
+    <li>- Gene ADAM15 annotations </i>with</i> grouping (1 row for whole gene):</li>
+  </ul>
+  <IMG SRC="/images/tview.example3.png" BORDER="0" style="margin: auto;">
+</DIV>
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="terseVerbose">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.2.4. Terse &amp; Verbose Mode for Grouping</DIV>
+<!--   Sub-topic content -->
+<UL class="compact2">
+  <li>- In <u>Verbose mode</u>: phase, comments, sequence, and user-defined attributes from all individual annotations are displayed, separated by commas.</li>
+  <li>- In <u>Terse mode</u>: only the phase, comments, sequence, and user-defined attributes with identical values in <i>all</i> annotations are displayed;
+        otherwise the special keyword &quot;{varies}&quot; is displayed.</li>
+</ul>
+<div style="clear: both;"></div>
+
+
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="special">&nbsp;</A>
+<DIV class="topLabel">
+  <SPAN class="subtopicHeader">7.3. Special Features</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="allowAnnoEdit">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.3.1. Edit button</DIV>
+<!--   Sub-topic content -->
+<UL class="compact2">
+	<LI>- To allow users to edit annotations or annotation groups from the table display, the <SPAN class="genbLabel">"Edit Link"</SPAN> field must be selected for display in the layout.</LI>
+  <LI>- In the resulting tabular view that is generated, an Edit button will appear that 
+  will allow the users to access the <SPAN class="genbLabel">Editor</SPAN>
+  features of Genboree.
+	<LI>- Data from shared databases such as templates are not editable, and the Edit Link
+  column will contain the phrase <em>Read only</em> to signify this situation.</LI>
+</UL>
+<div style="clear:both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="graphicView">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.3.2. Graphical Browser link</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+When a layout includes the <SPAN class="genbLabel">Name</SPAN> attribute, it is automatically 
+turned into a clickable link back 
+to the graphical browser view of that annotation or annotation group.  The display should
+appear centered and zoomed in on the annotation or annotation group that was clicked.
+<!-- END -->
+<div style="clear: both;"></div>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="sorting">&nbsp;</A>
+<DIV class="subsubtopicHeader">7.3.3. On-demand sorting</DIV>
+<!--   Sub-topic content -->
+  <p class="body">In order to allow for quicker re-sorting of the data after a tabular view has already been
+  created, the header of each column presents a clickable sort button.  These buttons will
+  allow the user to add columns to the sort order as either an ascending or descending sort.
+  The tabular view will remember the previous sort order as well, so any re-sorting in this
+  manner will result in an addition to the previous sort order, not a replacement of it.</p>
+  <p class="body">
+  Whenever a user-defined attribute is included in the sort order, sorting performance will
+  dramatically decrease.  Please be patient when performing a sort of your dataset on a
+  user-defined attribute.</p>
+</UL>
+<div style="clear:both;"></div>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

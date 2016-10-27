@@ -1,0 +1,119 @@
+  </td>
+  <td width=10></td>
+  <td class="shadow"></td>
+</tr>
+<tr>
+  <td colspan="3" align="left">
+    <p>
+    &nbsp;
+    <p>
+    &nbsp;
+    <br>
+    <!-- hr width="90%" -->
+    <table width="100%" border="0" cellpadding="0">
+		<tr>
+      <!--
+      <td align="left" width="10">
+        <a href="http://www.genboree.org/site/bioinformatics_research_laboratory">
+          <img style="margin-left:10px;" src="/images/brl50.gif" width="70" height="50" alt="Bioinformatics Research Laboratory" border="0">
+        </a>
+      </td -->
+      <td>
+        <!-- Genboree Acknowledgement Text -->
+        <!-- div id="ackText" style="text-align: left; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+          Genboree is built &amp; maintained by the <a href="http://www.genboree.org/site/bioinformatics_research_laboratory">Bioinformatics&nbsp;Research&nbsp;Laboratory</a><br>
+          at <a href="http://www.bcm.edu">Baylor&nbsp;College&nbsp;of&nbsp;Medicine</a>.
+        </div -->
+        <!-- div id="ackText" style="text-align: left; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+          Genboree is a hosted service. Code is available
+        </div -->
+        <div id="ackText" class="col-sm-12" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 20px ; padding-top: 2px ; padding-bottom: 10px ; ">
+          Powered by <a href="http://genboree.org">Genboree __GENBOREE_VERSION__</a>
+        </div>
+        <!-- VERSION -->
+        <!-- div id="ackText" style="text-align: left; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+          Genboree version: 2.01.01
+        </div>
+      </td>
+      <td width="113" align="right">
+        &nbsp;
+      </td>
+    </tr>
+    </table>
+  </td>
+  <td class="shadow" width="10"></td>
+</tr>
+<%
+  java.util.Calendar cal = new java.util.GregorianCalendar() ;
+  int currYear = cal.get(java.util.Calendar.YEAR) ;
+%>
+<tr>
+  <td width="10"></td>
+  <td>
+  	<table width="100%" border="0" cellpadding="8">
+		<tr>
+		  <!-- td class="note" style="font-size: 7pt;">
+			  &copy; 2001-<%=currYear%> <A HREF="http://www.genboree.org/site/bioinformatics_research_laboratory">Bioinformatics Research Laboratory</A>
+			  <br>
+			  &nbsp; &nbsp; <span style="font-size: 7pt;">(400D Jewish Wing, MS:BCM225, 1 Baylor Plaza, Houston, TX 77030)</span>
+		  </td -->
+		  <!--td class="highlight" align="left" valign="middle" width="136" style="font-size: 7pt;">
+			  <a href='mailto:<%=org.genboree.util.GenboreeConfig.getConfigParam("gbAdminEmail")%>'><nobr>Questions or comments?</nobr></a>
+		  </td-->
+		</tr>
+		</table>
+  </td>
+	<td width=10></td>
+  <td width=10 class="shadow"></td>
+</tr>
+
+<tr>
+  <td colspan="3" height="10"></td>
+  <td class="shadow" width="10"></td>
+</tr>
+
+  <tr>
+    <td width=10 class="bkgd"></td>
+    <td height=10 class="shadow"></td>
+    <td width=10 class="shadow"></td>
+    <td width=10 class="shadow"></td>
+  </tr>
+</table>
+
+<%@ page import="java.lang.reflect.*" %>
+<%
+  // Print a memory report
+  //if(userInfo != null)
+  //{
+  //  System.err.println("MEM CURR. => [" + (new java.util.Date()).toString() + "] FILE: " + request.getServletPath().replaceAll("/java-bin/", "") + " by UserId = " + userInfo[0] +  ", MEM: " + Util.commify(Runtime.getRuntime().totalMemory()) + ", max: " + Util.commify(Runtime.getRuntime().maxMemory()) + ", used: " + Util.commify(MemoryUtil.usedMemory())) ;
+  //}
+  Calendar nowCal = Calendar.getInstance() ;
+  long timeLong = nowCal.getTimeInMillis() ;
+  timeLong /= 1000 ;
+  if(timeLong % 20 == 17) // Or could == 0 or anything 0-9...do you believe in biases?
+  {
+    MemoryUtil.forceGC() ;
+    System.err.println("MEM AFTER forceGC() => [" + (new java.util.Date()).toString() + "] MEM: total: " + Util.commify(Runtime.getRuntime().totalMemory()) + ", max: " + Util.commify(Runtime.getRuntime().maxMemory()) + ", used: " + Util.commify(MemoryUtil.usedMemory())) ;
+  }
+  nowCal = null ;
+  // What's in the session?
+  if(mys == null)
+  {
+    System.err.println("    SESSION: is *null*, why? (maybe is help page, that's ok)") ;
+  }
+  else
+  {
+    //System.err.println("    SESSION: id => " + mys.getId() + ", max inactive time => " + mys.getMaxInactiveInterval() ) ;
+    Enumeration attrEnum = mys.getAttributeNames() ;
+    String currAttr = null ;
+    Object currValue = null ;
+    while(attrEnum.hasMoreElements())
+    {
+      currAttr = (String)attrEnum.nextElement() ;
+      currValue = mys.getAttribute(currAttr) ;
+      String vClassStr = currValue.getClass().toString() ;
+      vClassStr = vClassStr.replaceAll("org\\.genboree\\.", "") ;
+      //System.err.println("        - Atttribute: '" + currAttr + "' => [" + vClassStr + "] ' ") ; // => " + currValue + "'" ) ;
+    }
+  }
+%>

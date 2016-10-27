@@ -1,0 +1,44 @@
+<%# RENDER HTML %>
+<div style="height: 440px;" class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      {
+        :toolHelpOverview => 'This tool allows you to manage and delete queries to which you have access. Note that "Shared" queries can only be managed by group admins.'
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       => [ 'Drag 1 Query resource into the <u>Input Data</u> box.' ],
+        :types              => [ [ 'track', 'min: 1 ; max: (any)' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ '<i>None</i>. The &quot;Output Targets&quot; box must be left EMPTY.' ],
+        :types              => [ [ '[none]', 'min: 0 ; max: 0' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Update Query', "Once you have made all changes to the query you chose to manage, click the &quot;Update Query&quot; button." ],
+          [ 'Delete Query', "If you wish to delete the query from the database, simply click the &quot;Delete Query&quot; button. This operation is permanent and there is NO RECOVERY of deleted queries."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed by Bio:Neos for <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

@@ -1,0 +1,33 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/allele/[^/?]+/?(?:$|\\?)",
+        1,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "SourceRegistry": [
+        "/kb/[^/?]+/coll/[^/?]+/?(?:$|\\?)",
+        "SourceRegistry must refer to a valid URL"
+      ],
+      "ConclusionCache": [
+        "/kb/[^/?]+/coll/[^/?]+/?(?:$|\\?)",
+        "ConclusionCache must refer to a valid URL"
+      ],
+      "CA2EvidenceCache": [
+        "/kb/[^/?]+/coll/[^/?]+/?(?:$|\\?)",
+        "CA2EvidenceCache must refer to a valid URL"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  }
+}

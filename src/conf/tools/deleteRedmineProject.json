@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "deleteRedmineProject",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Redmine Project",
+    "shortLabel": "[NOT SET]"
+  }
+}

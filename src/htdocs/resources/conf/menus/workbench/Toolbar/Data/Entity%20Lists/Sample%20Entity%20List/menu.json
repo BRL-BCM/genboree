@@ -1,0 +1,31 @@
+
+[
+  {
+    "text": "Create Sample Entity List",
+    "tooltip": "Create/Add a new sample entity list in a selected database.",
+    "idStr": "createSampleList"
+  },
+  {
+    "text": "Copy/Move Sample Entity List",
+    "tooltip": "Copy or move one or more existing sample entity lists to a target database.",
+    "idStr": "copySampleLists"
+  },
+  {
+    "text": "Delete/Remove Sample Entity List",
+    "tooltip": "Permanently remove one or more sample entity lists from a selected database.",
+    "idStr": "deleteSampleLists"
+  },
+  { "text": "Rename Sample Entity List",
+    "toolTip": "Rename an existing sample entity list.",
+    "idStr": "renameSampleList"
+  },
+  { "text": "Add Samples to Sample Entity List",
+    "toolTip": "Add additional samples to an existing sample entity list.",
+    "idStr": "addSamplesToEntityList"
+  },
+  { "text": "Remove Samples from Sample Entity List",
+    "toolTip": "Remove one or more samples from an existing sample entity list.",
+    "idStr": "removeSamplesFromEntityList"
+  }
+]
+

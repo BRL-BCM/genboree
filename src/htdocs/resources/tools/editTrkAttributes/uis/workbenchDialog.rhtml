@@ -1,0 +1,24 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" method="POST" class="wbDialog wbForm">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Edit Attributes" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "Manage attributes below.  Values are autosaved as they are entered.
+        "
+      })
+  %>
+  <%# Div where ExtJs UI is rendered %>
+  <div id="wbAttrGridDiv"></div>
+
+</form>
+
+<script>
+/* Initialize vars for javascript */
+var encGrpName = '<%= CGI.escape(WorkbenchFormHelper.getNameFromURI(:grp, @inputs[0])) %>' ;
+var encDbName = '<%= CGI.escape(WorkbenchFormHelper.getNameFromURI(:db, @inputs[0])) %>' ;
+var encTrkName = '<%= CGI.escape(WorkbenchFormHelper.getNameFromURI(:trk, @inputs[0])) %>' ;
+</script>
+
+<%= WorkbenchFormHelper.renderInlineScriptFrag("#{@genbConf.toolViewRoot}/editTrkAttributes/uis/editAttributes.js") %>

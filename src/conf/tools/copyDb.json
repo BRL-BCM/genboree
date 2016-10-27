@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "copyDb",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Clone/Copy Database",
+    "shortLabel": "Clone/Copy Database"
+  }
+}

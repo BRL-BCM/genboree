@@ -1,0 +1,105 @@
+<%# RENDER HTML %>
+<%
+    require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+    width = (@hasAccess ? 500 : 320)
+    height = (@hasAccess ? 380 : 320)
+    if(@inputs.size == 0)
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+    else
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+    end
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows uploading of entrypoints. Supported formats include:
+          <ul>
+            <li><a href=\"http://genboree.org/java-bin/showHelp.jsp?topic=uploadEPhowto#3ColumnLFF\">3 column LFF</a></li>
+            <li><a href=\"http://en.wikipedia.org/wiki/FASTA_format\">FASTA</a></li>
+          </ul>
+          <br>&nbsp;<br>
+          Note that the entrypoints being uploaded shouldn't already exist. If you just want to edit existing entrypoints, you can use the 'Edit Entrypoints' tool.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets1 = []
+    if(@inputs.size == 0)
+        widgets1 =
+                  [
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                    { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                  ]
+    end
+    widgets2 =
+            [
+              { :id => 'inputFormat', :label => 'Input Format', :type => :select, :onchange => "displayOptions(this.value)", :options =>
+                {
+                  :lff3col => { :label => '3ColLFF', :selected => true },
+                  :fasta => {:label => 'FASTA'}
+                }
+              }
+            ]
+    widgets = widgets1 + widgets2
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

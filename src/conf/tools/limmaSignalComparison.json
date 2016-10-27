@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "limmaSignalComparison",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "23432mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Compare by LIMMA -> Tracks",
+    "shortLabel": "LIMMA - Tracks"
+  }
+}

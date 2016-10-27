@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "editDbInfo",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Edit Database Info",
+    "shortLabel": "[NOT SET]"
+  }
+}

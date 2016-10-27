@@ -1,0 +1,29 @@
+<%@ page import="org.genboree.util.Util,
+org.genboree.util.SessionManager,
+org.genboree.dbaccess.GenboreeGroup"%>
+<td class="form_header"><strong>Group</strong></td>
+<td class="form_header"><input type="hidden"  name="grpChanged" id="grpChanged" value="0">
+<select name="group_id" id="group_id" onchange="grpChanged.value=1; this.form.submit(); "  class="txt"  style="width:300">
+<%String grpAccess = "SUBSCRIBER";
+GenboreeGroup selGroup = rwGrps[0];
+boolean hasSessionGroup  = false;
+String selectedGroupAccess = "SUBSCRIBER";
+for(int  ii=0; ii<rwGrps.length; ii++ ){
+String myId = rwGrps[ii].getGroupId();
+ grpAccess = "SUBSCRIBER";   
+boolean isOwner = is_admin || rwGrps[ii].isOwner( myself.getUserId() );
+boolean isReadOnlyGroup = !is_admin && rwGrps[ii].isReadOnly( myself.getUserId() );
+if( !isReadOnlyGroup )
+grpAccess = isOwner ? "ADMINISTRATOR" : "AUTHOR";
+if (ii==0)
+selectedGroupAccess =   grpAccess;
+String sel = "";
+if (myId.equals(groupId)) {sel = " selected" ;
+selectedGroupAccess =   grpAccess;
+selGroup = rwGrps[ii];
+SessionManager.setSessionGroupId(mys, groupId);
+SessionManager.setSessionGroupName(mys,rwGrps[ii].getGroupName() );
+hasSessionGroup  = true;
+}else  sel = "";%><option value="<%=myId%>"<%=sel%>><%=Util.htmlQuote(rwGrps[ii].getGroupName())%></option><%}if (!hasSessionGroup && rwGrps != null && rwGrps.length >0 ) {
+SessionManager.setSessionGroupId(mys, rwGrps[0].getGroupId());
+SessionManager.clearSessionDatabase(mys); }%></select>&nbsp;&nbsp;<font color="#CCCCFF">Role:</font>&nbsp;&nbsp;<%=selectedGroupAccess%></td>

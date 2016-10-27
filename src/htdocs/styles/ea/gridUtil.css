@@ -1,0 +1,38 @@
+
+.wbDialogAlert .x-window-mc {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/genboree/window/top-bottom-no-border.png) repeat-x scroll 0 0 !important ;
+}
+.wbDialogAlert .x-window-ml {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/genboree/window/left-border-only.png) repeat-y scroll 0 0 !important ;
+  padding-left: 2px ;
+}
+.wbDialogAlert .x-window-mr {
+  background: transparent url(/javaScripts/ext-2.2/resources/images/genboree/window/right-border-only.png) repeat-y scroll right 0 !important ;
+  padding-right: 2px ;
+}
+.wbDialogAlert .x-window-body {
+  padding: 0px 0px 0px 14px ;
+}
+
+.wbDialogAlert .wbDialog {
+  padding: 0 ;
+  margin: 0 ;
+  background: none ;
+  /* height: auto ; */
+  /* width: auto ; */
+}
+
+.wbDialogAlert .wbDialogFeedbackTitle {
+  font-size: 1.3em ;
+  font-weight: bold ;
+  margin-bottom: 1em ;
+}
+
+.wbDialogAlert .wbDialog div.wbSubmitMsg {
+  margin: 0 ;
+}
+
+.wbDialogAlert .x-panel-btns-ct {
+  margin: 0px 5px 5px 5px ;
+  padding: 0px 5px 5px 5px ;
+}

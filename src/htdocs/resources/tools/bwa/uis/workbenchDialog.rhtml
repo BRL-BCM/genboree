@@ -1,0 +1,357 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "BWA is a software package for mapping low-divergent sequences against a large reference genome, such as the human genome. It consists of three algorithms: <b> BWA-backtrack </b>, <b> BWA-SW </b> and <b> BWA-MEM </b>. The first algorithm is designed for Illumina sequence reads up to 100bp, while the rest two for longer sequences ranged from 70bp to 1Mbp. 
+        <br>&nbsp;<br>
+        
+        <center><span class='footnote'>[ Detailed description of BWA can be found <a href='http://bio-bwa.sourceforge.net/bwa.shtml' target='_blank'>this reference page</a>. ]</span></center>
+        <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%
+    userId = @context['userId']
+    dbu = BRL::Genboree::DBUtil.new("#{@genbConf.dbrcKey}", nil, nil)
+    hostAuthMap = Abstraction::User.getHostAuthMapForUserId(dbu, userId)
+
+    uri = URI.parse(@outputs[0])
+    rcscUri = uri.path
+    listOfIndexes = {}
+
+    # Get list of entrypoints from user db
+    epArray = []
+    apiCaller = ApiCaller.new(uri.host, "#{uri.path}/eps?", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+
+    if(apiCaller.succeeded?)
+      resp = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+      resp.each { |ep|
+        epArray << ep['name']
+      }
+    end # if(apiCaller.succeeded?) for getting entrypoints
+    $stderr.puts "**#{epArray.inspect} \n\n"
+
+    apiCaller = ApiCaller.new(uri.host, "#{rcscUri}/files/indexFiles/BWA", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+ 
+    if(apiCaller.succeeded?)
+      userData = JSON.parse(apiCaller.respBody)['data']
+      userData.each { |subdir|
+        userIndexName = subdir['name']
+        indexDir = userIndexName.split("/")[2]
+        indexFile = userIndexName.split("/")[3]
+
+        indexUri = @outputs[0].dup
+        indexUri = indexUri.chomp("?")
+        indexUri << "/file/indexFiles/BWA/#{CGI.escape(indexDir)}/#{CGI.escape(indexFile)}"
+        listOfIndexes[:"#{indexUri}"] = { :label => "#{indexDir}" }
+      }
+    end # if(apiCaller.succeeded?) for getting index list from user db
+
+    #$stderr.puts "second apicall #{listOfIndexes.inspect} \n\n"
+    
+    # Get Genome Version of output database
+    genomeVersion = @settings['genomeVersion'].decapitalize
+    
+    # Get list of indexes (if any) from repository db
+    @roiRepositoryGroup = @genbConf.roiRepositoryGrp
+    @roiRepoDb = "#{@roiRepositoryGroup}#{genomeVersion}"
+    indexUri = URI.parse(@roiRepoDb)
+    rsrcPath = indexUri.path
+    @roiDirs = ['wholeGenome', 'eachChr']
+    @roiDirs.each { |dirName|
+      apiCaller = ApiCaller.new(indexUri.host, "#{rsrcPath}/files/indexFiles/BWA/#{CGI.escape(dirName)}", hostAuthMap)
+      apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+      apiCaller.get()
+      if(apiCaller.succeeded?)
+      ## There are indexes available in common database
+        repoData = JSON.parse(apiCaller.respBody)['data']
+        repoData.each { |subdir|
+          indexName = subdir['name']
+          indexDir = indexName.split("/")[2]
+          indexFile = indexName.split("/")[3]
+          indexROIUri = @roiRepoDb.dup
+          indexROIUri = indexROIUri.chomp("?")
+          indexROIUri << "/file/indexFiles/BWA/#{CGI.escape(dirName)}/#{CGI.escape(indexFile)}"
+          if(dirName =~ /wholeGenome/)
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}", :selected => true }
+          else
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}" }
+          end
+        }
+      end # if(apiCaller.succeeded?)
+    }
+    #$stderr.puts "last apicall #{listOfIndexes.inspect} \n\n"
+
+  %>
+
+  <%=
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "BWA-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (below \'BWA\') where BWA results are organised' },
+                #{ :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the inputs/outputs"},
+                { :id => 'indexOptions', :toggleText => "Index Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'useIndex', :label => 'Select Index', :title => 'Do you want to build a new index using reference sequences or use an existing index? Default: Uses whole genome index if available', :onChange => "showIndexOption(this.value)", :type => :select, :options =>
+                      {
+                        :makeNewIndex => { :label => 'Build a new index'},
+                        :useExistingIndex => {:label => 'Use existing index', :selected => true }
+                      }
+                    },
+                    { :id => 'indexList', :label => 'BWA index', :title => 'Select the appropriate BWA index to be used for mapping', :type => :select, :options => listOfIndexes },
+                    { :id => 'indexBaseName', :label => 'BWA Index Name', :type => :text, :value => genomeVersion, :size => '15', :maxlength => '30', :hidden => true, :title => "Provide a name for your custom BWA index. This name should be less than 30 characters in length. Default: GenomeVersion" },
+                    { :id => 'selectEps', :toggleText => "Select Entrypoints/Chromosomes", :type => :advancedSection, :startWithExpanded => false, :hidden => true, :title => "Select list of entrypoints/chromosomes for building Bowtie2 index. Default: all entrypoints" , :widgets =>
+                      [
+                        { :id => "epArray", :label => "", :labelWidth => '100px', :type => :tableWithCheckboxSection, :rows => epArray, :headerRow => ['Entrypoint', 'Select'] },
+                        { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'epArray'}
+                      ]
+                    },
+                  ]
+                },
+
+                { :id => 'doUploadResults', :label => 'Upload Coverage Results as Tracks ?', :type => :checkbox, :title => 'Sequencing Coverage is calculated from the mapped reads. Check this to upload coverage results as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC Genome Browser. ', :onClick => "displayTrackName(this.checked)" },
+                { :id => 'trackClassName', :label => 'Track Class Name', :type => :text, :value => 'User Data', :disabled => true, :title => 'Provide a track class name for uploading coverage track under this Class. [Default: User Data]'},
+                { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => 'Read', :hideTrackName => true, :defaultSubtype => 'Density', :hidden => true, :title => 'For uploading Coverage track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+               
+                { :id => 'presetOption', :label => 'Alignment Type', :title => 'Three options: <b>BWA-MEM</b>, <b>BWA-SW</b> and <b>BWA-Bactrack</b>. BWA-MEM and BWA-SW support long-read and split alignment, but BWA-MEM is faster and accurate for high-quality queries. BWA-Backtrack is designed for Illumina sequence reads up to 100bp. If not sure which one to choose use default first. [Default: BWA-MEM] <br> <b>Note</b>: This will affect the available advanced Settings and the appropriate default settings.', :type => :select, :onchange => "displayAdvOptions(this.value)", :options =>
+                  {
+                    :aln   => { :label => 'BWA-Backtrack'},
+                    :bwasw   => { :label => 'BWA-SW'},
+                    :mem   => { :label => 'BWA-MEM', :selected => true }
+                  }
+                },
+                { :id => 'advancedSettings', :type => :advancedSection,
+                :width => '450px',
+                :text => '(The default values for these settings are what will be used if you do not change them.)',
+                :widgets =>
+                [
+                  #mem specific options
+                  { :id => 'interleavedFileOption', :label => 'Interleaved Paired End Data', :type => :checkbox, :class => 'advSet', :title => 'Assumes the 2i-th and the (2i+1)-th read in the input paired end fastq file constitute a read pair. This option valid only for BWA-MEM'},
+                  { :id => 'minSeedLength', :label => 'Minimum Seed Length', :type => :text, :size => "10", :value => "19", :class => 'advSet', :title => 'Matches shorter than this will be missed.' },
+                  { :id => 'bandWidth', :label => 'Band Width', :type => :text, :size => "10", :value => "100", :class => 'advSet', :title => 'Gaps longer than this will not be found.' },
+                  { :id => 'xDropoff', :label => 'Drop off Score', :type => :text, :size => "10", :value => "100", :class => 'advSet', :title => 'Off-diagonal X-dropoff (Z-dropoff). Stop extension when the difference between the best and the current extension score is above |i-j|*A + xDropoff, where i and j are the current positions of the query and reference, respectively, and A is the matching score.'  },
+                  { :id => 'outAlignment', :label => 'Filter output alignments', :type => :text, :size => "10", :value => "30", :class => 'advSet', :title => 'Skip alignments with a score lower than this.'  },
+                  { :id => 'outAll', :label => 'Output All Found Alignments', :type => :checkbox, :class => 'advSet', :title => 'Output all found alignments for single-end or unpaired paired-end reads. These alignments will be flagged as secondary alignments.'  },
+                  { :id => 'matchScore', :label => 'Match Score', :type => :text, :size => "10", :value => "1", :class => 'advSet', :title => 'Matching score.' },
+                  #common
+                  { :id => 'matchPenalty', :label => 'Mismatch Penalty', :type => :text, :size => "10", :value => "4", :class => 'advSet', :title => 'Mismatch penalty.' },
+                  #common
+                  { :id => 'gapOpen', :label => 'Gap Open penalty', :type => :text, :size => "10", :value => "6", :class => 'advSet', :title => 'Gap open penalty.' },
+                  #common
+                  { :id => 'gapExtension', :label => 'Gap Extension Penalty', :type => :text, :size => "10", :value => "1", :class => 'advSet', :title => 'Gap extension penalty.' },
+                  #aln specific options
+                  { :id => 'editDistance', :label => 'Maximum Edit Distance', :type => :text, :size => "10", :value => "0.04", :class => 'advSet', :disabled => true, :title => 'Maximum edit distance.' },
+                  { :id => 'numGapOpens', :label => 'Maximum Number of Gap Opens', :type => :text, :size => "10", :value => "1", :class => 'advSet', :disabled => true, :title => 'Maximum number of gap opens.' },
+                  { :id => 'disDeletion', :label => 'Disallow Deletion', :type => :text, :size => "10", :value => "16", :class => 'advSet', :disabled => true, :title => 'Disallow a long deletion within this number of base pairs towards the 3\' end' },
+                  { :id => 'disIndel', :label => 'Disallow Indel', :type => :text, :size => "10", :value => "5", :class => 'advSet', :disabled => true, :title => 'Disallow an indel within this bp towards the ends.' },
+                  { :id => 'maxEditSeed', :label => 'Maximum Edit Distance in the Seed ', :type => :text, :size => "10", :value => "2", :class => 'advSet', :disabled => true, :title => 'Maximum edit distance in the seed' },
+                  { :id => 'maxNumAlignments', :label => 'Maximum Number of Alignments', :type => :text, :size => "10", :value => "3", :class => 'advSet', :disabled => true, :title => 'Maximum number of alignments to output in the XA tag for reads paired properly. If a read has more than INT hits, the XA tag will not be written.' }
+                ]
+              }
+            ]
+               
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "BWA Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+function showIndexOption(value)
+{
+  var indexList = document.getElementById('indexList');
+  var indexListLabel = Ext.get('indexListLabel')
+
+  var indexBaseName = Ext.get('indexBaseName');
+  var indexBaseNameLabel = Ext.get('indexBaseNameLabel');
+
+  var selectEps = Ext.get('selectEps');
+  var selectEpsLabel = Ext.get('selectEpsLabel');
+
+  if(value == "useExistingIndex")
+  {
+    indexList.style.visibility = 'visible' ;
+    indexListLabel.setStyle('display', '') ;
+
+    indexBaseName.setStyle('display', 'none') ;
+    indexBaseNameLabel.setStyle('display', 'none') ;
+    selectEpsLabel.setStyle('display', 'none') ;
+  }
+  else if(value == "makeNewIndex")
+  {
+    indexList.style.visibility = 'hidden' ;
+    indexListLabel.setStyle('display', 'none') ;
+
+    indexBaseName.setStyle('display', '') ;
+    indexBaseNameLabel.setStyle('display', '') ;
+    selectEpsLabel.setStyle('display', '') ;
+  }
+}
+
+function displayTrackName(checked)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var wigTracklabel = Ext.get("trackNameLabel") ;
+
+  var lffTrackClassName = document.getElementById('trackClassName') ;
+  var lffTrackClassNameLabel = Ext.get("trackClassNameLabel") ;
+  if(checked)
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    lffType.style.visibility = '' ;
+    lffSubType.style.visibility = '' ;
+    lffTrackClassName.disabled = false ;
+    wigTracklabel.setStyle('display', '') ;
+  }
+  else
+  {
+    lffType.style.visibility = 'hidden' ;
+    lffType.disabled = true ;
+    lffSubType.style.visibility = 'hidden' ;
+    lffSubType.disabled = true ;
+    lffTrackClassName.disabled = true ;
+    wigTracklabel.setStyle('display', 'none') ;
+  }
+}
+function displayAdvOptions(value)
+{
+  var advSettings = document.getElementsByClassName('advSet') ;
+  var advLength = advSettings.length ;
+  var ii ;
+  if(value == 'mem') // disable none
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = false ;
+      if(advSettings[ii].id == 'bandWidth'){advSettings[ii].value = "100";}
+      else if(advSettings[ii].id == 'matchScore'){advSettings[ii].value = "1";}
+      else if(advSettings[ii].id == 'matchPenalty'){advSettings[ii].value = "4";}
+      else if(advSettings[ii].id == 'gapOpen'){advSettings[ii].value = "6";}
+      else if(advSettings[ii].id == 'gapExtension'){advSettings[ii].value = "1";}
+      else if(advSettings[ii].id == 'minSeedLength' || advSettings[ii].id == "xDropoff" || advSettings[ii].id == 'outAlignment')
+      {
+        advSettings[ii].disabled = false;
+      }
+      else
+      {
+        advSettings[ii].disabled = true ;
+      }    
+    }
+  }
+  else if(value == 'bwasw')
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      if(advSettings[ii].id == 'bandWidth')
+      {
+        advSettings[ii].value = "33";
+        advSettings[ii].disabled = false;
+      }
+      else if(advSettings[ii].id == 'matchScore')
+      {
+        advSettings[ii].value = "1";
+        advSettings[ii].disabled = false;
+      }
+      else if(advSettings[ii].id == 'matchPenalty'){advSettings[ii].value = "3";}
+      else if(advSettings[ii].id == 'gapOpen'){advSettings[ii].value = "5";}
+      else if(advSettings[ii].id == 'gapExtension'){advSettings[ii].value = "2";}
+      else
+     {
+       advSettings[ii].disabled = true;
+     } 
+    }    
+  }
+  else
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      if(advSettings[ii].id == 'bandWidth'){advSettings[ii].disabled = true;}
+      else if(advSettings[ii].id == 'matchScore'){advSettings[ii].disabled = true;}
+      else if(advSettings[ii].id == 'matchPenalty'){advSettings[ii].value = "3";}
+      else if(advSettings[ii].id == 'gapOpen'){advSettings[ii].value = "11";}
+      else if(advSettings[ii].id == 'gapExtension'){advSettings[ii].value = "4";}
+      else if(advSettings[ii].id == 'minSeedLength' || advSettings[ii].id == "xDropoff" || advSettings[ii].id == 'outAlignment')
+      {
+        advSettings[ii].disabled = true;
+      }
+      else
+      {
+         advSettings[ii].disabled = false;
+        
+      }
+    }
+  }
+
+}
+ 
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

@@ -1,0 +1,171 @@
+Function:
+#####################
+The file "BRL_UCSC_importer_complete.rb" takes the user input of a genome assembly version and/or remote UCSC track information, and download the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF.
+
+To run correctly,
+All sources files including downloader and converter files, "BRL_UCSC_importer_complete.rb", and "data_acquisition_complete_data.txt", "BRL_UCSC_universial_downloader.rb", "BRL_UCSC_fosmidlff.rb", "BRL_UCSC_chimpchainlff.rb", ..., should be put in the same direcory in a machine with MySQL server installed in order to run them successfully.
+#####################
+
+The input usage info is:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+ruby BRL_UCSC_importer_complete.rb -a assembly -t trackName -e emailAddress
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The sample output minutes look like:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(importer_complete) woodstock58 >ruby BRL_UCSC_importer_complete.rb -a hg18 -t Fosmid:EndPairs -e ybai@bcm.tmc.edu
+Mon Sep 29 21:04:36 -0500 2008 BEGIN IMPORT (Mem: 6736 kB)
+Server version: 5.0.45
+
+==== Operation for table data_acquisition_complete ==================
+A list of remote data (tracks) that are compatible with user selected database - hg18 and the tracks available for: (i) dynamic download and (ii) conversion to lff via a converter:
+hg18    AFFY:GNF1H
+hg18    Affy:HuEx 1.0
+hg18    Affy:U133
+hg18    Affy:U133Plus2
+hg18    AFFY:U95
+hg18    Alignment:Chain
+hg18    BAC:EndPairs
+hg18    CNP:Iafrate2
+hg18    CNP:Locke
+hg18    CNP:Redon
+hg18    CNP:Sebat2
+hg18    CNP:Sharp2
+hg18    CNP:Tuzun
+hg18    DEL:Conrad2
+hg18    DEL:Hinds2
+hg18    DEL:Mccarroll
+hg18    DIS:CCC
+hg18    DIS:GAD
+hg18    Fosmid:EndPairs
+hg18    GNF:Atlas 2
+hg18    NIMH:BIPOL
+hg18    Polymorphisms:HapMap LD
+hg18    Polymorphisms:HapMap SNPs
+hg18    Polymorphisms:Microsatellites
+hg18    Polymorphisms:Repeat Masker
+hg18    Polymorphisms:Segmental Dups
+hg18    Polymorphisms:Simple Repeats
+hg18    Polymorphisms:SNPs (128)
+hg18    RGD:MGI MOUSE QTL
+hg18    RGD:QTL
+hg18    RGD:RAT QTL
+hg18    RNA:Small
+hg18    UCSC:EST
+hg18    UCSC:Genes
+hg18    UCSC:mRNA
+hg18    UCSC:Spliced EST
+hg18    UCSC:UniGene
+hg18    UCSC:xenoEst
+hg18    Variants:TCAG.v3
+
+Given input of a genome assembly version and a list of one or more track names, the program actually goes and downloads the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF.
+Mon Sep 29 21:04:37 -0500 2008 BEGIN (Mem: 5372 kB)
+Checking connections..
+Checking user name and password...
+Authentification is ok...
+Checking availbility of given assembly on host side....
+Starting downloading....
+Downloading completes! Please check your directory for files, thank you!
+Mon Sep 29 21:04:52 -0500 2008 DONE
+Converting starts...
+Mon Sep 29 21:04:53 -0500 2008 BEGIN (Mem: 5308 kB)
+Mon Sep 29 21:08:36 -0500 2008 DONE
+Mon Sep 29 21:08:36 -0500 2008 DONE IMPORT
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(importer_complete) woodstock58 >ruby BRL_UCSC_importer_complete.rb -a mm9 -t AFFY:GNF1M -e ybai@bcm.tmc.edu
+Mon Sep 29 21:15:57 -0500 2008 BEGIN IMPORT (Mem: 6736 kB)
+Server version: 5.0.45
+
+==== Operation for table data_acquisition_complete ==================
+A list of remote data (tracks) that are compatible with user selected database - mm9 and the tracks available for: (i) dynamic download and (ii) conversion to lff via a converter:
+mm9     AFFY:GNF1M
+mm9     AFFY:MOE430
+mm9     AFFY:U74
+mm9     AFFY:U74A
+mm9     AFFY:U74B
+mm9     AFFY:U74C
+mm9     BAC:EndPairs
+mm9     Polymorphisms:Microsatellites
+mm9     Polymorphisms:Repeat Masker
+mm9     Polymorphisms:Simple Repeats
+mm9     Polymorphisms:SNPs (128)
+mm9     RNA:miRNA
+mm9     UCSC:EST
+mm9     UCSC:Genes
+mm9     UCSC:mRNA
+mm9     UCSC:Spliced EST
+mm9     UCSC:xenomRNA
+
+Given input of a genome assembly version and a list of one or more track names, the program actually goes and downloads the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF.
+Mon Sep 29 21:15:58 -0500 2008 BEGIN (Mem: 5368 kB)
+Checking connections..
+Checking user name and password...
+Authentification is ok...
+Checking availbility of given assembly on host side....
+Starting downloading....
+Downloading completes! Please check your directory for files, thank you!
+Mon Sep 29 21:16:00 -0500 2008 DONE
+Converting starts...
+Mon Sep 29 21:16:01 -0500 2008 BEGIN (Mem: 5308 kB)
+Mon Sep 29 21:16:14 -0500 2008 DONE
+Mon Sep 29 21:16:14 -0500 2008 DONE IMPORT
+
+
+The error sample output minutes look like:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+(importer_complete) woodstock58 >ruby BRL_UCSC_importer_complete.rb -a hg18 -t Fosmid:End -e ybai@bcm.tmc.edu
+Mon Sep 29 20:56:04 -0500 2008 BEGIN IMPORT (Mem: 6736 kB)
+Server version: 5.0.45
+
+==== Operation for table data_acquisition_complete ==================
+A list of remote data (tracks) that are compatible with user selected database - hg18 and the tracks available for: (i) dynamic download and (ii) conversion to lff via a converter:
+hg18    AFFY:GNF1H
+hg18    Affy:HuEx 1.0
+hg18    Affy:U133
+hg18    Affy:U133Plus2
+hg18    AFFY:U95
+hg18    Alignment:Chain
+hg18    BAC:EndPairs
+hg18    CNP:Iafrate2
+hg18    CNP:Locke
+hg18    CNP:Redon
+hg18    CNP:Sebat2
+hg18    CNP:Sharp2
+hg18    CNP:Tuzun
+hg18    DEL:Conrad2
+hg18    DEL:Hinds2
+hg18    DEL:Mccarroll
+hg18    DIS:CCC
+hg18    DIS:GAD
+hg18    Fosmid:EndPairs
+hg18    GNF:Atlas 2
+hg18    NIMH:BIPOL
+hg18    Polymorphisms:HapMap LD
+hg18    Polymorphisms:HapMap SNPs
+hg18    Polymorphisms:Microsatellites
+hg18    Polymorphisms:Repeat Masker
+hg18    Polymorphisms:Segmental Dups
+hg18    Polymorphisms:Simple Repeats
+hg18    Polymorphisms:SNPs (128)
+hg18    RGD:MGI MOUSE QTL
+hg18    RGD:QTL
+hg18    RGD:RAT QTL
+hg18    RNA:Small
+hg18    UCSC:EST
+hg18    UCSC:Genes
+hg18    UCSC:mRNA
+hg18    UCSC:Spliced EST
+hg18    UCSC:UniGene
+hg18    UCSC:xenoEst
+hg18    Variants:TCAG.v3
+
+Given input of a genome assembly version and a list of one or more track names, the program actually goes and downloads the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF.
+
+Sorry,track Fosmid:End is not a valid track name, so downloading and converting did not occur. Please use the track name available in database for correct input!!!
+
+Mon Sep 29 20:56:05 -0500 2008 DONE IMPORT
+
+

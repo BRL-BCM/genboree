@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "renameSampleList",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Rename Sample List",
+    "shortLabel": "[NOT SET]"
+  }
+}

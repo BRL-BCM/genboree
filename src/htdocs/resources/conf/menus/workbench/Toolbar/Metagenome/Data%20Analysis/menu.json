@@ -1,0 +1,51 @@
+[
+  {
+    "text": "WGS Microbiome Pipeline",
+    "tooltip": "",
+    "idStr": "wgsMicrobiomePipeline"
+  },
+/*  {
+    "text": "WGS Microbiome Pipeline - Sequence Import",
+    "tooltip": "",
+    "idStr": "wgsMicrobiomeSeqImport"
+  },
+  {
+    "text": "WGS Microbiome Pipeline - Taxanomic Abundance - MetaPhlAn",
+    "tooltip": "",
+    "idStr": "wgsMicrobiomeTaxAbun"
+  },
+  {
+    "text": "WGS Microbiome Pipeline - Digital Normalization, Assembly and Find ORFs",
+    "tooltip": "",
+    "idStr": "wgsMicrobiomeDigNorm"
+  },
+  {
+    "text": "WGS Microbiome Pipeline - Functional Annotation",
+    "tooltip": "",
+    "idStr": "wgsMicrobiomeFuncAnno"
+  },
+*/
+  {
+    "text": "Taxonomic Classification (RDP)",
+    "tooltip": "Run RDP’s Classifier pipeline on sample-specific FASTA data.",
+    "idStr": "rdp"
+  },
+  {
+    "text": "QIIME",
+    "tooltip": "Creates sample groups, generates OTU table, generates sample metadata.",
+    "idStr": "qiime"
+  },
+  {
+    "text": "Alpha Diversity",
+    "tooltip": "",
+    "idStr": "alphaDiversity"
+  },
+  {
+    "text" : "Machine Learning"
+  },
+  {
+    "text": "WGS Sample Grid Viewer",
+    "idStr": "microbiomeSampleGridViewer",
+    "tooltip": "Launch the specialized WGS Sample grid viewer application."
+  }
+]

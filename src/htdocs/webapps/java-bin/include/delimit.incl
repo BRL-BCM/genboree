@@ -1,0 +1,10 @@
+<P>
+<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="1">
+<TR>
+  <TD class="annotation2" >
+    <INPUT SIZE="14" id="commentFormatBtn" name="commentFormatBtn" TYPE="button" class="btn" onclick="dispatchWrapComments('comments', document.getElementById('commentDelims').value);" VALUE="Wrap Comments">
+
+    Wrap delimiters:&nbsp;<INPUT SIZE="2" id="commentDelims" name="commentDelims" TYPE="text" VALUE=";">
+  </TD>
+</TR>
+</TABLE>

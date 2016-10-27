@@ -1,0 +1,643 @@
+/**
+ * Main Genboree splash page CSS
+ */
+
+/**
+ * Sticky page footer styles
+ *   http://ryanfait.com/resources/footer-stick-to-bottom-of-page/
+ **/
+*
+{
+  margin: 0;
+}
+
+html, body
+{
+  height: 100%;
+}
+#wrapper
+{
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  margin: 0 auto -100px;
+  overflow: hidden;
+}
+footer, #push
+{
+  height: 100px;
+  clear: both;
+}
+
+nav .inner
+{
+  /* This div is mainly for coloring */
+  background-color: #c3daf9;
+
+  /* REQUIRED, to not obscure the footer: */
+  position: relative;
+  z-index: -1;
+  /** REQUIRED, must be sufficiently wider than the left margin: * /
+  margin-left: -2000px;
+  padding-left: 2000px;**/
+  /* REQUIRED, must be sufficiently taller than the content will ever be: */
+  /* This technique (faux-col in CSS) also requires #wrapper to have overflow hidden */
+  margin-bottom: -10000px;
+  padding-bottom: 10000px;
+}
+nav ul li.contrast-box
+{
+  /** REQUIRED, must be sufficiently wider than the left margin: * /
+  margin-left: -2000px;
+  padding-left: 2000px;**/
+}
+
+/** 
+ * Some resets on the body
+ **/
+body
+{
+  padding: 0;
+  margin: 0;
+  font-family: "Open Sans", sans-serif;
+}
+
+/** 
+ * Header styling
+ **/
+header
+{
+  position: fixed;
+  top: 0;
+  height: 50px;
+  background-color: #15428b;
+  width: 100%;
+  z-index: 1000;
+}
+
+nav, #content
+{
+  /** Must be equal to height of the "header": **/
+  padding-top: 50px;
+
+  box-sizing: border-box;
+}
+
+#logo
+{
+  color: #ffffff;
+  float: left ;
+  font-size: 2.5em;
+  font-weight: bold;
+  font-family: "Montserrat", "Arial", sans-serif;
+  position: relative;
+  text-transform: uppercase;
+  top: 21px;
+  padding: 0 20px;
+}
+
+#logo a
+{
+  text-decoration: none;
+  color: #ffffff;
+  transition: none;
+  text-shadow: 2px 2px 1px #15428b;
+}
+
+/** Login section styles **/
+ul.login
+{
+  color: #FFF ;
+  float: right ;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1em ;
+  list-style: none ;
+  margin-top: 0;
+  margin-bottom: 0 ;
+  padding-top: 5px;
+  top: 0px ;
+  text-align: right ;
+  text-transform: uppercase;
+  height: 45px ;
+  z-index: 999 ;
+}
+
+ul.login li
+{
+  float: left ;
+}
+
+div#lost-wrapper
+{
+  margin-top: -2px;
+}
+
+a#lost-password,
+a:hover#lost-password,
+a:visited#lost-password
+{
+  color: #FFF ;
+  font-size: 0.75em ;
+  font-style: italic;
+  margin-right: 3px ;
+  text-transform: none ;
+  text-decoration: none ;
+}
+
+.button-group
+{
+  margin-left: 5px ;
+  text-align: center ;
+}
+
+.button-group a.button
+{
+  background-color: #C3DAF9 ;
+  border-radius: 0 ;
+  border: 1px solid #15428B ;
+  color: #FFF ;
+  display: block;
+  font-size: 1em ;
+  padding: 5px ;
+  width: 125px ;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700 ;
+  position: relative ;
+  text-decoration: none ;
+  text-shadow: 0 1px 1px #15428B;
+  text-transform: uppercase;
+  -webkit-transition: background-color 0.5s ease;
+  -moz-transition: background-color 0.5s ease;
+  -ms-transition: background-color 0.5s ease;
+  -o-transition: background-color 0.5s ease;
+  transition: background-color 0.5s ease;
+}
+
+.button-group a.button:hover
+{
+  background-color: #dff1f9;
+}
+
+.button-group a.button.short
+{
+  width: 100px ;
+}
+
+.button-group .icon
+{
+  background-color: rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  position: absolute;
+  top: 0 ;
+  left: 0 ;
+  width: 30px ;
+  height: 100% ;
+  padding-top: 8px ;
+  box-shadow: -1px 0 0 0 rgba(0, 0, 0, 0.05) inset ;
+  -webkit-box-shadow: -1px 0 0 0 rgba(0, 0, 0, 0.05) inset ;
+  -moz-box-shadow: -1px 0 0 0 rgba(0, 0, 0, 0.05) inset ;
+}
+
+.button-group .text
+{
+  margin-left: 30px ;
+}
+
+.button-group#register-group
+{
+  margin-left: 45px ;
+}
+
+
+.login .input-field
+{
+  border: 1px solid #15428B ;
+  height: 21px ;
+  padding: 3px 6px ;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 0.9em ;
+  width: 135px;
+}
+
+/** Enforce min/max width in main containers **/
+#main,
+header .inner,
+footer .inner
+{
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1400px;
+  min-width: 960px;
+}
+
+#wrapper
+{
+  min-width: 960px;
+}
+
+
+/** Main page **/
+#main
+{
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+}
+
+
+/** Nav bar (left menu) **/
+nav
+{
+  float: left;
+  font-family: "Montserrat", "Arial", sans-serif;
+  text-transform: uppercase;
+  color: #2e3436;
+  height: 100%;
+}
+
+nav .inner
+{
+  /** Protect against overlap from Genboree logo overhang **/
+  padding-top: 15px;
+}
+
+nav ul
+{
+  list-style: none;
+  width: 200px;
+  padding-left: 30px;
+}
+nav ul ul
+{
+  /** Each submenu level must lose width == left padding **/
+  width: 170px;
+}
+nav ul ul ul
+{
+  /** Each submenu level must lose width == left padding **/
+  width: 140px;
+}
+
+nav ul li a
+{
+  display: block;
+  padding: 7px 0;
+}
+
+nav ul li a.active
+{
+  font-weight: bold;
+  color: #000;
+}
+nav ul li a.active:hover
+{
+  text-shadow: none;
+}
+
+/** Sub-items **/
+nav ul ul li
+{
+  font-family: "Open Sans Condensed", sans-serif;
+}
+
+/** The contrast box **/
+nav ul li.contrast-box
+{
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background-color: #e2e6f3;
+  border-top: 1px solid #CCC ;
+  border-bottom: 1px solid #CCC ;
+  margin-left: -30px;
+  padding-left: 30px;
+}
+
+/** Link definitions for Nav bar **/
+nav a
+{
+  -webkit-transition: color 0.3s ease, text-shadow 0.3s ease;
+  -moz-transition: color 0.3s ease, text-shadow 0.3s ease;
+  -o-transition: color 0.3s ease, text-shadow 0.3s ease;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+  text-decoration: none;
+}
+
+nav a:link,
+nav a:visited
+{
+  color: #2e3436;
+  text-shadow: none;
+}
+
+nav a:hover,
+nav a:active
+{
+  color: #000;
+  text-shadow: 0 0 1px #444;
+}
+
+nav ul.sublist
+{
+  display: none ;
+}
+
+/** Main Content **/
+#content
+{
+  overflow: auto;
+  padding-left: 10px;
+  padding-right: 10px;
+
+  /** Must be equal to height of the "header": **/
+  padding-top: 50px;
+}
+
+#content #focus
+{
+  position: relative ;
+  text-align: center ;
+}
+
+#content #focus .title
+{
+  color: #15428B ;
+  font-size: 1.2em;
+  font-weight: bold;
+  padding: 10px 0 10px;
+}
+
+#content #focus .overlay
+{
+  /** NOTE: Not best way to do this, text might overflow and cause scollbar **/
+  height: 125px;
+  margin-bottom: 10px ;
+  padding: 0 50px ;
+  overflow: auto;
+  text-align: left ;
+  position: absolute ;
+  bottom: 0 ;
+  left: 0;
+  right: 0;
+  background-color: #fff ;
+  background-color: rgba(255, 255, 255, 0.8) ;
+  border-top: 1px solid #CCC ;
+  border-bottom: 1px solid #CCC ;
+  transition: background-color 0.5s ease;
+  -o-transition: background-color 0.5s ease;
+  -ms-transition: background-color 0.5s ease;
+  -moz-transition: background-color 0.5s ease;
+  -webkit-transition: background-color 0.5s ease;
+}
+
+#content #focus:hover .overlay
+{
+  background-color: #FFF ;
+}
+
+/** Slider styles **/
+#slider
+{
+  display: table ;
+  margin: 0 auto ;
+  overflow: auto;
+  text-align: center;
+}
+
+#slider i
+{
+  color: #AAA ;
+  float: left ;
+  cursor: pointer;
+}
+
+#slider ul#thumbnails
+{
+  float: left ;
+  list-style: none ;
+  margin: 0 10px ;
+  padding: 0 ;
+}
+
+#slider ul#thumbnails li
+{
+  float: left ;
+  margin-right: 5px ;
+}
+
+#slider ul#thumbnails a
+{
+  display: block ;
+  text-decoration: none ;
+  position: relative;
+}
+#slider ul#thumbnails a div.caption
+{
+  font-size: 0.6em;
+  width: 64px;
+  position: absolute;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+#slider ul#thumbnails a.active
+{
+  border-bottom: 2px solid;
+}
+
+/** Two column style boxes on splash page */
+.highlight
+{
+  box-sizing: border-box ;
+  -o-box-sizing: border-box ;
+  -ie-box-sizing: border-box ;
+  -moz-box-sizing: border-box ;
+  -webkit-box-sizing: border-box ;
+  float: left ;
+  padding: 10px ;
+  width: 50% ;
+}
+
+.highlight .title a
+{
+  color: #15428B;
+  text-decoration: none;
+}
+
+/** Shared styles for What's New and Events (blocks and pages) **/
+#whats-new .title,
+#events .title
+{
+  margin-top: 15px;
+  color: #15428B ;
+  font-family: 'Montserrat', sans-serif ;
+  font-size: 1.25em ;
+  text-align: center ;
+  text-transform: uppercase ;
+}
+
+#whats-new .title i,
+#events .title i
+{
+  margin-right: 5px ;
+}
+
+#whats-new ul,
+#events ul,
+ul.options
+{
+  list-style: none ;
+  margin-top: 20px;
+}
+
+.more-link
+{
+  text-align: right;
+}
+
+/** What's New styles **/
+.news
+{
+  margin-bottom: 10px;
+}
+
+.highlight .event .description,
+.highlight .news .description
+{
+  font-family: "Open Sans Condensed", sans-serif;
+  text-align: justify;
+}
+
+.highlight .news .date
+{
+  text-align: right;
+}
+
+.news .date
+{
+  font-size: 0.8em;
+  font-style: italic;
+  color: #15428B;
+}
+
+/** Events styles **/
+.event
+{
+  margin-bottom: 10px ;
+}
+
+.event .date
+{
+  color: #15428B ;
+  font-family: 'Open Sans', sans-serif ;
+  font-size: 1.25em ;
+  line-height: 1.25em ;
+  font-weight: bold;
+}
+
+.event .description
+{
+  font-size: 1em ;
+  padding-left: 7px;
+}
+
+/** Footer **/
+footer
+{
+  text-align: center;
+  font-size: 0.8em;
+  background-color: #e6e6f3;
+  background-color: rgba(240, 240, 250, 0.75);
+  width: 100%;
+}
+footer .inner
+{
+  background: url("../images/footerPalette.png") top left no-repeat;
+  padding-top: 10px;
+}
+
+footer .col1
+{
+  float: left;
+}
+
+footer .col1 ul
+{
+  display: inline-block;
+  vertical-align: top;
+  text-align: left;
+  padding: 0;
+  margin: 0 10px;
+  list-style: none;
+}
+
+footer .col2
+{
+  float: right;
+  padding-right: 5px;
+}
+footer .col2 img
+{
+  vertical-align: middle;
+}
+
+/**
+ * General styles 
+ `**/
+h1
+{
+  color: #15428B ;
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase ;
+}
+
+h1.title
+{
+  text-align: center;
+  margin: 20px auto 5px;
+}
+
+p
+{
+  margin: 10px auto;
+}
+
+.bold
+{
+  font-weight: bold ;
+}
+
+.center
+{
+  display: table ;
+  margin: 100px auto ;
+}
+
+.button
+{
+  background-color: #CCC ;
+  border: 1px solid #AAA ;
+  color: #FFF ;
+  font-family: 'Montserrat', sans-serif ;
+  font-size: 1.25em ;
+  padding: 5px 20px ;
+  /*text-shadow: 0 1px 1px #15428B ;*/
+}
+
+a:link,
+a:visited
+{
+  color: #1861d6;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  -o-transition: color 0.3s ease;
+  -ms-transition: color 0.3s ease;
+  -moz-transition: color 0.3s ease;
+  -webkit-transition: color 0.3s ease;
+}
+
+a:hover,
+a:active
+{
+  color: #15428b;
+  /*text-shadow: 0 0 10px;*/
+}
+

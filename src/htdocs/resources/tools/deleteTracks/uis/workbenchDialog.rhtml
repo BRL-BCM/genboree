@@ -1,0 +1,129 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  dbUri = dbApiHelper.extractPureUri(@inputs[0])
+  trkHash = @settings['trkHash']
+  trkArray = []
+  editableTrk = false
+  trkList = []
+  rowKeyArray = []
+  trkHash.keys.sort { |aa, bb|
+                      aa.downcase <=> bb.downcase
+                    }.each {|trk|
+    editable = trkHash[trk] ? "Yes" : "No. (Template Track. Protected)"
+    if(editable != "Yes")
+      type = trkHash[trk] ? true : false
+      subtype = trkHash[trk] ? true : false
+      trkArray << [ { 'name' => {:value => trk, :checkbox => false } }, { 'editable' => { :value => editable, :checkbox => false } }, { 'delete' => { :value => "", :checkbox => false } } ]
+      rowKeyArray << trk
+    end
+  }
+  trkHash.keys.sort { |aa, bb|
+                      aa.downcase <=> bb.downcase
+                    }.each {|trk|
+    editable = trkHash[trk] ? "Yes" : "No. (Template Track. Protected)"
+    if(editable == "Yes")
+      editableTrk = true
+      trkList << trk
+      type = trkHash[trk] ? true : false
+      subtype = trkHash[trk] ? true : false
+      trkArray << [ { 'name' => {:value => trk, :checkbox => false } }, { 'editable' => { :value => editable, :checkbox => false } }, { 'delete' => { :value => "", :checkbox => true } } ]
+      rowKeyArray << trk
+    end
+  }
+  width = 700
+  height = (editableTrk ? 550 : 200)
+  height = 350 if(trkList.size < 8 and editableTrk)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will allow you to delete existing tracks in Genboree.
+          You can either drag a track class or a database (to delete all tracks within that class/database) or drag tracks individually into &quot;Input Data&quot;.
+          <br>&nbsp;<br>
+          Note that ALL the tracks should come from the same database and the tool cannot be used to delete tracks on another host.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+
+  <%
+    if(editableTrk)
+  %>
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dbUri} )
+      })
+    %>
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Delete",
+        :widgets =>
+        [
+          { :id => "trkArray", :label => "", :labelWidth => "5px", :rowKeys => rowKeyArray, :type => :tabularCheckboxSection, :rows => trkArray,
+          :headerRow => ['Track Name', 'Can Delete?', 'Delete'], :fontSize => '12px', :noWrap => true, :paddingTop => "7px", :valign => "middle", :addRowColor => true},
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'trkArray'}
+        ]
+      })
+
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :submit, :value => "Delete" }, { :type => :cancel} ]
+        })
+    %>
+    </form>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO TRACKS:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "Your list of selected track(s) does not contain any deletable tracks. Please select at least one deletable track (non reference track) and launch the tool again."
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolOverview,
+        { :toolOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

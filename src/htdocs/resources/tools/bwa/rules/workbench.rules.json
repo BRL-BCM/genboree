@@ -1,0 +1,47 @@
+{
+  "inputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/files/entityList/",
+        0,
+        1
+      ],
+      [
+        "/file/",
+        0,
+        2
+      ],
+      [
+        "/files/",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Study Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

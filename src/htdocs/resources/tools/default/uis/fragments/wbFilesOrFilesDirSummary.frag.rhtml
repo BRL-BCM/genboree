@@ -1,0 +1,57 @@
+<%
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+
+  @fileFolderList = [ @fileList ] unless(@fileList.is_a?(Array) or @fileList.nil?)
+  unless(@fileFolderList.nil?)
+    # Create URI helpers we'll need
+    dbApiUriHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new(false, false) # assert we won't need a dbu or genbConf (faster if not needed)
+    fileApiUriHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new(false, false) # assert we won't need a dbu or genbConf (faster if not needed)
+    # Collect subdirs by database
+    subdirsByDb = Hash.new { |hh,kk| hh[kk] = [] }
+    @fileFolderList.each { |fileUri|
+      dbName = dbApiUriHelper.extractName(fileUri)
+      subdir = fileApiUriHelper.subdir(fileUri)
+      $stderr.puts "subdir: #{subdir.inspect}"
+      subdir << "#{fileApiUriHelper.extractName(fileUri)}" if(subdir == '')
+      subdirsByDb[dbName] << subdir
+    }
+  end
+%>
+<table width="100%">
+<tr>
+  <th width="25%">Database</th>
+  <th width="74%">File/Folder</th>
+</tr>
+<%  if(@fileFolderList.nil? or @fileFolderList.empty?) %>
+    <tr>
+      <td><i>n/a</i></td>
+      <td class="explain"><i>[ None selected ]</i></td>
+    </tr>
+<%
+    else
+      subdirsByDb.keys.sort { |aa,bb| aa.downcase <=> bb.downcase }.each { |dbName|
+        subsubdirsForDb = subdirsByDb[dbName].sort { |aa,bb| aa.downcase <=> bb.downcase }
+%>
+        
+        
+<%
+          subsubdirsForDb.each_index { |ii|
+            subdir = subsubdirsForDb[ii].chomp('?')
+%>
+            <tr>
+<%
+            if(ii == 0)
+%>
+                 <td width="25%" rowspan="<%= (subsubdirsForDb.empty? ? 1 : subsubdirsForDb.size) %>" ><i><%== CGI.unescape(dbName) %></i></td>
+<%
+            end
+%> 
+              <td width="74%" >&raquo; <i><%== CGI.unescape(subdir) %></i></td>
+            </tr>
+<%
+          }
+      }
+    end
+%>
+</table>

@@ -1,0 +1,22 @@
+RUNNING LFF Generator -- 2008-02-19 @ 15:35:50 (1203456950)
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/lffGenerator.rb --ampliconFileName Amplicon_File.txt.gz_phase2.txt_sharedGenes.txt.gz --type BCM --ampliconSubtype amplicon --ampliconClassName BCM-Report-Data --ampliconLffFileName amplicons.lff --primerSubtype primer --primerClassName BCM-Report-Data --primerLffFileName primers.lff --roiFileName ROI_File.txt.gz_phase2.txt_sharedGenes.txt.gz --roiSubtype roi --roiClassName BCM-Report-Data --roiLffFileName roi.lff --roiSequencingLffFileName roiSequencing.lff --roiSequencingFileName ROI_seq_file_20080208.txt.gz_phase2.txt_sharedGenes.txt.gz --roiSeqclassName BCM-Report-Data --ampliconSequencingFileName Amplicon_Sequencing_File.txt.gz --ampliconSeqLffFileName ampliconSeq.lff --ampliconSeqclassName BCM-Report-Data
+RUNNING Mapping Generator -- 2008-02-19 @ 15:35:50 (1203456950)
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/mappingFilesGenerator.rb --ampliconLffFileName amplicons.lff --roiLffFileName roi.lff --ampliconToRoiFileName ampliconToRoi.map --ampliconToRoiMissingFileName missingA2Roi.missing --ampliconToRoiMultipleFileName dupA2Roi.duplicated --lociLffFileName phase2SharedLoci.lff --roiToLociFileName roiToLoci.map --roiToLociMissingFileName missingR2Loci.missing --roiToLociMultipleFileName dupR2Loci.duplicated --ampliconToLociFileName ampliconToLoci.map --ampliconToLociMissingFileName missingA2Loci.missing --ampliconToLociMultipleFileName dupA2Loci.duplicated --roiSequencingFileName ROI_seq_file_20080208.txt.gz_phase2.txt_sharedGenes.txt.gz --roiTableFile roiToCoverage.map --sampleFileName Sample_File.txt.gz
+RUNNING Sample Stats Generator -- 2008-02-19 @ 15:35:50 (1203456950)
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/sampleStats.rb --sampleSequencingFileName Sample_Sequencing_File.txt.gz_phase2.txt_sharedGenes.txt.gz --ampliconFileName Amplicon_File.txt.gz_phase2.txt_sharedGenes.txt.gz --sampleFileName Sample_File.txt.gz --sampleAmpliconTableFile sampleAmpliconTable.table --totalAmpliconFile ampliconCompletion.summary --totalSampleFile sampleCompletion.summary --sampleCompletionPrefix sampleCompletion --sampleCompletionSubFix report --columnSampleCompletionNumber 3 --numberOfColumnsSampleCompletion 4 --sampleAmpliconCompletionPrefix ampliconCompletion --sampleAmpliconCompletionSubFix report --columnAmpliconSampleCompletionNumber 3 --numberOfColumnsSampleAmpliconCompletion 4
+RUNNING LFF Modifiers  -- 2008-02-19 @ 15:35:50 (1203456950)
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/modifyLffs.rb --tabDelimitedFileName roiToLoci.map --lffFileName roi.lff --outPutFileName temp.lff
+mv temp.lff roi.lff
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/modifyLffs.rb --tabDelimitedFileName roiToCoverage.map --lffFileName roi.lff --outPutFileName temp.lff
+mv temp.lff roi.lff
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/modifyLffs.rb --tabDelimitedFileName ampliconToRoi.map --lffFileName amplicons.lff --outPutFileName temp.lff
+mv temp.lff amplicons.lff
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/modifyLffs.rb --tabDelimitedFileName ampliconToLoci.map --lffFileName amplicons.lff --outPutFileName temp.lff
+mv temp.lff amplicons.lff
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/modifyLffs.rb --tabDelimitedFileName ampliconCompletion.summary --lffFileName amplicons.lff --outPutFileName temp.lff
+mv temp.lff amplicons.lff
+RUNNING GAPS Generator  ---- 
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/gapFileGenerator.rb --roiLffFileName roi.lff --gapLffFile gaps.lff --attributeName perc1xCoverage --attributeThreshold 0.001 --subtype gaps
+RUNNING SUMMARY Generator  ---- 2008-02-19 @ 15:35:50 (1203456950)
+/usr/local/brl/local/apache/ruby/brl/fileFormats/tcgaParsers/summaryGenerator.rb --roiLffFileName roi.lff --classType CountPerCoverage --attNameToUseForGrouping geneName --geneCoverageFileName geneCoverage.summary --ampliconLffFileName amplicons.lff --sampleFileName Sample_File.txt.gz --geneCompletionClassType CountPerAmpliconCompletion --geneCompletionFileName geneCompletion.summary --fileCompletionPrefix geneCompletion --fileCompletionSubFix report --columnCompletionNumber 4 --numberOfColumnsCompletion 5 --fileOneXCoveragePrefix geneOneXCoverage --fileTwoXCoveragePrefix geneTwoXCoverage --fileCoverageSubFix report --numberOfColumnsCoverage 5 --columnOneXCoverageNumber 3 --columnTwoXCoverageNumber 4
+The End  --2008-02-19 @ 15:35:51 (1203456951)

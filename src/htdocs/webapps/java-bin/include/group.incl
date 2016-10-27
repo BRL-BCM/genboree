@@ -1,0 +1,233 @@
+<%@ page import="java.util.Vector,
+                 org.genboree.dbaccess.GenboreeGroup,
+                 org.genboree.dbaccess.JSPErrorHandler,
+                 java.util.Hashtable,
+                 java.sql.SQLException,
+                 java.sql.Connection,
+                 java.beans.Statement,
+                 java.sql.ResultSet,
+                 java.sql.PreparedStatement,
+                 org.genboree.util.*,
+                 java.util.ArrayList"%>
+<%@ include file="userinfo.incl" %>
+<%
+  boolean isAdmin = false ;
+  Vector vRw = new Vector() ;
+  for( int i=0 ; i<grps.length ; i++ )
+  {
+    String groupId = grps[i].getGroupId() ;
+ 		vRw.addElement( grps[i] ) ;
+ 	}
+
+ 	GenboreeGroup[] rwGrps = new GenboreeGroup[ vRw.size() ] ;
+  if(vRw.size() <= 0)
+  {
+    GenboreeUtils.sendRedirect(request,response,  "/java-bin/index.jsp" ) ;
+  	return ;
+  }
+
+  vRw.copyInto( rwGrps ) ;
+ 	GenboreeGroup grp = rwGrps[0] ;
+
+ 	String groupId = request.getParameter( "group_id" ) ;
+
+ 	boolean grp_hard = true ;
+  if(groupId == null)
+  {
+  	groupId = SessionManager.getSessionGroupId(mys) ;
+ 		grp_hard = false ;
+ 	}
+
+ 	if(groupId == null || groupId.compareTo("#")==0 )
+  {
+    groupId = grp.getGroupId() ;
+  }
+
+  String currGroupRoleCode = null ;
+  if(groupId != null)
+  {
+    int userIdInt = Util.parseInt(userInfo[2], -1) ;
+    int groupIdInt = Util.parseInt(groupId, -1) ;
+    currGroupRoleCode = GenboreeUtils.fetchGrpAccess(userIdInt, groupIdInt, db) ;
+  }
+  System.err.println("DEBUG: currGroupRoleCode: " + currGroupRoleCode) ;
+
+  ArrayList  subscribeOnlyGroupIds = new ArrayList () ;
+  for(int i=0 ; i<grps.length ; i++)
+  {
+    String tempgroupId = grps[i].getGroupId() ;
+    if( myself.isReadOnlyGroup(tempgroupId) )
+    {
+      subscribeOnlyGroupIds.add(grps[i].getGroupId()) ;
+    }
+  }
+
+  for(int  i=0 ; i<rwGrps.length ; i++ )
+  {
+  	GenboreeGroup cgrp = rwGrps[i] ;
+    if( cgrp.getRefseqs().length == 0 )
+    {
+  		cgrp.fetchRefseqs( db ) ;
+  		if( JSPErrorHandler.checkErrors(request, response, db, mys) )
+      {
+        return ;
+      }
+  	}
+    // set current group
+    if(cgrp.getGroupId().equals(groupId))
+    {
+      grp = cgrp ;
+    }
+  }
+
+  // check user access. Must have o (owner/administrator)
+  // OLD CODE WAS WRONG...admin == not subscriber? wtf?
+  if(currGroupRoleCode != null && currGroupRoleCode.equals("o"))
+  {
+    isAdmin = true ;
+  }
+
+  String rseq_id = request.getParameter( "rseq_id") ;
+  if(rseq_id == null)
+  {
+    rseq_id = SessionManager.getSessionDatabaseId(mys) ;
+  }
+
+  if(rseq_id != null && !grp_hard)
+  {
+  	GenboreeGroup oldGrp = grp ;
+    if(grp!=null && !grp.belongsTo(rseq_id))
+    {
+      grp = null ;
+    }
+    if(grp == null)
+    {
+      for(int i=0 ; i<rwGrps.length ; i++)
+      {
+        GenboreeGroup cgrp = rwGrps[i] ;
+        if(cgrp.belongsTo(rseq_id))
+        {
+          grp = cgrp ;
+          groupId = grp.getGroupId() ;
+          break ;
+        }
+      }
+    }
+    if( grp == null )
+    {
+      grp = oldGrp ;
+    }
+  }
+
+  GenboreeGroup pubGrp = (GenboreeGroup) mys.getAttribute( "public_group" ) ;
+  if( pubGrp == null )
+  {
+    pubGrp = new GenboreeGroup() ;
+    pubGrp.setGroupName( "Public" ) ;
+    if( pubGrp.fetchByName(db) )
+    {
+      pubGrp.fetchRefseqs( db ) ;
+      mys.setAttribute( "public_group", pubGrp ) ;
+    }
+    else
+    {
+      pubGrp = null ;
+    }
+    if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+    {
+      return ;
+    }
+  }
+
+  grp.getUsers( db ) ;
+  if(JSPErrorHandler.checkErrors(request,response, db,mys))
+  {
+    return ;
+  }
+
+  mys.setAttribute(Constants.SESSION_GROUP_ID, groupId ) ;
+  // Force student=2 (Honey Bee - style multitrack databases)
+  grp.setStudent( 2 ) ;
+
+  int igroupId = -1 ;
+  try
+  {
+    igroupId = Integer.parseInt(groupId) ;
+  }
+  catch(NumberFormatException e)
+  {
+    e.printStackTrace() ;
+  }
+
+  int userId = -1 ;
+  try
+  {
+      userId = Integer.parseInt(myself.getUserId()) ;
+  }
+  catch(NumberFormatException e)
+  {
+    e.printStackTrace() ;
+  }
+
+  boolean i_am_owner = is_admin || grp.isOwner(myself.getUserId()) ;
+  String myGrpAccess = GenboreeUtils.fetchGrpAccess(userId, igroupId, db ) ;
+
+  int acs_level = 0 ;
+  if(myGrpAccess == null)
+  {
+    myGrpAccess ="Subscriber" ;
+  }
+  else if(myGrpAccess.compareTo("o") ==0)
+  {
+    acs_level = 2 ;
+    myGrpAccess ="Administrator" ;
+  }
+  else if(myGrpAccess.compareTo("w") ==0)
+  {
+    acs_level = 1 ;
+    myGrpAccess ="Author" ;
+  }
+  else if(myGrpAccess.compareTo("r") ==0)
+  {
+    acs_level = 0 ;
+    myGrpAccess ="Subscriber" ;
+  }
+
+    Refseq[] rseqs = Refseq.fetchAll( db, grps ) ;
+    if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+    {
+      return ;
+    }
+    if(rseqs == null)
+    {
+      rseqs = new Refseq[0] ;
+    }
+
+  if(rseqs == null)
+  {
+    rseqs = new Refseq[0] ;
+  }
+
+  Hashtable htrs = new Hashtable() ;
+  for(int  i=0 ; i<rseqs.length ; i++ )
+  {
+    htrs.put( rseqs[i].getRefseqName().toLowerCase(), rseqs[i] ) ;
+  }
+
+  String[] myrs = grp.getRefseqs() ;
+
+  Vector v0 = new Vector() ;
+  for(int  i=0 ; i<rseqs.length ; i++ )
+  {
+    Refseq rs = rseqs[i] ;
+    if( grp.belongsTo(rs.getRefSeqId()) )
+    {
+      v0.addElement( rs ) ;
+    }
+  }
+  rseqs = new Refseq[ v0.size() ] ;
+  v0.copyInto( rseqs ) ;
+  // Clean up vector
+  v0.clear() ;
+  v0 = null ;
+%>

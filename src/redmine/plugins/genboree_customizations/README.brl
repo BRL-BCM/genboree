@@ -1,0 +1,28 @@
+
+A. To set up customization of the email subject prefix:
+
+You must add the following settings key to the Redmine's config/settings.yml :
+
+emails_subject_prefix:
+        default: ''
+emails_reply_to:
+        default: ''
+
+Otherwise it will fail because it doesn't know about this setting.
+
+
+B. DO NOT set this to other than '' (empty string)
+
+This is NOT where you set the default. This is where you *tell* Redmine about what settings
+exist. Redmine saves the ACTUAL SETTINGS in a MySQL TABLE.
+
+
+C. Setting the "Email subject prefix" via the UI
+
+This plugin adds a new form field to your Redmine Settings page. To configure:
+
+
+  Administration -> Settings -> [Email notifications] -> [Email subject prefix] -> [Save]
+
+
+

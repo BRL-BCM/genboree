@@ -1,0 +1,12 @@
+[
+ {
+    "text" : "Build Bowtie Index",
+    "tooltip" : "Build a bowtie2 index from a set of DNA Sequences in FASTA format using bowtie2-build.",
+    "idStr" : "indexBowtie"
+  },
+  {
+    "text": "Build BWA Index",
+    "tooltip" : "Build BWA index from a set of DNA Sequences in FASTA format using bwa index option.",
+    "idStr": "indexBwa"
+  }
+]

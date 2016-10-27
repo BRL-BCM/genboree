@@ -1,0 +1,324 @@
+
+<%
+  if(@settings['summaryResponse'].nil? or @settings['summaryResponse'].empty?)
+%>
+    <div class="wbDialog" id="wbDialogAcceptMsgDiv" style="height:auto; width:auto;">
+      <div class="wbToolTitleInDialog wbSubmitMsg">
+        <%= @context['toolTitle'] %>
+      </div>
+      <div class="wbDialogFeedback wbDialogSuccess">
+        <br/>
+        <br/>
+        No Jobs Found
+        <br/>
+        <br/>
+        If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+      </div>
+    </div>
+<%
+  else
+%>
+  <%
+    buff = %Q^<div id="jobBtnsDiv" name="jobBtnsDiv">^
+    buff << %Q^<table><tr>^
+    buff << %Q^<td><div id="jobRefreshDiv" name='jobRefreshDiv'></div></td>^
+    buff << %Q^<td><div id="jobDownloadDiv" name='jobDownloadDiv'"></div></td>^
+    buff << %Q^</tr></table>^
+    buff << %Q^</div>^
+    buff << %Q^<div id="jobSummaryDiv" name='jobSummaryDiv' style="height:auto; width:840px;"></div>^
+  %>
+  <%= buff %>
+  <style type="text/css">
+    .x-grid3-row td,
+    .x-grid3-summary-row td,
+    .x-grid3-cell-text,
+    .x-grid3-hd-text,
+    .x-grid3-hd,
+    .x-grid3-row,
+    .x-grid-cell,
+    .x-grid-cell-inner *,
+    .x-unselectable,
+    .x-unselectable *
+    {
+      -moz-user-select: inherit;
+      -khtml-user-select: text;
+      -webkit-user-select: text;
+      -o-user-select: inherit ;
+      -ms-user-select: text ;
+    }
+  }
+  </style>
+  <script type="text/javascript">
+    function loadGrid(summaryResponse, parseJson)
+    {
+      var respArr ;
+      if(parseJson)
+      {
+        var respArr = JSON.parse(summaryResponse) ;
+      }
+      else
+      {
+        var respArr = summaryResponse ;
+      }
+      var ii ;
+      var jobData = [] ;
+      var i, len ;
+      var arrowPattern = /\-\>/ ;
+      var tool ;
+      var min ;
+      var status ;
+      var timeInCurrentStatus ;
+      for(ii = 0; ii < respArr.length; ii ++)
+      {
+        var submitDateObj = new Date(respArr[ii]['submitDate'])  ;
+        var completedDateObj = new Date(respArr[ii]['completedDate'])  ;
+        var submitDateStr = submitDateObj.format('Y/h/d H:i:s') ;
+        var completedDateStr ;
+        if(completedDateObj.getFullYear() != '1969')
+        {
+          completedDateStr = completedDateObj.format('Y/h/d H:i:s') ;
+        }
+        else /* Year is 1969. This indicates that the job is still in process*/
+        {
+          completedDateStr = '-' ;
+        }
+        /* find and replace '->' with &rarr since it looks better in the grid */
+        if(respArr[ii]['tool'].match(arrowPattern))
+        {
+          tool = respArr[ii]['tool'].replace(arrowPattern, '&rarr;') ;
+        }
+        else
+        {
+          tool = respArr[ii]['tool'] ;
+        }
+        status = respArr[ii]['status'] ;
+        if (respArr[ii]['timeInCurrentStatus'] == 'N/A') {
+          timeInCurrentStatus = "N/A"
+        }
+        else
+        {
+          timeInCurrentStatus = secondsToString(respArr[ii]['timeInCurrentStatus']) ;
+        }
+        jobData.push([respArr[ii]['jobName'], tool, submitDateStr, completedDateStr, respArr[ii]['status'], timeInCurrentStatus ]) ;
+      }
+      var gridHeight = 45 * respArr.length ;
+      if(gridHeight > 250)
+      {
+        gridHeight = 250 ;
+      }
+      if(gridHeight < 100)
+      {
+        gridHeight = 90 ;
+      }
+      var jobSummaryStore = new Ext.data.SimpleStore(
+      {
+        id: 'jobSummaryStore',
+        fields: [
+          {name: 'jobName'},
+          {name: 'tool'},
+          {name: 'submitDate'},
+          {name: 'completedDate'},
+          {name: 'status'},
+          {name: 'timeInCurrentStatus'}
+
+        ],
+        data: jobData
+      });
+      var statusHash = new Hash() ;
+      statusHash.set('entered', 'wbStatusEntered') ;
+      statusHash.set('submitted', 'wbStatusSubmitted') ;
+      statusHash.set('running', 'wbStatusRunning') ;
+      statusHash.set('submitted', 'wbStatusSubmitted') ;
+      statusHash.set('completed', 'wbStatusCompleted') ;
+      statusHash.set('failed', 'wbStatusFailed') ;
+      statusHash.set('wait4deps', 'wbStatusWait4Deps') ;
+      statusHash.set('partialSuccess', 'wbStatusPartialSuccess') ;
+      statusHash.set('canceled', 'wbStatusCanceled') ;
+      statusHash.set('killed', 'wbStatusKilled') ;
+      var grid = new Ext.grid.GridPanel({
+        store: jobSummaryStore,
+        stateful: false,
+        id: 'jobSummaryGridPanel',
+        columns: [
+          {header: 'Job Name', dataIndex: 'jobName', width: 250, sortable: true},
+          {header: 'Tool', dataIndex: 'tool', width: 130, sortable: true},
+          {header: 'Submit Date', dataIndex: 'submitDate', width: 110, sortable: true},
+          {header: 'Completed Date', dataIndex: 'completedDate', width: 110, sortable: true},
+          {header: 'Status', dataIndex: 'status', width: 80, sortable: true,
+            renderer: function(value, metadata)
+            {
+              metadata.css = statusHash.get(value) ;
+              return value ;
+            }
+          },
+          {header: 'Time Spent', dataIndex: 'timeInCurrentStatus', width: 140, sortable: true}
+        ],
+        stripeRows: true,
+        height: gridHeight,
+        title:'<center>Jobs Summary Report</center>'
+      });
+      var detailsContainer = new Ext.Container(
+      {
+        id: "jobSummaryGridContainer",
+        layout: 'fit',
+        renderTo: 'jobSummaryDiv',
+        monitorResize: true,
+        items: [
+          grid
+        ]
+      }) ;
+    }
+
+    function secondsToString(seconds)
+    {
+      var numdays = Math.floor((seconds % 31536000) / 86400);
+      var numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+      var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+      /* var numseconds = (((seconds % 31536000) % 86400) % 3600) % 60; */
+      /* return numdays + " days " + numhours + " hours " + numminutes + " min " + numseconds + " sec"; */
+      return numdays + " days " + numhours + " hours " + numminutes + " min " ;
+    }
+
+    function refreshSummary(tools, dateRange, sortOrder, grouping)
+    {
+      var dateStr = "" ;
+      var sortByCols = "" ;
+      if(dateRange != ',')
+      {
+        dateStr = '&entryDateRange=' + dateRange ;
+      }
+      if(grouping == 'none')
+      {
+        sortByCols = "entryDate" ;
+      }
+      else
+      {
+        sortByCols = grouping + ',' + 'entryDate' ;
+      }
+      var resourcePath = 'http://<%=@genbConf.machineName%>/REST/v1/jobs?' + 'detailed=summary&toolIdStrs=' + tools + '&sortBy=' + sortOrder + '&sortByCols=' + sortByCols + dateStr ;
+      Ext.Ajax.request(
+      {
+        url: '/java-bin/apiCaller.jsp',
+        params:
+        {
+          rsrcPath: resourcePath ,
+          apiMethod: 'GET'
+        },
+        success: reloadGrid,
+        failure: showFailure
+      }) ;
+    }
+
+    function reloadGrid(transport)
+    {
+      var respObj = Ext.util.JSON.decode(transport.responseText) ;
+      var respArr = respObj.data ;
+      var ii ;
+      var jobData = [] ;
+      var i, len ;
+      var tool ;
+      var arrowPattern = /\-\>/ ;
+      var timeInCurrentStatus ;
+      for(ii = 0; ii < respArr.length; ii ++)
+      {
+        var submitDateObj = new Date(respArr[ii]['submitDate'])  ;
+        var completedDateObj = new Date(respArr[ii]['completedDate'])  ;
+        var submitDateStr = submitDateObj.format('Y/h/d H:i:s') ;
+        var completedDateStr ;
+        if(completedDateObj.getFullYear() != '1969')
+        {
+          completedDateStr = completedDateObj.format('Y/h/d H:i:s') ;
+        }
+        else /* Year is 1969. This indicates that the job is still in process*/
+        {
+          completedDateStr = '-' ;
+        }
+        if(respArr[ii]['tool'].match(arrowPattern))
+        {
+          tool = respArr[ii]['tool'].replace(arrowPattern, '&rarr;') ;
+        }
+        else
+        {
+          tool = respArr[ii]['tool'] ;
+        }
+        if (respArr[ii]['timeInCurrentStatus'] == 'N/A')
+        {
+          timeInCurrentStatus = "N/A"
+        }
+        else
+        {
+          timeInCurrentStatus = secondsToString(respArr[ii]['timeInCurrentStatus']) ;
+        }
+        jobData.push([respArr[ii]['jobName'], tool, submitDateStr, completedDateStr, respArr[ii]['status'], timeInCurrentStatus ]) ;
+      }
+      Ext.ComponentMgr.get('jobSummaryGridPanel').store.loadData(jobData, false) ;
+    }
+
+    function showFailure(response)
+    {
+      displayFailureDialog(response) ;
+    }
+
+    function loadRefreshBtn()
+    {
+      var refreshBtn = new Ext.Button(
+        {
+          text: "Refresh",
+          id: 'jobRefreshBtn',
+          renderTo: 'jobRefreshDiv',
+          handler: function() {
+            refreshSummary('<%=@settings['toolIdStr']%>', '<%=@settings['entryDateRange']%>','<%=@settings['sortOrder']%>','<%=@settings['grouping']%>')
+          }
+        }
+      ) ;
+      refreshBtn.setTooltip('Click this button to refresh the job summary report.') ;
+      refreshBtn.addClass('x-btn-text-icon') ;
+      refreshBtn.setIcon('/images/silk/arrow_refresh.png') ;
+    }
+
+    function loadDownloadBtn(tools, dateRange, sortOrder, grouping)
+    {
+      var dateStr = "" ;
+      var sortByCols = "" ;
+      if(dateRange != ',')
+      {
+        dateStr = '&entryDateRange=' + dateRange ;
+      }
+      if(grouping == 'none')
+      {
+        sortByCols = "entryDate" ;
+      }
+      else
+      {
+        sortByCols = grouping + ',' + 'entryDate' ;
+      }
+      var resourcePath = 'http://<%=@genbConf.machineName%>/REST/v1/jobs?' + 'format=tabbed&detailed=summary&toolIdStrs=' + tools + '&sortBy=' + sortOrder + '&sortByCols=' + sortByCols + dateStr ;
+      var downloadBtn = new Ext.Button(
+        {
+          text: "Download",
+          id: 'jobDownloadBtn',
+          renderTo: 'jobDownloadDiv',
+          handler: function() {
+            /* Use a hidden iframe to initialize the download of the file. */
+            Ext.DomHelper.append(document.body, {
+              tag: 'iframe',
+              frameBorder: 0,
+              width: 0,
+              height: 0,
+              css: 'display:none;visibility:hidden;height:1px;',
+              src: '/java-bin/apiCaller.jsp?jobSummary=true&rsrcPath='+encodeURIComponent(resourcePath)
+            });
+          }
+        }
+      ) ;
+      downloadBtn.setTooltip('Click this button to download the job summary report in a tab-delimited format.') ;
+      downloadBtn.addClass('x-btn-text-icon') ;
+      downloadBtn.setIcon('/images/download.png') ;
+    }
+    loadGrid('<%=@settings['summaryResponse']%>', true) ;
+    loadRefreshBtn() ;
+    loadDownloadBtn('<%=@settings['toolIdStr']%>', '<%=@settings['entryDateRange']%>','<%=@settings['sortOrder']%>','<%=@settings['grouping']%>') ;
+  </script>
+<%
+  end
+%>

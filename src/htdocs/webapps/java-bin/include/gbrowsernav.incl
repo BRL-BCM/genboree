@@ -1,0 +1,56 @@
+<%@ page import="org.genboree.util.Util"%>
+<%
+	    String __bkmkUrl =  "javascript:void(prompt('Use the URL below to share this page " +
+                          "with friends/colleagues','http://" + request.getHeader("host") + Util.htmlQuote(bkmkUrl) + "'));" ;
+
+	String[] __pubHrefs = { __bkmkUrl, "javascript:document.dnld.submit()"  };
+	String[] __pubLabs = { "Full&nbsp;URL", "Download" };
+	String[] __navHrefs2 = {
+		__bkmkUrl, "javascript:document.dnld.submit()",
+		"trackmgr.jsp?mode=Styles", "linkmgr.jsp", "trackmgr.jsp", "trackClassify.jsp"
+		};
+	String[] __navLabs2 = {
+		"Full&nbsp;URL", "Download",
+		"Style&nbsp;Setup", "Link&nbsp;Manager", "Track&nbsp;Manager", "Class&nbsp;Manager"
+		};
+
+	String[][] __ahrefs = null;
+	String[][] __alabs = null;
+	if( is_public )
+	{
+		__ahrefs = new String[1][];
+		__ahrefs[0] = __pubHrefs;
+		__alabs = new String[1][];
+		__alabs[0] = __pubLabs;
+	}
+	else
+	{
+		__ahrefs = new String[1][];
+		__ahrefs[0] = __navHrefs2;
+		__alabs = new String[1][];
+		__alabs[0] = __navLabs2;
+	}
+
+	for( int iTab=0; iTab<__ahrefs.length; iTab++ )
+	{
+		out.println( "<table border=\"0\" cellpadding=\"2\" cellspacing=\"4\"><tr>" );
+
+		if( iTab == __ahrefs.length - 1 && has_seq )
+		{
+			out.println( "<td class=\"nav\"><a href=\"javascript:getdna()\">GetDNA</a></td>" );
+		}
+
+		String[] __hrefs = __ahrefs[iTab];
+		String[] __labs = __alabs[iTab];
+        for(int _z=0; _z<__hrefs.length; _z++ )
+		{
+			boolean __is_hilit = false;
+			String __style = __is_hilit ? "nav_selected" : "nav";
+			String __f1 = __is_hilit ? "<font color=\"white\">" : "";
+			String __f2 = __is_hilit ? "</font>" : "";
+			out.println( "<td class=\""+__style+"\"><a href=\""+
+				__hrefs[_z]+"\">"+__f1+__labs[_z]+__f2+"</a></td>" );
+		}
+		out.println( "</tr></table>" );
+	}
+%>

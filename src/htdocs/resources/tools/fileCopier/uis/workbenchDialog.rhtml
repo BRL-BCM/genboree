@@ -1,0 +1,48 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 500px; height: 370px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "This tool will copy/move file(s) from one database (or Files Section) folder to another.
+        <br>&nbsp;<br>
+        Review that the correct file(s) are going to be copied/moved.
+        "
+      })
+  %>
+   <%# Input data help %>
+  <%=
+     renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "File Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database/Files:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "File(s): Copy or Move",
+      :widgets =>
+      [
+        { :name => "deleteSourceFilesRadio", :label => 'Copy Files?', :type => :radio, :checked => true, :value => "copy", :title => "Only copy. Do not remove file(s) from source."},
+        { :name => "deleteSourceFilesRadio", :label => 'Move Files?', :type => :radio, :value => "move", :title => "Copy to target database and remove file(s) from source."}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

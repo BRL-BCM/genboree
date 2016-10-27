@@ -1,0 +1,15 @@
+<%@ page import="org.genboree.util.Constants,
+                 org.genboree.util.GenboreeUtils"%>
+<%
+    String redir = pageName;
+    String redirUpfid =pageName + "?upfid=" + textid;
+    if (request.getParameter("upfid")!=null  && totalNumAnno>= Constants.GB_MIN_ANNO_FOR_DISPLAY_WARN && !proceedLargeGroup && request.getParameter("largeGrp")!= null) {
+       GenboreeUtils.sendRedirect(request, response, "/java-bin/" + redir2);
+    %>
+    <form name="backform" id="backform" action="<%=redir2%>" method="post"  >
+    </form>
+    <% }
+    else if (request.getParameter("upfid")!=null &&  request.getParameter("largeGrp")== null && totalNumAnno >= Constants.GB_MIN_ANNO_FOR_DISPLAY_WARN  )  {
+        redir = redirUpfid;
+    }
+%>

@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "erccFinalProcessing",
+    "releaseStatus": "release",
+    "version": "1.0.0"
+  },
+  "cluster": {
+    "ppn": 1,
+    "queue": "gb"
+  },
+  "ui": {
+    "label": "ERCC Final Processing",
+    "shortLabel": "ERCC Final Processing",
+    "groupAccessUri": null
+  }
+}

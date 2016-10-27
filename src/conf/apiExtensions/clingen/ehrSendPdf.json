@@ -1,0 +1,11 @@
+{
+  "rsrc" : {
+    "pathBase" : "/REST-ext/EHR/assets/files"
+  },
+  "records" : {
+    "host" : "localhost",
+    "grp"  : "EHR-API",
+    "kb"   : "EHR-API",
+    "coll" : "EhrSendPdf"
+  }
+}

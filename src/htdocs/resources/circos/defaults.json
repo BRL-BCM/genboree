@@ -1,0 +1,98 @@
+{
+  "plots" :
+  {
+    "background" : "yes",
+    "background_color" : "vlgrey",
+    "background_stroke_color" : "black",
+    "background_stroke_thickness" : 1,
+    "axis" : "no",
+    "axis_color" : "lgrey",
+    "axis_thickness" : 1,
+
+    "scatter" :
+    {
+      "glyph" : "circle",
+      "glyph_size" : 6,
+      "fill_color" : "black",
+      "stroke_color" : "black",
+      "stroke_thickness" : 1
+    },
+
+    "line" :
+    {
+      "thickness" : 2,
+      "color" : "black",
+      "max_gap" : "1u"
+    },
+
+    "histogram" :
+    {
+      "orientation" : "out",
+      "fill_under" : "no",
+      "fill_color" : "black",
+      "extend_bin" : "no",
+      "thickness" : 2,
+      "color" : "black",
+      "max_gap" : "1u"
+    },
+
+    "highlight" :
+    {
+      "fill_color" : "black",
+      "stroke_color" : "black",
+      "stroke_thickness" : 1
+    },
+
+    "link" :
+    {
+      "bezier_radius" : "0.5r",
+      "color" : "black",
+      "thickness" : 2
+    }
+  },
+
+  "axisBreaks" :
+  {
+    "spacing" : "2u",
+    "axis_break" : "yes",
+    "axis_break_style" : 2,
+    "axis_break_at_edge" : "yes",
+    "stroke_color" : "black",
+    "fill_color" : "black",
+    "styles" :
+    {
+      "1" :
+      {
+        "thickness" : "0.25r",
+        "stroke_thickness" : 2
+      },
+      "2" :
+      {
+        "thickness" : "2r",
+        "stroke_thickness" : 3
+      }
+    }
+  },
+
+  "tickMarks" :
+  {
+    "show_ticks" : "yes",
+    "show_tick_labels" : "yes",
+    "radius" : "dims(ideogram,radius_outer)",
+    "thickness" : "2p",
+    "color" : "black",
+    "show_label" : "yes",
+    "label_offset" : "0p",
+    "format" : "%d",
+    "tick_separation" : "3p",
+    "label_separation" : "3p"
+  },
+
+  "grid" :
+  {
+    "grid" : "no",
+    "grid_color" : "dgrey",
+    "grid_thickness" : "2p",
+    "show_grid" : "no"
+  }
+}

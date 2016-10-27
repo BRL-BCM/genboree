@@ -1,0 +1,259 @@
+Spark v1.0
+
+Author: Cydney Nielsen
+Last updated: November 4, 2010
+
+MANUAL
+
+1. OVERVIEW
+-----------
+
+1.1 TOOL DESCRIPTION
+
+Spark is a clustering and visualization tool that enables the interactive exploration of genome-wide data sets. Popular genome browsers display data along the genomic x-coordinate and organize each data sample as a distinct row or "track". While powerful for integrating diverse data types, this view is inherently limited to individual genomic loci and it can be difficult to obtain a global overview of the predominant data patterns.
+
+Our approach targets genomic regions of interest, such as transcriptional start sites or a user defined set of data enrichment peaks, and extracts a data matrix for each region. The matrix rows correspond to data samples and the columns map to genomic positions. These matrices are clustered and the summarized data for each cluster is visualized in an interactive display. 
+
+Selection of any cluster reveals a scrollable panel of the cluster's individual members, enabling the data for each individual region to be easily viewed. This approach utilizes data clusters as a high-level visual guide, while facilitating detailed inspection of individual regions. The detailed view links to existing genome browser displays to take advantage of their wealth of annotation and provide a richer biological context.
+
+1.2 WORKFLOW SUMMARY
+
+A. FILE PREPARATION: 
+
+To generate your own clusters, you need to assemble the following files: (i) data files, (ii) a file of region coordinates, and (iii) a properties.txt file that specifies which parameter values to use (see section on "INPUT FILES" below for details). 
+
+B. PREPROCESSING
+
+This first step of using the tool is performed on the command line and involves (i) indexing the input data files to enable fast retrieval of data from the regions of interest, and (ii) computing global statistics on each data sample to be used later for normalization. See the section on "OUTPUT FILES" for more details of the files generated in this process.
+
+C. CLUSTERING
+
+This second step of using the tool is also performed on the command line and applies k-means clustering in order to group the data from the specified regions of interest into k clusters. See the section on "OUTPUT FILES" for more details of the files generated in this process.
+
+D. INTERACTIVE VISUALIZATION
+
+The third and final step of using the tool involves the Graphical User Interface (GUI), which can be launched either from the software web page (http://www.bcgsc.ca/platform/bioinfo/software/spark) or on the command line. See details below in the "RUNNING THE TOOL" section. 
+
+
+2. RUNNING THE TOOL
+-------------------
+
+2.1 GETTING STARTED
+
+To get an initial impression of Spark's visualization interface:
+
+   1. Download and unzip the example clustering file: http://www.bcgsc.ca/downloads/spark/v1.0/data/example.zip
+   2. Launch Spark from a web browser: http://www.bcgsc.ca/downloads/spark/v1.0/start.jnlp
+   3. Use the "File:Open" menu to select the following directory: path_to_your_downloaded_files/example/analysis/hg18_tss_example_k4/
+
+This uses Java Web Start and you will be asked whether to allow unrestricted access to your computer (click 'Allow'). You should be prompted for a location where to store the application. An icon should then appear at that location and you can use it to relaunch the application at a later time (no longer need to launch from the original web page above).
+
+Currently, you cannot generate your own clustering analysis using the GUI alone. See the section on "Command Line Options" below for details on how to run the full tool.
+
+2.2 COMMAND LINE OPTIONS
+
+The command line options allow you to generate your own clustering analysis. The process consists of three steps:
+1. Preprocessing
+2. Clustering
+3. Interactive Visualization
+
+To demonstrate these steps, we will use the available example files: 
+http://www.bcgsc.ca/downloads/spark/v1.0/data/example.zip
+
+You will also need to download the Java jar: 
+http://www.bcgsc.ca/downloads/spark/v1.0/lib/Spark-v1.0.jar
+
+To print all of the command line options:
+java -jar Spark-v1.0.jar --help
+
+Now to (re)generate the clustering:
+
+1. To run the preprocessing step:
+java -Xms256m -Xmx1024m -jar Spark-v1.0.jar -p -a path_to_downloads/example/analysis/hg18_tss_example_k4/
+
+The "-Xms256m" and "-Xmx1024m" flags are needed to increase the java default memory heap size. For future runs, you can increase them further if needed. 
+
+B. To run the clustering step:
+java -Xms256m -Xmx1024m -jar Spark-v1.0.jar -c -a path_to_downloads/example/analysis/hg18_tss_example_k4/
+
+C. Finally, you can launch the GUI:
+java -Xms256m -Xmx1024m -jar Spark-v1.0.jar
+
+Use the "File:Open" menu to select the following directory: path_to_your_downloaded_files/example/analysis/hg18_tss_example_k4/. See section "Components of the Visualization" for a detailed description of the GUI.
+
+
+3. COMPONENTS OF THE VISUALIZATION
+----------------------------------
+
+3.1 FILE MENU
+
+OPEN
+
+Use the file chooser to select a subdirectory within your "analysis" directory (for example, "example/analysis/hg18_tss_example_k4").
+
+SAVE AS
+
+This allows you to save the current clustering to a new subdirectory within your "analysis" directory. This is useful once you have overlaid additional data sets (see section 3.6) or interactively split some clusters (see section 3.7) and wish to save these results for a later session.
+
+OVERLAY DATA
+
+See Section 3.6 below. 
+
+QUIT
+
+Simply exits the application.
+
+3.2 CLUSTER DISPLAY
+
+The upper panel displays the clusters arranged from left to right in descending order by number of member regions. A size bar is draw above the clusters together with the absolute number of region members in each cluster. The total number of regions is printed on the upper left. Each cluster displays the average values of its member regions and thus provides a global overview of its pattern.
+
+3.3 REGION BROWSER
+
+The Region Browser is a scrollable panel in which the individual members of the currently selected cluster can be explored. Currently, only five regions are displayed at one time. If the "Name" attribute was specified in the regions GFF3 file (see section on "INPUT FILES"), then these names will appear above the corresponding regions and are also searchable in the Search box (upper right).
+
+3.4 LINKING TO THE UCSC GENOME BROWSER
+
+Clicking on an individual region in the Region Browser displays that region's genomic coordinate, which is also an active link to that coordinate in the UCSC Genome Browser.
+
+3.5 SEARCH
+
+The search box on the upper right allows you to search for a region name and find it in the clustering. Only "Name" attributes in the GFF3 regions file are indexed for searching. Currently, if two regions have the same "Name" attribute, this search option will only retrieve the first one (not all possibilities).
+
+3.6 INTERACTIVELY OVERLAYING DATA
+
+This option allows you to see how an additional data set distributes across the existing clusters. It indexes the new data file and computes the data averages across each cluster on-the-fly. Using the test data set, you can try overlaying the "H1_RNASeq_step50.wig" file. This may take a few moments.
+
+Each new data set is assigned a new color (however the selection is currently somewhat limited).
+
+Also note that at the moment, you can only load additional data files that reside within the same 'data' directory as already in use.
+
+3.7 INTERACTIVE CLUSTERING SPLITTING
+
+To split a cluster within the visualization tool, right click on the target cluster and select the "Split cluster" menu option. This will launch a new k-means clustering using a k of 2 using only the regions within the selected cluster, effectively splitting it into two new clusters. While the clustering is running, the target cluster will appear grey. However, the clustering is performed on a separate thread, so you can still interact with the unaffected clusters.
+
+3.8 Gene Ontology (GO) ANALYSIS
+
+To launch a GO analysis on the regions within a give cluster, right click on the target cluster and select the "Launch GO analysis" menu option. This will upload the region ids from the selected cluster to the DAVID website, enabling you to view GO classifications. 
+
+There is a limitation on the number of ids that can be uploaded in this fashion at one time, so you may encounter a dialog with the option to 'Copy and Launch'. This will copy the region IDs to the clipboard and launch the DAVID website. Once the site is loaded, paste your ID list into the 'Upload' tab. Note that you will also have to "Select Identifier" ("REFSEQ_MRNA" for the example cluster files) and a "List Type" (select "Gene List"). 
+
+
+4. DIRECTORY STRUCTURE AND REQUIRED FILES
+-----------------------------------------
+
+This section covers some details necessary to prepare your own files for clustering using the tool on the command line.
+
+The input and output files for the software should be organized into two directories named "data" and "analysis". See downloadable example as a guide: http://www.bcgsc.ca/downloads/spark/v1.0/data/example.zip
+
+Subdirectories should be created within the "data" directory to store useful sets of data files. Recognized data file formats are described in the next section. 
+
+Subdirectories should be created within the "analysis" directory to store the output of a given clustering run. It can be useful to specify the clustering parameters within the subdirectory name. For example, "hg18_tss_b300_k5" indicates a clustering using transcriptional start sites (tss) from the human reference genome hg18, using a 300 bp bin size and a k value of 5. The parameters themselves are stored in a "properties.txt" file inside each analysis subdirectory (described in detail in a subsequent section). Each analysis subdirectory also contains a "regions" subdirectory that specifies the genomic locations to use in the clustering. Recognized region file formats are described in a subsequent section.
+
+4.1 INPUT FILES
+
+A. DATA FILES
+
+The software currently accepts genome-wide data sets in either WIG or BedGraph formats. Please see the UCSC website for full specification of these formats:
+
+WIG - http://genome.ucsc.edu/goldenPath/help/wiggle.html
+BedGraph - http://genome.ucsc.edu/goldenPath/help/bedgraph.html
+
+B. REGION FILES
+
+The genomic locations to be clustered should be specified in GFF3 format. Please see the Sequence Ontology Project site for a full specification of this format: http://www.sequenceontology.org/gff3.shtml
+
+Note that the end coordinate is inclusive: e.g. a feature from 1 to 9 has a length of 10 nt.
+
+These regions can be of variable length (see additional details regarding how to specify feature length in the PROPERTIES FILE section). In addition, the GFF3 attribute with the key value "Name" is indexed for searching within the application. See the SEARCH section below for additional details. 
+
+C. PROPERTIES FILE
+
+The properties.txt file within each analysis subdirectory specifies all of the parameters for the clustering analysis. Each parameter value is specified in a key=value pair. The following is a list of available keys:
+
+
+- org
+
+The organism and genome version to use (useful when launching a web browser view of the data). For example, "org=hg18". Currently, only "hg18", "hg19", "mm8", and "mm9" organism names are recognized. 
+
+
+- dataLabel
+
+A label for the data set. This label is only used internally in the output file names.
+
+
+- dataDir
+
+The name of the data subdirectory containing the data files to be considered in the clustering. This is the subdirectory as it appears in the "data" dir (do not provide the full path).
+
+
+- dataFiles
+
+The names of the data files inside of the specified dataDir to use in the clustering. Their order here dictates their order in the display. 
+
+
+- regionLabel
+
+The name of the regions used (e.g. TSSs). This label is displayed in the visualization. 
+
+
+- regions
+
+The name of the regions file to be used in the clustering. This is the file name as it appears in analysis/yourAnalysis/regions/ (do not provide its path, just the file name itself).
+
+
+- normType
+
+Specifies the type of normalization to be done. Currently "exp" is the only accepted option and it employs the same normalization scheme as used by ChromaSig (Hon G, Ren B, and Wang W, PLoS Comput Biol. 2008 Oct;4(10):e1000201):
+
+x'_h,i = 1/(1+e^-(x_h,i - median(x_h))/std(x_h))
+
+for bin i and sample h. The result is that all binned values are normalized to be between 0 and 1, with a median value having a normalized value of 0.5.
+
+
+- binSize
+
+The data values in each specified region are first binned prior to clustering. The binSize parameter specifies the fixed number of nucleotides to use per bin. This is an appropriate parameter to set when all of your regions have the same length (e.g. TSS +/- 3kb). Also see numBins. Only one of binSize and numBins can be set. 
+
+
+- numBins
+
+The data values in each specified region are first binned prior to clustering. The numBins parameter specifies the number of (equally sized) bins to use for each region, not the absolute nucleotide length of the bin. This is an appropriate parameter to set when your regions are of variable length (e.g. genes). Also see binSize. Only one of binSize and numBins can be set. 
+
+
+- statsType
+
+Specifies how the bin value distribution should be calculated. This parameter therefore influences the sample median and standard deviation values used in normalization. 
+
+The current valid options are "regional" and "global". The "regional" setting results in the median and standard deviation being calculated using all available bin values for the sample in the regions of interest. As a result, a normalized value of 1.0 indicates that this bin has the highest value observed out of all of the bins in the regions of interest. The "global" setting on the other hand samples the genome at random to estimate the global median and standard deviation for a sample. As a result, a normalized value of 1.0 indicates that this bin has the highest value observed out of all of the bins sampled (approximation of the whole genome). 
+
+NOTE: currently can only use "global" with the binSize parameter (must use "regional" if specifying numBins). This will be addressed in the near future.
+
+
+- k
+
+The number of clusters to generate. Note that this value is only used during the clustering step, so there is no need to first rerun the preprocessing step if you wish to rerun the clustering step with a different value of k (see COMMAND LINE OPTIONS for details on running these two steps). 
+
+
+- colLabel
+
+Specifies how to color the data values in the visualization. Currently, only "blue", "green", and "orange'" are recognized. Provide one value for each input data file (comma separated).
+
+
+4.2. OUTPUT FILES
+
+The software outputs several custom files.
+
+A. INDICES
+
+One index file is generated for each data file specified by the user during the Preprocessing step. The index files are in a custom format that specifies the points in the file where each region of interest can be found and are later used for faster data retrieval. They are stored in analysis/yourAnalysisDir/indices/.
+
+B. CLUSTERS
+
+Two files are output for each clustering analysis. The first is a GFF3 file (see the REGION FILES section above for specification), which is a copy of the original region coordinates file with an additional "cID" attribute to indicate the cluster id. The cluster id currently corresponds to the cluster rank (order) in the visualization from left-to-right, where clusters are sorted in descending order by number of regions in each cluster. The second file is in a custom format that captures the summary values for each cluster therefore enabling faster cluster loading in the visualization (do not need to recompute each time you open an analysis). These files are stored in a subdirectory in analysis/yourAnalysisDir/clusters/.
+
+C. STATISTICS
+
+One statistics file is generated for each data file specified by the user during the Preprocessing step. These files are in a custom format that specifies the sample mean, median, standard deviation, min, max, total count, etc., some of which are used for generating the visualization. These files are stored in analysis/yourAnalysisDir/stats/.
+
+If a normalization procedure is specified in the properties.txt file, then a version of this file is also generated for the normalized data values. These files are stored in analysis/yourAnalysisDir/normStats/.
+

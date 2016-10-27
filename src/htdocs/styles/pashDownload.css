@@ -1,0 +1,20 @@
+@CHARSET "ISO-8859-1";
+
+#paperList {
+  padding-left: 30px;
+  margin-bottom: 30px;
+}
+
+#licenseText {
+  background-color:#EBEBEB;
+  border: 1px black solid;
+  height:240px;
+  overflow:scroll;
+  margin-bottom: 25px;
+  margin-top: 25px;
+}
+
+#licenseAgreement {
+  background-color:#EBEBEB;
+  border: 1px black solid;
+}

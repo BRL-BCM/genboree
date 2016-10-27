@@ -1,0 +1,106 @@
+<%
+  hasAccess = true
+  width = (hasAccess ? 600 : 320)
+  height = (hasAccess ? 525 : 320)
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Message To Group" } ) %>
+<%
+  if(hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will allow you to send an email/message to all users of a target group.
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Send message to group:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs} )
+  })
+%>
+<%=
+    uriObj = URI.parse(@outputs[0])
+    apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/usrs?detailed=true", @context['userId'])
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    usersInGroup = apiCaller.parseRespBody['data']
+    $stderr.puts("usersInGroup: #{usersInGroup.inspect}")
+    buff = %Q^<div style="width:100%;padding-top:5px;">^
+    buff << %Q^The message will be sent out to the following users:^
+    buff << %Q^</div>^
+    buff << %Q^<table align="center" style="width:100%;padding-top:5px;padding-left:10px;" >^
+    buff << %Q^<tr><th style="font-size:11px;padding-bottom:5px;">Login</th><th style="font-size:11px;">Name</th><th style="font-size:11px;">Email Address</th></tr>^
+    usersInGroup.each { |userRec|
+      buff << %Q^<tr><td style="font-size:11px;padding-bottom:5px;">#{userRec['login']}</td><td style="font-size:11px;">#{userRec['firstName']} #{userRec['lastName']}</td><td style="font-size:11px;">#{userRec['email']}</td></tr>^
+    }
+    buff << %Q^</table>^
+    renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "Message Recipients:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => buff
+      })
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => "signature", :label => 'Signature', :labelWidth => "200px", :type => :text, :value => @context['userEmail'], :size => "20", :disabled => true },
+        { :id => "subject", :label => 'Message Subject', :labelWidth => "200px", :type => :text, :value => "", :size => "20" },
+        { :id => "messageBody", :label => "Message", :labelWidth => '200px', :type => :textarea, :wrap => "soft", :style => "height: 150px; width: 200px;", :value => "" }
+      ]
+    })
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

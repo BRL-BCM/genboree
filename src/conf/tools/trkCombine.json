@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "trkCombine",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "walltime": "12:00:00"
+  },
+  "ui": {
+    "label": "Combine Tracks",
+    "shortLabel": "Combine Tracks"
+  }
+}

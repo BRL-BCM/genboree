@@ -1,0 +1,131 @@
+<%# RENDER HTML %>
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool takes as input SAM/BAM files resulted from mate pair experiments on the Illumina or SOLID platforms.
+          <br>&nbsp;<br>
+          It considers the range for consistent mate pairs (as determined by the user, with the help of the \"Insert Size Collection Tool\").
+          It determines the inconsistent mate pairs, defines as having the ends map on different chromosomes or on the same chromosome,
+          but with the insert size outside of the user specified range.
+          <br>&nbsp;<br>
+          It clusters the inconsistent mate pairs using Breakout, and reports to the user the putative breakpoints having a coverage of at least 3 mate pairs.
+          <br>&nbsp;<br>
+          The breakpoints are reported both in the Genboree LFF format and in a spreadsheet format accessible with programs such as Microsoft Excel.
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Data File" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Location:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "MatePairInsertSizeCollection-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}" },
+                { :id => 'platformType', :label => 'Platform', :type => :select, :onchange => "changeSettings(this.value)", :options =>
+                  {
+                    :illumina => { :label => 'Illumina', :selected => true },
+                    :solid => { :label => 'SOLiD'}
+                  },
+                  :title => 'Select the sequencing platform the data came from. '
+                },
+                { :id => 'forwardSuffix', :label => 'Forward Suffix', :type => :text, :size => "25", :value => "\\1", :style => 'font-size: 80%'},
+                { :id => 'reverseSuffix', :label => 'Reverse Suffix', :type => :text, :size => "25", :value => "\\2", :style => 'font-size: 80%'},
+                { :id => 'lowerBound', :label => 'Lower Bound', :type => :text, :size => "25", :value => "", :style => 'font-size: 80%'},
+                { :id => 'upperBound', :label => 'Upper Bound', :type => :text, :size => "25", :value => "", :style => 'font-size: 80%'},
+                { :id => 'upperBoundFailed', :label => 'Upper Bound Failed', :type => :text, :size => "25", :value => "", :style => 'font-size: 80%'},
+                { :id => 'uploadLffFile', :label => 'Upload as track?', :type => :checkbox, :checked => true},
+                { :id => 'circosPlot', :label => 'Circos Plot', :type => :checkbox, :hidden => true, :newline => false},
+                { :id => 'cnvCall', :label => 'CNV Call', :type => :checkbox, :hidden => true, :newline => false},
+              ]
+
+    @inputs.size.times { |ii|
+                          widgets <<  { :id => "inputType_#{ii}", :label => "#{CGI.unescape(File.basename(@inputs[ii]).chomp("?"))}", :type => :select, :options =>
+                                        {
+                                          :Fwd => { :label => 'Fwd', :selected => true },
+                                          :Rev => { :label => 'Rev'}
+                                        },
+                                        :title => 'Select the input type for the corresponding input file. '
+                                      }
+                        }
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+
+<script type="text/javascript">
+function changeSettings(value)
+{
+  var forwardSuffix = Ext.get('forwardSuffix').dom ;
+  var reverseSuffix = Ext.get('reverseSuffix').dom ;
+  if(value == 'illumina')
+  {
+    forwardSuffix.value = '\\1' ;
+    reverseSuffix.value = '\\2' ;
+  }
+  else
+  {
+    forwardSuffix.value = '' ;
+    reverseSuffix.value = '' ;
+  }
+}
+</script>
+
+<%
+  else
+%>
+
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

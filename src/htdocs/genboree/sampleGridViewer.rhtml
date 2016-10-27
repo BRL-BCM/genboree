@@ -1,0 +1,500 @@
+
+<%#
+
+THIS FILE USES eruby %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require "timeout"
+require "cgi"
+require "json"
+require "net/http"
+require "uri"
+require "brl/util/util"
+require "brl/genboree/genboreeUtil"
+require "brl/genboree/genboreeContext"
+require "brl/genboree/rest/apiCaller"
+require "brl/genboree/geneViewer/gbTrackUtilNew"
+require 'brl/genboree/abstract/resources/user'
+require "brl/genboree/rest/helpers/databaseApiUriHelper"
+
+begin
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  self.extend(BRL::Genboree)
+  @errorMsg = ""
+  @errorState = false
+  %>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+    <html>
+    <head>
+    <link rel="stylesheet" type="text/css" href="/javaScripts/ext-3.4.0/resources/css/ext-all.css">
+    <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/eaBase.css?jsVer=<%= @context.genbConf.jsVer %>" />
+    <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/topNavigation.css?jsVer=<%= @context.genbConf.jsVer %>" />
+    <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/topNavigation.css?jsVer=<%= @context.genbConf.jsVer %>" />
+    <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/gridViewer.css?jsVer=<%= @context.genbConf.jsVer %>" />
+    <link rel="stylesheet" type="text/css" href="/styles/workbench/dialogs.css?jsVer=<%= @context.genbConf.jsVer %>" />
+
+    <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/prototype/scriptaculous.js"></script>
+    <script type="text/javascript" src="/javaScripts/prototype-1.6.js"></script>
+    <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/prototype/ext-prototype-adapter.js?"></script>
+    <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/ext/ext-base.js"></script>
+    <script type="text/javascript" src="/javaScripts/ext-3.4.0/ext-all-debug.js"></script>    
+    <script type="text/javascript" src="/javaScripts/util.js?jsVer=<%= @context.genbConf.jsVer %>"></script>    
+    <script type="text/javascript" src="/epigenomeatlas/scripts/gridViewer.js?jsVer=<%= @context.genbConf.jsVer.to_i %>"></script>
+    <script type="text/javascript" src="/epigenomeatlas/scripts/gridUtil.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+    <script type="text/javascript" src="/javaScripts/processSampleSelections.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+    <script type="text/javascript" src="/epigenomeatlas/scripts/commonFunctions.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+    <script type="text/javascript" src="/epigenomeatlas/scripts/topNavigation.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+  <%
+  apiHost = ENV["HTTP_HOST"]
+  
+  scriptOutput = StringIO.new
+  # If any of the following is not provided,the default edacc value is used. Provided values override defaults in all cases (including edacc)
+  inGenbSession = true
+  if(@context.cgi["genbSession"].nil? or @context.cgi["genbSession"].empty?) then inGenbSession = false end
+  userId = @context.cgi["userId"].strip
+    if(!(userId.nil? or userId.empty?)) then
+    userId = userId.to_i
+    @hostAuthMap = Abstraction::User.getHostAuthMapForUserId(nil, userId)
+    end
+    
+  gbTrackUtil = BRL::Genboree::GeneViewer::GBTrackUtil.new(@hostAuthMap)
+  attrValues = @context.cgi["attrValues"].strip.split(/,/).map{|xx| CGI.unescape(xx).split(/,/).map{|yy| CGI.unescape(yy)}};if(attrValues.nil? or attrValues.empty?) then attrValues =[["Adult Liver","Histone H3K27me3"],["H1 Cell Line","RRBS"]] end
+  grpDefault = "Epigenomics Roadmap Repository"
+  dbDefault = "Release 5 Repository"
+  
+  defaultGbKey = gbTrackUtil.getGbKey(apiHost, grpDefault, dbDefault)
+  
+  dbList = @context.cgi["dbList"].strip.split(/,/);if(dbList.nil? or dbList.empty?) then dbList = ["http://#{apiHost}/grp/#{grpDefault}/db/#{dbDefault}?gbKey=#{defaultGbKey}"] end
+  dbHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new("")
+  #gbKeysPresent = true
+  #dbList.each{|db|
+  #  gbKey = dbHelper.extractGbKey(db)
+  #  if(gbKey.nil? or gbKey.empty?) then gbKeysPresent = false;
+  #  end
+  #}
+
+  dbURIs = {}
+    dbGbKeys ={}
+    dbList.each{|db|
+      dbURIs[db] = dbHelper.extractPureUri(db)
+      dbgb = dbHelper.extractGbKey(db)
+      if !(dbgb.nil? or dbgb.empty?) then
+        dbGbKeys[db]="?gbKey=#{dbgb}"
+    else
+      dbGbKeys[db]=""
+    end
+    }
+
+  #if(gbKeysPresent) then
+
+    xattr = gbTrackUtil.cgiVarValue(@context.cgi, "gbGridXAttr","eaAssayType")
+    yattr = gbTrackUtil.cgiVarValue(@context.cgi, "gbGridYAttr","eaSampleType")
+    xlabel = gbTrackUtil.cgiVarValue(@context.cgi,"xlabel",xattr)
+    ylabel = gbTrackUtil.cgiVarValue(@context.cgi,"ylabel",yattr)
+    # SR: Needed to determine correct ROI track and choice of metrics in sample gene viewer
+    mbwAnnotationType = gbTrackUtil.cgiVarValue(@context.cgi,"mbwAnnotationType","Gene")
+    # ARJ: Currently not needed and ~edacc track metadata specific / inspired
+    #xtype = gbTrackUtil.cgiVarValue(@context.cgi,"xtype","experiments")
+    #ytype = gbTrackUtil.cgiVarValue(@context.cgi,"ytype","bioSamples")
+    gridTitle = gbTrackUtil.cgiVarValue(@context.cgi,"gridTitle","Epigenome Atlas")
+    pageTitle = gbTrackUtil.cgiVarValue(@context.cgi,"pageTitle","Epigenome Atlas")
+    genome  = gbTrackUtil.getVersionForDB(dbList[0])
+
+    if(genome.nil?) then genome = "" end
+
+    downloadDir = CGI.unescape(@context.cgi["downloadDir"].strip);
+    disableGeneBrowser = false
+    if (@context.cgi["disableGeneBrowser"] == "true") then disableGeneBrowser = true end
+
+    attrDetails = nil
+    sampleHash = {}
+    xvals = nil
+    yvals = nil
+    sampleList = []
+    attrList = [yattr,xattr]
+
+    attrDetails = gbTrackUtil.getAllEntitiesAndValuesMulti(:sample, dbList, attrList)
+    # Call returns a hash structure with these keys:
+    # xattr -> Array of xattr values encountered on tracks meeting x and y conditions
+    # yattr -> Array of yattr values encountered on tracks meeting x and y conditions
+    # tracks -> Array of hashes where each hash has the following keys:
+    #           xattr -> Value of xattr for this track
+    #           yattr -> Value of yattr for this track
+    #           name -> Name of the track
+
+
+    if(!(attrDetails.nil? or attrDetails.empty?)) then
+      attrDetails.each_key{|db|
+        attrDetails[db].each_key{|sample|
+          xval = attrDetails[db][sample][xattr]
+          yval = attrDetails[db][sample][yattr]
+          sampleHash[yval] = Hash.new unless sampleHash.has_key?(yval)
+          sampleHash[yval][xval] = Array.new unless sampleHash[yval].has_key?(xval)
+          sampleHash[yval][xval] << [sample, db]
+        }
+      }
+      xsortHash = {}
+      ysortHash = {}
+
+      yvals = gbTrackUtil.getAllAttrValuesMultiForEntityType(:sample, dbList, yattr)
+
+      xvals = gbTrackUtil.getAllAttrValuesMultiForEntityType(:sample, dbList, xattr)
+      xl = xvals.length
+      yl = yvals.length
+
+      # Sort keys alphabetically for now and assign them negative ranks in descending order
+      # first track -35 (or value based on number of elements)
+      # second track -34
+      # last track -1
+      xvals.sort.each_with_index{|kk,ii| xsortHash[kk] = ii - xl}
+      # Check if any of these tracks have ranks in the d/b. d/b ranks are ascending positive numbers
+      # first : 1 second :2 and so on If found they replace the -ve ranks in the hash
+      # ARJ: Currently not needed and ~edacc track metadata specific / inspired
+      # gbTrackUtil.getMultiSortOrder(dbList,xtype,xsortHash)
+      # Sort tracks with negative (no ranks in d/b) and positive ranks (ranks found) separately in ascending order
+      # [-35 -34 ..-1] and [1 2 3] etc. Then combine these arrays. This ensures that tracks without ranks show up first (to remind user?)
+      # followed by intended sort order for tracks with ranks
+      xvals = gbTrackUtil.sortedMerge(xsortHash)
+      # Same as above for y values
+      yvals.sort.each_with_index{|kk,ii| ysortHash[kk] = ii - yl}
+      # ARJ: Currently not needed and ~edacc track metadata specific / inspired
+      #gbTrackUtil.getMultiSortOrder(dbList,ytype,ysortHash)
+      yvals = gbTrackUtil.sortedMerge(ysortHash)
+      # The Ext JS structure of the grid is composed of two grids.
+      # The larger of the two has # columns = # of possible x values and # of rows = # of possible y values
+      ystoreBuf = StringIO.new()
+      ystoreBuf <<"ystore = new Ext.data.ArrayStore({fields: ['id','name'"  # name for the actual y-value field
+      (0 .. xvals.length-1).each{|ii| ystoreBuf << ",'xval#{ii}'"}  # 1 field for each x value (the x-y pair does not have to exist. Hence the empty cells)
+      ystoreBuf <<"],"
+      ystoreBuf <<"data:["
+      yvals.each_with_index{|yy,jj|
+        if(sampleHash.has_key?(yy)) then
+        sampleList[jj] = []
+        ystoreBuf <<",[#{jj},'#{yy}'"
+        xvals.each_with_index{|xx,ii|          
+          if sampleHash[yy].has_key?(xx) then
+            sampleList[jj][ii] = []
+            sampleHash[yy][xx].each{|tt|
+              sampleList[jj][ii] << "#{CGI.escape(tt[0])}"
+            }
+            ystoreBuf <<",#{(sampleHash[yy][xx]).length}" # if tracks exist for the cell (x-y pairing) use the count
+          else
+            ystoreBuf <<",'&nbsp;'"                      # else just leave empty
+          end
+        }
+        ystoreBuf <<"]"
+        end
+      }
+      ystoreBuf <<"]});"
+
+
+      # The xstore buff could be avoided with headers for the y store buff corresponding to x value names
+      # It needs to be a separate store if x value filtering is to be supported. Currently EXT Js column filtering is very slow and
+      # hence no x value filtering supported. xstore remains for future use if necessary
+      xstoreBuf = StringIO.new
+      # The xstore has as many rows as the x vallues and only name and id fields
+      xstoreBuf <<"xstore = new Ext.data.ArrayStore({fields: ['name','id'],data:["
+      xvals.each_with_index{|xx,ii|
+        xstoreBuf <<",['#{xx}',#{ii}]" # Actual x value
+      }
+      xstoreBuf <<"]});"
+
+      columnHeight = 145
+      columnWidth = 22
+
+      # HTML stuff for first cell of grid. It displays the appropriate x and y labels and a filter for the y store/yvalues only.
+
+      firstCellHTMLBuf = StringIO.new
+      firstCellHTMLBuf << "<div style=\"height:#{columnHeight}px;position:relative;\" ><div style=\"position:absolute;top:0;right:0;display:table;\"><div style=\"display:table-cell;\"> #{xlabel} </div><div style=\"vertical-align:bottom;\"> <img src=\"/epigenomeatlas/images/right_arrow.gif\"></div></div>"
+      firstCellHTMLBuf << "<div style=\"position:absolute;bottom:0;left:0;\">"
+      firstCellHTMLBuf << "<div style=\"display:table-row;\">"
+      firstCellHTMLBuf << "<div style=\"display:table-cell;vertical-align:bottom;\"> <img src=\"/images/workbench/down_arrow.gif\"> </div>"
+      firstCellHTMLBuf << "<div style=\"display:table-cell;\"> #{ylabel} </div><div style=\"display:table-cell;\">&nbsp;</div></div>"
+      firstCellHTMLBuf << "<div style=\"display:table-row;\">"
+      #firstCellHTMLBuf << "<div style=\"display:table-cell;\">&nbsp;</div>"
+      #firstCellHTMLBuf << "<div style=\"display:table-cell;text-align:right;\"> Filter:&nbsp;</div>"
+      #firstCellHTMLBuf << "<div style=\"display:table-cell;\"> <input type=\"text\" id = \"rowFilterField\" onkeyup=\"filterRows(this.value,this.id);\">&nbsp; (e.g. \"stool\")</div></div>"
+      firstCellHTMLBuf << "</div></div>"
+      firstCellHTML = firstCellHTMLBuf.string
+      columnModelBuf = StringIO.new
+      # The column model for the grid which has the first column as the y value and 1 column for every possible x value.
+      columnModelBuf << "columnModel = new Ext.grid.ColumnModel({"
+      # The filtering first cell becomes the header for the yvalue column
+      columnModelBuf << "columns:[{id:'firstCell',dataIndex: 'name',header: '#{firstCellHTML}',width:350,height:#{columnHeight},css:'border-left:1px solid #EEEEEE;border-right:1px solid #D0D0D0;padding:0px;position:relative;',renderer:yRenderer}"
+      tdCSS = "border-left:1px solid #EEEEEE;border-right:1px solid #D0D0D0; padding:0px;height:100%;"
+      # The other column headers are the xvalues they correspond to
+      xvals.each_with_index{|xx,ii|
+        headerHTML = "<div id=\"xdiv-#{ii+1}\" style=\"position:relative;cursor:pointer;width=#{columnWidth-1}px !important;border-left:1px solid #D0D0D0 !important;\" class=\"parentWidth\" onclick=\"showxDialog(#{ii+1},\\\'#{xx}\\\');\"><span class=\"rotateText transformText\">#{xx}</span></div>"
+        columnModelBuf << ",{id:'tracks',dataIndex: 'xval#{ii}', header: '#{headerHTML}',width:#{columnWidth} ,height:#{columnHeight} ,css:'#{tdCSS}', renderer:dataRenderer}"
+      }
+      columnModelBuf <<"]});"
+
+      # Make stuff available as JS variables
+
+      scriptOutput << "yattr = '#{yattr}';"
+      scriptOutput << "xattr = '#{xattr}';"
+      scriptOutput << "dbList = '#{dbList.join(",")}';"
+      scriptOutput << "sourceDb = '#{dbList[0]}';"
+      scriptOutput << "xvals = Ext.util.JSON.decode('#{xvals.to_json}');"
+      scriptOutput << "yvals = Ext.util.JSON.decode('#{yvals.to_json}');"
+      scriptOutput << "xlabel = '#{CGI.escape(xlabel)}';"
+      scriptOutput << "ylabel = '#{CGI.escape(ylabel)}';"
+      # ARJ: Currently not needed and ~edacc track metadata specific / inspired
+      # scriptOutput << "xtype = '#{CGI.escape(xtype)}';"
+      # scriptOutput << "ytype = '#{CGI.escape(ytype)}';"
+      scriptOutput << "gridTitle = '#{CGI.escape(gridTitle)}';"
+      scriptOutput << "pageTitle = '#{CGI.escape(pageTitle)}';"
+      scriptOutput << "genome = '#{genome}';"
+      scriptOutput << "userId = '#{@context.cgi["userId"].strip}';"
+      scriptOutput << "mbwAnnotationType = '#{mbwAnnotationType}';"
+      scriptOutput << "inGenbSession = #{inGenbSession.to_s};"
+      if(inGenbSession) then
+        scriptOutput << "gridViewerFile = '/java-bin/sampleGridViewer.jsp';"
+        scriptOutput << "geneViewerFile = '/java-bin/sampleGeneViewer.jsp';"
+      else
+        scriptOutput << "gridViewerFile = '/genboree/sampleGridViewer.rhtml';"
+        scriptOutput << "geneViewerFile = '/genboree/sampleGeneViewer.rhtml';"
+      end
+
+      scriptOutput << ystoreBuf.string.gsub(/\[,/,"[")
+      scriptOutput << xstoreBuf.string.gsub(/\[,/,"[")
+      scriptOutput << columnModelBuf.string.gsub(/\[,/,"[")
+      scriptOutput << "maxRows=#{yvals.length};"
+      scriptOutput << "maxColumns=#{xvals.length};"
+      scriptOutput << "userLogin='#{@context.cgi["userLogin"].strip}';"
+      scriptOutput << "trackList = Ext.util.JSON.decode('#{sampleList.to_json}');" #irregular naming to utilize js save functionality
+
+      if(!(downloadDir.nil? or downloadDir.empty?)) then scriptOutput << "downloadDir='#{downloadDir}';"
+      end
+    else
+      @errorMsg = "Could not retrieve samples from #{dbList.inspect} with xattr=#{xattr} and yattr=#{yattr}. Either the URIs are incorrect, no such samples exist or the server is not responding"
+      @errorState = true
+    end
+  #  else
+  #  @errorMsg = "Could not retrieve tracks. One or more of the supplied URIs is missing a gbKey"
+  #  @errorState = true
+  #end
+  
+    %>
+
+    <title><%= pageTitle %></title>
+
+    <% if(!@errorState) then%>
+    <script type="text/javascript" >
+    var ystore;
+    var xstore;
+    var columnModel;
+    var grid;
+    Ext.onReady(function(){
+      Ext.QuickTips.init();
+      <%= scriptOutput.string %>
+      // This is for correct display of names on side in all browsers
+      if(Ext.isIE && !Ext.isIE9)
+        {
+          Ext.util.CSS.createStyleSheet(".transformText{display:block;position:absolute;top:5px;width:140px;filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);}");
+        }
+      else
+        {
+          Ext.util.CSS.createStyleSheet(".transformText{display:block;position:absolute;bottom:82px;left:-78px;width:170px;}");
+        }
+        //This is the menu in the toolbar that goes over the grid as a whole
+
+        var viewMenu = new Ext.menu.Menu({
+          id: 'mainMenu',
+          items: [{
+          text: "View in",
+          iconCls: "viewClass",
+          menu: {
+          items: [
+            <%if(!disableGeneBrowser) then%>
+              {
+                text:'<%=mbwAnnotationType%> Browser',
+                iconCls:'agbClass',
+                handler:sendToGeneBrowser   // for gene visualization
+              },'-',
+            <% end %>            
+              
+            ]
+          }
+          },
+          {
+                text:'Clear Selections',
+                iconCls:"clearClass",
+                handler:clearSelections
+              },
+              {
+                text:'Save Selections',
+                iconCls:"saveClass",
+                handler:function () {showWindow("saveSelection",false);},
+                tooltip:"Save selections as a \"List of Samples\" for further analysis using Workbench Tools"
+              }
+          ]
+          });
+        
+        
+var toolbar = new Ext.Toolbar({
+      items:[
+        '<span style="padding:5px;" >Filter Rows:<input id ="blah" type="text" onkeyup="filterRows(this.value)"></span>',
+        {
+          text:'Selections',
+          iconCls: "selectionClass",
+          menu: viewMenu
+        }
+]
+          });
+            
+
+          grid = new Ext.grid.GridPanel({
+            border: false,
+            store: ystore,
+            colModel: columnModel,
+            enableHdMenu: false,
+            stripeRows: true,
+            disableSelection: true,
+            trackMouseOver:false,
+            height: 660,
+            width: 1200,
+            deferRowRender:false,
+            title: '<%=gridTitle%>',
+            renderTo: 'local-states',
+            tbar:toolbar
+          });
+
+          //Add toolbar to grid. Link grid with ystore
+
+          // Needed if xvalue filtering is used
+          grid.show();
+          showAllColumns();
+        });
+
+        </script>
+    <% end %>
+        </head>
+        <body onmouseup="stopDragOutside();">
+        <div id="dataFreezeHeaderContainer">
+        <div id="dataFreezeHeaderLeft">
+        <div id="dataFreezeEaLogo">
+        <a href="http://www.brl.bcm.tmc.edu">
+        <!--<img border="0" style="float:left;height:160px" src="images/Epigenome.png" alt="Human Epigenome Atlas">-->
+        <img border="0" style="float:left;height:100px;width:235px;margin-top:30px;" src="/images/BRL_logo.png" alt="Bioinformatics Reasearch Laboratory">
+        </a>
+        </div>
+        <div id="centerLogo">
+        <div style="margin:0 auto;text-align:center;width:300px;">
+        <div style="display:table-row;">
+        <div style="display:table-cell;">
+        <!--<img border="0" src="/images/old_Epigenome.gif" alt="Epigenome Atlas">-->
+        </div>
+        <div class="legendBold22" style="display:table-cell;vertical-align:middle;padding-left:10px;"><%=pageTitle%></div>
+        </div>
+        </div>
+        </div>
+        </div>
+
+
+
+        <div id="dataFreezeHeaderRight">
+        <div id="dataFreezeTopRightNavigation">
+        <!--<a href="index.rhtml">Home</a>-->
+        </div> <!-- End topRightNavigation -->
+        <br><br>
+        <div id="dataFreezeHeaderImage">
+        <a href="http://www.bcm.edu">
+        <img border="0" style="float:right;" src="/epigenomeatlas/images/bcm_logo.gif" alt="Baylor College of Medicine">
+        </a>
+        </div>
+        </div>
+        </div> <!-- End header -->
+        <div id="dataFreezeTopNavigation">
+        <ul>
+        <li><span style="height:20px;"></span></li>
+        <!--<li class="dropDown" onmouseover="showMenu('releaseDropDown', 'releaseItem')" onmouseout="hideMenu('releaseDropDown', 'releaseItem')"  id="releaseItem">Releases
+        <div id="releaseDropDown">
+        <a href="edaccGridViewer.rhtml" class="informaticsDropDownAnchor">Current Release (Release 5)</a><br/>
+        <a href="releases.rhtml" class="informaticsDropDownAnchor">Release Information (All Releases)</a><br/>
+        </div>
+        </li>
+
+        <li class="dropDown" onmouseover="showMenu('informaticsDropDown', 'informaticsItem')" onmouseout="hideMenu('informaticsDropDown', 'informaticsItem')"  id="informaticsItem">Informatics
+        <div id="informaticsDropDown">
+        <a href="genboreeWorkbench.rhtml" class="informaticsDropDownAnchor">Genboree Workbench</a><br/>
+        <a href="dataFlow.rhtml" class="informaticsDropDownAnchor">Metadata &amp; Data Flow</a><br/>
+        <a href="dataAnalysis.rhtml" class="informaticsDropDownAnchor">Analysis Pipelines</a><br/>
+        <a href="comparativeAnalysis.rhtml" class="informaticsDropDownAnchor">Data Quality</a>
+        </div>
+        </li>
+
+        <li class="dropDown" onmouseover="changeBackgroundOver(this)" onmouseout="changeBackgroundOut(this)"><a href="publications.rhtml" class="topNavigationAnchor">Publications</a></li>
+        <li class="dropDown" onmouseover="changeBackgroundOver(this)" onmouseout="changeBackgroundOut(this)"><a href="forums.rhtml" class="topNavigationAnchor">Forums</a></li>
+        <li class="dropDown" onmouseover="changeBackgroundOver(this)" onmouseout="changeBackgroundOut(this)"><a href="contributors.rhtml" class="topNavigationAnchor">Contributors</a></li>-->
+        </ul>
+        </div> <!-- End topNavigation -->
+        <div style="background-color:White;margin:0 auto;width:1200px;">
+        <% if(!@errorState) then%>
+          <div style="margin-left:15px;">
+          <ul class="pageList">
+          <li><div class="legend10">Select cells by <b>clicking and dragging</b>, then use the "View Selections in" pulldown in the top left corner (below) to view selections in the <%=mbwAnnotationType%> Browser</div></li>
+          <li><div class="legend10"><b>NOTE:</b> Some pages may not be accessible over low bandwidth internet connections. This page has been tested with the following browsers: <img style="vertical-align:middle;" src="/epigenomeatlas/images/browserIcons.png"></div></li>
+          </ul></div>
+
+
+          <form name="mainForm" id="mainForm" action="ucscForwarder.rhtml" method="post">
+          <div id="local-states" onselectstart="return false;"></div>
+          <input type="hidden" id = "xattrVals" name="xattrVals" value= "">
+          <input type="hidden" id = "yattrVals" name="yattrVals" value= "">
+          <input type="hidden" id = "dbList" name="dbList" value= "">
+          <input type="hidden" id = "ucscHost" name="ucscHost" value= "brlMirror">
+          <input type="hidden" id = "genome" name="genome" value= "<%=genome%>">
+          </form>
+          <br>
+          <p>
+          <%
+        end
+      rescue => err
+        $stderr.puts "-"*50
+        $stderr.puts  "ERROR:Problem generating data grid.\n" +
+        "- Exception: #{err.message}\n" +
+        err.backtrace.join("\n")
+        $stderr.puts "-"*50
+        @errorMsg += "ERROR:Problem generating data grid.\n" +"- Exception: #{err.message}\n" + err.backtrace.join("\n")
+        @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+        @errorState = true
+        %>
+        <%
+        # --------------------------------------------------------------------------
+        # WRAP UP
+        # --------------------------------------------------------------------------
+      ensure
+        if(@errorState) then %>
+        <div class="wbDialog" style="height:auto; width:auto; margin-top: 0px;">
+  <div class="wbDialogFeedback wbDialogFail">
+    <span class="wbErrorLabel"><b>ERROR:</b> There was an error creating and displaying the grid.</span>
+    <br>
+    <br>
+      <b>Error Details:</b><br>
+      <ul style="color: #C64848;"><li><%= @errorMsg %></li></ul>
+      <br>
+    <br>
+    <span class="contact">If you have questions, please contact <a href="mailto:genboree_admin@genboree.org">genboree_admin@genboree.org</a> for assistance.</span>
+  </div>
+</div>
+        <!--  <div style="background-color:white;font:bold 15px  tahoma,helvetica,verdana;text-align:center;margin:0 auto;width:800px;"><%= @errorMsg %></div>-->
+          <% end
+        %>
+        <div style="text-align:center;font-size:7pt;"><a href="mailto:genboree_admin@genboree.org">Questions or comments?</a></div>
+          <p>
+          </div>
+          <div id="footerHold" style="width: 1200px; background-color: white; margin: 0 auto;">
+          <%= Erubis::Eruby.load_file( "includes/eaFooter.incl" ).result ; %>
+          </div>
+        </body>
+        </html>
+        <%
+        end # begin
+        %>

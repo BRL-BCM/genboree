@@ -1,0 +1,48 @@
+# ##############################################################################
+# Output Related Properties
+# ##############################################################################
+
+# The text which to append to the name of the chromosome for the name of the output file
+file_name           = july_3_2003
+
+# ##############################################################################
+# Input Related Properties
+# ##############################################################################
+
+# A comma delimeted list of chromosome which to map against.  Use "all" for all chromosomes
+target_chromosome   = all
+# The mapping mode of the program.  "refseq" for mapping against refSequences, and "windowed" for sliding window mode
+mode                = refseq
+# Comma delimited specificiations, in the form: window_size,boundary_overlap
+# window_size specifies the size of the window
+# boundary_overlap specifies the amount a window overlaps with its neighbours.
+# Specify as "" if in refseq mode
+window_specs        = ""
+# The first tissue types to compare.  Valid list can be found using the command line
+# ruby FindOverlap.rb -h tissue
+tissue_group_A      = ovary
+# The tissue group which to compare against group_A
+# Can specify "other" to compare against all tissue types _not_ listed in group_A
+tissue_group_B      = other
+
+# The two histology types to compare.  Can list "other" as second histology type
+#   if you wish to compare the first histology type against all others.
+histology_group_A   = cancer
+# The histology group which to compare against group_A
+# Can specify "other" to compare against all histolgoy types _not_ listed in group_A
+histology_group_B   = normal
+# The ftype,ftype_subtype of the libraries we are mapping against the genome.  
+# Typically EST,all_est
+library_ftype       = EST,all_est
+# The ftype,ftype_subtype of the target we are mapping against.  
+# Typically Gene,refGene
+target_ftype        = Gene,refGene
+
+
+# The regular expression to be applied to _all_ keywords which specifies which to discard based on matches
+filter_all = /(test[es|is|ic]*|prost[a-zA-Z]*|penis|embry[a-zA-Z]*]|umbilical|stem|uncharacterized\stissue|pooled\stissue)/
+# The following filters will only be applied to their respective groups
+filter_tissue_A = ""
+filter_tissue_B = ""
+filter_histology_A = ""
+filter_histology_B = /([a-zA-Z]*oma|leukemia|metastatic|neoplas[a-zA-Z]*|tumor[a-zA-Z]*|cancer[a-zA-Z]*)/

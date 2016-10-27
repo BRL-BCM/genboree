@@ -1,0 +1,5 @@
+LFF is assumed to have 13 columns.
+conservedRegionID is assumed not available in srcLff, but is added in the output lff files
+See main.sh for calling examples.
+
+This is my understanding of the specification. In case the I misunderstand something, please let me know so that I can fix it.

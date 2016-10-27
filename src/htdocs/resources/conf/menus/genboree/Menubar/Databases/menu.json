@@ -1,0 +1,16 @@
+[
+  {
+    "text": "How-to",
+    "href": "/java-bin/myrefseq.jsp",
+    "id": "dbDocs",
+    "tooltip": "Create, edit and delete databases. Upload track annotations and edit, upload and delete entrypoints."
+  },
+  {
+    "text": "Manage Tracks",
+    "href": "/java-bin/trackmgr.jsp"
+  },
+  {
+    "text": "Link Setup",
+    "href": "/java-bin/linkmgr.jsp"
+  }
+]

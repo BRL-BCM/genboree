@@ -1,0 +1,47 @@
+[
+  {
+    "text" : "Import"
+  },
+  {
+    "text" : "Utilities"
+  },
+  {
+    "text" : "Track Hubs"
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "Access",
+    "href": "/java-bin/trackmgr.jsp?mode=Access",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Set more limited track annotation access to just a few specific users (rather than the whole group), using the old Genboree functionality.<br><i><u>Deprecated:</u> this functionality has been deprecated and will likely be discontinued in the future.</i>"
+  },
+  {
+    "text": "Classify",
+    "href": "/java-bin/trackmgr.jsp?mode=Classify",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Assign tracks to classes/categories using the old Genboree functionality in a new tab."
+  },
+  {
+    "text": "Link Setup",
+    "href": "/java-bin/linkmgr.jsp",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Configure links patterns to external services for track annotations, using the old Genboree functionality. Mainly to allow the deprecated Genboree browser to link an annotation to 1+ external site using the annotation information.<br><i><u>Deprecated:</u> this functionality has been deprecated and will likely be discontinued in the future.</i>"
+  },
+  {
+    "text": "Basic Track Operations",
+    "href": "/java-bin/trackOps.jsp",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Perform basic track operations (combine, intersect, etc), using the old Genboree functionality.<br><i><u>Deprecated:</u> this functionality has been deprecated and will likely be discontinued in the future unless there are request to migrate it to actual Workbench tools. May not work on all track types.</i>"
+  }
+]
+

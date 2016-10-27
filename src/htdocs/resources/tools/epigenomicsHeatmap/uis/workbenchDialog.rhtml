@@ -1,0 +1,282 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <p>The Heatmap tool computes the similarity (Pearson correlation metric) between two experiments based on epigenomic marks (MeDIP, RRBS, 450K, etc).  Data tracks from two or more epigenomic experiments are projected over the regions of interest (ROIs), such as promoters, exons, UTRs, etc.  The Pearson correlation metric is calculated, and the similarity matrix is presented visually as a heatmap.</p>
+
+          <p>To set up the heatmap analysis:</p>
+
+        Populate <strong>Input Data</strong>
+          <ul>
+          <li>Drag the first set of tracks (containing at least 2 data tracks) into <strong>Input Data</strong></li>
+            <li>Drag the second set of tracks (containing at least 2 data tracks) into <strong>Input Data</strong><br />   <em>Please note:</em> to perform a self-comparison, one experimental set can be used</li>
+            <li>Drag a &quot;region of interest&quot; (ROI) track into <strong>Input Data</strong> (the ROI is optional, and if one is not provided, the comparison will occur over a fixed window size)</li>
+          </ul>
+
+
+        Populate <strong>Output Targets</strong>
+          <ul>
+          <li>Drag a database into <strong>Output Targets</strong> (the data will be deposited into this database)</li>
+            <li>Drag a project into <strong>Output Targets</strong> (the data will reside within this project page)</li>
+          </ul>
+
+
+        Configure &#38; Submit the Heatmap Job
+          <ul>
+          <li>Select: <code>Epigenome</code> &raquo; <code>Compute Similarity Matrix (heatmap)</code></li>
+            <li>Use the default, or select new tool settings</li>
+            <li>Click <code>Submit</code></li>
+          </ul>
+
+
+          <p>Heatmap results are accessible in the designated database, in the Projects folder.  Clicking on that project will make a link available in <strong>Details</strong>, which will take you to your project page and the heatmap results.  A link to the project page is also provided in the email that you receive upon job completion.</p>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+   <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+       :sectionTitle => "Input Entity Lists(s)/ROI-Track:",
+       :sectionHtml => renderFrag(@toolIdStr, :wbMixedListSummary, { :list => @inputs } )
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database/Project:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+  %>
+  <%# Special info message %>
+  <%
+      # If there is only one entity list, duplicate it for a self comparison
+      noOfList = 0
+      listIndex = nil
+      idx = 0
+      trackEntityListApiHelper = BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper.new()
+      @inputs.each { |input|
+        if(trackEntityListApiHelper.extractName(input))
+          noOfList += 1
+          listIndex = idx
+        end
+        idx += 1
+      }
+      @distFunctions =
+      {
+        :binary     => { :label => 'Binary' },
+        :canberra   => { :label => 'Canberra' },
+        :euclidean  => { :label => 'Euclidean (dist)', :selected => true },
+        :manhattan  => { :label => 'Manhattan' },
+        :maximum    => { :label => 'Maximum' },
+        :minkowski  => { :label => 'Minkowski' },
+        :cor        => { :label => "Pearson's Correlation" },
+        :abscor     => { :label => "Abs. Value of Pearson's Correlation" },
+        :sqcor      => { :label => "Square of Pearson's Correlation" }
+      }
+      if(noOfList == 1)
+        renderFrag(@toolIdStr, :wbSpecialInfoSection,
+        {
+          :sectionTitle => "<font color='red'>NOTE:</font>",
+          :sectionType  => :warningInfoSection,
+          :sectionHtml  => "<font color='red'>Because you selected only one track list, a self comparison will be performed.</font>"
+        })
+        @distFunctions[:passThrough] = { :label => "Leave data matrix unchanged" }
+      end
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    widgets =
+    [
+      { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "36", :value => "EpigenomeExpHeatmap#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Provide a name for this analysis (tool job). It will also be used as a file-folder name for storing the output files." },
+      { :id => 'normalization', :label => 'Normalization', :type => :select, :style => "width: 230px", :options =>
+        {
+          :quant  => { :label => 'Quantile', :selected => true },
+          :none   => { :label => 'None'},
+          :gauss  => { :label => 'Gaussian'}
+        },
+        :title => "How to normalize track score data?"
+      },
+      { :id => 'spanAggFunction', :label => 'Aggregating Function', :type => :select, :style => "width: 230px", :options =>
+        {
+          :avg          => { :label => 'Avg', :selected => true },
+          :med          => { :label => 'Median' },
+          :sum          => { :label => 'Sum' },
+          :count        => { :label => 'Count' },
+          :max          => { :label => 'Max' },
+          :min          => { :label => 'Min' },
+          :stdev        => { :label => 'Standard Deviation' },
+          :avgByLength  => { :label => 'Avg By Length' }
+        },
+        :title => "How to aggregate score data within a given region?"
+      },
+      { :id => 'simFun',  :label => 'Similarity Function', :type => :select, :style => "width: 230px", :options =>
+        {
+          :pearson  => { :label => "Pearson Correlation", :selected => true },
+          :spearman => { :label => "Spearman Correlation" }
+        },
+        :title => "The data matrix which is subject to clustering is a matrix of pairwise track similarities. How to compute the similarity between 2 tracks, using their respective scores for each ROI region (or for each fixed window)?"
+      },
+      { :id => 'distfun', :label => 'Distance Metric', :type => :select , :style => "width: 230px", :options => @distFunctions, :title => "When performing clustering on the matrix of pairwise track similarities, how to measure distance between two tracks in the clustering algorithm?" },
+      { :id => 'hclustfun', :label => 'Hierarchical Clustering Function', :type => :select, :style => "width: 230px", :options=>
+        {
+          :ward     => { :label => 'Ward' },
+          :single   => { :label => 'Single' },
+          :complete => { :label => 'Complete (hclust)', :selected => true },
+          :average  => { :label => 'Average' },
+          :mcquitty => { :label => 'McQuitty' },
+          :median   => { :label => 'Median' },
+          :centroid => { :label => 'Centroid' }
+        },
+        :title => "What method for clustering the matrix of pairwise track similarities? (Columns and rows are clustered independently)"
+      },
+      { :id => 'key', :label => 'Legend?', :type => :checkbox, :checked => true, :value => "TRUE", :title => "Show the legend on the heatmap visualization?", :hidden => true },
+      { :id => 'density', :label => "Score Distribution", :type => :select , :style => "width: 230px", :options =>
+        {
+          :histogram      =>  { :label => 'Histogram'},
+          :none           =>  { :label => 'None' },
+          :density        =>  { :label => 'Density', :selected => true  }
+        },
+        :title => "How to draw the score distribution on the legend?"
+      },
+      { :id => 'dendograms', :label => 'Dendograms to Draw', :type => :select , :style => "width: 230px", :options =>
+        {
+          :both         =>  { :label => 'Both', :selected => true },
+          :column       =>  { :label => 'Column' },
+          :row          =>  { :label => 'Row' },
+          :none         =>  { :label => 'None' }
+        },
+        :title => "Which clustering dendrograms to draw on the heatmap visualization?"
+      },
+      { :id => 'colors', :label => "Heatmap color spectrum", :type => :select, :style => "width: 230px", :sortBy => :label, :options =>
+        {
+          :Spectral   => { :label => "Divergent: Spectral", :selected => true },
+          :RdGy       => { :label => "Divergent: Greys &amp; Reds" },
+          :RdBu       => { :label => "Divergent: Blues &amp; Reds" },
+          :PuOr       => { :label => "Divergent: Purples &amp; Oranges" },
+          :PRGn       => { :label => "Divergent: Purples &amp; Greens" },
+          :PiYG       => { :label => "Divergent: Greens &amp; Pinks" },
+          :Blues      => { :label => "Sequential: Blues" },
+          :Reds       => { :label => "Sequential: Reds" },
+          :Greens     => { :label => "Sequential: Greens" },
+          :Oranges    => { :label => "Sequential: Oranges" },
+          :Greys      => { :label => "Sequential: Greys" },
+          :Purples    => { :label => "Sequential: Purples" },
+          :YlGn       => { :label => "Sequential: Yellows &amp; Greens" },
+          :YlOrRd     => { :label => "Sequential: Yellows &amp; Reds" }
+        },
+        :title => "What color palette to use for the heatmap?"
+      },
+      {
+        :id => 'forceSquare', :label => "Force Square?", :type => :checkbox, :checked => false, :value => true, :title => "By default, the dimensions of the heatmap are proportionally sized to the number of rows or columns, respectively; individual cells are thus roughly square.<br>&nbsp;<br>You can override this default with this setting, which will force the heatmap visualization itself to have square dimensions--no longer proportional to the row or column counts. Obviously, the individual cells will be elongated rectangles, with greater elongation the greater the difference between the row count versus the column count."
+      },
+      { :id => "naAdvSec", :type => :advancedSection, :toggleText => "No Data Regions", :startWithExpanded => false,
+        :widgets =>
+        [
+          { :id => 'replaceNAValue', :label => 'No Data Value', :type => :text , :size => "6", :value => "0", :title => "When a track has no score data for a given region, what value should be assumed, <i>if</i> the region is to be retained when comparing two tracks? (as determined by <code>Remove No Data Regions</code>)" },
+          { :id => 'removeNoDataRegions', :label => 'Remove No Data Regions?', :labelWidth => "200px", :type => :checkBox, :checked => true, :onchange=>"toggleVisibility('naSection');", :title => "Should regions having No Data for one or both track be used when comparing them? If so, tracks with No Data while be given the <code>No Data Value</code> score." },
+          { :id => 'naSection', :type => :indentedSection, :indentWidth => '20px', :spanFullRow => true, :border => '', :label => '',
+            :widgets =>
+            [
+              { :name=>"naGroup", :id => 'anyTrack', :value=>"0", :label => 'If EITHER track has no data for that region', :labelWidth => "300px", :labelStyle => "font-weight:normal; font-size: 0.82em;", :type => :radio, :checked => true, :onchange => "clearAndDisable('naPercentage');", :title => "Remove the region from consideration if <i>either</i> track has No Data for it."},
+              { :name=>"naGroup", :id => 'allTracks',:value=>"100", :label => 'If BOTH tracks have no data for that region', :labelWidth => "300px", :labelStyle => "font-weight:normal; font-size: 0.82em;", :type => :radio, :onchange => "clearAndDisable('naPercentage');", :title => "Remove the region only if <i>both</i> tracks have No Data for it." }
+            ],
+          }
+        ]
+      }
+    ]
+    # Add resolution if roi has not been dragged
+    hasROI = false
+    trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+    @inputs.each { |input|
+      if(trkApiHelper.extractName(input))
+        hasROI = true
+        break
+      end
+    }
+    if(!hasROI)
+      widgets <<
+                { :id => 'fixedResolution', :label => "Resolution", :type => :select,  :options =>
+                  {
+                    :high   => { :label => 'High' },
+                    :low    => { :low   => 'Low' },
+                    :medium => { :label => 'Medium', :selected => true }
+                  },
+                  :title => "You have not provided an ROI track as a basis for comparing the scores within 2 tracks. You will use fixed genomic windows. Please select the window size; i.e. if you want to use high, medium, or low resolution windows."
+                }
+    end
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Epigenomic Experiment Heatmap Tool",
+      :widgets => widgets
+
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<script type="text/javascript">
+
+function toggleVisibility(elementId)
+{
+  var element = document.getElementById(elementId) ;
+  if(element)
+  {
+    if(element.attributes.getNamedItem("hidden"))
+    {
+      element.hidden = false ;
+    }
+    else
+    {
+      element.hidden = true ;
+    }
+  }
+}
+
+</script>
+<%
+  else # user doesn't have access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool, which will leverage the <a href='http://bioinf.wehi.edu.au/limma/'>LIMMA</a> R package, is currently
+          under development and only available internally and to some collaborators for testing.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>
+          <br>
+          <span style='color: red;'>Once development is complete, and testing and review carried out, the tool will be available for all users.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end # if(@hasAccess)
+%>

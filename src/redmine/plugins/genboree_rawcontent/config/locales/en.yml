@@ -1,0 +1,25 @@
+# ----------------------------------------------------
+# Localization Strings for GenboreeKB
+# - only English (en) to start
+# - put other languages in their own files (e.g. fr.yml) like Redmine does
+# - all localization keys for the GenboreeKB plugin must have the gbkb_ prefix
+# - after the gbkb_ prefix, follow usual naming convention of label_ field_ test_ permiission_ etc etc etc
+#   used in Rails and [most] standard plugins.
+# ----------------------------------------------------
+# English strings go here for Rails i18n
+en:
+  # my_label: "My label"
+  gbrc_settings_label_dir: Content Dir Pattern
+  gbrc_settings_label_index_files: Index Files
+  gbrc_settings_label_valid_exts: Valid Extensions Regexp
+  gbrc_settings_label_max_size: Max Embedded File Size
+  gbrc_settings_label_caption: Menu Name
+  gbrc_label_gb_filedir_name: Name
+  gbrc_label_gb_filedir_size: Size
+  gbrc_label_gb_filedir_updated: Last Updated
+  gbrc_label_gb_filedir_actions: Actions
+  
+  
+  permission_gbrc_view: View Raw Content Files/Dirs
+  permission_gbrc_edit: Edit/Create Raw Content
+  permission_gbrc_delete: Delete Raw Content Files/Dirs

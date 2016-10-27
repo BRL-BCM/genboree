@@ -1,0 +1,128 @@
+<%@ page import="java.util.HashMap,
+     org.genboree.manager.tracks.*,
+     java.util.ArrayList,
+     java.sql.Connection,
+     java.sql.SQLException,
+     java.util.Iterator,
+     java.sql.ResultSet,
+     java.sql.PreparedStatement,
+     org.genboree.dbaccess.DbFtype,
+     org.genboree.dbaccess.DbGclass,
+     org.genboree.dbaccess.Refseq,
+     org.genboree.dbaccess.DBAgent"%>
+<%!
+   public static  boolean  saveEmptyTrackMap (Connection con, HashMap track2Classes, DbFtype[] emptytracks, DbGclass [] gclasses,   Refseq rseq, DBAgent db1, JspWriter out){
+   boolean success = false;
+
+   if (track2Classes == null || rseq == null || emptytracks == null)
+        return false;
+     HashMap class2tracks = new HashMap();
+    HashMap gclassName2class = new HashMap ();
+    if (gclasses == null)
+    return false ;
+    // mapping className to class object
+    for (int n =0; n<gclasses.length; n++) {
+        DbGclass gclass = gclasses [n];
+        if (gclass != null)
+        gclassName2class.put(gclasses[n].getGclass(), gclasses[n]);
+    }
+
+
+    // update class to track Mapping
+    for (int k=0; k<emptytracks.length; k++) {
+        DbFtype ft = emptytracks[k];
+        String className = (String) track2Classes.get(ft.getFmethod() + ":" + ft.getFsource());
+
+        ArrayList list  = (ArrayList)class2tracks.get(className);
+
+        if (list==null)
+            list = new ArrayList();
+
+        if (!list.contains(ft)) {
+            list.add(ft);
+            class2tracks.remove(className);
+            class2tracks.put(className, list);
+        }
+    }
+
+
+   // update class: ftypes
+    if (!class2tracks.isEmpty())  {
+        Iterator it = class2tracks.keySet().iterator();
+            while (it.hasNext()) {
+            String editClassName = (String)it.next();
+
+
+             ArrayList list = (ArrayList) class2tracks.get(editClassName);
+                if (list!= null) {
+                DbFtype[] ftypes = (DbFtype[])list.toArray(new DbFtype[list.size()]);
+                    if (ftypes!=null && ftypes.length > 0)  {
+                        DbGclass gclass = (DbGclass) gclassName2class.get(editClassName);
+
+                        if (gclass != null)
+                        success = updateTrackMap(con, ftypes, gclass,  out);
+
+                    }
+                }
+            }
+    }
+  return success;
+};
+
+public static boolean  updateTrackMap( Connection conn,   DbFtype selTracks [], DbGclass gclass  , JspWriter out)
+{         try
+    {
+    String sql =  null;
+    if(  gclass  != null)
+
+        if (conn == null || conn.isClosed())
+        return false;
+        ResultSet rs = null;
+        PreparedStatement pstmt = null;
+
+        if(selTracks!=null || selTracks.length>0 ) {
+        int gid = gclass.getGid();
+
+        int ftypeid = 0;
+        for( int i=0; i< selTracks.length; i++ )
+            {
+                DbFtype ft = selTracks[i];
+
+                if (ft == null)
+                continue;
+                ftypeid = ft.getFtypeid();
+                String sqldel =  "delete from ftype2gclass where ftypeid = "  +  ftypeid  ;
+                sql =  "INSERT ignore  INTO ftype2gclass (gid, ftypeid) VALUES (" + gid + ", " + ftypeid + ")" ;
+
+                pstmt = conn.prepareStatement(sqldel);
+                pstmt.executeUpdate();
+                pstmt = conn.prepareStatement(sql);
+                pstmt.executeUpdate();
+            }
+        }
+        pstmt.close();
+    } catch( Exception ex ) {
+
+        ex.printStackTrace()  ;
+    }
+
+    return true;
+}
+
+    public static boolean  validateSelection (int n, HttpServletRequest request, JspWriter out )  {
+        boolean b = true;
+        if(n < 0)
+            return false;
+        for (int i=0; i<n; i++) {
+            String className = request.getParameter("emptyClassName_" + i) ;
+            int index = -1;
+            if (className != null)
+                index =   className.indexOf("select a class");
+            if ((className == null) || (index >=0)) {
+                b= false;
+                break;
+            }
+        }
+        return b;
+    }
+    %>

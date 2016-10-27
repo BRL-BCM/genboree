@@ -1,0 +1,319 @@
+ORIGINAL SOURCE:  http://genboree.org/theCommons/boards/3/topics/3507
+
+
+NOTE:
+
+A. You Have the Controller and View Code
+- The explanation below explains the implementation
+- But if you have the plugin, you have the implementation
+
+B. No Migrations, So Configure As Described
+- Thus you probably want to start at "Need to Insert a New Record into the Existing @auth_sources@ Table"
+- Do the auth-source insert via the Rails console
+- Do the MySQL table create--with your host/pw info--it describes.
+
+
+
+Redmine 2.4.1 - Genboree as a Custom / Alternative Authentication
+
+Added by Jackson, Andrew R 3 months ago
+
+We want to use Genboree as an authentication source for Redmine and make it the default.
+
+* There is a "Custom Authentication How-To":http://www.redmine.org/projects/redmine/wiki/Alternativecustom_authentication_HowTo to follow
+* _However_, it is NOT PLUG-IN based.
+* Useful as a reference only.
+
+We will take a *plug-in* approach and do things *the rails way* below.
+
+h2. Setup
+
+* @cd@ to your Redmine installation dir
+* Set a key env variable: @export RAILS_ENV="production"@
+
+h2. Generate The Plugin Dir Tree, ETC (if you don't have it from SVN)
+
+* @ruby script/rails generate redmine_plugin genboree_auth@
+* This creates the appropriate dir tree in your @plugins/@ sub-dir:
+
+<pre>
+$ tree -F --charset=ASCII plugins/genboree_auth/
+plugins/genboree_auth/
+|-- app/
+|   |-- controllers/
+|   |-- helpers/
+|   |-- models/
+|   `-- views/
+|-- assets/
+|   |-- images/
+|   |-- javascripts/
+|   `-- stylesheets/
+|-- config/
+|   |-- locales/
+|   |   `-- en.yml
+|   `-- routes.rb
+|-- db/
+|   `-- migrate/
+|-- init.rb
+|-- lib/
+|   `-- tasks/
+|-- README.rdoc
+`-- test/
+    |-- fixtures/
+    |-- functional/
+    |-- integration/
+    |-- test_helper.rb
+    `-- unit/
+</pre>
+
+* You can edit & fill in @plugins/genboree_auth/init.rb@ with some nice values [optional]
+
+h2. Create a @AuthSource@ Sub-Class Called @AuthSourceGenboree@
+
+* According to Rails naming conventions, this file will go in @plugins/genboree/app/models/auth_source_genboree.rb@
+* You may have this from SVN. If so, it's probably ready-to-use, just put it in the right location.
+* It should look something like this:
+
+<pre>
+<code class="ruby">
+# Redmine MyApp Authentication Source
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+# Due to ActiveRecord design of storing state (current connection) in a *class*
+# variable (that's some sweet grass you smokin'), let's have a new class for our
+# ActiveReocrd-based connection to our alternative authentication database.
+class GenboreeMainDB_ActiveRecord < ActiveRecord::Base
+  PAUSE_RETRIES = 5
+  MAX_RETRIES = 50
+end
+
+class AuthSourceGenboree < AuthSource
+  # +login+ : what user entered for their login
+  # +password+ : what user entered for their password
+  def authenticate(login, password)
+    retVal = nil
+    unless(login.blank? or password.blank?)
+      # Get a connection to the authenticating database.
+      # - Don't use ActiveRecord::Base when using establish_connection() to get at
+      #   your alternative database. Use class you prepped above.
+      # - Use the fields of auth_sources to hold necessary information for
+      #   performing the authentication against your db/authService. For accessing
+      #   1+ tables in some other database, I like to use the columns like this:
+      #   . "type" => MUST be this class's name the type of AR database adapter; usually "mysql" for me
+      #   . "host" => who says the database is on the same host as the Redmine database???
+      #   . "account" => username/account for connecting to the database
+      #   . "account_password" => that username's password (who says these are the same
+      #     as for the Redmine application?)
+      #   . "base_dn" => while this field name is highly LDAP-ish, here we will take it to mean:
+      #     "BASic Database Name data" and within is stored a string of the form {dbAdapterName}:{dbName}
+      adapter, dbName = self.base_dn.split(':')
+      retryCount = 0
+      begin
+        connPool = GenboreeMainDB_ActiveRecord.establish_connection(
+          :adapter  => adapter,
+          :host     => self.host,
+          :port     => self.port,
+          :username => self.account,
+          :password => self.account_password,
+          :database => dbName,
+          :reconnect => true
+        )
+        db = connPool.checkout()
+      rescue => err
+        if(retryCount < GenboreeMainDB_ActiveRecord::MAX_RETRIES)
+          sleep(1) if(retryCount < GenboreeMainDB_ActiveRecord::PAUSE_RETRIES)
+          retryCount += 1
+          #RAILS_DEFAULT_LOGGER.error("\n  ALT AUTH CONNECTION ERROR (will retry):\n  #{err.message}\n  " + err.backtrace.join("\n  "))
+          connPool.disconnect!
+          retry # start again at begin
+        else # too many retries, serious, reraise error and let it fall through as it normally would in Rails.
+          raise
+        end
+      end
+
+      # Query the alternative authentication database for needed info. SQL
+      # sufficient, obvious, and doesn't require other setup/LoC. Even more the
+      # case if we have our database engine compute our digests (here, the whole username is a salt).
+      # SQL also nice if your alt auth database doesn't have AR classes and is not part of a Rails app, etc.
+      resultRow = db.select_one("SELECT name, firstName, lastName, email " +
+                                "FROM genboreeuser " +
+                                "WHERE SHA1(CONCAT(name, password)) = SHA1(CONCAT('#{db.quote_string(login)}', '#{db.quote_string(password)}'))") ;
+      RAILS_DEFAULT_LOGGER.error("\n  ALT AUTH QUERY RESULTS: #{resultRow.inspect}")
+
+      unless(resultRow.nil? or resultRow.empty?)
+        user = resultRow[self.attr_login]
+        unless(user.nil? or user.empty?)
+          retVal =
+          {
+            :firstname => resultRow[self.attr_firstname],
+            :lastname => resultRow[self.attr_lastname],
+            :mail => resultRow[self.attr_mail],
+            :auth_source_id => self.id
+          } if(onthefly_register?)
+        end
+      end
+    end
+    # RAILS_DEFAULT_LOGGER.error("\n  ALT AUTH: retVal:\n    #{retVal.inspect}")
+    connPool.checkin(db)
+    return retVal
+  end
+
+  # test the connection to the LDAP
+  def test_connection
+  end
+
+  def auth_method_name
+    "Genboree"
+  end
+end
+</code>
+</pre>
+
+h2. Create an HTML-Partial For Editing Key Fields Via Administration UI
+
+* In newer versions of Redmine, admins can edit the @auth_sources@ records in the UI.
+* Each type of @AuthSource@ needs to have an HTML-partial which the UI uses to present the appropriate UI form.
+* Redmine comes with one of these in @app/views/auth_sources/_form_auth_source_ldap.html.erb@, and we'll base our version on that.
+** But we won't allow just anything to be changed via the UI. Genboree-specific things can't be changed, but hostname and port to talk to, and the Genboree MySQL account credentials, all can be [makes sense].
+* Edit our plugin version of this file (naming conventions matter; rails finds the correct file based on names):
+** @plugins/genboree_auth/app/views/auth_sources/_form_auth_source_genboree.html.erb@
+
+<pre>
+<code class="html">
+
+<%# Adapted from the app/views/auth_sources/_form_auth_source_ldap.html.erb that comes with Rails %>
+<%# - commented out things that administrator/users should not be able to change (fixed for Genbore-type auth) %>
+
+<%= error_messages_for 'auth_source' %>
+
+<div class="box tabular">
+  <!-- p><%= f.text_field :name, :required => true %></p -->
+  <p><%= f.text_field :host, :required => true %></p>
+  <p><%= f.text_field :port, :required => true, :size => 6 %> </p>
+  <p><%= f.text_field :account, :required => true %></p>
+  <p><%= f.password_field :account_password, :label => :field_password, :required => true,
+           :name => 'dummy_password',
+           :value => ((@auth_source.new_record? || @auth_source.account_password.blank?) ? '' : ('x'*15)),
+           :onfocus => "this.value=''; this.name='auth_source[account_password]';",
+           :onchange => "this.name='auth_source[account_password]';" %></p>
+  <!-- p><%= f.text_field :base_dn, :required => true, :size => 60 %></p -->
+  <!-- p><%= f.text_field :filter, :size => 60, :label => :field_auth_source_ldap_filter %></p -->
+  <!-- p><%= f.text_field :timeout, :size => 4 %></p -->
+  <!-- p><%= f.check_box :onthefly_register, :label => :field_onthefly %></p -->
+</div>
+
+<!-- fieldset class="box tabular"><legend><%=l(:label_attribute_plural)%></legend>
+  <p><%= f.text_field :attr_login, :required => true, :size => 20 %></p>
+  <p><%= f.text_field :attr_firstname, :size => 20 %></p>
+  <p><%= f.text_field :attr_lastname, :size => 20 %></p>
+  <p><%= f.text_field :attr_mail, :size => 20 %></p>
+</fieldset -->
+</code>
+</pre>
+
+h2. Need to Insert a New Record into the Existing @auth_sources@ Table
+
+* We use the +rails console+ to do this.
+* It will read all the Rails code AND discover our plugin and its model class!
+* We will employ the existing model class for this, named @AuthSourceGenboree@ (as per rails table<->class naming convention you can always figure out the model class names)
+** You can create new records/instances of models via the @create()@ class method as we'll see.
+
+h3. Enter the rails console
+
+* @cd@ to your redmine install directory
+* Enter the rails console (@irb@ + rails stuff available):
+
+<pre>
+$ export RAILS_ENV=production
+$ ruby script/rails console
+>
+> # Note the fields available in the @auth_sources@ table (since AuthSourceGenboree inherits from AuthSource):
+> AuthSourceGenboree
+#=> AuthSource(id: integer, type: string, name: string, host: string, port: integer, account: string,
+#      account_password: string, base_dn: string, attr_login: string, attr_firstname: string, attr_lastname: string,
+#      attr_mail: string, onthefly_register: boolean, tls: boolean, filter: string, timeout: integer)
+>
+> # Use AuthSourceGenboree.create() and these fields as named-parameters to what you want to fill in for the new record.
+> # - Things you don't provide will be given the default value.
+> AuthSourceGenboree.create( {
+  :type               => "AuthSourceGenboree",
+  :name               => "Genboree",
+  :host               => "taurine.brl.bcmd.bcm.edu",
+  :port               => 3306,
+  :account            => "genboree",
+  :account_password   => "{gbDbPassword}",
+  :base_dn            => "mysql:genboree",
+  :attr_login         => "name",
+  :attr_firstname     => "firstName",
+  :attr_lastname      => "lastName",
+  :attr_mail          => "email",
+  :onthefly_register  => true,
+  :tls                => false
+})
+>
+> # The record has now been inserted into the MySQL table backing this Redmine installation
+> # - you can confirm this by asking for "all" model records [from the table]
+> # - examine output/inspect of this carefully:
+> AuthSource.all
+
+</pre>
+
+* Can also confirm record is there in the MySQL database:
+
+<pre>
+> select * from auth_sources ;
++----+--------------------+----------+--------------------------+------+----------+------------------+----------------+------------+----------------+---------------+-----------+-------------------+-----+--------+---------+
+| id | type               | name     | host                     | port | account  | account_password | base_dn        | attr_login | attr_firstname | attr_lastname | attr_mail | onthefly_register | tls | filter | timeout |
++----+--------------------+----------+--------------------------+------+----------+------------------+----------------+------------+----------------+---------------+-----------+-------------------+-----+--------+---------+
+|  1 | AuthSourceGenboree | Genboree | taurine.brl.bcmd.bcm.edu | 3306 | genboree | {DB_PASSWORD}  | mysql:genboree | name       | firstName      | lastName      | email     |                 1 |   0 | NULL   |    NULL |
++----+--------------------+----------+--------------------------+------+----------+------------------+----------------+------------+----------------+---------------+-----------+-------------------+-----+--------+---------+
+</pre>
+
+h3. Possible @config/database.yml@ and @Gemfile.local@ Gotcha Fix
+
+If you are using @mysql2@ as your adapter via the appropriate @config/database.yml@ setting [smart], you will NOT have the regular/old @mysql@ gem loaded.
+* Interestingly, Redmine's @app/models/auth_source.rb@ code requires this @mysql@ gem and associated rails adapter. Since we're inheriting from that...
+** If those aren't available, you'll get an error when a Genboree user tries to log in, triggering our new auth source.
+
+To fix this:
+# Install the @mysql@ gem if it's not there (check via @gem list --local@ first): @gem install mysql@
+# Install the @activerecord-mysql-adapter@ gem: @gem install activerecord-mysql-adapter@
+# Add the @mysql@ gem to your @Gemfile.local@ file (since only the @mysql2@ is loaded currently)
+#* Add this line: @gem "mysql", ">=2.8.1"@
+# Restart redmine
+
+h3. Restart & Confrm
+
+* Restart your redmine instance
+* Log in using an administrator account that was working previously
+* Go to @Administration -> LDAP authentication@
+** No, it's not LDAP. The setting has a bad name, because this page _actually_ lists all known alternative Authorization Sources!
+** And your should see one called @Genboree@ now!
+** If you click the blue @Genboree@ link, you should see a little form for changing key fields in the @auth_sources@ record.
+* Click @Test@
+** Should show a green @Successful connection@ message.
+* Log out
+* Log back in as user not yet known to this Redmine instance...one from Genboree
+** Should be able to log in.
+* Log out
+* Log back in as the Adminstrator type user.
+** If actually a Genboree user, go to @Administration -> Users -> [Click this admin user]
+** Under the @Authentication@ section, change @Authentication mode@ to @Genboree@
+** Click @Save@
+* Log out and back in again...you've successfully changed this user from local-Redmine over to Genboree-authorized
+
+
+

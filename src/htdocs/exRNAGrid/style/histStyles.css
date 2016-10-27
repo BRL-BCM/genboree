@@ -1,0 +1,114 @@
+/*Placement and style definitions of the div elements*/
+.histogramFull{
+ height: 530px;
+ background-color: white;
+ position: relative;
+ width: 460px; 
+ border: solid #eeeeee;
+
+}
+.container {
+  display: table;
+  position: absolute;
+  left:8%;
+
+  top:10%;
+  /*height:208px;*/
+  width:380px;
+  /*height:520px;*/
+  background-color: white;
+  /*overflow: hidden;*/
+}
+.max {
+  display: table-cell;
+  background-color: #3a9ee0;
+   width:40px;
+   text-align:center;
+   font-size:9px;
+   color: white;
+   font-weight: bold;
+   left:5;
+   /*position:relative;*/
+}
+.row {
+  display: table-row;
+}
+.lastrow{
+ display: table-row;
+ background-color: #eeeeee;
+}
+.axisRow {
+  display: table-row;
+  height: 2px;
+}
+.labelRow {
+ display: table-row;
+  height: 20px;
+  text-align:center;
+}
+
+
+.outer {
+   display: table-cell;
+   background-color: white; 
+   width:40px; 
+   position: relative;
+   font-size:9px;
+   color: #3a9ee0; ;
+   text-align:center;
+   vertical-align: bottom;
+   font-weight: bold;
+}
+.inner {
+  text-align:center;
+  background-color:#3a9ee0; 
+  width:40px;
+  position: absolute;
+  font-size:9px;
+  bottom:0;
+  color:white;
+  font-weight: bold;
+  overflow: hidden;
+}
+
+.xaxis{
+  width:40px;
+  background-color:#eeeeee;
+  height:2px;
+  display: table-cell;
+}
+.row div.xaxis {
+  background-color: white;
+}
+
+.space {
+  background-color:#eeeeee;
+  display: table-cell;
+  height:1px;
+}
+
+.labelName{
+  display:table-cell;
+  background-color:white;
+  font-size:9px;
+  color:#FF6600;
+  width: 40px;
+  font-weight: bold;
+  text-align:center;
+  vertical-align:middle;
+}
+.title{
+  display:table-cell;
+  background-color:white;
+  font-size:12px;
+  color:#3a9ee0;
+  width: 380px;
+  font-weight: bold;
+  text-align:center;
+  height: 30px;
+  position: absolute;
+  left:8%;
+  top: 50;
+  padding-top: 10px;
+}
+

@@ -1,0 +1,329 @@
+<%
+  require 'open-uri'
+  require 'cgi'
+  require 'mechanize'
+  require 'brl/genboree/genboreeContext'
+
+  Pathway = Struct.new(:categories, :link, :keggId)
+
+  # ARGUMENTS TO PAGE:
+  # - geneName -- see if there are any pathways for a gene with this [exact] ename
+  # - refSeqId -- we'll need to make browser links BACK to Genboree if we find a pathway, so we need this
+  # - keggUrl -- the url for the pathway page at Kegg; will make augmented version of their page
+  # - ip or isPublic -- should all the links be tagged as isPublic to avoid Genboree logins? (only works for published databases)
+  cgi = CGI.new()
+  context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  geneName = cgi['geneName'].to_s.strip
+  refSeqId = cgi['refSeqId'].to_s.strip
+  keggUrl = cgi['keggUrl'].to_s.strip
+  isPublic = cgi['ip'] || cgi['isPublic']
+  isPublicStr = ((isPublic.nil? or isPublic.empty?) ? '' : "&ip=#{isPublic}")
+  success = false
+
+  unless(geneName.empty? or refSeqId.empty? or keggUrl.empty?)
+    # We need a "browser". We lie to remote hosts so they don't prevent our "robot" programmatic browsing.
+    agent = Mechanize.new()
+    agent.user_agent_alias = 'Linux Firefox'
+    agent.max_history = 10 # else infinite
+
+    # Grab Kegg pathway page
+    page = agent.get(keggUrl)
+    # Root URL
+    baseUrl = "#{page.uri.scheme}://#{page.uri.host}"
+    # Nokogiri html document object to make augmentation easy.
+    # - you will see a lot of xpath and/or CSS style searches to select relevant tags or attributes; very powerful
+    doc = page.parser
+
+    # ------------------------------------------------------------------
+    # Changes to Links on Page
+    # ------------------------------------------------------------------
+    # First, FIX all relative href and src attribute values for NON <area> tags
+    # - these are non-pathway hotspots relative links to suff at Kegg
+    # - but we're not at Kegg, so need to make ABSOLUTE links, so they will work
+    nonAreaElems = doc.search("//*[@href or @src or @action][not(parent::map)]")
+    nonAreaElems.each { |elem|
+      # href
+      href = elem['href']
+      if(href and href !~ %r{[^:]+://[^/]+})  # We'll avoid editing links with protocol directly or within a void(window.open())
+        # Replace the first / with http://host.com/. This should handle the simple cases of '/relative/link' and 'void(window.open("/rel/link"))'
+        elem['href'] = elem['href'].sub(/\//, "#{baseUrl}/")
+      end
+      # src
+      src = elem['src']
+      if(src and src !~ %r{[^:]+://[^/]+})  # We'll avoid editing links with protocol directly or within a void(window.open())
+        # Replace the first / with http://host.com/. This should handle the simple cases of '/relative/link' and 'void(window.open("/rel/link"))'
+        elem['src'] = elem['src'].sub(/\//, "#{baseUrl}/")
+      end
+      # action
+      src = elem['action']
+      if(src and src !~ %r{[^:]+://[^/]+})  # We'll avoid editing links with protocol directly or within a void(window.open())
+        # Replace the first / with http://host.com/. This should handle the simple cases of '/relative/link' and 'void(window.open("/rel/link"))'
+        elem['action'] = elem['action'].sub(/\//, "#{baseUrl}/")
+      end
+    }
+
+    # Second, FIX all relative hrefs of <area> tags NOT in the <map> for the image.
+    # - WTF is a is an area tag not in a map? well in this case it's:
+    #   1. being super conservative, but more it is:
+    #   2. dealing with any images and <map> tags for things OTHER than the pathway image
+    areaElems = doc.search("//map[not(@name='mapdata')]/area")
+    areaElems.each { |elem|
+      # href
+      href = elem['href']
+      if(href and href !~ %r{[^:]+://[^/]+})  # We'll avoid editing links with protocol directly or within a void(window.open())
+        # Replace the first / with http://host.com/. This should handle the simple cases of '/relative/link' and 'void(window.open("/rel/link"))'
+        elem['href'] = elem['href'].sub(/\//, "#{baseUrl}/")
+      end
+    }
+
+    # Third, MAKE LINK-BACKS to Genboree's Genome Space
+    # - CHANGE the href's in <area> tags in the <map> for the image to point to a Genboree search using indicated gene name
+    # - actually, make the href pop up a little dialog where the user can choose to go back to Genboree space OR follow original Kegg link!
+    areaElems = doc.search("//map[@name='mapdata']/area")
+    areaElems.each { |elem|
+      href = elem['href']
+      title = elem['title']
+      # Does this look like a gene-name <area>? If not, skip
+      if(href and title)
+        if(href =~ %r{\?hsa:\d+}) # then looks like a gene node in the image
+          # Try to accumulate all the keggIds and matching gene names from the title attribute
+          keggGeneIds = []
+          geneNames = []
+          title.scan(/(\d+)\s*\(([^\)]+)\)/) { |geneInfoMatch| # Then title also looks like it is a [possible CSV list of ) '12345 (geneName)'
+            keggGeneIds << geneInfoMatch[0]
+            geneNames << geneInfoMatch[1]
+          }
+          # Clear out the href, we're going to use onclick only.
+          elem.delete('href')
+          # Add onClick
+          keggGeneIdsStr = keggGeneIds.map{ |xx| "'#{xx.strip}'" }.join(',')
+          geneNamesStr = geneNames.map{ |xx| "'#{xx.strip}'" }.join(',')
+          elem['onclick'] = "showLinkBacks( event, [#{keggGeneIdsStr}], [#{geneNamesStr}]) ;"
+          elem['style'] = "cursor: pointer ;"
+        else # some other kind of <area> tag link...need to fix to have baseUri
+          if(href !~ %r{[^:]+://[^/]+})  # We'll avoid editing links with protocol directly or within a void(window.open())
+            # Replace the first / with http://host.com/. This should handle the simple cases of '/relative/link' and 'void(window.open("/rel/link"))'
+            elem['href'] = elem['href'].sub(/\//, "#{baseUrl}/")
+          end
+        end
+      end
+    }
+
+    # ------------------------------------------------------------------
+    # CORE PAGE MODIFICATION
+    # - do this after "fixing" the links above, so we don't end up
+    #   modifying our own inserted links
+    # ------------------------------------------------------------------
+    # Change page title
+    titleElems = doc.search("//title")
+    unless(titleElems.empty?)
+      titleElems.first.inner_html = "#{titleElems.first.inner_html} [Pathway Space wrapped by Genboree]"
+    end
+
+    # Fixup Help button animation
+    helpElems = doc.search("//img[@name='help']")
+    unless(helpElems.empty?)
+      helpElem = helpElems.first
+      helpElem.each { |attr, val| if(attr =~ /^onmouse/) then helpElem.delete(attr) ; end }
+    end
+
+    # Add <style>  and <script> sections in the <head>
+    firstElems = doc.search("//head/*[position()=1]")
+    unless(firstElems.empty?)
+      firstElem = firstElems.first
+      firstElem.before( <<-EOS
+        <script src="/javaScripts/prototype-1.6.js" type="text/javascript"></script>
+        <script src="/javaScripts/pathway2genomeWrapper.js" type="text/javascript"></script>
+        <script type="text/javascript">
+          var refSeqId = "#{refSeqId}" ;
+          var isPublicStr = "#{isPublicStr}" ;
+        </script>
+        <style type="text/css">
+          span.fixed {
+            font-family: Courier New, Fixed, monospaced ;
+          }
+          span.inGreen {
+            background: #BFFFBF ;
+            color: #000000 ;
+            border: 1px solid #000000 ;
+            padding: 1px ;
+          }
+          div.title {
+            font-weight: bold ;
+            font-size: 1.2em ;
+          }
+          div.msg {
+            background-position: 2px 2px ;
+            background-repeat: no-repeat ;
+            padding: 2px 2px 2px 42px ;
+            min-height: 30px;
+            font-weight: bold ;
+            width: 460px ;
+          }
+          div.warn {
+            background-color: #FFF0D8 ;
+            background-image: url(/images/vgpWarning.png) ;
+            border: 2px solid #C64848 ;
+            color: #C64848 ;
+            font-family: sans-serif ;
+            font-size: 10pt ;
+            margin-top: 20px ;
+            margin-bottom: 20px ;
+            margin-left: auto ;
+            margin-right:auto ;
+            width: 460px ;
+            font-weight: normal !important ;
+          }
+          div.fail {
+            background-color: #FFE0E0 ;
+            background-image: url(/images/vgpFailure.png) ;
+            border: 2px solid #C64848 ;
+            color: #C64848 ;
+            font-family: sans-serif ;
+            font-size: 11pt ;
+            margin-top: 20px ;
+            text-align: center ;
+          }
+          div.warn ul {
+            padding: 0px 0px 0px 16px ;
+            margin: 0px ;
+          }
+          div.availLinks {
+            background: #003399 ;
+            color: #FFFFFF ;
+            width: 100% ;
+            border: 1px solid black ;
+            height: 1.4em ;
+          }
+          div.availLinksTitle {
+            background: #003399 ;
+            font-size: 1.3em ;
+            font-weight: bold ;
+            margin-bottom: 8px ;
+            float: left ;
+            width: 90% ;
+          }
+          div.availLinksClose {
+            background: #003399 ;
+            float: right ;
+            width: 10% ;
+          }
+          div.availLinksClose a:link,div.availLinksClose a:visited,div.availLinksClose a:hover,div.availLinksClose a:active {
+            color: #FFFFFF !important ;
+            font-weight: bold !important ;
+          }
+          div#gbLinkBackDiv {
+          }
+          div.linkGeneName {
+            font-weight: bold ;
+            margin-right: 5px ;
+          }
+          div#gbLinkBackDiv ul {
+            list-style-type: none ;
+          }
+          div#gbLinkBackDiv ul.linkBack {
+            list-style-type: none ;
+            padding-left: 15px ;
+            margin-top: 2px ;
+            margin-bottom: 2px ;
+            margin-left: 0px ;
+            margin-right: 0px ;
+          }
+          div#gbLinkBackDiv span.linkBack {
+            background: url(/images/silk/bullet_go.png) center left no-repeat ;
+            padding-left: 18px ;
+          }
+        </style>
+      EOS
+      )
+    end
+
+    # Finally, add a special <div> to the the top of the page with notes about what's going on.
+    # - Also, add a specifal <div> to the top that will be used for the gene links.
+    firstElems = doc.search("//body/*[position()=1]")
+    unless(firstElems.empty?)
+      firstElem = firstElems.first
+      firstElem.before( <<-EOS
+        <div class="msg warn">
+          <div class="title">
+            Note: This Is Wrapped Pathway Data
+          </div>
+          <ul>
+            <li>
+              The pathway from <a href="http://www.genome.jp/kegg/kegg2.html">Kegg</a> has been wrapped by Genboree
+              in order to link <span class="inGreen">Genes</span> in this pathway back to your Genboree database.
+            </li>
+            <li>
+              The <a href="#{keggUrl}"><i>original</i> Kegg pathway page</a> contains useful links to their
+              own database information about the pathways, genes, etc.
+            </li>
+          </ul>
+        </div>
+        <div id="gbLinkBackDiv" name="gbLinkBackDiv" class="" style="display: none; position: absolute; width:240px; height:20px; border:1px solid #333; background:#c2defb;"></div>
+      EOS
+      )
+    end
+
+    success = true
+  end
+%>
+<%  if(success) %>
+      <%= doc.inner_html.gsub(/\302\240/, ' ') %>
+<%  else %>
+
+<html>
+  <head>
+    <style type="text/css">
+      span.fixed {
+        font-family: Courier New, Fixed, monospaced ;
+      }
+      div.title {
+        font-weight: bold ;
+        font-size: 1.2em ;
+        margin-bottom: 10px ;
+      }
+      div.msg {
+        background-position: 2px 2px ;
+        background-repeat: no-repeat ;
+        padding: 2px 2px 2px 42px ;
+        min-height: 30px;
+        font-weight: bold ;
+        width: 460px ;
+        text-align: center ;
+      }
+      div.warn {
+        background-color: #FFE375 ;
+        background-image: url(/images/vgpWarning.png) ;
+        border: 2px solid #C64848 ;
+        color: #C64848 ;
+        font-family: sans-serif ;
+        font-size: 11pt ;
+        margin-top: 20px ;
+      }
+      div.fail {
+        background-color: #FFE0E0 ;
+        background-image: url(/images/vgpFailure.png) ;
+        border: 2px solid #C64848 ;
+        color: #C64848 ;
+        font-family: sans-serif ;
+        font-size: 11pt ;
+        margin-top: 20px ;
+      }
+    </style>
+    <title>
+      Kegg Pathway (Genome Space wrapped)
+    </title>
+  </head>
+  <body>
+      <div class="msg fail">
+      <%  if(keggUrl.empty?) %>
+            ERROR: No <i>keggUrl</i> argument provided to this page.<br>Cannot map its Pathway Space information back to Genome Space.
+      <%  elsif(refSeqId.empty?) %>
+            ERROR: No <i>refSeqId</i> argument provided to this page.<br>Can't map Pathway Space back to Genome Space.
+      <%  else %>
+            Could not find a pathway associated with a gene name of<br>&quot;<span class="fixed"><%= geneName %></span>&quot;.
+      <%  end %>
+      </div>
+  </body>
+</html>
+<%  end %>

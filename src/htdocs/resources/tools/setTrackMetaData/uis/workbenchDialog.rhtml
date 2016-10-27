@@ -1,0 +1,97 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+%>
+
+<%=
+  formTag = ""
+  if(@inputs.size == 0)
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+  else
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  end
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Set Track Metadata" } ) %>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+          This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will import Track metadata into a target <u>Database</u>. Note that in order for the file(s) to be imported
+        successfully, the file(s) need to be in a specific <i>tab-delimited</i> format:
+        <ul>
+          <li>The first line of the file contains the column headers, as a comment-line. It must start with a '<b>#</b>'.</li>
+          <li>One of the fields MUST be 'name' which should be unique for all Track records.</li>
+          <li>All records MUST have the same number of fields/columns.</li>
+        </ul>
+        Review that the correct track metadata file is going to be imported.
+        <br>&nbsp;<br>
+        Note that the <b>Create New Tracks</b> checkbox gives you the option of creating new tracks (without any annotations) in cases where the track is not already present
+        in the target database.
+        <br>&nbsp;<br>
+        <b>Warning</b>: Changing some of the internally used metadata fields for tracks is prohibited and will be skipped if present in the input file.
+        These fields include:
+        <ul style='font-size:80%;width:80%;'>
+          <li >gbTrackBpSpan</li>
+          <li>gbTrackBpStep</li> 
+          <li>gbTrackUseLog</li> 
+          <li>gbTrackDataMax</li> 
+          <li>gbTrackDataMin</li> 
+          <li>gbTrackRecordType</li>
+          <li>gbTrackDataSpan</li> 
+          <li>gbTrackHasNullRecords</li> 
+        </ul>
+      "
+    })
+%>
+<%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Metadata File:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Meta Data File" } )
+    })
+  %>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+%>
+<%=
+    widgets = []
+    if(@inputs.size == 0)
+      widgets = [
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                    { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                ]
+    end
+    widgets << { :id => 'createEmptyTracks', :label => 'Create New Tracks?', :type => :checkbox, :checked => true }
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>

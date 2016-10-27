@@ -1,0 +1,332 @@
+<%
+  require 'json'
+  @gbRSeqToolsGenomesInfo = JSON.parse(File.read(@genbConf.gbRSeqToolsGenomesInfo)) 
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      {
+        :toolHelpOverview =>
+        "
+        <ul>
+          <li><a href=\"#OverviewAnchor\">Overview</a></li>
+          <li><a href=\"#TutorialsAnchor\">Tutorials</a></li>
+          <li><a href=\"#addendumAnchor\">Addendum</a></li>
+          <li><a href=\"#rseqManifestAnchor\">Manifest Files</a></li>
+          <li><a href=\"#rseqExampleAnchor\">Example Dataset</a></li>
+          <li><a href=\"#rseqWorkflowAnchor\">Workflow</a></li>
+          <li><a href=\"#rseqModulesAnchor\">RSEQtools Modules</a></li>
+          <li><a href=\"#inputNotesAnchor\">Important Notes</a></li>
+        </ul>
+        
+        <a name='overview' id='OverviewAnchor'><b>Overview</b></a>
+        <p>
+        The <i>Analyze RNA-Seq data by RSEQtools - Batch processing</i> tool is used for analyzing multiple single or paired-end FASTQ files using the RSEQtools pipeline.
+        This RNA-Seq data analysis pipeline uses several well established tools, including Bowtie2, Samtools, FastQC, and specific modules available in RSEQtools. FastQC performs a quality check on the sequence reads, Bowtie2 maps the reads to the reference genome, and Samtools is used to post-process the aligned reads. Downstream analysis utilizes specific modules in RSEQtools performing tasks such as gene-expression quantification, generating signal tracks of mapped reads for visualization, calculating mapping bias, and computing annotation coverage. RSEQtools uses the Mapped Read Format (MRF), a compact data summary format for both short and long read alignments that enables anonymization of confidential sequence information.
+        <br>&nbsp;<br>
+        See <a href=\"#addendumAnchor\">addendum</a> section below for details about the pipeline and example data for running the tool.
+        </p>
+        <br>
+
+        <b>Inputs</b>
+        <br>
+          <ol>
+            <li><i>Data Files</i> - <b>REQUIRED</b> </li> 
+              <ul>
+                <li><i>Individual Input Files</i> - One or more <b>single-end or paired-end RNA-seq read files</b> in <a href='http://en.wikipedia.org/wiki/FASTQ_format' target='_blank'>FASTQ</a> format. The input files can be compressed.</li>
+                <li><i>Batches of Input File Archives</i> - You can also upload one or more compressed archives of multiple FASTQ files. Each FASTQ file can also be compressed inside of these archives. </li>
+              </ul>
+            <li><i>Manifest File</i> - This is a <b>REQUIRED</b> file. This file is used by the pipeline to distinguish the single-end or paired-end FASTQ files in the submission. This file will be in <a href='http://en.wikipedia.org/wiki/JSON' target='_blank'>JSON</a> format and will have the extension <b>\".manifest.json\"</b>. See <a href=\"#rseqManifestAnchor\">manifest files</a> section below for example manifest files for single as well as paired-end sequencing reads.</li>   
+          </ol>
+        <br>
+        Please see <a href=\"#inputNotesAnchor\">IMPORTANT NOTES</a> in the <a href=\"#addendumAnchor\">addendum</a> section to prepare your input files.
+        <br>
+        <u>NOTE</u>: To upload input files to your database, use <code>Data</code> &raquo; <code>Files</code> &raquo <code>Transfer File</code> from the toolset menu.
+
+        <br><br>
+        <b>Outputs</b>
+          <ul>
+            <li>Genboree Database</li>
+            <li>Redmine Project: To create a new Redmine project for use in this tool, refer to the Help section in <code>System/Network</code> &raquo; <code>Redmine Projects</code> &raquo; <code>Add Project</code></li>
+          </ul>
+        <br>         
+        <b>Bowtie 2 Index of reference sequences</b> 
+        <br>
+        <u>NOTE</u>: If there are no Bowtie 2 indexes in your database or in the repository database, you should create a new Bowtie 2 index.
+        <br>Select from two options:
+          <ul>
+            <li><b>Use existing index</b> Select existing index from a list of Bowtie 2 indexes available in the user database or repository database (if available for chosen genome). By default, whole genome index is used if it is available.</li>
+            <li><b>Build a new index</b> Build a new Bowtie 2 index for a set of entrypoints/chromosomes or user uploaded reference sequences. The IndexBowtie tool is used to build new index.
+            <br>
+            <u>NOTE</u>: To upload reference sequences as new entrypoints, use <code>Data</code> &raquo; <code>Entrypoints</code> &raquo <code>Upload Entrypoints</code> tool from the toolset menu.
+            </li>
+          </ul>
+
+        <b>Gene annotations</b>: This version only supports UCSC knownGene annotations for the genomes: <b><font color=green> #{@gbRSeqToolsGenomesInfo.keys.join(", ")} </font></b>.
+        <br>&nbsp;<br>
+
+        <b>Results</b>
+        <br>
+        <u>NOTE</u>: To download any file from your database to your computer, click the file name in the <code>Data Selector</code> tree, then click on <code>Click to Download File</code> link from the <code>Details</code> panel. 
+        <ul>
+          <li>Alignments in <a href='http://samtools.sourceforge.net/SAMv1.pdf' target='_blank'>SAM and BAM</a> formats - compressed in <i>AnalysisName</i>_alignments.zip</li>
+          <li>All result files compressed in <i>AnalysisName</i>_results.zip</li>
+          <li>Key result files for quick access (also found in <i>AnalysisName</i>_results.zip):
+            <ul>
+              <li>File with gene expression values</li>
+              <li>Mapping bias file</li>
+              <li>Annotation Coverage File</li>
+            </ul>
+          </li>
+          <li>Signal Tracks of mapped reads (for visualization in genome browsers) - Uploaded as signal track under the <code>Tracks</code> section of the user db (if specified in the UI). 
+            <ul>
+              <li>Track names in Genboree are <a href='http://genboree.org/java-bin/showHelp.jsp?topic=lffFileFormat' target='_blank'>LFF</a>-style names, that look like <code>TRACK:NAME</code>, where TRACK and NAME are sensible names relevant to the input specified by the user in the tool settings. An example track name could be <code>Sample1Reads:Density</code>.</li>
+              <li>These tracks can be used for visualization in UCSC Genome browser by dragging this database to <code>Input Data</code> and choosing <code>Visualization</code> &raquo; <code>Launch UCSC Genome Browser</code> from the menu. </li> 
+              <li>Ensure that this database is 'unlocked'. To unlock a database, drag the database to <code>Input Data</code> and select <code>Data</code> &raquo; <code>Databases</code> &raquo; <code>Unlock/Lock Database</code>.</li>
+            </ul>
+          </li>
+          <li>FastQC output plots - The links to view these plots are availble in the <code>Redmine Project</code> wiki page. To open the <code>Redmine Project</code> wiki page, click on the Project name, then click <code>Link to Job Output</code> in the <code>Details</code> panel.</li>
+          <li>Custom Bowtie2 Index File, if available</li>
+          <li>Genboree Job Specification File: <em>jobFile.json</em></li>
+        </ul>
+        
+        <br>
+        
+        <a name='tutorials' id='TutorialsAnchor'><b>Tutorials</b></a>
+        <br>
+        Tutorials to run this tool can be found in this <a href='http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Long%20RNA-seq%20Pipeline' target='_blank'>Wiki</a> page.
+        <br>&nbsp;<br>
+
+        <span style='font-size: 80%'><i>This tool has been deployed in the context of the <a href='http://exrna.org/' target='_blank'>Extracellular RNA Communication Consortium</a>. Please contact <a href='mailto:sailakss@bcm.edu'>Sai Lakshmi Subramanian</a> at the Data Coordination Center (DCC) of the ERCC with questions or comments, or for help with using it on your own data.</i></span>     
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag one or more single or paired-end FASTQ files and a .manifest.json file into &quot;Input Data&quot;.',
+          "Optionally drag a folder or a file entity list or one or more compressed archives with FASTQ files into &quot;Input Data&quot;. "
+        ],
+        :types              => [ [ 'File', 'min: 2 ; max: any' ], [ 'Files Dir', 'min: 1 ; max: 1' ], [ 'Files Entity', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>RSEQtools</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Analysis Name</span> will be used as a sub-folder to hold the files generated by that run of the tool.',
+                                  'Drag a Redmine project into &quot;Output Targets&quot. The plots generated by FastQC can be viewed from this Redmine project\'s Wiki page.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ], [ 'Redmine Project', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'RSEQtools') used to organize RSEQtools results."],
+          [ 'Bowtie Index Options', "Do you want to build a new index using reference sequences or use an existing index? [Default: Uses whole genome index if available]. "],
+          [ 'Use existing index', "Select existing index from a list of Bowtie2 indexes available in the user database or repository database (if available for chosen genome)"],
+          [ 'Build a new index', "Build a new Bowtie2 index for a set of entrypoints/chromosomes or user uploaded reference sequences. The IndexBowtie tool is used to build new index."],
+          [ 'Bowtie2 Index Name', "Provide a name for your custom Bowtie2 index. This name should be less than 30 characters in length. [Default: GenomeVersion]. " ],
+          [ 'Select Entrypoints/Chromosomes', "Select list of entrypoints/chromosomes for building Bowtie2 index. You will see a warning message if no entrypoint is selected. To build Bowtie2 index for custom reference sequences, you can upload your reference sequence as a new entrypoint to your database using <code>Data</code> &raquo; <code>Entrypoints</code> &raquo; <code>Upload Entrypoints</code> from the menu." ],
+          [ 'Upload Results ?', 'Check this to upload signal track of mapped reads in WIG format as a Genboree track in the output database for viewing in UCSC Genome Browser.'],
+          [ 'Class Name', 'If uploading the signal track, provide a Class name, under which tracks will be uploaded in your database. [Default: User Data]'],
+          [ 'Track Name', 'Provide an LFF-style track name, to upload the signal track. Preferably not an existing track in the output database.'],
+          [ 'Delete Pre-existing Tracks', "Check this to delete existing tracks in the target database and replace them with newly created ones if the names match. Non matching tracks will not be changed in any way. This will avoid duplication of imported data. By default, data gets appended to the existing track. [Default: Unchecked]."],
+          [ 'Coverage Factor', 'Minimum level of uniform coverage required across a transcript. [Default: 1]'],
+          [ 'Submit', "Once you have reviewed the inputs, the output destination database, and your settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [
+                                    'Lukas Habegger, Andrea Sboner, Tara A. Gianoulis, Joel Rozowsky, Ashish Agarwal, Michael Snyder, Mark Gerstein. <i>RSEQtools: A modular framework to analyze RNA-Seq data using compact, anonymized data summaries.</i> 
+                                    Bioinformatics. <b>2010</b> Dec 5;<b> 27(2) </b>: 281-283
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/21134889" target="_blank">PubMed</a>]</span>'
+                                  ],
+                                  [
+                                    'Langmead B, Salzberg SL. <i>Fast gapped-read alignment with Bowtie 2.
+                                    </i> Nature Methods. <b>2012</b> Mar 4;<b> 9 </b>: 357-359.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/22388286" target="_blank">PubMed</a>]</span>'
+                                  ],
+                                  [
+                                    'Li H., Handsaker B., Wysoker A., Fennell T., Ruan J., Homer N., Marth G., Abecasis G., Durbin R. and 1000 Genome Project Data Processing Subgroup. <i>The Sequence alignment/map (SAM) format and SAMtools. </i> Bioinformatics. <b>2009</b> 25: 2078-9.'
+                                  ],
+                                  ['RSEQtools was developed by the <a href="http://www.gersteinlab.org/" target="_blank">Gerstein Lab</a> at Yale University.'],
+                                  [ 'Integrated into the Genboree Workbench by Sai Lakshmi Subramanian at <a href="http://genboree.org/site/team" target="_blank">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+<%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum' id='addendumAnchor'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>  
+              Addendum
+            </div>
+          </a>
+          <a name='rseqManifest' id='rseqManifestAnchor'>
+          <b>Manifest File</b>
+          </a>
+          Here is an example of a manifest JSON file for single end sequencing reads. Note the usage of \"dataFileName\" for specifying the single-end FASTQ file name.
+          <pre>
+          \{
+          \"manifest\": 
+            [
+              \{
+                \"dataFileName\": \"BT474.fastq\"
+              \},
+              \{
+                \"dataFileName\": \"HCC1143.fastq.gz\"
+              \}
+            ]
+          \}
+          </pre>
+          <br>
+          Here is another example of a manifest JSON file for paired end sequencing reads. Note the usage of \"dataFileName1\" and \"dataFileName2\" for specifying the paired-end FASTQ file names.
+          <pre>
+          \{
+          \"manifest\": 
+            [
+              \{
+                \"dataFileName1\": \"BT474.subset.1.fastq.gz\",
+                \"dataFileName2\": \"BT474.subset.2.fastq.gz\"
+              \},
+              \{
+                \"dataFileName1\": \"HCC1143.subset.1.fastq.gz\",
+                \"dataFileName2\": \"HCC1143.subset.2.fastq.gz\"
+              \}
+            ]
+          \}
+          </pre>
+          <br>
+          <a name='rseqExample' id='rseqExampleAnchor'>
+          <b>Example data for RSEQtools</b>
+          </a>
+          A sample from a deep-sequencing study to analyze the transcriptome changes that occur during the differentiation of human embryonic stem cells into the neural lineage has been used in this example. The sample consists of 27 nucleotide single-end reads, that are aligned to human reference genome build hg18 and to a splice junction library generated from the UCSC Known Genes annotation set using Bowtie2. The mapped reads are then analyzed using various modules in RSEQtools. 
+          <br>
+          Sample datasets with input and output files can be found in the <code>Data Selector</code> panel:
+          <img src='/images/workbench/rseqtoolsTestSet-Batch.png' style='float:right; width:460px; height: 560px; margin: 0px 3px 0px 3px;'>
+          <br>&nbsp;<br>
+          <ul>
+            <li>Under the group <code>Examples and Test Data</code>, select the database <code>RSEQtools hg19 - Example Data</code></li> 
+            <li>Input FASTQ files can be found under: <code>Files</code>. Manifest files in JSON format can also be found in the same location. </li>
+            <li>Outputs of RSEQtools pipeline can be found under <code>Files</code> &raquo; <code>RSEQtools</code> folder of this database</li>
+            <li>QC Plots from FastQC can be found in the <code>Redmine Projects</code> page</li>
+            <li>Custom Bowtie2 indexes can be found under <code>Files</code> &raquo; <code>indexFiles</code> &raquo; <code>bowtie</code> &raquo; <code>[Your custom index folder]</code></li>  
+            <li>Signal tracks are uploaded under the <code>Tracks</code> section of this database.</li>
+          </ul>         
+ 
+          <br>&nbsp;<br>
+          <a name='rseqWorkflow' id='rseqWorkflowAnchor'>
+          <b>RNA-Seq data analysis by RSEQtools</b>
+          </a>
+          <br>&nbsp;<br>
+
+          <img src='/images/workbench/rseqtoolsWorkflow.png' style='width:478px; height:358px; margin: 0px 3px 0px 3px;' />
+          <br>&nbsp;<br>
+          <ol>
+            <li><b>Input Sequence import</b>: User uploads single or paired-end <a href='http://en.wikipedia.org/wiki/FASTQ_format' target='_blank'>FASTQ</a> input sequence files to their database in the workbench</li>
+            <li><b>QC FASTQ reads</b>: Input FASTQ sequence reads are checked for quality using FastQC</li>
+            <li><b>Map reads to reference genome</b>: Sequence reads are mapped to reference genome using Bowtie 2</li>
+            <li><b>Sort alignments</b>: Alignments in <a href='http://samtools.sourceforge.net/SAMv1.pdf' target='_blank'>SAM</a> format are sorted using Samtools</li>
+            <li><b>Convert to Mapped Read Format (MRF)</b>: Sorted Alignments in SAM format are converted to <a href='http://info.gersteinlab.org/RSEQtools#Mapped_Read_Format_.28MRF.29' target='_blank'>MRF</a> using RSEQtools</li>
+            <li><b>Downstream analysis using modules in RSEQtools.</b> 
+              <ul>
+                <li><b>Gene expression values</b>: Calculate gene expression values using module \"mrfQuantifier\"</li>
+                <li><b>Annotation Coverage</b>: Calculate annotation coverage value using module \"mrfAnnotationCoverage\"</li>
+                <li><b>Mapping Bias</b>: Calculate mapping bias for a given annotation set using module \"mrfMappingBias\"</li>
+                <li><b>Signal Tracks</b>: Generate signal tracks in <a href='http://genome.ucsc.edu/goldenPath/help/wiggle.html' target='_blank'>WIG</a> format using module \"mrf2wig\"</li>
+              </ul> 
+            </li> 
+          </ol>
+          <br>&nbsp;<br>
+          
+          <a name='rseqModules' id='rseqModulesAnchor'>
+          <b>RSEQtools modules</b>
+          </a>
+          <ul>
+            <li><b>mrfQuantifier</b>: 
+              This module calculates expression values (RPKM; read coverage normalized per million mapped nucleotides and the length of the annotation model per kb). Given a set of mapped reads in MRF and an annotation set (representing exons, transcripts, or gene models) mrfQuantifier calculates an expression value for each annotation entry. This is done by counting all the nucleotides from the reads that overlap with a given annotation entry. Subsequently, this value is normalized per million mapped nucleotides and the length of the annotation item per kb.</li> 
+            <li><b>mrfMappingBias</b>:
+            Module to calculate mapping bias for a given annotation set. Aggregates mapped reads that overlap with transcripts (specified in file.annotation) and outputs the counts over a standardized transcript (divided into 100 equally sized bins) where 0 represents the 5' end of the transcript and 1 denotes the 3' end of the transcripts. This analysis is done in a strand specific way.</li>
+            <li><b>mrfAnnotationCoverage</b>:
+            Module to calculate annotation coverage. Sample a set of mapped reads and determine the fraction of transcripts (specified in annotation file) that have at least \<coverageFactor\>-times uniform coverage. </li>
+            <li><b>mrf2wig</b>:
+            Generates signal track (WIG) of mapped reads from a MRF file. By default, the values in the WIG file are normalized by the total number of mapped reads per million. Only positions with non-zero values are reported. </li>
+          </ul>
+          <br>&nbsp;<br>
+          
+          <a name='inputNotes' id='inputNotesAnchor'>
+          <b>IMPORTANT NOTES</b> to prepare input archives:<br>
+          </a>
+          <ul>
+            <li>Commonly used compression formats like .zip, .gz, .tar.gz, .bz2 are accepted.</li>
+            <li>The archive should not contain any folders or sub-folders - all files should be directly placed into the archive.</li> 
+            <li>Each compressed archive should not be larger than 10GB. If you have multiple FASTQ files, we recommend splitting the
+            job into batches by preparing multiple archives, then upload all the compressed archives of input files to your Genboree Database
+            and using all of them together for analysis. This will allow you to successfully upload many input files together
+            as well as reduce upload issues and also submit all your input files for analysis, thereby allowing you to
+            compare and contrast the results of all your input files in one job submission.</li>
+            <li>If you are using Mac OS to prepare your files, remember to remove the \"__MACOSX\" sub-directory that gets added to the compressed archives.</li>
+            <li>In order to create the input file archive using the terminal in Linux/MacOSX, first navigate to the directory where the input files are located.
+            <br>
+            <b>EXAMPLE:</b> If the files were located in C:/Users/John/Desktop/Submission, use the \"cd\" command. In the terminal, type    
+            <code>cd C:/Users/John/Desktop/Submission</code> .
+            <br>
+            Next, use the zip command with the -X parameter (to avoid saving extra file attributes) to compress the files.
+            <br>
+            <b>EXAMPLE:</b> Imagine that we want to submit 4 data files with the following names:
+            <code>inputSequence1.fq.gz, inputSequence2.fq.bz2, inputSequence3.fq.zip, inputSequence4.sra</code>
+            <br>
+            We also want to name our .zip file <i>johnSubmission.zip</i>. In order to create our archive, we would type the following in the terminal:
+            <br>
+            <code>zip -X johnSubmission.zip inputSequence1.fq.gz inputSequence2.fq.bz2 inputSequence3.fq.zip inputSequence4.sra</code>
+            </li>
+          </ul>
+          <br>&nbsp;<br>
+        "
+      })
+%>
+
+</div>

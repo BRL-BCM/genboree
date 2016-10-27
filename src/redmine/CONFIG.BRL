@@ -1,0 +1,313 @@
+
+
+INITIAL SETTINGS
+
+Once initially installed and plugins configured/migrated as per instructions, you
+start up Redmine in a temporary environment, and do some final key configs of
+users, plugin UIs, etc.
+
+You should also make some key settings changes.
+
+The stuff below is tedious, but need only be done ONCE. Possible little additions/tweaks
+after you are up and running, but nothing like initial config!
+
+A. Quick Changes
+   Administration => Settings => [General]
+   - Set your "Application title". It may appear in browser title bar, bookmarks,
+     and on the odd web page.
+   - Set some "Welcome text" (optional/deprecated; genboree_customizations plugin
+     should be directing users to Project page, not welcome page by default.
+   - Increase "Attachment max. size". We use 20GB
+   - If you will have a URL *mount* (via nginx proxy) then enter {host}/{mount}
+     into "Host name and path"
+     . Do LAST or do NOT restart until you have the mount-based proxy configured!
+     . Else may not get assets like CSS, JS files, etc.
+     . This value needs to be coordinated with your init.d script
+       AND with nginx config.  [see init.d/README.brl]
+   Administration => Settings => [Display]
+   - Change Theme to "Redminecrm"
+     . Our SVN dir-tree includes several 3rd party themes in public/themes/
+     . This is one.
+   - Change "Users display format" to "{Last}, {First}"
+   Administration => Settings => [Authentication]
+   - Uncheck "Authentication required" (to allow robots/public access to published
+     Redmine projects. Such access is via the "Anonymous" Role...important below.
+   - Disable:
+     . "Autologin"
+     . "Self-registration" <= Bad! Use Genboree authentication only.
+   - Uncheck "Allow users to delete their own account".
+   Administration => Settings => [Projects]
+   - Uncheck "New projects are public by default"
+   - Enable ONLY Documents, Wiki, Forums, Calendar, Gantt module by default.
+   - No default trackers (Project admins will add/configure when they add Issues module)
+   - Users creating projects should be "Administrators" in their created project!
+   Administration => Settings => [Issue tracking]
+   - May want to configure the "Selected Columns"
+     . Reducing the number of columns is usually wise & easier to read.
+     . Like Tracker, Status, Priority, Subject, Assignee, Updated
+   Administration => Settings => [Repositories]
+   - Uncheck ALL "Enabled SCM"
+  Administration => Authenication modes
+  * Review this. Should already be filled in if you followed BRL's install instructions.
+
+
+B. Original Source: http://genboree.org/theCommons/boards/3/topics/3525
+
+B.1. Default project modules
+     Administration => Settings => [Projects]
+     - Too many are on by default
+     - ONLY have these checked:
+       . Documents
+       . Wikis
+       . Forums
+     - Project creators/admins will decide what others they need and when.
+
+B.2. Email subject prefix
+     Administration => Settings => [Email notifications]
+     - Save a suitable prefix which will begin all emails' subject line
+     - This makes email filtering easy by your users!!
+     - This makes Redmine email obvious and clearly identified.
+
+B.3. Redmine user groups
+     Administration => Groups => Add group
+     - User groups help you manage those folks as a unit rather than individually.
+     - More productive administration. Especially for adding folks to project and such.
+     - Define, add users to (should have at least 1 initially...you!):
+         "Redmine Admins"
+    
+B.4. Add Issue statuses
+     Administration => Issue statuses
+     - What are the Issue statuses that are possible?
+     - Defaults are lacking and to support various projects, we've had to add some standard/expected ones.
+     - Make sure these all exist; Suggested set, in order to be entered on the admin page:
+        #** @New@ - Initial state for all Issues when created. Once left this state, will not come back. +Default=true+
+        #** @Assigned@ - The issue has been assigned to someone who will look into it. May leave and come back to this state.
+        #** @Acknowledged@ - The issue has been viewed, possibly by Assignee, and accepted/acknowledged as an issue. i.e. not rejected.
+        #** @Confirmed@ - The issue has been looked into, possibly by Assignee, and confirmed as a problem.
+        #** @Escalated@ - The issue's priority has been raised and needs revisiting or a solution sooner than originally planned.
+        #** @Resolved@ - The issue has been resolved. Someone should confirm. Likely not deployed yet.
+        #** @Feedback@ - The issue cannot be resolved until the feedback, probably from Assignee, is addressed or more information is provided.
+        #** @Deferred@ - The issue is being tabled/deferred until some time in the future. Cannot be resolved or decided now.
+        #** @Deployed@ - The issue has been deploy to a production environment or official release (probably was @Resolved@ previously...). This +Closes+ the issue.
+        #** @Closed@ - This issue has been closed, for some reason not covered by @Deployed@ or @Rejected@
+        #** @Rejected@ - This issue is rejected as a non-issue. No further work or discussion is currently planned. This +Closes+ the issue.
+        #** @Approved-Final@ - This issue is approved and final. Once this state is reached, cannot go back to any other state. This +Closes+ the issue permanently. Only Admin can reach @Approved-Final@ state.
+        #** @Re-open@ - The issue can be re-opened. Can go to all states from here.
+        #* Closed issues can indeed be reopened and set to a state other than @New@ or @Closed@.
+
+B.5. Configure @Trackers@
+     Administration => Trackers
+     - You MUST define at least 1 Issue @"Tracker"@, for which you will also define a @Workflow@ (the valid status transitions for Issues are Tracker specific)
+     - Trackers _can be_ project specific. So you can add more specific/niche trackers later and only expose them in relevant projects.
+     - Anyway, a tracker is really an abstract concept for named Issue Trackers targeted for specific purposes and with defined workflows
+       (defined valid status transitions). They also help to ~categorize Issues somewhat.
+     - Together with Workflows, there is a decent amount of set up work to configure a Tracker.
+     - Create/ensure the following "trackers" and order:
+         ** @Bug@ [tracker]
+         ** @Feature enhancement@ [tracker]
+         ** @Support@ [tracker]
+     - For NIH and others, we have also made use of these, which probably you don't need:
+         ** @New Ontology Term@
+         ** @Modify Ontology Term@
+         ** @Add Synonym to Existing Term@
+     - Ensure ALL have the @Issues displayed in roadmap@ box checked
+     - +We will come back to this and use the @Copy workflow from@ setting once we have 1 Workflow to start with [below]+
+
+B.6. Configure Any Custom Fields
+     Administration => Custom fields
+     - Custom fields in Redmine are a way you can add your own +form fields+
+       to standard Redmine forms such as Issues, Documents, Projects, etc.
+     - These fields will be available to be filled in when these things are created or edited using their usual forms.
+     - This mechanism is also used to define custom fields for plugins.
+     - Some plugins _require_ such a field be configured in order to work! (e.g. Google Calendar iFrame plugin)
+     - Note that there is an @Issue priorities@ tab. However, Issue priorities are configured via 
+       Administration => Enumerations => [Issue priorities]@ so I don't know what the tab here in Custom Fields is for, exactly.
+       An extra priority field perhaps.
+     - Add the following custom fields, in order given:
+        * @Issues@
+        ** @Tags@ - Text, not required, used as a filter, searchable, visible to any users, Trackers: New Ontology Term, Modify Ontology Term, Add Synonym to Existing Term
+     - For NIH and others, we have also made use of these, which probably you don't need:
+        * @Issues@
+        ** @Labels@ - [Deprecated in favor of @Tags@] Text, not required, used as a filter, searchable, visible to any users, no trackers
+        ** @Publications@ - Long text, not required, not used as a filter, not searchable, visible to any users,
+           Trackers: New Ontology Term, Modify Ontology Term, Add Synonym to Existing Term
+     - You MUST add a custom field in the [Projects] tab to support Google Calendars plugin.
+       . Create a *Project* custom field called "Google Calendar" with the type "long text"
+         * Uncheck "Visible" and "Searchable" and any other checkboxes. Otherwise this ugly field will
+           appear on your Overview page of any Projects having a Google Calendar!
+       . Go to Administration => Plugins => Google Calendar Plugin => Configure
+         * Select and save the project custom field which will contain the Google Calendar-iframe code;
+            in this example select the newly created project custom field "Google Calendar"
+       . To add a Google Calendar tab to an project, you need to go get the IFrame based embed code from Google.
+         * The calendar you want to embed MUST BE PUBLICLY viewable, else there will be some login stuff required.
+           - So set that at Google's site.
+         * While logged in to Google, go get the IFrame stuff from Google:
+           - Click on "Settings" in the upper left hand corner at Google.
+           - Click on the "Calendars" tab
+           - Select the calendar you want to use
+           - In the "Embed This Calendar" section, copy the entire <tt><iframe></tt> code from the text box
+
+
+B.7. Configuring Custom Enumerations for Issue Priorities or Activities
+     Administration -> Enumerations
+     - Review the @Issue priorities@ shown here. Do you need any others? e.g. for more resolution?
+        * Generally, you should add:
+        ** @TBD@ - a new +default priority+ which is +active+ for new Issues probably; submitters,
+           especially non-developers CANNOT reasonably set the priority. Even true of lab managers.
+           They can make recommendations but don't know all the factors influencing priority. Also, due to human nature,
+           non-engineers tend to say everything is high priority (meaning nothing is).
+        ** @Very low@ - not a default but it should be +active+; this Issue is nice and all, but cost-benefit is out of
+           whack or it's so trivial further thought is _currently_ contraindicated. But thank you. We'll keep it on file.
+           Don't call us though, we'll call you.
+     - Re: Enumerations for @Activities@
+        * Also relevant regarding Issues (maybe...see how to side step this entirely above)
+        * In certain project configurations, when an Issue is +updated+ there will be _fields related to Time Logging._
+        * They are generally optional but will appear and some users may decide to fill them out.
+        * You should plan ahead for when these fields are visible
+        * Such fields include:
+        ** @Spent time@
+        ** @Comment@
+        ** @Activity@ <-- *a type or category for the time spent on the Issue* 
+     - By default @Activity@ types are pretty sparse and niche. Just: @Design@ and @Development@.
+       Probably should add a few more to cover more scenarios and try to have at least 1 option that a user understands and can apply.
+       Some examples (don't add them unless you want them):
+        * @Support@ - Provided the requested support or the activity was support in nature (info, IT/sysadmin work, etc)
+        * @Debugging & Fixing@ - um, hello?
+        * @Documenting@ - serious activity, need more of this
+        * @Sysadmin@ - if you want to specifically single this out, rather than piling into Support
+        * @Consulting@ - meh 
+     - Re: Enumerations for @Document categories@
+        * Some changes and additions should be made here:
+        ** @User documentation -> Presentation@
+        ** @Technical documentation -> Documentation@
+        ** @Data Files@
+        ** @Analysis Results@
+        ** @General@ - default
+
+B.8. Role Permissions
+     Administration => Roles and Permission
+     - Which roles can do what?
+     - Default generally poor and you definitely want to review "Anonymous" and "Non-Member"
+     - For each of the following, click it and then make the indicated change(s) and @Save@:
+        * @Manager  -> Administrator@
+        ** Permissions (all checked)
+        * @Developer -> Author@
+        ** Permissions (all UNchecked except):
+        *** Project: @View Activity@, @Create subprojects@
+        *** Forums: @Edit own messages@, @Post messages@, @Delete own messages@
+        *** Calendar: @View calendar@
+        *** Documents: @View documents@, @Add documents@, @Edit documents@, @Delete documents@
+        *** FAQ: @New FAQ@
+        *** Files: @Manage Files@, @View files@
+        *** Gantt: @View gantt chart@
+        *** Genboree kbs: @View genboree kbs@, @Create genboree kbs@, @Update genboree kbs@
+        *** Google calendar: @View google calendar tab@
+        *** Issue tracking: @Edit issues@, @Edit notes@, @Set notes as private@, @Manage public queries@, @Add watchers@, @View issues@, @Edit own notes@, @View calendar@, @Delete watchers@, @Add issues@, @Manage subtasks@, @Add notes@, @View private notes@, @View watchers list@
+        *** News: @Comment news@
+        *** Repository: [none/don't use repos]
+        *** Time tracking: @Log spent time@, @Edit own time logs@, @View spent time@
+        *** Wiki: @View wiki@, @Edit wiki pages@, @Rename wiki pages@, @Export wiki pages@, @View wiki history@, @Protect wiki pages@, @Edit wiki pages@
+        *** Wiki extensions: @Add wiki comments@, @Edit wiki comments@
+        * @Reporter -> Subscriber@
+        ** Permissions (all UNchecked except):
+        *** Project: @View activity@
+        *** Forums: @Edit own messages@, @Post messages@
+        *** Calendar: @View calendar@
+        *** Documents: @View documents@
+        *** FAQ: @New FAQ@
+        *** Files:  @View files@
+        *** Gantt: @View gantt chart@
+        *** Genboree kbs: @View genboree kbs@
+        *** Google calendar: @View google calendar tab@
+        *** Issue tracking: @View issues@, @Edit own notes@, @View calendar@, @Add issues@, @Add notes@, @View watchers list@
+        *** News: [none]
+        *** Repository: [none/don't use repos]
+        *** Time tracking: [none]
+        *** Wiki: @View wiki@, @View wiki history@
+        *** Wiki extensions: [none]
+        * @Non member@
+        ** Permissions (all UNchecked except):
+        *** Project: [none]
+        *** Forums: [none]
+        *** Calendar: [none]
+        *** Documents: @View documents@
+        *** FAQ: @New FAQ@
+        *** Files:  @View files@
+        *** Gantt: [none]
+        *** Genboree kbs: [none]
+        *** Google calendar: [none]
+        *** Issue tracking: @View Issues@
+        *** News: [none]
+        *** Repository: [none/don't use repos]
+        *** Time tracking: [none]
+        *** Wiki: @View wiki@, @Edit wiki pages@
+        *** Wiki extensions: [none]
+        * @Anonymous@
+        ** Permissions (all UNchecked except):
+        *** Project: [none]
+        *** Forums: [none]
+        *** Calendar: [none]
+        *** Documents: @View documents@
+        *** FAQ: @New FAQ@
+        *** Files:  @View files@
+        *** Gantt: [none]
+        *** Genboree kbs: [none]
+        *** Google calendar: [none]
+        *** Issue tracking: [none]
+        *** News: [none]
+        *** Repository: [none/don't use repos]
+        *** Time tracking: [none]
+        *** Wiki: @View wiki@
+        *** Wiki extensions: [none]
+
+B.9. Configuring a @Workflow@ for a @Tracker@
+      Administration -> Workflow
+      - Final and most expensive initial config step.
+      - As mentioned above, a @Workflow@ is the defined valid status transitions for a given tracker.
+      - Workflows can also be different for different Roles.
+        ** i.e. who is allowed to Reject an Issue? Assign it? Who is allowed to Close it? Resolve it?
+        ** See, possibly Role specific. More work to define, yay.
+      - Select the @Role@ you're going to define the valid workflow for.
+        * Select the @Tracker@ you're defining the valid workflow for
+        * Best NOT to only display statuses used by the tracker initially. But once created,
+          this option makes Workflow changes easier to manage probably. Unless you need to add a new state
+          of course....then uncheck this box.
+        * Click @Edit@
+        * Use the matrix to set up the sensible and actually thought-about status transitions for @Role@ in @Tracker@
+        ** +Note:+ The valid transitions are specified _horizontally_ ; I made the mistake of using the vertical columns as the
+           transitions...that is not what Redmine will use.
+        ** +Note:+ A symmetric matrix is likely NOT appropriate. For example, @New -> [non-New]@ should likely be a one-way trip.
+     - @Save@ when done 
+     -  Note:
+        * Don't allow self-to-self transitions (i.e. the diagonal)....come on, that's silly, right?
+        * Don't just allow anything -> anything. Seriously, why are you bothering at all?
+        * That being said, the Project "Administrator" should have a great deal of flexibility, as possibly should any "Supervisor"
+          or "Manager" type @Roles@ you set up.
+     - SAVE TIME: Once you have +done the Workflow for one @Role - Tracker@ combo, consider using the
+       @Copy@ link to expedite the set up of Workflows+ for the remaining @Roles@ in the same @Tracker@!
+        * The @Copy@ form allows you to copy the workflow to _multiple_ target Roles at once, via @Ctrl-click@
+        ** In general, you wouldn't select the @Anonymous@ Role as a copy target, and only @Non-member@ if you are configuring an
+           Issueer track that is open to the [registered] public!
+        * Following a @Copy@, review and edit the workflows sensibly. No, not all Roles should be able to do what the Project Admin can!!
+     - Note:
+        * DON'T leave a Workflow partially defined. Complete & review for each Role before moving to the next Tracker
+        * DO use the @Copy workflow from@ when setting up new Trackers though! Just review the various Workflows for
+         any adjustments specific to that tracker (may or may not be any!)
+     - Guidelines:
+        * Here is a general policy for Workflow transitions that ~makes sense. Think about similar issues, and even if a new Role
+          (manager, reviewer, curator can help, rather than letting everyone do everything and having no actual defined workflow):
+        ** *Can't go back to new* - Once an issue leaves New, it is henceforth _non-New_
+        ** *Can't jump from closed to anywhere* - States that close the issue should not let you jump back into the middle of your
+            workflow. Like @Rejected -> Resolved@. However, being able to go from closed states to things like @Assigned@ and
+            @Feedback@ can make a lot of sense.
+        ** *Feedback is more universally available and lets folks question @Assignments@ or @Rejections@ or Issues claiming to be
+           @Deployed@ etc.
+        ** *Project Admins*  - Can do most transitions (not all, see above) . Responsible for @Assigning@ issues to people.
+           Responsible for @Rejecting@ issues. Responsible for any @Deferred@ decisions. Responsible for permanently closing the
+           issue by assigning @Approved-Final@ state.
+        ** *Authors* - Most likely people fixing, addressing, creating content, etc. Cannot assign work to others (can't "pass the buck").
+           Can't @Reject@ or @Defer@ issues.
+        ** *Subscribers* - Ideally people submitting issues and maybe providing @Feedback@. Possibly also @Escalating@ issues causing
+           serious issues. Some sensible Author-like transitions if assigned work. Although that's not a good role for the user in that case.
+        ** Rather than give Author lots of permissions and any old transition, consider a new Role to help with admin-like
+           decision/assignment/closing work.

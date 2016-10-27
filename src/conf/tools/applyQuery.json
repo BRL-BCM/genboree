@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "applyQuery",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "ui": {
+    "label": "Apply Query",
+    "shortLabel": "[NOT SET]"
+  }
+}

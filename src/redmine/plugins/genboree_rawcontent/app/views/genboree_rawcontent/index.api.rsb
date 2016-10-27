@@ -1,0 +1,13 @@
+api.rawcontent do
+  api.path @contentDirRsrcPath
+  api.array :contents do
+    @tocFiles.each do |item|
+      api.entry do
+        api.path item[:rsrcPath]
+        api.mtime item[:mtime]
+        api.kind item[:kind]
+        api.size item[:size]
+      end
+    end
+  end
+end

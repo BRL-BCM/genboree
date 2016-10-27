@@ -1,0 +1,30 @@
+<%
+  @trackOrFileList = [ @trackOrFileList ] unless(@trackOrFileList.is_a?(Array) or @trackOrFileList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@trackOrFileList.nil? or @trackOrFileList.empty?) ? "" : "rowspan='#{@trackOrFileList.size}'") %> ><%= (@label || "Track") %>:</th>
+<%  if(@trackOrFileList.nil? or @trackOrFileList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @trackOrFileList.each_index { |ii|
+        item = @trackOrFileList[ii]
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        trkOrFile = WorkbenchFormHelper.getNameFromURI(:trk, item, true)
+        unless(trkOrFile)
+          trkOrFile = WorkbenchFormHelper.getNameFromURI(:file, item, true, true)
+        end
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%= trkOrFile %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

@@ -1,0 +1,6 @@
+ <div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolErrorTitle, { :title => GenboreeRESTRackup.toolIdMap[@context['toolIdStr']]} ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+</div>

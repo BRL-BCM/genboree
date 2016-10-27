@@ -1,0 +1,211 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 540 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            <p>Cuffdiff tracks changes in the relative abundance of transcripts sharing a common transcriptional start site, and in the relative abundances of the primary transcripts of each gene. Tracking the former allows one to see changes in splicing, and tracking the latter lets one observe changes in relative promoter use for that gene. It produces a number of output files that contain results for changes in expression at the level of transcripts, primary transcripts, and genes.</p>
+
+
+            <p>To set up the Cuffdiff analysis:</p>
+
+
+            <p><ins>Part 1:  Create entity lists as input for Cuffdiff</ins></p>
+
+
+          Populate <strong>Input Data</strong>
+            <ul>
+            <li>Drag two or more SAM/BAM files containing fragment alignments (<em>accepted_hits.bam</em>) for two or more samples into <strong>Input Data</strong></li>
+            </ul>
+
+
+          Populate <strong>Output Targets</strong>
+            <ul>
+            <li>Drag a database into <strong>Output Targets</strong> (the entity lists will be deposited into this database under:  <code>Lists &#38; Selection</code>  &raquo; <code>List of Files</code> )</li>
+            </ul>
+
+
+            <ul>
+            <li>Create entity lists using:  <code>Data</code> &raquo; <code>Entity Lists</code> &raquo; <code>File Entity List</code> &raquo; <code>Create File Entity List</code><br />   <em>Please note:</em> You must generate a file entity list for each experimental input, even for those with a single replicate.  You will be solicited for a sample name for each of the input SAM/BAM files, and will need to give each input entity list a unique name.</li>
+            </ul>
+
+
+            <p><ins>Part 2: Submit entity lists for Cuffdiff analysis</ins></p>
+
+
+          Populate <strong>Input Data</strong>
+            <ul>
+            <li>Drag the entity lists into <strong>Input Data</strong></li>
+            </ul>
+
+
+          Populate <strong>Output Targets</strong>
+            <ul>
+            <li>Drag a database into <strong>Output Targets</strong></li>
+            </ul>
+
+
+          Configure &#38; Submit the Cuffdiff Job
+            <ul>
+            <li>Select <code>Transcriptome</code> &raquo; <code>Analyze RNA-Seq Data</code> &raquo; <code>Detect Transcription Changes by Cuffdiff</code></li>
+              <li>Click <code>Submit</code></li>
+            </ul>
+
+
+            <p>Cuffdiff generates <em>four sets</em> of tracking files:  1) FPKM, 2) differential expression, 3) count, and 3) read group.<br />Genboree generates four <em>xls</em> files that will be of primary interest (<strong>bold</strong> below).</p>
+
+
+          <strong>FPKM tracking files</strong> (calculates FPKM of each transcript, primary transcript, and gene in each sample):
+            <ul>
+            <li><strong><em>isoforms.fpkm_tracking.withGeneName.xls</em></strong> (transcript FPKMs)</li>
+              <li><strong><em>genes.fpkm_tracking.withGeneName.xls</em></strong> (summed FPKM of transcripts sharing each gene_id)</li>
+              <li><em>cds.fpkm_tracking</em> (summed FPKM of transcripts sharing each p_id, independent of tss_id)</li>
+              <li><em>tss_groups.fpkm_tracking</em> (primary transcript FPKMs)</li>
+            </ul>
+
+
+          <strong>Differential expression tests</strong> (lists results of differential expression testing between samples for spliced transcripts, primary transcripts, genes, and coding sequences.  For each pair of samples <em>x</em> and <em>y</em>, four files are created):
+            <ul>
+            <li><strong><em>isoform_exp.diff.withGeneName.xls</em></strong> (transcript differential FPKM)</li>
+              <li><strong><em>gene_exp.diff.withGeneName.xls</em></strong> (tests differences in summed FPKM of transcripts sharing each gene_id)</li>
+              <li><em>tss_group_exp.diff</em> (tests differences in summed FPKM of transcripts sharing each tss_id)</li>
+              <li><em>cds_exp.diff</em> (tests differences in summed FPKM of transcripts sharing each p_id independent of tss_id)</li>
+            </ul>
+
+
+            <p>Cuffdiff also generates these output files:</p>
+
+
+          <strong>Count tracking files</strong> (estimates number of fragments originating from each transcript, primary transcript, and gene in each sample):
+            <ul>
+            <li><em>isoforms.count_tracking</em> (transcript counts)</li>
+              <li><em>genes.count_tracking</em> (gene counts, summed counts of transcripts sharing each gene_id)</li>
+              <li><em>cds.count_tracking</em> (coding sequence counts)</li>
+              <li><em>tss_groups.count_tracking</em> (primary transcript counts)</li>
+            </ul>
+
+
+          <strong>Read group tracking files</strong> (expression and fragment count for each transcript, primary transcript, and gene in each replicate):
+            <ul>
+            <li><em>isoforms.read_group_tracking</em> (transcript read groups)</li>
+              <li><em>genes.read_group_tracking</em> (summed expression and counts of transcript sharing each gene_id in each replicate)</li>
+              <li><em>cds.read_group_tracking</em> (summed expression and counts of transcripts sharing each p_id, independent of tss_id in each replicate)</li>
+              <li><em>tss_groups.read_group_tracking</em> (summed expression and counts of transcripts sharing each tss_id in each replicate)</li>
+            </ul>
+
+
+          <strong>Genboree Job Specification File</strong>:
+            <ul>
+            <li>jobFile.json</li>
+            </ul>
+
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <i>Bam</i> files or a <u>Files Directory</u> with the <i>Bam</i> files or a Files Entity List with the <i>Bam</i> files into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Files Dir', 'min: 1 ; max: 1' ], ['Files', 'min: 2 ; max: any'], [ 'Files Entity', 'min: 1 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database under the Files area. ' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'Cuffdiff') used to organize Cuffdiff results."],
+          [ 'Time Series', "Treat samples as a time-series [ Default:  FALSE ]"],
+          [ 'Min Align Count',   "Minimum number of alignments in a locus for testing [Default: 10]"],
+          [ 'Multi Read Correct', "Use 'rescue method' for multi-reads (more accurate [Default:  FALSE ]"],
+          [ 'Upper Quart Norm', "Use upper-quartile normalization [Default: FALSE ]</i><br>&nbsp;<br>"],
+          [ 'Advanced Settings:<br>',  "The following options are in the Advanced Settings section.</i><br>&nbsp;<br>" ],
+          [ 'Mean Frag Length', 'Average fragment length (unpaired reads only) [Default: 200 ]'],
+          [ 'Frag Length Stdev', 'Fragment length std deviation (unpaired reads only)  [Default: 80 ]'],
+          [ 'Num Importance Samples', 'Number of importance samples for MAP restimation [Default: 1000]'],
+          [ 'Num Bootstrap Samples', 'Number of bootstrap replications [Default: 20 ]'],
+          [ 'Bootstrap Fraction', 'Fraction of fragments in each bootstrap sample [Default: 1.0 ]'],
+          [ 'Max MLE Iterations', 'Maximum iterations allowed for MLE calculation. [Default: 5000]'],
+          [ 'Compatible Hits Norm', 'Count hits compatible with reference RNAs only [Default: TRUE]'],
+          [ 'Total Hits Norm',  'Count all hits for normalization [Default: FALSE]'],
+          [ 'Poisson Dispersion', "Don't fit fragment counts for overdispersion [Default: FALSE]"],
+          [ 'Max Bundle Frags', "Maximum fragments allowed in a given bundle [ default: 500000]"],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+
+                                  [
+                                    'Trapnell C, Williams BA, Pertea G, Mortazavi AM, Kwan G, van Baren MJ, Salzberg SL, Wold B, Pachter L. <i>Transcript assembly and quantification by RNA-Seq reveals
+                                    unannotated transcripts and isoform switching during cell differentiation.</i> Nature Biotechnology. <b>2010</b> May;<b>28(5)</b>:511-5.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/20436464">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Roberts A, Trapnell C, Donaghey J, Rinn JL, Pachter L. <i> Improving RNA-Seq expression estimates by correcting for fragment bias.</i> Genome Biology.
+                                    <b>2011</b> Mar 16;<b>12(3)</b>:R22.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/21410973">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Roberts A, Pimentel H, Trapnell C, Pachter L.  <i>Identification of novel transcripts in annotated genomes using RNA-Seq.</i> Bioinformatics.
+                                    <b>2011</b> Sep 1;<b>27(17)</b>:2325-9.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/21697122">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Integrated into the Genboree Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+
+                                ]
+
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

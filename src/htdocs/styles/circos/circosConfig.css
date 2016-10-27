@@ -1,0 +1,200 @@
+*
+{
+  margin: 0 ;
+}
+
+body
+{
+  font-size: 100% ;
+}
+
+.text, input[type="text"] 
+{
+  font: normal 12px tahoma,arial,helvetica,sans-serif ;
+  background-color: #FFF ;
+  background-image: url(/images/vgpTextBg.gif) ;
+  background-repeat: repeat-x ;
+  background-position: 0 0 ;
+  border: 1px solid #B5B8C8 ;
+  padding: 2px 2px ;
+  width: 7em ;
+}
+
+input[type="text"].disabled
+{
+  background-color: #F3F3F3 ;
+}
+
+.checkbox
+{
+  /** IE Hacks **/
+  width: 13px ;
+  height: 13px ;
+  margin-bottom: 2px ;
+}
+
+input.error
+{
+  background-image: url(/images/vgpTextError.gif) ;
+  background-repeat: repeat-x ;
+  background-position: 0 0 ;
+  border: 1px solid #F00 ;
+}
+
+.option label
+{
+  width: 20em ;
+}
+
+.movable
+{
+  cursor: move ;
+}
+
+.clickable
+{
+  cursor: pointer ;
+}
+
+a.smallBttn
+{
+  display: block ; 
+  float: left ; 
+  text-align: center ;
+  height: 16px ; 
+  width: 16px ; 
+  margin: 1px 3px 0 0 ;
+  background: transparent url(/images/circos/smallBttn.png) no-repeat scroll top right ; 
+  text-decoration: none ;
+}
+
+a.smallBttn:active 
+{
+  background-position: bottom right ;
+  outline: none ;
+}
+
+a.smallBttn span
+{
+  display: block ;
+  padding-top: 1px ;
+}
+
+a.smallBttn:active span
+{
+  padding-top: 2px ;
+}
+
+.detail
+{
+  font-size: 9pt ;
+  color: #336699 ;
+}
+
+.instruction
+{
+  font-size: 110% ;
+  font-style: normal ;
+  font-weight: normal ;
+  color: #4C3D99 ;
+  padding: 3px ;
+  border: 1px dashed #CCC ;
+  background-color: #EFEFEF ;
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+}
+
+.widgetRef
+{
+  color: #4C2399 ;
+  font-style: italic ;
+}
+
+.reference
+{
+  padding-top: 5px ;
+  padding-bottom: 5px ;
+  background-color: #DDD ;
+}
+
+.selected
+{
+  border: 2px solid #999 ;
+}
+
+.entryPoint.selected
+{
+  border: 1px solid #777 ;
+}
+
+.entryPoint
+{
+  padding: 2px ;
+  overflow: auto ;
+}
+
+.entryPointName
+{
+  padding-left: 5px ;
+  float: left ;
+}
+
+.entryPointControl
+{
+  padding-right: 5px ;
+  text-align: right ;
+}
+
+#epLabel
+{
+  width: auto ;
+}
+
+#epsList
+{
+  height: 500px ;
+}
+
+#epsList li
+{
+  border: none ;
+  padding: 0 ;
+  margin: 0 ;
+  cursor: pointer ;
+}
+
+#epsList .hidden
+{
+  background-color: #CCC ;
+}
+
+#debug
+{
+  margin-top: 15px ;
+  border: 1px solid #008888 ;
+  background-color: #00DDDD ;
+  color: white ;
+  font-size: 8pt ;
+  padding: 5px ;
+  font-family: courier, serif ;
+}
+
+#feedback
+{
+  margin-top: 15px ;
+  border: 1px solid #008888 ;
+  background-color: #0099FF ;
+  color: white ;
+  font-size: 8pt ;
+  padding: 5px ;
+  font-family: courier, serif ;
+}
+
+#scaleSpecs
+{
+  margin: 5px 0 ; 
+  border: 1px solid #DCDCDC ; 
+  background-color: #EDEDED ; 
+  padding: 5px ;
+  overflow: auto ;
+}

@@ -1,0 +1,871 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;8.A REST API &ndash; Resource IDs&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#intro">8.A.1 Introduction</A>
+  <LI class="compact1_10"><A HREF="#rsrcPaths">8.A.2 Resource Paths</A>
+    <UL class="compact1">
+      <LI><A HREF="#rsrcPathsTable"><FONT CLASS="tocSmall">8.A.2.1 Resource Path Table</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAPIOverview">8. REST API &ndash; Overview</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restUniformMethods">8.B REST API &ndash; Methods</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restRepresentations">8.C REST API &ndash; Representations</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAuthorization">8.D REST API &ndash; Authorization</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="intro">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.A.1. Introduction:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <P class="body">
+			The Genboree API operates on <i>resources</i> which correspond to data entities or
+			collections of entities stored within Genboree. Genboree resources range from those
+			of user genomic data&mdash;annotations, chromosomes, tracks, etc&mdash;but can also include
+			other types of data, such as user groups, user databases, project pages, etc.
+		<P class="body">
+			Each <i>resource</i> must have at least 1 unique identifier, and there must be some
+			way of indicating the <i>location</i> of the resource. By using <i>Uniform Resource Locators (URLs)</i>
+			for our identifiers, we satisfy both the unique and locatability criteria.
+		<P class="body">
+			The URLs have a general form, with several distinct parts:
+		<P class="body">
+			<center>
+			<table class="sections">
+				<tr>
+					<th>Resource URI<br>(<span class="genbField">{rsrcURI}</span>)</th>
+					<th>Auth.<br>Parameters</th>
+				</tr>
+				<tr>
+					<td>
+						<span class="genbLabel">
+							http://<span class='genbField'>{genbHost}</span>/<span class='genbField'>{rsrcPath}</span>?<span class='genbField'>{rsrcParams}</span>
+					  </span>
+					</td>
+					<td>
+						<span class="genbLabel">
+							<span class='genbField'>{authParams}</span></span></center>
+						</span>
+					</td>
+				</tr>
+			</table>
+		  </center>
+    <p class="body">
+      <ul class="compact2">
+				<li>- The core of the resource URL is the <span class='genbField'>{rsrcURI}</span>, which is everything but the authorization parameters:
+					<ul class="compact2">
+						<li>- <span class='genbField'>{genbHost}</span> is the host where Genboree is running<br>(e.g. <span class='genbFixed'>www.genboree.org</span>)</li>
+						<li>- <span class='genbField'>{rsrcPath}</span> is the path identifying the resource. <a href="#rsrcPaths">See below.</a><br>(e.g. <span class='genbFixed'>/REST/v1/grp/{grpName}/db/{dbName}/tracks</span>)</li>
+						<li>- <span class='genbField'>{rsrcParams}</span> are any parameters for the resource, generally to modify the representation received or sent. Generally optional.</li>
+					</ul>
+				  <br>
+				<li>
+					<a name="rsrcIDAuthParams">&nbsp;</a>
+					- Appended to the <span class='genbField'>{rsrcURI}</span> are the 3 required parameters Genboree uses to authorize and authenticate the user accessing/modifying the resource.
+          See the <a href="/java-bin/showHelp.jsp?topic=restAuthorization">REST API - Authorization</a> page for more detail.
+				</li>
+      </ul>
+    </p>
+<HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="rsrcPaths">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.A.2. Resource Paths (<span class="genbField">rsrcPath</span>)</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      The path of the resource URL is the key component indicating which resource on the Genboree
+      host you wish to operate on. In effect, the path describes the location and name of the
+      resource, similar to the path to a file on your computer.
+    <p class="body">
+      The structure of the path is highly <i>hierarchical</i>, and corresponds to how Genboree
+      data entities are nested and how they are presented to the user in the Genboree UI.
+    <p class="body">
+      The path is also highly <i>descriptive</i>, in that dynamic fields are preceded by
+      a static category indicating what the field represents. Furthermore, plurality is used
+      to indicate  <i>collections</i> of resources as opposed individual entities.
+      <ul class="compact2">
+        <li>&nbsp;&nbsp;&nbsp;A specific resource may be addressed by more than one <span class='genbField'>{rsrcPath}</span>.
+        The path used provides some <i>context</i> for accessing the data entity, which can be used
+        to process the request where appropriate.</li>
+      </ul>
+    <p class="body">
+      Finally, the API is <i>versioned</i>, which is reflected in the <span class="genbLabel">/v1</span>
+      following the common <span class="genbLabel">/REST</span> prefix. This facilitates
+      simultaneous support for newer, but incompatible, versions of the API and provides
+      continued support for any older resource identifiers in use.
+    <p class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="rsrcPathsTable">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.A.2.1. Resource Path Table
+        </DIV>
+      <!--   Sub-topic content -->
+      <p class="body">
+        The table below lists the resources exposed in the current version of the Genboree REST API.
+        New resources will be added over time, so check back often. If you wish to request exposure
+        of certain Genboree data entities, please <a href="mailto:andrewj@bcm.edu?subject=REST API Request">
+        contact us</a>.
+      <p class="body">
+        Parameters affecting the representation or filtering collections of entities are indicated in <font color="#3300CC"><b>blue</b></font>.
+        Following a <span class="genbParam">parameter</span> will be information on whether it is <code>optional</code> and
+        if so what default value [if any] will be used; the phrase <code>multiple ok</code> indicates the parameter can be
+        provided more than once if multiple values are useful (e.g. multiple <span class="genbParam">landmark</span>s
+        specifying several regions from which to get annotations); the <span class="genbParam">detailed</span> flag
+        is used to indicate that a detailed representation is or is not desired in the response.
+      <p class="body">
+        <table class="resources" width="100%">
+          <!-- RESOURCE: USERS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_usrs'>&nbsp;</a>Resource: Users</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grps
+            </td>
+            <td>
+              Collection of groups to which user <span class="genbField">{usr}</span> belongs.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">detailed</span> &raquo; [optional; default: 'no']
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td>
+              A group to which user <span class="genbField">{usr}</span> belongs.
+            </td>
+          </tr>
+          <!-- RESOURCE: GROUPS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_grps'>&nbsp;</a>Resource: User Groups</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <!-- This should be access to ALL GROUPS and need special server-admin role
+            <tr>
+              <td class="genbFixed" align="center" width="35%">
+                /REST/v1/grps
+              </td>
+              <td>
+                Collection of groups for user provided in <font color="blue"><b>gbLogin</b></font> parameter.
+              </td>
+            </tr>
+          -->
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td>
+              A user group.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/dbs
+            </td>
+            <td>
+              Collection of databases within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prjs
+            </td>
+            <td>
+              Collection of projects within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usrs
+            </td>
+            <td>
+              Collection of users within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>
+            </td>
+            <td>
+              A user within <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>/role
+            </td>
+            <td>
+              A user's role within <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>/unlockedResources
+            </td>
+            <td>
+              The unlocked resources within <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <!-- RESOURCE: DATABASES -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: User Databases</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>
+            </td>
+            <td>
+              A database within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/eps
+            </td>
+            <td>
+              Collection of entrypoints (e.g. chromosomes) within database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/trks
+            </td>
+            <td>
+              Collection of tracks within database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">detailed</span> &raquo; [optional; default: 'no']
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/seq
+            </td>
+            <td>
+              DNA sequence for database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">landmark</span> &raquo; [optional; multiple ok; default: <i>absent</i>;<br>e.g. 'chr1:1234-5678']
+              </div>
+            </td>
+          </tr>
+          <!-- RESOURCE: DATABASE FILES -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: Database Files</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/files
+            </td>
+            <td>
+              A collection of data file belonging to database <span class="genbField">{db}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>
+            </td>
+            <td>
+              A data file belonging to database <span class="genbField">{db}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/data
+            </td>
+            <td>
+              The contents of the file <span class="genbField">{fileName}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/label
+            </td>
+            <td>
+              The label of the file <span class="genbField">{fileName}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/description
+            </td>
+            <td>
+              The description of the file <span class="genbField">{fileName}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/date
+            </td>
+            <td>
+              The date of the file <span class="genbField">{fileName}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/archived
+            </td>
+            <td>
+              Indicates whether the file <span class="genbField">{fileName}</span> is archived.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/autoArchive
+            </td>
+            <td>
+              Indicates whether the file <span class="genbField">{fileName}</span> will be autoArchived.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/hide
+            </td>
+            <td>
+              Indicates whether the file <span class="genbField">{fileName}</span> is hidden.
+            </td>
+          </tr>
+          <!-- RESOURCE: PROJECTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_prjs'>&nbsp;</a>Resource: User Projects</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>
+            </td>
+            <td>
+              A project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/title
+            </td>
+            <td>
+              Title text/html for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/description
+            </td>
+            <td>
+              Description text/html for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/customContent
+            </td>
+            <td>
+              Custom (free-form) content for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/news
+            </td>
+            <td>
+              Collection of ALL news items for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/links
+            </td>
+            <td>
+              Collection of ALL links for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/quickLinks
+            </td>
+            <td>
+              Collection of ALL quick-links for a project within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <!-- RESOURCE: ENTRYPOINTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_eps'>&nbsp;</a>Resource: Entrypoints (e.g. chromosomes)</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/ep/<span class="genbField">{ep}</span>
+            </td>
+            <td>
+              An entrypoint from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <!-- RESOURCE: TRACKS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_trks'>&nbsp;</a>Resource: Annotation Tracks</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>
+            </td>
+            <td>
+              A track from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">detailed</span> &raquo; [optional; default: 'no']
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/url
+            </td>
+            <td>
+              URL associated with track <span class="genbField">{trk}</span> from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/urlLabel
+            </td>
+            <td>
+              URL label text for track <span class="genbField">{trk}</span> from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/description
+            </td>
+            <td>
+              Description text for track <span class="genbField">{trk}</span> from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateUrl
+            </td>
+            <td>
+              URL associated with track <span class="genbField">{trk}</span> from template database <span class="genbField">{db}</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateUrlLabel
+            </td>
+            <td>
+              URL label text for track <span class="genbField">{trk}</span> from template database <span class="genbField">{db}</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/templateDescription
+            </td>
+            <td>
+              Description text for track <span class="genbField">{trk}</span> from the template database <span class="genbField">{db}</span>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/style
+            </td>
+            <td>
+              The user-definied style of the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/display
+            </td>
+            <td>
+              The user-definied display type associated with track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.  Should be one of: ()
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/color
+            </td>
+            <td>
+              The user-definied display color or the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/rank
+            </td>
+            <td>
+              The user-definied sort order of the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultStyle
+            </td>
+            <td>
+              The group default style of the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultDisplay
+            </td>
+            <td>
+              The group default display type associated with track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.  Should be one of: ()
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultColor
+            </td>
+            <td>
+              The group default display color of the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/defaultRank
+            </td>
+            <td>
+              The group default sort order for the track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/classes
+            </td>
+            <td>
+              Collection of classes/categories associated with track <span class="genbField">{trk}</span> from user database <span class="genbField">{db}</span>
+              within user group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annoAttributes
+            </td>
+            <td>
+              Collection of user-defined attributes/properties associated with an annotation for track <span class="genbField">{trk}</span>
+              from database <span class="genbField">{db}</span> within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/bigBed
+            </td>
+            <td>
+              BigBed file for the track <span class="genbField">{trk}</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/bigWig
+            </td>
+            <td>
+              BigWig file for the track <span class="genbField">{trk}</span>
+            </td>
+          </tr>
+
+          <!-- RESOURCE: TRACK ATTRIBUTES-->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Track Attributes</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attributes
+            </td>
+            <td>
+              Collection of user-defined attributes associated with track <span class="genbField">{trk}</span>
+              from database <span class="genbField">{db}</span> within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/value
+            </td>
+            <td>
+              The value for attribute with the name <span class="genbField">{attribute}</span> associated with track <span class="genbField">{trk}</span>
+              from database <span class="genbField">{db}</span> within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/display
+            </td>
+            <td>
+              The user-defined display settings for attribute with the name <span class="genbField">{attribute}</span> associated with track <span class="genbField">{trk}</span>
+              from database <span class="genbField">{db}</span> within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/defaultDisplay
+            </td>
+            <td>
+              The group default display settings for attribute with the name <span class="genbField">{attribute}</span> associated with track <span class="genbField">{trk}</span>
+              from database <span class="genbField">{db}</span> within group <span class="genbField">{grp}</span>.
+            </td>
+          </tr>
+
+          <!-- RESOURCE: ANNOTATIONS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Annotations</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annos
+            </td>
+            <td>
+              Collection of annotations within track <span class="genbField">{trk}</span> from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span> returned in various formats
+              depending on value of <span class="genbParam">format</span> parameter.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">layoutName</span> &raquo; [only when format=layout; default: <i>absent</i>]
+              </div>
+              <div class="genbParamDef">
+                <span class="genbParam">landmark</span> &raquo; [optional; multiple ok; default: <i>absent</i>;<br>e.g. 'chr1:1234-5678']
+              </div>
+              <div class="genbParamDef">
+                <span class="genbParam">format</span> &raquo; [lff, gff, bed, bed3col, wig, fwig, vwig, layout]
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trks/annos
+            </td>
+            <td>
+              Collection of annotations within tracks (listed in request body) from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span> returned in various formats
+              depending on value of <span class="genbParam">format</span> parameter.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">layoutName</span> &raquo; [only when format=layout; default: <i>absent</i>]
+              </div>
+              <div class="genbParamDef">
+                <span class="genbParam">landmark</span> &raquo; [optional; multiple ok; default: <i>absent</i>;<br>e.g. 'chr1:1234-5678']
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/annos/count
+            </td>
+            <td>
+              Count of number of annotations within track from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">landmark</span> &raquo; [optional; multiple ok; default: <i>absent</i>;<br>e.g. 'chr1:1234-5678']
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trks/annos/count
+            </td>
+            <td>
+              Count of number of annotations withing tracks (listed in request body) from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+              <div class="genbParamDef">
+                <span class="genbParam">landmark</span> &raquo; [optional; multiple ok; default: <i>absent</i>;<br>e.g. 'chr1:1234-5678']
+              </div>
+            </td>
+          </tr>
+
+          <!-- RESOURCE: LAYOUTS -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_layouts'>&nbsp;</a>Resource: Tabular Layouts</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos/layouts
+            </td>
+            <td>
+              Collection of saved tabular layouts from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos<br>
+              /layout/<span class="genbField">{layout}</span>
+            </td>
+            <td>
+              The saved tabular layout representation from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.<br>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos<br>
+              /layout/<span class="genbField">{layout}</span><br>
+              /attribute/<span class="genbField">{attribute}</span>
+            </td>
+            <td>
+              A single attribute from the saved tabular layout <span class="genbField">{layout}</span>
+              from database <span class="genbField">{db}</span>
+              within group <span class="genbField">{grp}</span>.  The userId, created, and modified
+              attributes are all read-only.
+            </td>
+          </tr>
+
+          <!-- RESOURCE: QUERYABLE -->
+          <tr>
+            <td class="category" colspan="2"><a name='rsrcTable_layouts'>&nbsp;</a>Resource: Queryable</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="35%">Resource Path (<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="left">Description</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/queryable<br><br>
+            </td>
+            <td>
+              A list of all of the queryable resources available.  The response object contains a
+              template URI attribute for each resource, and if the query was performed with either
+              the second or third form of the URI listed here, the
+              <span class="genbField">{db}</span> and / or <span class="genbField">{grp}</span>
+              will be automatically replaced with their values in this attribute.
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="35%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/<span class="genbField">{*}</span>/queryable<br>
+            </td>
+            <td>
+              The information about a queryable resource (specified by the path 
+              <span class="genbField">{*}</span>) including: whether or not the resource specified
+              is a queryable resource, its name and human readable (pretty) name, its template URI,
+              and the attributes that can be queried against for that particular resource.
+            </td>
+          </tr>
+        </table>
+      </p>
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

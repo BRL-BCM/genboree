@@ -1,0 +1,27 @@
+div.projDiv {
+  float: left ;
+  width: 50% ;
+}
+
+ul.projList {
+  margin: 0px ;
+  list-style: none ;
+  padding-left: 2em ;
+  text-indent: -1em ;
+}
+
+div.genbUpdateItem {
+  padding-left: 1em ;
+  margin-bottom: 15px ;
+}
+
+p.newsItem {
+  margin-bottom: 15px ;
+}
+
+span.contentNewsHdr {
+  font-size: 1.4em ;
+  font-weight: bold ;
+  margin: 0px ;
+  padding: 3px ; 
+}

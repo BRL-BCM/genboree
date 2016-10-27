@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "coverage",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Coverage Computation",
+    "shortLabel": "Coverage Computation"
+  }
+}

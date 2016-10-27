@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "setTrackMetaData",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Set Track Metadata",
+    "shortLabel": "[NOT SET]"
+  }
+}

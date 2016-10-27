@@ -1,0 +1,213 @@
+<%
+  require 'open-uri'
+  require 'cgi'
+  require 'mechanize'
+  require 'brl/genboree/genboreeContext'
+
+  Pathway = Struct.new(:name, :link, :keggId)
+
+  allPathways = Hash.new { |hh, kk| hh[kk] = {} }
+
+  # ARGUMENTS TO PAGE:
+  # - geneName -- see if there are any pathways for a gene with this [exact] ename
+  # - refSeqId -- we'll need to make browser links BACK to Genboree if we find a pathway, so we need this
+  # - ip or isPublic -- should all the links be tagged as isPublic to avoid Genboree logins? (only works for published databases)
+  cgi = CGI.new()
+  context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  @geneName = cgi['geneName'].to_s.strip
+  @refSeqId = cgi['refSeqId'].to_s.strip
+  @isPublic = cgi['ip'] || cgi['isPublic']
+  fromGenboree = false
+  success = false
+
+  unless(@geneName.empty? or @refSeqId.empty?)
+    # We need a "browser". We lie to remote hosts so they don't prevent our "robot" programmatic browsing.
+    agent = Mechanize.new()
+    agent.user_agent_alias = 'Linux Firefox'
+    agent.max_history = 10 # else infinite
+
+    # Grab Kegg gene-search page contents
+    # - use this link to look up pathways for a gene by name:
+    page = agent.get("http://www.genome.jp/dbget-bin/www_bget?hsa:#{@geneName}")
+    # Root URL
+    @baseUrl = "#{page.uri.scheme}://#{page.uri.host}"
+
+    # Try to get content we want; if no content, then probably a failed look up. Thus, we always have to be mindful of:
+    # 1. Success pages with content we want
+    # 2. Failure page (or pages if different types of failure) when info is missing, gene name is bad, etc.
+    tdsWithPathways = page.search("//a[contains(@href, 'show_path')]/parent::*[contains(., 'PATH')]")
+    success = !(tdsWithPathways.nil? or tdsWithPathways.empty?)
+    if(success) # Found some pathways, extract them from Kegg's page
+      td = tdsWithPathways.first # should only be 1, but if more, we'll take the first only
+      tdHtml = td.inner_html.gsub(/\n/, ' ').gsub(/<br>|\]/, '')
+      pathways = []
+      # Extract each pathway found. We want the pathway name, id, link.
+      tdHtml.scan(/(.+?)\[(PATH|[A-Z]+):\s*<a\s+href="([^"]+)"\s*>([^<]+)<\/a>/) { |matches|
+        linkType = matches[1]
+        next if(linkType != "PATH") # The regexp will match a few other things too, in an attempt not to miss anything and make debugging easy.
+        # Go through categories and store in allPathways Hash.
+        # - last category is the pathway name
+        categories = matches[0].split(/;/).map{ |xx| xx.strip }
+        numParentCateories = categories.size - 1
+        currParentHash = allPathways
+        numParentCateories.times { |ii|
+          parentCategory = categories[ii]
+          currParentHash[parentCategory] ||= {} # Create entry if not there yet
+          currParentHash = currParentHash[parentCategory]
+        }
+        # Store the pathway name (last 'category')
+        currParentHash[categories.last] = Pathway.new(categories.last, matches[2], matches[3])
+      }
+    end
+  end
+
+  # This function uses simple recursion to render the HTML for the
+  # nested cateogries and their pathways
+  def renderPathwayHash(pathwayHash)
+    buff = ''
+    pathwayHash.keys.sort{|aa,bb| aa.downcase<=>bb.downcase}.each { |name|
+      rec = pathwayHash[name]
+      # If rec is a Hash, then this is a category
+      if(rec.is_a?(Hash))
+        # Open the list for this category
+        buff << <<-EOS
+          <li>
+            <ul class="cat">
+              <li><span class="cat">#{CGI.escapeHTML(name)} : </span>
+        EOS
+        # Display the children in this category
+        buff << renderPathwayHash(rec)
+        # Close list for this category
+        buff << <<-EOS
+              </li>
+            </ul>
+          </li>
+        EOS
+      # Else if rec is a Pathway then we want to show a pathway link
+      else # a Pathway
+        # Kegg link:
+        keggLink = "#{@baseUrl}#{rec.link}"
+        # Pathway Space wrapper link
+        # - we wrap Kegg's URL for the actual pathway as an argument to our "augmentation" page
+        wrapperLink = "/genboree/pathway2genomeWrapper.rhtml?refSeqId=#{@refSeqId}&geneName=#{CGI.escape(@geneName)}&keggUrl=#{CGI.escape(keggLink)}"
+        wrapperLink << "&ip=#{@isPublic}" unless(@isPublic.nil? or @isPublic.empty?)
+        # Make list entry for this pathway item
+        buff << <<-EOS
+          <ul class="cat">
+            <li>
+              <span class="path">
+                &quot;<a href="#{wrapperLink}">#{CGI.escapeHTML(rec.name)}</a>&quot;
+                <span class="kegg">(Kegg Pathway Id: <a href="#{wrapperLink}">#{CGI.escapeHTML(rec.keggId)}</a>)</span>
+              </span>
+            </li>
+          </ul>
+        EOS
+      end
+    }
+    return buff
+  end
+
+  # HTML to show our user.
+  # - show pathways if any found
+  #   * link to our special rendering page to "augment" Kegg's pathway page with some Genboree stuff
+  # - show informative message if no pathways found for gene
+%>
+<html>
+  <head>
+    <style type="text/css">
+      body {
+        font-size: 11pt ;
+      }
+      span.cat {
+        background: url(/images/silk/folder.png) center left no-repeat ;
+        padding-left: 18px ;
+      }
+      span.path {
+        background: url(/images/silk/chart_organisation.png) center left no-repeat ;
+        padding-left: 24px ;
+      }
+      span.kegg {
+        font-size: 0.8em ;
+      }
+      span.fixed {
+        font-family: Courier New, Fixed, monospaced ;
+      }
+      span.path a {
+        font-weight: bold ;
+      }
+      ul {
+        margin: 0px !important ;
+        padding: 0px !important ;
+      }
+      ul.cat {
+        list-style: none ;
+        margin: 0px !important ;
+        padding-top: 0px !important ;
+        padding-bottom: 0px !important ;
+        padding-left: 30px !important ;
+      }
+      ul.cat li {
+        margin: 0px !important ;
+        padding: 0px !important ;
+      }
+      div.msg {
+        background-position: 2px 2px ;
+        background-repeat: no-repeat ;
+        padding: 2px 2px 2px 42px ;
+        min-height: 30px;
+        font-weight: bold ;
+        width: 460px ;
+        text-align: center ;
+      }
+      div.fail {
+        background-color: #FFE0E0 ;
+        background-image: url(/images/vgpFailure.png) ;
+        border: 2px solid #C64848 ;
+        color: #C64848 ;
+        font-family: sans-serif ;
+        font-size: 11pt ;
+        margin-top: 20px ;
+      }
+      div.results {
+        border: 1px solid black ;
+        padding: 5px 5px 10px 10px ;
+        margin: 0px ;
+      }
+      div.success {
+        margin: 5px ;
+        padding: 5px 5px 10px 10px ;
+        font-family: sans-serif ;
+        font-size: 11pt ;
+      }
+      div.success div.title {
+        font-weight: bold ;
+        margin-bottom: 10px ;
+      }
+    </style>
+    <title>
+      Pathways Associated with Gene '<%== @geneName %>'
+    </title>
+  <%# PAGE HEADER %>
+  <%= (fromGenboree ? '' : context.includeFile("/genboree/header.rhtml") ) %>
+<%  if(success) %>
+      <div class="success">
+        <div class="title">Pathways associated with the gene &quot;<span class="fixed"><%== @geneName %></span>&quot;:</div>
+        <div class="results">
+          <ul class="cat">
+            <%= renderPathwayHash(allPathways) %>
+          </ul>
+        </div>
+      </div>
+<%  else %>
+      <div class="msg fail">
+      <%  if(@geneName.empty?) %>
+            ERROR: No <i>geneName</i> argument provided to this page.<br>Nothing to look up pathways with.
+      <%  elsif(@refSeqId.empty?) %>
+            ERROR: No <i>refSeqId</i> argument provided to this page.<br>Can't map Pathway Space back to Genome Space.
+      <%  else %>
+            Could not find a pathway associated with a gene name of<br>&quot;<span class="fixed"><%== @geneName %></span>&quot;.
+      <%  end %>
+      </div>
+<%  end %>
+  <%# FOOTER %>
+  <%= (fromGenboree ? '' : context.includeFile("/genboree/footer.rhtml") ) %>

@@ -1,0 +1,483 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 800 : 320)
+  grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  trkHash = @settings['trkHash']
+  imgHash = {
+    'simple_draw' => "SimpleRectangle.gif",               
+    'bes_draw' => "Paired-EndAnnotations.gif",                     
+    'cdna_draw' => "BoxedAnnotations.gif",                     
+    'gene_draw' => "Line-LinkedAnnotations.gif",                    
+    'tag_draw' => "AnchoredArrows.gif",                 
+    'singleFos_draw' => "HalfPaired-EndAnnotation.gif",                 
+    'scoreBased_draw' => "Score-BasedBarchart(small).gif",   
+    'barbed_wire_draw' => "Barbed-WireRectangle.png",
+    'chromosome_draw' => "LabelWithinRectangle.gif",          
+    'largeScore_draw' => "Score-BasedBarchart(big).gif",
+    'negative_draw'  => "SimpleRectangle(gaptags).gif",    
+    'groupNeg_draw'  => "Line-Linked(gaptags).gif",
+    'fadeToWhite_draw'   => "ScoreColored(fadetowhite).gif",
+    'fadeToGray_draw'    => "ScoreColored(fadetogray).gif",
+    'fadeToBlack_draw'   => "ScoreColored(fadetoblack).gif",
+    'differentialGradient_draw'    => "ScoreColored(fix).gif",
+    'barbed_wire_noLine_draw' => "Barbed-WireRectangle_noLine.gif",
+    'pieChart_draw'    => "chart.gif",
+    'local_scoreBased_draw'    => "Score-BasedBarchart(small).gif",
+    'local_largeScore_draw'      => "Score-BasedBarchart(big).gif",
+    'sequence_draw'       => "Line-LinkedAnnotationsWithSeq.gif",
+    'bidirectional_draw_large'   => "BidirectionalBarChart.png",
+    'bidirectional_local_draw_large' => "BidirectionalBarChart.png"
+  }
+  showSetDefBtn = @settings['showSetDefBtn']
+  userId = @context['userId']
+  trkSettingsArray = []
+  rowKeys = []
+  urlHash = {}
+  attrMap = {}
+  id = 0
+  minConditions = false # This variable should be set to true to render the dialog. At least one track should have either a bigwig or a bigbed file
+  trkHash.keys.sort.each { |dbUri|
+    attrMap.clear()
+    uriObj = URI.parse(dbUri)
+    host = uriObj.host
+    grp = grpApiHelper.extractName(dbUri)
+    dbName = dbApiHelper.extractName(dbUri)
+    # Get the attribute map for this database, we need to know what trks are HDHV to limit the list of styles presented
+    apiCaller = WrapperApiCaller.new(host, "#{uriObj.path}/trks/attributes/map?", userId)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias)
+    apiCaller.get()
+    attrMap = apiCaller.parseRespBody['data']
+    trkHash[dbUri].keys.sort.each { |trk|
+      styleHash = nil
+      trkStyle = nil
+      trkColor = nil
+      if(!attrMap[trk].key?('gbTrackRecordType'))
+        styleHash = {
+          'simple_draw' =>  { :selected => false, :label => "Simple Rectangle" },               
+          'bes_draw' => { :selected => false, :label => "Paired-End" },                     
+          'cdna_draw' => { :selected => false, :label => 'Boxed Group' },                     
+          'gene_draw' => { :selected => false, :label => "Line-Linked" },                    
+          'tag_draw' => { :selected => false, :label => "Anchored Arrows" },                 
+          'singleFos_draw' => { :selected => false, :label => 'Half Paired-End' },                 
+          'scoreBased_draw' => { :selected => false, :label => "Global Score Barchart (small)" },   
+          'barbed_wire_draw' => { :selected => false, :label => "Barbed-Wire Rectangle" },
+          'chromosome_draw' => { :selected => false, :label => "Label Within Rectangle" },          
+          'largeScore_draw' => { :selected => false, :label => "Global Score Barchart (big)" },
+          'negative_draw'  => { :selected => false, :label => "Simple Rectangle With Gaps" },    
+          'groupNeg_draw'           => { :selected => false, :label => 'Line-Linked With Gaps' },
+          'fadeToWhite_draw'   => { :selected => false, :label => 'Score Colored (fade to white)' },
+          'fadeToGray_draw'    => { :selected => false, :label => "Score Colored (fade to gray)" },
+          'fadeToBlack_draw'   => { :selected => false, :label => "Score Colored (fade to black)" },
+          'differentialGradient_draw'    => { :selected => false, :label => 'Score Colored (fixed colors)' },
+          'barbed_wire_noLine_draw' => { :selected => false, :label => 'Barbed-Wire Rectangle (no lines)' },
+          'pieChart_draw'                 => { :selected => false, :label => "Score Pie Chart" },
+          'local_scoreBased_draw'    => { :selected => false, :label => "Local Score Barchart (small)" },
+          'local_largeScore_draw'      => { :selected => false, :label => "Local Score Barchart (big)" },
+          'sequence_draw'       => { :selected => false, :label => "Line-Linked with Sequence" },
+          'bidirectional_draw_large'   => { :selected => false, :label => "Global Bidirectional Barchart" },
+          'bidirectional_local_draw_large' => { :selected => false, :label => "Local Bidirectional Barchart" }
+        }
+        trkStyle = trkHash[dbUri][trk][:style]
+        styleHash[trkStyle][:selected] = true
+      else
+        styleHash = {
+          'scoreBased_draw' => { :selected => false, :label => "Global Score Barchart (small)" },   
+          'largeScore_draw' => { :selected => false, :label => "Global Score Barchart (big)" },
+          'local_scoreBased_draw'    => { :selected => false, :label => "Local Score Barchart (small)" },
+          'local_largeScore_draw'      => { :selected => false, :label => "Local Score Barchart (big)" },
+          'bidirectional_draw_large'   => { :selected => false, :label => "Global Bidirectional Barchart" },
+          'bidirectional_local_draw_large' => { :selected => false, :label => "Local Bidirectional Barchart" }
+        }
+        trkStyle = trkHash[dbUri][trk][:style]
+        if(!styleHash.key?(trkStyle)) # Do not allow a non-barchart style for hdhv tracks
+          styleHash['local_largeScore_draw'][:selected] = true
+          trkStyle = 'local_largeScore_draw'
+        else
+          styleHash[trkStyle][:selected] = true
+        end
+      end
+      trkColor = trkHash[dbUri][trk][:color]
+      trkImg = imgHash[trkStyle]
+      trkSettingsArray << [
+        { 'name' => {:value => trk, :checkbox => false, :title => "#{host} \: #{grp} \: #{dbName}" } },
+        { 'Style' => { :value => styleHash.dup, :checkbox => false, :addFn => { :name => "changeStylePic(this)"} } },
+        { 'Sample' => {:checkbox => false, :value => "<img src=\"/images/#{trkImg}\" border=\"0\" id=\"img_#{id}\">"} },
+        { 'Color' =>
+            {
+              :checkbox => false,
+              :value => "
+                        <a href=\"javascript:void(0);\">
+                          <div id=\"colorDiv_#{id}\" style=\"background-color:#{trkColor};float:left;width:16px;height:16px;border-style:solid;border-color:black;border-width:1px 1px 1px 1px;\">
+                          </div>
+                          <div style=\"float:left;white-space:nowrap;margin-bottom:0px;margin-top:5px;font-weight:bold;\" onclick=\"setColor('#{id}');\">&nbsp;Change
+                          </div>
+                        </a>
+                        <input type=\"hidden\" id='color_input_#{id}' name='colorInput_#{id}' value=\"#{trkColor}\">
+                      "
+            }
+        }
+      ]
+      id += 1
+    }      
+    minConditions = true
+  }
+  useHeight = 250 + (30 * id)
+  useHeight = 500 if(useHeight > 500)
+  height = (@hasAccess ? useHeight : 320)
+  
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <br>&nbsp;<br>
+          This tool allows you to set style/colors for one or more tracks.
+          <br>&nbsp;<br>
+          You can either drag a track class or a track entity-list or a database (to visualize all tracks within that class/entity-list/database) or drag tracks individually into &quot;Input Data&quot;.
+          <br>&nbsp;<br>
+          If you are dragging tracks over from multiple databases/hosts, you can mouse over each track name in the settings dialog to get more context information. This includes the host, group and the database name
+          the track is coming from. 
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+
+  <%
+    if(minConditions)
+  %>
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => trkHash.keys} )
+      })
+    %>
+    
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Set Style/Color",
+        :widgets =>
+        [
+          { :id => "trkSettings", :label => '', :labelWidth => "10px", :fontSize => "11px", :cellspacing => "0", :colSpan => "2", :spanFullRow => true, :leftPadding => "10px", :bottomPadding => "5px",
+        :type => :tabularCheckboxSection, :rows => trkSettingsArray, :headerRow => ['Track', 'Style', 'Sample', 'Color'], :valign => "middle", :cellBottomPadding => "5px", :noToggleBtn => true },
+          { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'trkArray'}
+        ]
+      })
+
+    %>
+    <%
+      btns = []
+      btns << { :type => :submit, :value => "Save", :onClick => "setBtnType(this.value)" }
+      btns << { :type => :submit, :value => "Set As Default", :onClick => "setBtnType(this.value)" } if(showSetDefBtn)
+      btns << { :type => :button, :value => "Load Default", :onClick => "loadDefaults()" }
+      btns << { :type => :submit, :value => "Reset to default" , :onClick => "setBtnType(this.value)" }
+      btns << { :type => :cancel}
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => btns
+        })
+    %>
+    </form>
+    
+    <script type="text/javascript">
+    Ext.onReady(function(){
+      if(wbHash.get('settings').get('loadDefaults'))
+      {
+        wbHash.get('settings').unset('loadDefaults') ;
+      }
+    }) ;
+    function loadDefaults()
+    {
+      /* Hack to let the server side know that defaults are to be loaded. */
+      closeToolWindows() ;
+      showDialogWindow('setStyleAndColor', null, 'loadDefaults') ;
+    }
+    function setBtnType(btnValue)
+    {
+      wbFormSettings.set('btnType', btnValue) ;
+    }
+    function setBgColorOfColorDiv(id)
+    {
+      var color = document.getElementById('hexColorInput').value
+      document.getElementById('colorDiv_' + id).style.backgroundColor = color  ;
+      document.getElementById('colorTextBoxDiv').style.backgroundColor = color  ;
+      document.getElementById('color_input_' + id).value = color  ;
+      // Close the color window
+      Ext.ComponentMgr.get('colorPalette').destroy() ;
+      Ext.ComponentMgr.get('colorWindow').destroy() ;
+    }
+    function setColor(id)
+    {
+      var color = document.getElementById('color_input_' + id).value.split('#')[1] ;
+      if(Ext.ComponentMgr.get('colorPalette'))
+      {
+        Ext.ComponentMgr.get('colorPalette').destroy() ;
+      }
+      if(Ext.ComponentMgr.get('colorWindow'))
+      {
+        Ext.ComponentMgr.get('colorWindow').destroy() ;
+      }
+      // Instantiate a small window to render the color palette
+      var colWindowHtml = "<div align=\"center\"><div id='cpDiv' style='width:200px; height:170px;'></div><div align=\"center\" id='colorTextBoxDiv' style=\"width:170px; height:40px; background-color:#" + color + ";\">" ;
+      colWindowHtml += "<div style='float:left;padding-left:15px;padding-top:10px;'><input id='hexColorInput' type='text' size='10' value='#" + color + "'></div><div style='float:left;padding-left:5px;padding-top:10px;'><input  type='button' value='Set' size='10' onclick=\"setBgColorOfColorDiv(" + id + ")\"></div>"
+      colWindowHtml += "</div></div>"
+      colorWindow = new Ext.Window(
+      {
+        id: 'colorWindow',
+        modal: false,
+        autoScroll: true,
+        constrainHeader: true,
+        title: 'Select a color',
+        stateful: false,
+        height: 250,
+        width: 250,
+        html: colWindowHtml,
+        stateful: false
+      }) ;
+      colorWindow.addListener('close', closeColorWindow) ;
+      colorWindow.show() ;
+      renderColorPalette(color, id) ;
+    }
+    function renderColorPalette(color, id)
+    {
+      var colors = ["000000",
+                    "304040",
+                    "707070",
+                    "909090",
+                    "B2B2B2",
+                    "C3C3C3",
+                    "0000FF",
+                    "00FFFF",
+                    "00FF00",
+                    "FFFF00",
+                    "FF0000",
+                    "FF00FF",
+                    "9900CC",
+                    "6600CC",
+                    "330066",
+                    "663399",
+                    "7755DD",
+                    "9900FF",
+                    "990099",
+                    "990066",
+                    "CC3366",
+                    "CC6699",
+                    "FF6699",
+                    "FF3399",
+                    "CC3399",
+                    "000066",
+                    "003399",
+                    "336699",
+                    "6666CC",
+                    "6666FF",
+                    "00CCFF",
+                    "88EEFF",
+                    "99CCCC",
+                    "669999",
+                    "336666",
+                    "003333",
+                    "006633",
+                    "009933",
+                    "339966",
+                    "33CC66",
+                    "33CC33",
+                    "55EE55",
+                    "66FFCC",
+                    "99CC77",
+                    "669966",
+                    "669933",
+                    "77AA44",
+                    "99CC33",
+                    "99CC66",
+                    "CCFF66",
+                    "333300",
+                    "666633",
+                    "999966",
+                    "999933",
+                    "CCBB00",
+                    "CCCC33",
+                    "FFCC00",
+                    "AA7700",
+                    "663300",
+                    "774411",
+                    "996633",
+                    "CC9933",
+                    "FFCC99",
+                    "FF9966",
+                    "FF9933",
+                    "FF6633",
+                    "CC6633",
+                    "883311",
+                    "990000",
+                    "CC3300",
+                    "FF6666",
+                    "FF9999"]
+      var colPalette = new Ext.ColorPalette({value: color, id: 'colorPalette', colors: colors}) ;
+      colPalette.on('select', function(palette, selColor){
+        document.getElementById('colorTextBoxDiv').style.backgroundColor = '#'+selColor ;
+        document.getElementById('hexColorInput').value = '#'+selColor ;
+        document.getElementById('colorDiv_' + id).style.backgroundColor = '#'+selColor ;
+        document.getElementById('color_input_' + id).value = '#'+selColor  ;
+      }) ;
+      colPalette.render('cpDiv') ;
+      
+    }
+    function closeColorWindow()
+    {
+      Ext.ComponentMgr.get('colorPalette').destroy() ;
+      colorWindow.close() ;
+    }
+    function changeStylePic(styleObj)
+    {
+      var styleId = styleObj.id ;
+      var style = styleObj.value ;
+      var imgId = document.getElementById('img_' + styleId.split('|')[1]) ;
+      
+      if(style == 'simple_draw')
+      {
+        imgId.src = "/images/SimpleRectangle.gif" ;
+      }
+      else if(style == 'bes_draw')
+      {
+        imgId.src = "/images/Paired-EndAnnotations.gif" ;
+      }
+      else if(style == 'cdna_draw')
+      {
+        imgId.src = "/images/BoxedAnnotations.gif" ;
+      }
+      else if(style == 'gene_draw')
+      {
+        imgId.src = "/images/Line-LinkedAnnotations.gif" ;
+      }
+      else if(style == 'tag_draw')
+      {
+        imgId.src = "/images/AnchoredArrows.gif" ;
+      }
+      else if(style == 'singleFos_draw')
+      {
+        imgId.src = "/images/HalfPaired-EndAnnotation.gif" ;
+      }
+      else if(style == 'scoreBased_draw')
+      {
+        imgId.src = "/images/Score-BasedBarchart(small).gif" ;
+      }
+      else if(style == 'barbed_wire_draw')
+      {
+        imgId.src = "/images/Barbed-WireRectangle.png" ;
+      }
+      else if(style == 'chromosome_draw')
+      {
+        imgId.src = "/images/LabelWithinRectangle.gif" ;
+      }
+      else if(style == 'largeScore_draw')
+      {
+        imgId.src = "/images/Score-BasedBarchart(big).gif" ;
+      }
+      else if(style == 'negative_draw')
+      {
+        imgId.src = "/images/SimpleRectangle(gaptags).gif" ;
+      }
+      else if(style == 'groupNeg_draw')
+      {
+        imgId.src = "/images/Line-Linked(gaptags).gif" ;
+      }
+      else if(style == 'fadeToWhite_draw')
+      {
+        imgId.src = "/images/ScoreColored(fadetowhite).gif" ;
+      }
+      else if(style == 'fadeToGray_draw')
+      {
+        imgId.src = "/images/ScoreColored(fadetogray).gif" ;
+      }
+      else if(style == 'fadeToBlack_draw')
+      {
+        imgId.src = "/images/ScoreColored(fadetoblack).gif" ;
+      }
+      else if(style == 'differentialGradient_draw')
+      {
+        imgId.src = "/images/ScoreColored(fix).gif" ;
+      }
+      else if(style == 'barbed_wire_noLine_draw')
+      {
+        imgId.src = "/images/Barbed-WireRectangle_noLine.gif" ;
+      }
+      else if(style == 'pieChart_draw')
+      {
+        imgId.src = "/images/chart.gif" ;
+      }
+      else if(style == 'local_scoreBased_draw')
+      {
+        imgId.src = "/images/Score-BasedBarchart(small).gif" ;
+      }
+      else if(style == 'local_largeScore_draw')
+      {
+        imgId.src = "/images/Score-BasedBarchart(big).gif" ;
+      }
+      else if(style == 'sequence_draw')
+      {
+        imgId.src = "/images/Line-LinkedAnnotationsWithSeq.gif" ;
+      }
+      else if(style == 'bidirectional_draw_large')
+      {
+        imgId.src = "/images/BidirectionalBarChart.png" ;
+      }
+      else
+      {
+        imgId.src = "/images/BidirectionalBarChart.png" ;
+      }
+    }
+    </script>
+  <%
+    else
+  %>
+    <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "NO Tracks:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "There are no tracks in your selected list of input(s)."
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+        { :toolHelpOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

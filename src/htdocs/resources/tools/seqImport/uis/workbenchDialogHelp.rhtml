@@ -1,0 +1,121 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 620px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            <b>Overview:</b><br>
+            This tool prepares the Samples and related sequence files for use in Microbiome Workbench analyses.
+            <br>&nbsp;<br>
+            Using the sample-specific <span class='wbHelpMono'>barcode</span> and primer-pair information, it will <i>identify</i> and <i>extract</i> the sample-specific sequence records, and also perform some bookkeeping operations.
+            <br>&nbsp;<br>
+            <b>Requirements:</b><br>
+            Samples which you want processed must already have been associated with a specific <a href='http://www.ncbi.nlm.nih.gov/Traces/sra/static/SRAToolkit.pdf'>.SRA</a> or <a href='http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=show&f=formats&m=doc&s=formats#sff'>.SFF</a> sequence file. For example, using the <span class='wbHelpMonoEntity'>Data &raquo; Samples &raquo; Sample - File Linker</span> tool. The sequence file associated with the Sample will be the one from which sample - specific sequences are extracted.
+            <br>&nbsp;<br>
+            <b>Output:</b><br>
+            Archives of the sequences in <a href='http://en.wikipedia.org/wiki/FASTA_format'>FASTA</a> &amp; <a href='http://en.wikipedia.org/wiki/Fastq'>FASTQ</a> formats will be available in a folder matching your <span class='wbHelpMono'>Sample Set Name</span> setting, along with some additional bookkeeping files. This <i>sample set folder</i> is used as an input for several Microbiome Workbench analysis tools.
+            <br>&nbsp;<br>
+            <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i><a href='#addendum'>Addendum</a><i> at the bottom of this Help dialog.</i></div>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the individual <u>Sample(s)</u> or <u>Database(s)</u> or <u>Sample Folder</u> or <u>Sample Set(s)</u> into &quot;Input Data&quot;. You will have the option of selecting the samples you wish to run the tool on.',
+        ],
+        :types              => [ [ 'Samples', 'min: 0 ; max: any' ], 
+                                 [ 'BioFolder', 'min: 0 ; max: any' ], 
+                                 [ 'SampleSets', 'min: 0 ; max: any' ], 
+                                 [ 'Sample Entity List', 'min: 0 ; max: any'], 
+                                 [ 'Database', 'min: 0 ; max: any' ] 
+                               ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>Database</u> into &quot;Output Targets&quot;.' ],
+        :types              => [['Database', 'min:1 ; max: 1']  ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Sample Set Name', 'The name of the sample set, for example "Control set", "Treatment set".' ],
+          [ 'Trim At Distal Primer', 'Trim at distal primer location (up to 3 mismatches).' ],
+          [ 'Trim At N/n', 'Trim reads at the first location of N/n if it occurs before distal primer location.' ],
+          #[ 'Trim At Low Quality Window', 'Trim reads when the average quality drops below a given threshold set in Min_Average_Quality.' ],
+          [ 'Remove N Sequences?', 'Ignore any reads that contain an N/n.' ],
+          [ 'Min Read Length', 'Set the minimum read length to filter the FASTQ file.' ],
+          [ 'Min Average Quality', 'Ignore sequences that do not meet the minimum average quality.' ],
+          [ 'Min Sequence Count', 'Ignore samples that do not meet the minimum sequence count.' ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Developed internally by Kevin Riehle, Jun Ma; integrated into the workbench by Arpit Tandon and Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>A. Context Within the Microbiome Workbench</b><br>
+          Within the context of preparing data for use within the Microbiome Workbench suite of tools, this step <u>initializes the sequence data for prior to running an analysis tool</u> such as Qiime or RDP:<br>
+          <div style='width:100%; text-align: center; font-size: 12pt; font-weight: bold; margin: 10px 2px 0px 2px;'>
+            Microbiome Workbench Flow
+          </div>
+          <img src='/images/workbench/help/microbiomeWorkbench/flow_seqExtraction.png' style='margin:2px 2px 10px 2px; display:block; margin-left:auto; margin-right:auto; width:497; height:198;'>
+          <b>B. Output Produced</b><br>
+          The primary purpose of this step is to <u>initialize a 'Sample Set' folder</u> containing the necessary information for Microbiome Workbench tools to use a inputs for running an analysis. However, the files within this Sample Set folder may be of general interest and you may wish to download some or all of them.
+          <br>&nbsp;<br>
+          The Sample Set folder created will appear under the <u>MicrobiomeData</u> folder in the <u>Files</u> area of your output database. The folder will have the same name as the <span class='wbHelpMono'>Sample Set Name</span> you used in the Settings. In the example <b>below</b>, the user has run this <span class='wbHelpMono'>Microbiome Sequence Import</span> tool with a <span class='wbHelpMono'>Sample Set Name</span> of 'Tissue Distribution' and the tool has placed several output files within that folder:
+          <img src='/images/workbench/help/microbiomeWorkbench/seqExtraction_outputLocations.png' style='float:left; margin:5px; width:246;  height:251;'>
+          <div style='display: block; float: left; width: 55%;'>
+            <ul>
+              <li>
+                <b><u>filtered_fasta.result.tar.gz</u></b> - For each Sample, the sample-specific sequence records in <a href='http://en.wikipedia.org/wiki/FASTA_format'>fasta</a> format.
+              </li>
+              <li>
+                <u><b>fasta.result.tar.gz</b></u> - For each .SFF or .SRA, a <a href='http://en.wikipedia.org/wiki/FASTA_format'>fasta</a> file with all the sequence records.
+              </li>
+              <li>
+                <u><b>fasta.result.tar.gz</b></u> - For each .SFF or .SRA, a <a href='http://en.wikipedia.org/wiki/Fastq'>fastq</a> file with all the sequence records.
+              </li>
+              <li>
+                <u><b>stats.result.tar.gz</b></u> - For each Sample, a settings and information file.
+              </li>
+              <li>
+                <u><b>sample.metadata</b></u> - A tab-delimited file of sample records. All the metadata for each sample is provided in this file, even columns that are based on your parameter values from the tool Settings and a column showing the associated .SFF or SRA file location.
+              </li>
+              <li>
+                <u><b>settings.json</b></u> - A JSON file with the input &amp; output information, the tool settings, and some context for this tool job.
+              </li>
+            </ul>
+          </div>
+        "
+      })
+  %>
+</div>

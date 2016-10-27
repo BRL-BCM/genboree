@@ -1,0 +1,1332 @@
+<% # THIS IS AN ERUBY FILE
+########################################################################################
+# Project: VGP UI Integration
+#   This project creates a new User Interface (UI) to assist users in
+#   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a VGP job with the Genboree environment
+#   and then package the VGP output files and notify the user of job completion.
+#
+# vgpConfig.rhtml - This file creates all the HTML structure/elements to create a
+#   UI for a client to interact with
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2008 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+# NOTE: Any div that is involved in a scriptaculous effect (should) follows the scricptaculous suggestion
+#     : that it contain an inner div --> <div "idToShow"><div>Content to show</div></div>
+#     : These div's might be able to be removed but might have unexpected consequences in the effect...
+
+require 'cgi'
+require 'json'
+require 'sha1'
+require 'rest-open-uri'
+require 'RMagick'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+@cgi = CGI.new()
+debug = false
+epsInit = 0
+defaultFont = ""
+fonts = Array.new
+Magick.fonts { |font|
+  fonts.push(font.family) unless fonts.include?(font.family)
+}
+
+# Set a default font to select, we look for Arial first, Helvetica next,
+# If neither is present on the server, first in the array will be used
+if(fonts.include?("Arial") || fonts.include?("arial"))
+  defaultFont = "arial"
+elsif(fonts.include?("Helvetica") || fonts.include?("helvetica"))
+  defaultFont = "helvetica"
+end
+
+# Load our config file to access jsVersion
+@genbConf = BRL::Genboree::GenboreeConfig.load()
+@genbConf.vgpApiHost = "localhost" if @genbConf.vgpApiHost.nil? || @genbConf.vgpApiHost.empty?
+@genbConf.maxNumEPsToDisplay = 100 if @genbConf.maxNumEPsToDisplay.nil?
+
+########################################################################################
+# Utility method to easily make an inquiry to the REST API
+# This method will either return the apiData structure or exit in failure mode
+# * Arguments : 
+#  - +String+ -> The REST URI to query
+########################################################################################
+def getRestData(uri)
+  apiCaller = ApiCaller.new(@genbConf.vgpApiHost, uri, @cgi["userLogin"].strip(), @cgi["passwd"].strip())
+  
+  httpResp = apiCaller.get()
+  if(apiCaller.failed?)
+    errorText = ""
+    if(httpResp.nil?)
+      # Exception happened
+      errorText << "<div class=\"feedback\"><div class=\"failure\">ERROR: The REST resource that is required is currently unavailable. "
+      errorText << "Please try again later or contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">"
+      errorText << "#{@genbConf.gbTechEmail}</a> for assistance.<br><br>"
+      errorText << "Detailed Error Information: #{apiCaller.error.inspect}</div></div>"
+    else
+      # An API related error
+      apiCaller.parseRespBody()
+      errorText << "<div class=\"feedback\"><div class=\"failure\">An error has occurred while attempting to process your request.<br>"
+      errorText << "Please contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">#{@genbConf.gbTechEmail}</a> for assistance."
+      errorText << "<br><br>"
+      errorText << "<em>REST API Error</em>: An error occurred while communicating with the REST interface!<br>"
+      errorText << "<em>Status Code</em>: #{apiCaller.apiStatusObj["statusCode"]}<br><em>Message</em>: #{apiCaller.apiStatusObj["msg"]}"
+      errorText << "</div></div>"
+    end
+    
+    puts errorText
+    exit
+  end
+  
+  apiCaller.parseRespBody()
+  return apiCaller.apiDataObj
+end
+
+unless(@cgi.has_key?("userPwdDigest") && @cgi.has_key?("userLogin"))
+  # Login & password digest are required components, if we don't get these from the JSP, internal error occurred
+  err = "<div class=\"feedback\"><div class=\"failure\">An internal system error has occurred, please contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">"
+  err += "#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\nERROR: A required parameter was missing!</div></div>\n"
+  puts err
+
+  exit
+end
+
+unless(@cgi.has_key?("group_id") && @cgi.has_key?("rseq_id") && @cgi.has_key?("groupName") && @cgi.has_key?("rseqName"))
+  # These params just might not be set yet. Perhaps the first step in VGP might instead be to select these
+  puts "<div>Please select a group and database from above.</div>"
+else
+  # Gather our entry points from the REST API
+  eps = getRestData("/REST/v1/grp/#{CGI.escape(@cgi["groupName"].strip())}/db/#{CGI.escape(@cgi["rseqName"].strip())}/eps?connect=false&detailed=false")
+  # Sort the EPs so the _random* are at the bottom - this is still ASCII sort, not natural order...
+  eps["entrypoints"].sort! { |x, y|
+    if((!x["name"].index("_").nil? && !y["name"].index("_").nil?) || (x["name"].index("_").nil? && y["name"].index("_").nil?))
+      x["name"] <=> y["name"]
+    elsif(x["name"].index("_").nil?)
+      -1
+    else
+      1
+    end
+  }
+  
+  # Get our available tracks
+  tracks = getRestData("/REST/v1/grp/#{CGI.escape(@cgi["groupName"].strip())}/db/#{CGI.escape(@cgi["rseqName"].strip())}/trks?")
+  trackNames = Array.new()
+  tracks.each { |track| trackNames.push(track["text"]) }
+%>
+<div id="main">
+  <ul id="tabs">
+    <li><a id="epTab" href="#" class="active" onclick="setSelectedTab(this.id) ; return false ;">Select Entry Points</a></li>
+    <li><a id="imgTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Specify Images</a></li>
+    <li><a id="colTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Define Data Columns</a></li>
+    <li><a id="annotTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Add Annotation Tracks</a></li>
+    <li><a id="submitTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Submit</a></li>
+  </ul>
+  <div id="container">
+    <div id="content">
+      <div id="eps">
+        <h2 class="instruction">Select the entry points to be drawn in the figures</h2>
+        <fieldset>
+          <legend>
+            Available Entry Points
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['availEPs'].text, helpMessages['availEPs'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>
+          </legend>
+<%
+  # eps["count"] == 0 condition needed here? I don't think, it is a safety net...
+  unless(eps["entrypoints"].nil? || eps["count"] == 0 || eps["count"] >= @genbConf.maxNumEPsToDisplay.to_i)
+%>
+          <div id="epsDesc">
+            <ul id="epsList" class="dataList">
+<%
+    # Represents the number of eps being drawn by default (0 for the exists case)
+    epsInit = eps["count"]
+    eps["entrypoints"].each_with_index { |ep, index|
+      # We assume here that an EP name will ONLY have an underscore in the 'chromosomes exist' use case
+      checked = "checked=\"checked\""
+      drawn = (index % 2 == 1) ? "odd" : "even"
+      unless(ep["name"].index("_").nil?)
+        checked = ""
+        drawn += " hidden"
+        epsInit -= 1
+      end
+%>
+              <li onclick="selectAndShowEpDetails('ep_<%=ep["name"]%>') ;">
+                <div id="ep_<%=ep["name"].downcase()%>" class="entryPoint <%=drawn%>">
+                  <div class="entryPointName">
+                    <%=ep["name"]%>
+                  </div>
+                  <div class="entryPointControl">
+                    Draw?
+                    <span>
+                      <input id="ep_<%=ep["name"].downcase()%>_check" type="checkbox" class="checkbox" style="margin-left: 2px ;" onclick="toggleEPDrawing('ep_<%=ep["name"].downcase()%>');" <%=checked%> />
+                    </span>
+                  </div>
+                  <div style="clear: both ;"></div>
+                </div>
+              </li>
+<%
+    }
+%>
+            </ul>
+            <div style="margin-bottom: 5px ;">
+              <input type="button" value="Draw All" onclick="drawAllEps(true) ;" />
+              <input type="button" value="Draw None" onclick="drawAllEps(false) ;" />
+            </div> 
+            Total entry points to be drawn: <span id="epsDrawn" style="font-weight: bold ;"><%=epsInit%></span>
+          </div>
+<%
+  else
+%>
+          <div id="epsDesc">
+            There are <span style="font-weight: bold ;"><%=eps["count"]%></span> entry points available for drawing.
+            <div style="margin: 5px 0 ;">
+<%
+  # Because to_json encapsulates our string in double quotes, the event handler must be enclosed in single quotes. And because 
+  # our input can itself have a single quote (eg Sameer's Lemonade) we must escape any single quotes to avoid an abrupt end to 
+  # our event handler. HTML will not recognize \' as an escaped quote so we must convert it to the HTML escaped version.
+%>
+              <input id="epEntry" type="text" style="margin-right: 2px ;" onkeyup='if(checkSubmitKey(event)) { addEntryPoint($F("epEntry"), <%=@cgi["groupName"].strip().to_json.gsub("'", "&#39;")%>, <%=@cgi["rseqName"].strip().to_json.gsub("'", "&#39;")%>) ; }'/>
+              <input type="button" value="Add" onclick='addEntryPoint($F("epEntry"), <%=@cgi["groupName"].strip().to_json.gsub("'", "&#39;")%>, <%=@cgi["rseqName"].strip().to_json.gsub("'", "&#39;")%>) ;' >
+              <input id="removeButton" type="submit" value="Remove" onclick="removeEntryPoints('epsList') ;" disabled>
+            </div>
+            <div style="margin-bottom: 5px ;">
+              <select id="epsList" style="width: 50% ; height: 10em ;" multiple="multiple" onChange="processManualEpSelect(this) ;">
+              </select>
+            </div>
+            Total entry points to be drawn: <span id="epsDrawn" style="font-weight: bold ;"><%=epsInit%></span>
+          </div>
+<%
+  end
+%>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Define Partial Entry Point Segments
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['epSegs'].text, helpMessages['epSegs'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label style="width: 5em ;">Name: </label>
+              <div class="optionInput">
+                <span id="epName" class="disabled">[No entry point selected]</span>
+              </div>
+            </div>
+            <div class="option" style="margin-bottom: 10px ;">
+              <label style="width: 5em ;">Length: </label>
+              <div class="optionInput">
+                <span id="epLength" class="disabled">[N/A]</span>
+              </div>
+            </div>
+            <div id="fullDiv" class="option disabled">
+              <input id="full" disabled="disabled" class="radio" type="radio" name="epDrawing" onclick="toggleSegOptsVis(false, selectedEpId) ;" />
+              Draw the whole entry point
+            </div>
+            <div id="fullAndSegsDiv" class="option disabled">
+              <input id="fullAndSegs" disabled="disabled" class="radio" type="radio" name="epDrawing" onclick="toggleSegOptsVis(true, selectedEpId) ;" />
+              Draw the whole entry point and the segments below
+            </div>
+            <div id="segsOnlyDiv" class="option disabled">
+              <input id="segsOnly" disabled="disabled" class="radio" type="radio" name="epDrawing" onclick="toggleSegOptsVis(true, selectedEpId) ;" />
+              Only draw the segments below
+            </div>
+            <div class="advancedOptions" style="margin-left: 0 ; display: none ;" id="segOpts">
+              <div class="optionsGroup">
+                <div class="option">
+                  <label for="epSegStart" style="width: 18em ;">Segment start:</label>
+                  <div class="optionInput">
+                    <input type="text" id="epSegStart" onkeypress="return validateInt(event) ;" onblur="checkEpRange(selectedEpId, this) ;"/>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="epSegEnd" style="width: 18em ;">Segment end:</label>
+                  <div class="optionInput">
+                    <input type="text" id="epSegEnd" onkeypress="return validateInt(event) ;" onblur="checkEpRange(selectedEpId, this) ;"/>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="epSegOrder" style="width: 18em ;">Draw segments ordered by:</label>
+                  <div class="optionInput">
+                    <select id="epSegOrder" onchange="setSegOrderForEp(selectedEpId, $F(this)) ;">
+                      <option value="startOrder" selected="selected">Increasing Segment Start Value</option>
+                      <option value="addOrder">Addition Order</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="buttonPanel" style="margin: 3px 5px 10px 5px ;">
+                <input id="addSegButton" type="button" value="Add Segment" onclick="addSegmentToEp(selectedEpId) ;" />
+                <input id="updateSegButton" type="button" value="Update Segment" onclick="updateSegmentInEp(selectedEpId, selectedSegId) ;" />
+                <input id="removeSegButton" type="button" value="Remove Segment" onclick="removeSegmentFromEp(selectedEpId, selectedSegId) ;" />
+              </div>            
+              <fieldset style="margin: 5px ;">
+                <legend>Current Segments List - <span id="epSegsListId">(n/a)</span></legend>
+                <ul id="epSegsList">
+                </ul>
+              </fieldset>
+            </div>
+          </div>
+        </fieldset>
+        <div id="epFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('imgTab') ;" />
+        </div>
+      </div>
+      <div id="figures" style="display: none ;">
+        <h2 class="instruction">Select which images to create, specify options for those images and add any desired labels</h2>
+        <fieldset id="imageType">
+          <legend>
+            Specify Image Type
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['imageTypes'].text, helpMessages['imageTypes'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>            
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label for="imageClass">
+                Image Type:
+              </label>
+              <div class="optionInput">
+                <select id="imageClass" onchange="toggleImageTypeOptions() ;">
+                  <option value="genomeView">Genome View</option>
+                  <option value="chromView">Chromosome Views</option>
+                </select>
+              </div>
+            </div>
+            <div id="genomeView">
+              <div>
+                <div class="option">
+                  <label for="genomeChrLabels">
+                    Draw chromosome labels?
+                  </label>
+                  <div class="optionInput" style="width: 13px ;">
+                    <input id="genomeChrLabels" type="checkbox" class="checkbox" style="margin: 0 ;" checked="checked" />
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="genomeBorders">
+                    Draw borders around individual chromosomes?
+                  </label>
+                  <div class="optionInput" style="width: 13px ;">
+                    <input id="genomeBorders" type="checkbox" class="checkbox" style="margin: 0 ;" />
+                  </div>
+                </div>
+                <a href="#" onclick="toggleAdvancedOptions('genomeAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+                <div id="genomeAdvanced" class="advancedOptions" style="display: none ;">
+                  <div style="margin: 5px ;">
+                    <div class="option">
+                      <label for="genomeMargin">
+                        Margin*: 
+                      </label>
+                      <div class="optionInput">
+                        <span><input id="genomeMargin" type="text" size="6" value="5" onkeypress="return validateInt(event) ;" onblur="checkEmptyOption(this) ;" /></span>
+                        (pixel units)
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="genomeFontSize">
+                        Chromosome labels font size*:
+                      </label>
+                      <div class="optionInput">
+                        <span><input id="genomeFontSize" type="text" size="6" value="12" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                        (point units)
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="genomeFont">
+                        Chromosome labels font:
+                      </label>
+                      <div class="optionInput">
+                        <select id="genomeFont">
+<%
+                          fonts.each { |font|
+%>
+                          <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                            <%=font%>
+                          </option>
+<%
+                          }
+%>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="genomeFontColor">
+                        Chromosome labels font color*: 
+                      </label>
+                      <div class="optionInput colorInput">
+                        <div id="genomeFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                        <input type="hidden" id="genomeFontColor" value="#000000">
+                        <div style="float: left ; width: 50% ;">
+                          <a class="colorLink" href="#" onclick="setDivId('genomeFontSwatch', 'genomeFontColor', '#000000') ; return false ;">Change Color</a>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="drawEmptyCytobandsGV">
+                        Draw empty track for Cytoband tracks without data:
+                      </label>
+                      <div class="optionInput">
+                        <input id="drawEmptyCytobandsGV" type="checkbox" class="checkbox" checked="checked" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="chromView" style="display: none ;">
+              <div>
+                <div class="option">
+                  <label for="chromBorder">
+                    Draw borders around chromosome?
+                  </label>
+                  <div class="optionInput" style="width: 13px ;">
+                    <input id="chromBorder" type="checkbox" class="checkbox" style="margin: 0 ;" />
+                  </div>
+                </div>
+                <a href="#" onclick="toggleAdvancedOptions('chromAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+                <div id="chromAdvanced" class="advancedOptions" style="display: none ;">
+                  <div style="margin: 5px ;">
+                    <div class="option">
+                      <label for="chromXLabelPos">
+                        X-Axis label position:
+                      </label>
+                      <div class="optionInput">
+                        <select id="chromXLabelPos">
+                          <option value="top">Top</option>
+                          <option value="bottom" selected>Bottom</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="drawEmptyCytobandsCV">
+                        Draw empty track for Cytoband tracks without data:
+                      </label>
+                      <div class="optionInput">
+                        <input id="drawEmptyCytobandsCV" type="checkbox" class="checkbox" checked="checked" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset id="annotation">
+          <legend>
+            Image Labels
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['imgLabels'].text, helpMessages['imgLabels'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>              
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label for="title">
+                Image title: 
+              </label>
+              <div class="optionInput">
+                <textarea id="title" cols="30"></textarea>
+              </div>
+            </div>
+            <div class="option">
+              <label for="subtitle">
+                Image subtitle: 
+              </label>
+              <div class="optionInput">
+                <textarea id="subtitle" cols="30"></textarea>
+              </div>
+            </div>
+            <div class="option">
+              <label for="xAxisLabel">
+                X-Axis label: 
+              </label>
+              <div class="optionInput">
+                <textarea id="xAxisLabel" cols="30"></textarea>
+              </div>
+            </div>
+            <div class="option">
+              <label for="yAxisLabel">
+                Y-Axis label: 
+              </label>
+              <div class="optionInput">
+                <textarea id="yAxisLabel" cols="30"></textarea>
+              </div>
+            </div>
+            <div class="option">
+              <label for="yAxisScale">
+                Y-Axis scale:
+              </label>
+              <div class="optionInput">
+                <select id="yAxisScale">
+                  <option value="none">No Scale</option>
+                  <option value="left" selected>Left Side</option>
+                  <option value="right">Right Side</option>
+                  <option value="both">Both Sides</option>
+                  <option value="individual">Individual Scales for Each Entry Point</option>
+                </select>
+              </div>
+            </div>
+            <div class="option">
+              <label for="trackLegend">
+                Draw track-based legend?
+              </label>
+              <div class="optionInput" style="width: 13px ;">
+                <input id="trackLegend" type="checkbox" class="checkbox" style="margin: 0 ; padding: 0 ;" onclick="Effect.toggle('tLegendOptions', 'blind', {afterFinish: checkLegendPosConflict }) ;"/>
+              </div>
+            </div>
+            <div id="tLegendOptions" class="advancedOptions" style="display: none ; margin-top: -2px ; margin-bottom: 5px ;">
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="tLegendBorder">
+                    Draw a border around the legend?
+                  </label>
+                  <div class="optionInput" style="width: 13px ;">
+                    <input id="tLegendBorder" type="checkbox" class="checkbox" style="margin: 0 ;" checked="checked" />
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="tLegendPos">
+                    Primary position:
+                  </label>
+                  <div class="optionInput" style="width: 7em ;">
+                    <select id="tLegendPos" onchange="checkLegendPosConflict() ;">
+                      <option value="top">Top</option>
+                      <option value="bottom" selected>Bottom</option>
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                  <div id="tLegendSecPos" style="display: none ;">
+                    <label for="tLegendSecPosSelect" style="float: left ; width: 11em ;">
+                      Secondary position:
+                    </label>
+                    <select id="tLegendSecPosSelect" style="float: left ;" onchange="setColumnSecondaryPosition() ;">
+                      <option value="top" selected>Top</option>
+                      <option value="bottom">Bottom</option>
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="tLegendColNum">
+                    Number of columns in legend*:
+                  </label>
+                  <div class="optionInput">
+                    <span>
+                      <input id="tLegendColNum" type="text" style="margin: 0 ;" size="6" value="1" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" />
+                    </span>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="tLegendFontSize">
+                    Legend font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="tLegendFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="tLegendFont">
+                    Legend font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="tLegendFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="tLegendFontColor">
+                    Legend font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="tLegendFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="tLegendFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('tLegendFontSwatch', 'tLegendFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="option">
+              <label for="columnLegend">
+                Draw column-based legend?
+              </label>
+              <div class="optionInput" style="width: 13px ;">
+                <input id="columnLegend" type="checkbox" class="checkbox" style="margin: 0 ;" onclick="Effect.toggle('cLegendOptions', 'blind', {afterFinish: checkLegendPosConflict }) ;"/>
+              </div>
+            </div>
+            <div id="cLegendOptions" class="advancedOptions" style="display: none ; margin-top: -2px ; margin-bottom: 5px ;">
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="cLegendBorder">
+                    Draw a border around the legend?
+                  </label>
+                  <div class="optionInput" style="width: 13px ;">
+                    <input id="cLegendBorder" type="checkbox" class="checkbox" style="margin: 0 ;" checked="checked" />
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="cLegendPos">
+                    Primary position:
+                  </label>
+                  <div class="optionInput" style="width: 7em ;">
+                    <select id="cLegendPos" onchange="checkLegendPosConflict() ;">
+                      <option value="top">Top</option>
+                      <option value="bottom" selected>Bottom</option>
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                  <div id="cLegendSecPos" style="display: none ;">
+                    <span style="float: left ; width: 11em ;">
+                      Secondary position:
+                    </span>
+                    <span id="cLegendSecPosSpan" style="float: left ;">Bottom</span>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="cLegendColNum">
+                    Number of columns in legend*:
+                  </label>
+                  <div class="optionInput">
+                    <span>
+                      <input id="cLegendColNum" type="text" style="margin: 0 ;" size="6" value="1" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" />
+                    </span>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="cLegendFontSize">
+                    Legend font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="cLegendFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="cLegendFont">
+                    Legend font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="cLegendFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="cLegendFontColor">
+                    Legend font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="cLegendFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="cLegendFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('cLegendFontSwatch', 'cLegendFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <a href="#" onclick="toggleAdvancedOptions('annotAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+            <div id="annotAdvanced" class="advancedOptions" style="display: none ;">
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="titleFontSize">
+                    Title font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="titleFontSize" type="text" size="6" value="22" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="titleFont">
+                    Title font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="titleFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="titleFontColor">
+                    Title font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="titleFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="titleFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('titleFontSwatch', 'titleFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>          
+                <div class="option">
+                  <label for="subtitleFontSize">
+                    Subtitle font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="subtitleFontSize" type="text" size="6" value="13" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="subtitleFont">
+                    Subtitle font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="subtitleFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="subtitleFontColor">
+                    Subtitle font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="subtitleFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="subtitleFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('subtitleFontSwatch', 'subtitleFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>                    
+                <div class="option">
+                  <label for="xAxisFontSize">
+                    X-Axis label font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="xAxisFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="xAxisFont">
+                    X-Axis label font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="xAxisFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="xAxisFontColor">
+                    X-Axis label font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="xAxisFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="xAxisFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('xAxisFontSwatch', 'xAxisFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisFontSize">
+                    Y-Axis label font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="yAxisFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisFont">
+                    Y-Axis label font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="yAxisFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisFontColor">
+                    Y-Axis label font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="yAxisFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="yAxisFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('yAxisFontSwatch', 'yAxisFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisScaleFontSize">
+                    Y-Axis scale font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span><input id="yAxisScaleFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" /></span>
+                    (point units)
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisScaleFont">
+                    Y-Axis scale font:
+                  </label>
+                  <div class="optionInput">
+                    <select id="yAxisScaleFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="yAxisScaleFontColor">
+                    Y-Axis scale font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="yAxisScaleFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="yAxisScaleFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('yAxisScaleFontSwatch', 'yAxisScaleFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('epTab') ;" />
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('colTab') ;" />
+        </div>    
+      </div>
+      <div id="columns" style="display: none ;">
+        <h2 class="instruction"><a href="#">Data columns</a> are spatial elements that annotation tracks are added to and drawn in. Setup columns in which to draw annotation</h2>
+        <fieldset>
+          <legend>
+            Column Definition
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['colSettings'].text, helpMessages['colSettings'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>                          
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label for="columnTitleText">
+                Column title: 
+              </label>
+              <div class="optionInput">
+                <textarea id="columnTitleText"></textarea>
+              </div>
+            </div>
+            <div class="option">
+              <label for="drawColumnTitle">
+                Draw column title? 
+              </label>
+              <div class="optionInput">
+                <input type="checkbox" class="checkbox" id="drawColumnTitle" checked="checked" />
+              </div>
+            </div>                  
+            <div class="option">
+              <label for="drawColumnLabel">
+                Draw column label? 
+              </label>
+              <div class="optionInput">
+                <input type="checkbox" class="checkbox" id="drawColumnLabel" />
+              </div>
+            </div>
+            <a href="#" onclick="toggleAdvancedOptions('columnAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+            <div id="columnAdvanced" class="advancedOptions" style="display: none ;">
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnTitleFontSize">
+                    Title font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span>
+                      <input id="columnTitleFontSize" type="text" size="6" value="14" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" />
+                      (point units)
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnTitleFont">
+                    Title font: 
+                  </label>
+                  <div class="optionInput">
+                    <select id="columnTitleFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnTitleFontColor">
+                    Title font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="columnTitleFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="columnTitleFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('columnTitleFontSwatch', 'columnTitleFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnLabelFontSize">
+                    Label font size*: 
+                  </label>
+                  <div class="optionInput">
+                    <span>
+                      <input id="columnLabelFontSize" type="text" size="6" value="12" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" />
+                      (point units)
+                    </span>
+                  </div>              
+                </div>
+              </div>
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnLabelFont">
+                    Label font: 
+                  </label>
+                  <div class="optionInput">
+                    <select id="columnLabelFont">
+<%
+                      fonts.each { |font|
+%>
+                      <option value="<%=font%>" style="font-family: '<%=font%>', sans-serif ;" <%=(font.downcase == defaultFont) ? "selected=\"selected\"" : ""%>>
+                        <%=font%>
+                      </option>
+<%
+                      }
+%>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div style="margin: 5px ;">
+                <div class="option">
+                  <label for="columnLabelFontColor">
+                    Label font color*: 
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="columnLabelFontSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                    <input type="hidden" id="columnLabelFontColor" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('columnLabelFontSwatch', 'columnLabelFontColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>        
+          </div>
+          <div class="buttonPanel">
+            <input type="button" id="addColumnButton" value="Add Column" onclick="addDataColumn() ;" />
+            <input type="button" id="updateColumnButton" value="Update Column" disabled="disabled" onclick="updateDataColumnOptions(selectedColumnId) ;" />
+            <input type="button" id="removeColumnButton" value="Remove Column" disabled="disabled" onclick="removeDataColumn(selectedColumnId) ;" />
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Current Columns List
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['colDefined'].text, helpMessages['colDefined'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>              
+          </legend>
+          <ul id="dataColumns" class="dataList" style="width: auto ;">
+            <em id="emptyMsg">[List empty - Please add a column]</em>
+            <li style="border: none ; padding: 0 ; margin: 0 ; background-color: transparent ;"><ul id="dataColumnsSortable"></ul></li>
+          </ul>
+        </fieldset>
+        <div id="colFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('imgTab') ;" />
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('annotTab') ;" />
+        </div>            
+      </div>
+      <div id="tracks" style="display: none ;">
+        <h2 class="instruction">Specify and add annotation tracks to data columns</h2>
+        <div class="optionsGroup">
+          <div class="option">
+            <label for="dataColumnSelect">
+              Column:
+            </label>
+            <div class="optionInput">
+              <em id="dataColumnSelect">No columns defined - <a href="#" onclick="setSelectedTab('colTab') ;">Add a column</a> first</em>
+            </div>
+          </div>
+          <div class="option">
+            <label for="tracksSelect">
+              Available tracks: 
+            </label>
+            <div class="optionInput">
+              <select id="tracksSelect" onchange="processTrackChange(this) ;">
+                <option value="default" selected="selected">--- Select a track to add to this column ---</option>                    
+<%
+                trackNames.each { |trackName|
+%>
+                <option value="<%=CGI.escapeHTML(trackName)%>"><%=trackName%></option>
+<%
+                }
+%>                    
+              </select>
+            </div>
+          </div>
+        </div>
+        <fieldset id="trackSettings">
+          <legend>
+            Track Settings
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['trackSettings'].text, helpMessages['trackSettings'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>                    
+          </legend>
+          <div>
+            <div style="padding: 5px 0 ;" class="optionsGroup">
+              <div id="refTrackInput" class="option">
+                <label for="referenceTrack">
+                  Is this the reference track? 
+                </label>
+                <div class="optionInput">
+                  <span>
+                    <input id="referenceTrack" type="checkbox" class="checkbox" onclick="assignCytobandStyle(this.checked) ;" />
+                  </span>
+                </div>
+              </div>
+              <div class="option">
+                <label for="drawingStyle">
+                  Track drawing style: 
+                </label>
+                <div class="optionInput">
+                  <select id="drawingStyle" onchange="changeDrawingStyle($F(this)) ;">
+                    <option value="block">Block</option>
+                    <option value="box">Box</option>
+                    <option value="cytoband">Cytoband</option>
+                    <option value="score">Score</option>
+                    <option value="doubleSidedScore">Double-sided Score</option>
+                    <option value="callout">Callout</option>
+                  </select>
+                </div>
+              </div>
+              <div class="option">
+                <label for="trackWidth">
+                  Track width*: 
+                </label>
+                <div class="optionInput">
+                  <span>
+                    <input id="trackWidth" type="text" size="6" value="75" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" />
+                    (pixel units)
+                  </span>
+                </div>
+              </div>
+              <div class="option">
+                <label for="trackColor">
+                  Track color*: 
+                </label>
+                <div class="optionInput colorInput">
+                  <div id="trackSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                  <input type="hidden" id="trackColor" value="#000000">
+                  <div style="float: left ; width: 50% ;">
+                    <a class="colorLink" href="#" onclick="setDivId('trackSwatch', 'trackColor', '#000000') ; return false ;">Change Color</a>
+                  </div>
+                </div>
+              </div>
+              <div class="option">
+                <label for="trackColorOverride">
+                  Override track color for individual annotations?
+                </label>
+                <div class="optionInput">
+                  <input id="trackColorOverride" type="checkbox" class="checkbox" checked="checked" />
+                </div>
+              </div>
+              <div id="displaySpecificOptions">
+              </div>
+              <a href="#" onclick="toggleAdvancedOptions('trackAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+              <div id="trackAdvanced" class="advancedOptions" style="display: none ;">
+                <div style="margin: 5px ;">
+                  <div class="option">
+                    <label for="trackDisplayName">
+                      Track display name*:
+                    </label>
+                    <div class="optionInput">
+                      <span><input id="trackDisplayName" type="text" onblur="checkEmptyOption(this) ;" /></span>
+                    </div>
+                  </div>
+                  <div class="option">
+                    <label for="trackMargin">
+                      Margin*:
+                    </label>
+                    <div class="optionInput">
+                      <span>
+                        <input id="trackMargin" type="text" value="0" size="6" onkeypress="return validateInt(event) ;" onblur="checkEmptyOption(this) ;" />
+                        (pixel units)
+                      </span>
+                    </div>
+                  </div>
+                  <div class="option">
+                    <label for="trackBorder">
+                      Draw a border around the track?
+                    </label>
+                    <div class="optionInput">
+                      <input id="trackBorder" type="checkbox" class="checkbox" />
+                    </div>
+                  </div>
+                  <div class="option">
+                    <label for="trackLegendOrder">
+                      Order in the track legend:
+                    </label>
+                    <div class="optionInput">
+                      <span>
+                        <input id="trackLegendOrder" type="text" size="6" onkeypress="return validateInt(event) ;" />
+                      </span>
+                    </div>
+                  </div>
+                  <div id="displaySpecificAdvancedOptions">
+                    <div class="option">
+                      <label for="threshAboveScore">
+                        Draw annotation with a score above:
+                      </label>
+                      <div class="optionInput">
+                        <span style="float: left ;"><input type="text" id="threshAboveScore" size="6" onkeypress="return validateFloat(event, this) ;" /></span>
+                        <span style="float: left ; margin: 0.65em 0.5em 0 0.5em ;">with color</span>
+                        <div class="colorInput" style="float: left ; width: 50% ;">
+                          <div id="threshAboveColorSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                          <input type="hidden" id="threshAboveColor" value="#000000">
+                          <div style="float: left ;">
+                            <a class="colorLink" href="#" onclick="setDivId('threshAboveColorSwatch', 'threshAboveColor', '#000000') ; return false ;">Change Color</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="option">
+                      <label for="threshBelowScore">
+                        Draw annotation with a score below:
+                      </label>
+                      <div class="optionInput">
+                        <span style="float: left ;"><input type="text" id="threshBelowScore" size="6" onkeypress="return validateFloat(event, this) ;" /></span>
+                        <span style="float: left ; margin: 0.65em 0.5em 0 0.5em ;">with color</span>
+                        <div class="colorInput" style="float: left ; width: 50% ;">
+                          <div id="threshBelowColorSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                          <input type="hidden" id="threshBelowColor" value="#000000">
+                          <div style="float: left ;">
+                            <a class="colorLink" href="#" onclick="setDivId('threshBelowColorSwatch', 'threshBelowColor', '#000000') ; return false ;">Change Color</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="buttonPanel">
+              <input id="addTrackButton" type="button" value="Add Track" onclick="addTrackToDataColumn($F('tracksSelect'), $F('dataColumnSelect')) ;" disabled="disabled" />
+              <input id="updateTrackButton" type="button" value="Update Track" onclick="updateTrackInDataColumn(selectedTrackId, $F('dataColumnSelect')) ;" disabled="disabled" />
+              <input id="removeTrackButton" type="button" value="Remove Track" onclick="removeTrackFromDataColumn(selectedTrackId, $F('dataColumnSelect')) ;" disabled="disabled" />
+            </div>            
+          </div>
+        </fieldset>
+        <fieldset id="columnTracks">
+          <legend>
+            List of Tracks in Selected Column
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages['trackDefined'].text, helpMessages['trackDefined'].title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>                          
+          </legend>
+          <ul id="annotTracks" class="dataList"></ul>
+        </fieldset>
+        <div id="trackFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('colTab') ;" />
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('submitTab') ;" />
+        </div>        
+      </div>
+      <div id="submit" style="display: none ;">
+        <fieldset>
+          <legend>Submit VGP Job</legend>
+          <div id="statusIntro">
+            All of the following criteria must be satisified and no errors can exist before a job can be submitted to VGP:
+          </div>
+          <div style="width: 95% ; margin: 0 auto ;">
+            <table class="statusTable" id="statusTable">
+              <tr>
+                <th>Option</th>
+                <th>Tab</th>
+                <th>Status</th>
+              </tr>
+              <tr id="epsCheck">
+                <td>At least one entry point must be selected for drawing</td>
+                <td><a href="#" onclick="setSelectedTab('epTab') ; return false ;">Select Entry Points</a></td>
+                <td id="epsStatus" style="text-align: center ;"><img alt="Satisfied" src="/images/vgpCheckmark.png" /></td>
+              </tr>
+              <tr id="colCheck">
+                <td>At least one data column created</td>
+                <td><a href="#" onclick="setSelectedTab('colTab') ; return false ;">Defined Data Columns</a></td>
+                <td id="colStatus" style="text-align: center ;"><img alt="Failed" src="/images/vgpFailure.png" /></td>
+              </tr>
+              <tr id="trackCheck">
+                <td>At least one annotation track created</td>
+                <td><a href="#" onclick="setSelectedTab('annotTab') ; return false ;">Add Annotation Tracks</a></td>
+                <td id="trackStatus" style="text-align: center ;"><img alt="Failed" src="/images/vgpFailure.png" /></td>
+              </tr>
+            </table>
+            <ul class="statusList" id="errorList">
+              <li class="header">Error</li>
+            </ul>
+            <%# By default, we start out in an err state with no columns or tracks added %>
+            <div id="numErrors" style="float: right ; font-weight: bold ; margin-bottom: 10px ;" class="errorsExist">Total Errors: 2</div>
+            <ul class="statusList" id="warningList" style="clear: right ;">
+              <li class="header">Warning</li>
+            </ul>
+            <div id="numWarnings" style="float: right ; font-weight: bold ;">Total Warnings: 0</div>
+          </div>
+          <div id="status" class="feedback" style="margin-top: 35px ; clear: right ;"></div>
+          <input id="submitButton" type="button" value="Submit VGP Job" onclick="requestJob() ;" />
+        </fieldset>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('annotTab') ;" />
+        </div>
+      </div>
+    </div> <!-- end content -->
+  </div> <!-- end container -->
+</div> <!-- end main -->
+<%
+  if(debug)
+%>
+<div id="debug">
+  <h3>DEBUG OUTPUT</h3>
+  --------------------<br/>
+</div>
+<%
+  end
+%>
+
+<script type="text/javascript">
+  var userId = <%=@cgi["userId"].strip()%> ;
+  var userLogin = '<%=@cgi["userLogin"].strip()%>' ;
+  var userEmail = '<%=@cgi["userEmail"].strip()%>' ;
+  var groupId = <%=@cgi["group_id"].strip()%> ;
+  var rseqId = <%=@cgi["rseq_id"].strip()%> ;
+  var groupName = <%=@cgi["groupName"].strip().to_json%> ;
+  var rseqName = <%=@cgi["rseqName"].strip().to_json%> ;
+  var columns = {
+    count : 0,
+    cols : {}
+  } ;
+  var numEpsDrawn = <%=epsInit%> ;
+  var entryPoints = {
+<%
+  epString = ""
+  unless(eps["entrypoints"].nil? || eps["count"] == 0 || eps["count"] >= @genbConf.maxNumEPsToDisplay.to_i)
+    epString << "    count : #{eps["count"]},\n"
+    epString << "      eps : {"
+    eps["entrypoints"].each_with_index { |ep, index|
+      epString << "      'ep_#{ep["name"].downcase()}' : new EntryPoint('#{ep["name"]}', #{ep["length"]}, #{(ep["name"].index("_").nil?) ? true : false})"
+      epString << ",\n" unless ((index + 1) == eps["count"])
+    }
+    epString << "}"
+  else
+    # The 'count' property reflects how many EP objects exist in the eps variable, in this case,
+    # the user is responsible for creating the EP objects by manually adding them, so we have 0 to start
+    epString << "    count : 0,\n"
+    epString << "      eps : {}"
+  end
+%>
+  <%=epString%>
+  } ;
+  <%# Eventhough a track can contain any crazy characters, the only character we need to espace is the single quote
+      since it will break up our string. All other characters will therefore be within the quoted string
+  %>  
+  var allTracks = [ <%=trackNames.map{ |tn| tn.to_json }.join(",")%> ] ;
+  var defaultFont = '<%=defaultFont%>' ;
+  var fonts = [
+<%
+  # The font object in the javascript is not needed anymore, can be removed to just an array
+  fontStr = ""
+  fonts.each_with_index { |font, index|
+    fontStr << "    {name : '#{font}', value : '#{font}'}"
+    fontStr <<",\n" unless ((index + 1) == fonts.length)
+  }
+%>
+  <%=fontStr%>
+  ] ;
+
+  Position.includeScrollOffsets = true;
+  Sortable.create('dataColumnsSortable', {onUpdate: setDataColumnPositions}) ;
+</script>
+<%
+end
+%>

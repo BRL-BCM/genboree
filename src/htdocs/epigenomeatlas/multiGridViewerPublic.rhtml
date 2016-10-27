@@ -1,0 +1,815 @@
+<%#
+THIS FILE USES eruby %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require "timeout"
+require "stringio"
+require "cgi"
+require "json"
+require "net/http"
+require "uri"
+require "brl/util/util"
+require "brl/genboree/genboreeUtil"
+require "brl/genboree/genboreeContext"
+require "brl/genboree/rest/apiCaller"
+require "brl/genboree/geneViewer/gbTrackUtilNew"
+require 'brl/genboree/abstract/resources/user'
+require "brl/genboree/rest/helpers/databaseApiUriHelper"
+BRL::Genboree::REST::ApiCaller.usageContext = :serverEmbedded
+
+begin
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  self.extend(BRL::Genboree)
+  @errorMsg = ""
+  @errorState = false
+  @defaultMode = false
+
+  #@grpDbDefaults = [[http://"Epigenomics Roadmap Repository","Release 7 Repository"],
+  #                  ["JonathanMill_Lab","Brain-hg19"]]
+  @hostAuthMap = nil
+  %>
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+      <meta content="utf-8" http-equiv="encoding"> 
+      <link rel="stylesheet" type="text/css" href="/javaScripts/ext-3.4.0/resources/css/ext-all.css">
+      <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/eaBase.css?jsVer=<%= @context.genbConf.jsVer %>" />
+      <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/gridViewer.css?jsVer=<%= @context.genbConf.jsVer %>" />
+      <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/topNavigation.css?jsVer=<%= @context.genbConf.jsVer %>" />
+      <link rel="stylesheet" type="text/css" href="/styles/workbench/dialogs.css?jsVer=<%= @context.genbConf.jsVer %>" />
+
+      <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/prototype/scriptaculous.js"></script>
+      <script type="text/javascript" src="/javaScripts/prototype-1.6.js"></script>
+      <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/prototype/ext-prototype-adapter.js?"></script>
+      <script type="text/javascript" src="/javaScripts/ext-3.4.0/adapter/ext/ext-base.js"></script>
+      <script type="text/javascript" src="/javaScripts/ext-3.4.0/ext-all-debug.js"></script>
+      <script type="text/javascript" src="/javaScripts/util.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+      <script type="text/javascript" src="/javaScripts/ext-3.4.0/examples/ux/grid/RowExpander.js"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/gridViewer.js?jsVer=<%= @context.genbConf.jsVer.to_i %>"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/genboreeWb.js?jsVer=<%= @context.genbConf.jsVer.to_i %>"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/gridUtil.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/processSelectionsMulti.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/commonFunctions.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+      <script type="text/javascript" src="/epigenomeatlas/javascripts/topNavigation.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+      <%
+      apiHost = ENV["HTTP_HOST"]
+      dbHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new("")
+      
+      # Get list of databases from different hosts from Genboree conf
+      # file. This is a comma separated list of database URIs 
+      # Look for "defaultGridDBList" in the genboree.config.properties file
+      # NOTE: The first database in this list should have appropriate directories at this location : 
+      # ../resources/conf/gridViewer/ followed by exact same CGI-escaped directory structure given in the URI
+      # Example: ../resources/conf/gridViewer/grp/Epigenomics%20Roadmap%20Repository/db/Release%209%20Repository 
+      # with appropriate header, footer, summary files inside this directory, 
+      # else the grid will not show up and will error out since
+      # header.html, summary.html files do not exist!
+      @grpDbDefaults = @context.genbConf.defaultGridDBList
+      @ontologyFileDefault = @context.genbConf.defaultOntologyFile
+      scriptOutput = StringIO.new
+      
+      # If any of the following is not provided,the default edacc value is used. 
+      # Provided values override defaults in all cases (including edacc)
+      gbTrackUtil = BRL::Genboree::GeneViewer::GBTrackUtil.new(@hostAuthMap)
+      attrValues = @context.cgi["attrValues"]
+      $stderr.puts "SETTINGS: #{attrValues}"
+      if(attrValues.nil? or attrValues.empty?) then
+        attrValues =[["Adult Liver","Histone H3K27me3"],["H1 Cell Line","RRBS"]]
+      else
+        attrValues = attrValues.strip.split(/,/).map{|xx| CGI.unescape(xx).split(/,/).map{|yy| CGI.unescape(yy)}};
+      end
+        
+      # Declaring arrays and hashes
+      dbShowList = {} # This hash is for checkboxes, key(db) and value (true|false)
+                      # to specify which has to be checked
+      dbShow = [] # This list is used by ExtJS for rendering in the grid
+                  # a list with true or false for each database, 
+                  # true implying database will be checked
+      dbURIs = {}
+      dbGbKeys ={}
+      dbNamesList = {} # This hash is for names of each database
+      dbNames = [] # This list is used by ExtJS for rendering in the grid
+      dbDescsList= {} # This hash is for description of each db, shown as tooltip
+      dbDescs= [] # This list is used by ExtJS for rendering in the grid
+      dbVersions = []
+     
+      # Assign colors to cells to differentiate databases
+      # This makes it easy to identify where each sample/assay data comes from
+      # Four colors are used and will be repeated
+      # Cells that come from 2 or more sources will not have any color
+      colorList = ['#FFDF80','#A8C1ED','#E08E89','#CBF0BB']
+      
+      dbColors = {} # This hash has the color corresponding to each db, 
+                    # used in "Choose databases"
+      dbColorList = [] # This list colors each cell in the grid
+      
+      hostList = {} # This hash specifies true or false for each host, 
+                    # used for disabling checkboxes in case of unavailable hosts
+      hosts = [] # This list is used by ExtJS
+       
+      # Get list of databases to show in the grid
+      dbList = @context.cgi["dbList"];
+      if(dbList.nil? or dbList.empty?) then
+        dbList = []
+        @grpDbDefaults.each{|dbu|
+          num = @grpDbDefaults.index(dbu)
+          dbList << "#{dbu}"
+          dbShowList[dbu] = "false" 
+          if(num == 0)  # Ensure first database is always shown initialy
+            dbShowList[dbu]="true"
+            @defaultMode = true
+          end
+        }
+      else
+        dbList = dbList.strip.split(/,/)
+      end  
+      # To handle cases when one or more hosts are down,
+      # show it in the list with an appropriate tooltip message
+      # about why the host is unavailable
+      showList = dbList.dup  # Copy the dbList, so it can be used for displaying all hosts
+      showList.each{ |db|
+        ind = showList.index(db)
+        # Do a test API call to make sure all servers are available, 
+        # else remove it from the list that displays tracks.
+        # NOTE: Host that is unavailable will still be there in the list
+        # so user will know a particular server is not functioning 
+        # temporarily. 
+        inputUri = URI.parse(db)
+
+        dbUri = dbHelper.extractPureUri(db)
+        apiCaller = BRL::Genboree::REST::ApiCaller.new(inputUri.host, inputUri.path, @authMap)
+        apiCaller.initInternalRequest(@rackEnv, @machineNameAlias) if(@rackEnv)
+        apiCaller.get
+        apiError = apiCaller.lastTimeOut().inspect()  # Check for Gateway timeout or service unavailable HTTP codes
+
+        if(apiError =~ /:httpGatewayTimeout/)
+          dbList.delete_at(ind) # Remove the host that gives error from the list that displays tracks
+          dbShowList[db] = "false"
+          dbColors[db] = "#000000" # Show unavailable host in a different color
+          dbDescsList[db] = CGI.escape("SERVER ERROR: HTTP Gateway Timeout. Please try again later or contact Genboree Administrator <a href='mailto:#{@context.genbConf.gbAdminEmail}'>#{@context.genbConf.gbAdminEmail}</a>")
+          dbNamesList[db] = dbHelper.extractName(dbUri)
+          hostList[db] = "false" # This is used in JS handler to make sure the unavailable host checkbox is disabled
+        
+        elsif(apiError =~ /:httpServiceUnavailable/)
+          dbList.delete_at(ind) # Remove the host that gives error from the list that displays tracks
+          dbShowList[db] = "false" 
+          dbColors[db] = "#000000" # Show unavailable host in a different color
+          dbDescsList[db] = CGI.escape("SERVER ERROR: HTTP Service Unavailable at this time. Please try again later or contact Genboree Administrator <a href='mailto:#{@context.genbConf.gbAdminEmail}'>#{@context.genbConf.gbAdminEmail}</a>")
+          dbNamesList[db] = dbHelper.extractName(dbUri)
+          hostList[db] = "false" # This is used in JS handler to make sure the unavailable host checkbox is disabled
+        
+        else
+          hostList[db] = "true" # If the host is available, the checkbox will be clickable
+          dbColors[db] = colorList[ind%colorList.length]
+        end  
+      }
+      
+      cgiDbShow = @context.cgi["dbShow"]
+      if(!(cgiDbShow.nil? or cgiDbShow.empty?)) then
+        dbShow = cgiDbShow.strip.split(/,/)
+      elsif(dbShow.empty?)
+        showList.each{|db| 
+          dbShow << dbShowList[db]
+        }
+      end
+      cgiDefaultMode = @context.cgi["defaultMode"] 
+      if(!(cgiDefaultMode.nil? or cgiDefaultMode.empty?)) then
+        @defaultMode = true
+      end
+      
+      # Make sure all databases from different hosts are from the same
+      # genome version. This list does not contain any servers
+      # that are unavailable, so the api calls should not fail due to
+      # unavilable hosts!
+      version = gbTrackUtil.getVersionForDB(dbList[0])
+      if(version) then version.downcase! end
+      versionMismatch = false 
+      dbList.each{|db|
+         dbVer = gbTrackUtil.getVersionForDB(db)
+         if(dbVer) then dbVer.downcase! end
+         dbVersions << dbVer
+         if(version != dbVer) then versionMismatch = true end
+      }
+
+      # Check if all dbs from different hosts are from same genome version
+      if(!versionMismatch) then
+        # For each db, add gbKey, 
+        # assign tool tip labels, descriptions
+        dbList.each{|db|
+          dbURIs[db] = dbHelper.extractPureUri(db)
+          dbgb = dbHelper.extractGbKey(db)
+          if !(dbgb.nil? or dbgb.empty?) then
+            dbGbKeys[db]="?gbKey=#{dbgb}"
+          else
+            dbGbKeys[db]=""
+          end
+          shortAttr = "gbShortLabel"
+          longAttr = "gbLongLabel"
+          # Get names, descriptions of database. 
+          # This info is stored in a table 
+          dbLabels = gbTrackUtil.getDatabaseAttributes(db,[shortAttr,longAttr],0).first
+          dbName = dbLabels[shortAttr]
+          if(dbName.nil? or dbName.empty?) then
+            dbName = dbHelper.extractName(db)
+          end
+          dbNamesList[db] = dbName
+          dbDesc = dbLabels[longAttr]
+          if(dbDesc.nil? or dbDesc.empty?) then
+            dbDesc = gbTrackUtil.getDBDescription(db)
+          end
+          dbDescsList[db] = CGI.escape(dbDesc)
+        }
+    
+        # This list contains those databases that will be shown in "Choose Databases"
+        # even if the host is down, the name will show up 
+        # with strike-through, appropriate tooltip, color, checkbox disabled
+        showList.each{|db|
+          dbDescs << dbDescsList[db]
+          dbNames << dbNamesList[db]
+          dbColorList << dbColors[db]
+          hosts << hostList[db]
+        }
+        xattr = gbTrackUtil.cgiVarValue(@context.cgi,"gbGridXAttr","eaAssayType")
+        yattr = gbTrackUtil.cgiVarValue(@context.cgi,"gbGridYAttr","eaSampleType")
+        xlabel = gbTrackUtil.cgiVarValue(@context.cgi,"xlabel",xattr.gsub(/^ea/,""))
+        ylabel = gbTrackUtil.cgiVarValue(@context.cgi,"ylabel",yattr.gsub(/^ea/,""))
+        xtype = gbTrackUtil.cgiVarValue(@context.cgi,"xtype","experiments")
+        ytype = gbTrackUtil.cgiVarValue(@context.cgi,"ytype","bioSamples")
+        pageTitle = gbTrackUtil.cgiVarValue(@context.cgi,"pageTitle","Epigenome Atlas Release 9")
+        genome  = version
+
+        downloadDir = @context.cgi["downloadDir"];
+        if(!(downloadDir.nil? or downloadDir.empty?)) then
+          downloadDir = CGI.unescape(downloadDir.strip)
+        end
+
+        disableGeneBrowser = false
+        if (@context.cgi["disableGeneBrowser"] == "true") then disableGeneBrowser = true end
+        origdbList = dbList
+        dbList = []
+        origdbList.each_index{|ii|
+          if(dbShow[ii] == "true") then dbList << origdbList[ii] end
+        }
+        attrDetails = nil
+        trackHash = {}
+        xvals = nil
+        yvals = nil
+        trackList = []
+        attrList = [yattr, xattr]
+        attrDetails = gbTrackUtil.getAllTracksAndValuesMulti(dbList, attrList)
+        
+        # Call returns a hash structure with these keys:
+        # xattr -> Array of xattr values encountered on tracks meeting x and y conditions
+        # yattr -> Array of yattr values encountered on tracks meeting x and y conditions
+        # tracks -> Array of hashes where each hash has the following keys:
+        #           xattr -> Value of xattr for this track
+        #           yattr -> Value of yattr for this track
+        #           name -> Name of the track
+
+        # Get the grid title dynamically
+        grTitle = []
+        dbList.each{ |item|
+          itemObj = URI.parse(item)
+          grTitle << CGI.unescape(File.basename(itemObj.path))
+        }
+        gridTitleD = gbTrackUtil.cgiVarValue(@context.cgi,"gridTitleD","#{grTitle.join(", ")}")
+        if(!(attrDetails.nil? or attrDetails.empty?)) then
+          attrDetails.each_key{|db|
+            attrDetails[db].each_key{|track|
+              xval = attrDetails[db][track][xattr]
+              yval = attrDetails[db][track][yattr]
+              trackHash[yval] = Hash.new unless trackHash.has_key?(yval)
+              trackHash[yval][xval] = Array.new unless trackHash[yval].has_key?(xval)
+              trackHash[yval][xval] << [track, db]
+            }
+          }
+          xsortHash = {};ysortHash={}
+
+          yvals = gbTrackUtil.getAllAttrValuesMulti(dbList,yattr)
+          xvals = gbTrackUtil.getAllAttrValuesMulti(dbList,xattr)
+          xl = xvals.length
+          yl = yvals.length
+
+          # Sort keys alphabetically for now and assign them negative ranks in descending order
+          # first track -35 (or value based on number of elements)
+          # second track -34
+          # last track -1
+          xvals.sort.each_with_index{|kk,ii| xsortHash[kk] = ii - xl}
+          
+          # Check if any of these tracks have ranks in the d/b. d/b ranks are ascending positive numbers
+          # first : 1 second :2 and so on If found they replace the -ve ranks in the hash
+          gbTrackUtil.getMultiSortOrder(dbList,xtype,xsortHash)
+          
+          # Sort tracks with negative (no ranks in d/b) and positive ranks (ranks found) separately in ascending order
+          # [-35 -34 ..-1] and [1 2 3] etc. Then combine these arrays. This ensures that tracks without ranks show up first (to remind user?)
+          # followed by intended sort order for tracks with ranks
+          xvals = gbTrackUtil.sortedMerge(xsortHash)
+          
+          # Same as above for y values
+          yvals.sort.each_with_index{|kk,ii| ysortHash[kk] = ii - yl}
+          gbTrackUtil.getMultiSortOrder(dbList,ytype,ysortHash)
+          yvals = gbTrackUtil.sortedMerge(ysortHash)
+          #Import Ontology metadata file
+
+          # Ontology information is read in from the file Ontology.txt, placed in 
+          # Release 9 Repository database
+          begin
+            dbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc()
+            dbrc.user = dbrc.user.dup.untaint
+            dbrc.password = dbrc.password.dup.untaint
+            ontoObj = URI.parse(@ontologyFileDefault)
+            ontoHost = ontoObj.host
+            path = "#{ontoObj.path}/file/Ontology.txt/data"
+            ontologyFile = ''
+            apiCaller = BRL::Genboree::REST::ApiCaller.new(ontoHost, path, dbrc.user, dbrc.password)
+            apiCaller.get() {|chunk| ontologyFile << chunk}
+            if(apiCaller.succeeded?)
+              ff = File.open("Ontology.txt", "w")
+              ff.write(ontologyFile)
+              ff.close()
+            else
+              @errorMsg += "API_FAILED. Failed to get the Ontology file from Release 9 Repository database, #{apiCaller.parseRespBody()}"
+              @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+              @errorState = true
+            end
+            begin 
+              ff = File.open("Ontology.txt", "r")
+              ontoHash = Hash.new{|hh, kk| hh[kk] = ""}
+              searchStrHash = Hash.new{|hh, kk| hh[kk] = ""}
+              tmpHash = Hash.new{|hh, kk| hh[kk] = ""}
+              ff.each_line {|line|
+                datatmp = line.split("\t")
+                ontoHash[datatmp[1].chomp] = datatmp[2].chomp
+                searchStrHash[datatmp[1].chomp] = datatmp[-1].chomp
+                tmpHash[datatmp[2].chomp] = datatmp[-1].chomp
+              }
+              ff.close()
+            rescue => inerr
+              @errorMsg += "ERROR: Failed to read the Ontology file\n" +"- Exception: #{inerr.message}\n" + inerr.backtrace.join("\n")
+              @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+              @errorState = true
+            end
+          rescue => aerr
+            @errorMsg += "ERROR: Failed to get the Ontology file from #{ontoObj.path}.\n" +"- Exception: #{aerr.message}\n" + aerr.backtrace.join("\n")
+            @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+            @errorState = true
+          end
+          # The Ext JS structure of the grid is composed of two grids.
+          # The larger of the two has # columns = # of possible x values and # of rows = # of possible y values
+          
+          dbTree=Array.new
+          attrDetails.each_key{|db|
+            dbii = origdbList.find_index(db)
+            dbTree[dbii] = Array.new
+            curr = dbTree[dbii]
+            attrDetails[db].each_key{|track|
+              xx = xvals.find_index(attrDetails[db][track][xattr])
+              yy = yvals.find_index(attrDetails[db][track][yattr])
+              if(curr[yy].nil?) then curr[yy] =[] end
+              if(curr[yy][xx].nil?) then curr[yy][xx] = 0 end
+              curr[yy][xx] += 1
+            }
+          }
+          
+          numDataSources = Hash.new()
+          ystoreBuf = StringIO.new()
+          ystoreBuf << "ystore = new Ext.data.ArrayStore({fields: ['search','onto','id','name'"  # name for the actual y-value field
+          (0 .. xvals.length-1).each{|ii| ystoreBuf << ",'xval#{ii}'"}  # 1 field for each x value (the x-y pair does not have to exist. Hence the empty cells)
+          ystoreBuf << "],"
+          ystoreBuf << "data:["
+          yvals.each_with_index{|yy,jj|
+            if(trackHash.has_key?(yy)) then
+              trackList[jj] = []
+              hhh = ontoHash[yy]
+              sss = searchStrHash[yy]
+              ystoreBuf << ",['#{sss}','#{hhh}',#{jj},'#{yy}'"
+              xvals.each_with_index{|xx,ii|
+                if trackHash[yy].has_key?(xx) then
+                  trackList[jj][ii] = []
+                  trackHash[yy][xx].each{|tt|
+                    if(numDataSources["#{yy},#{xx}"].nil?) then numDataSources["#{yy},#{xx}"] = Hash.new(0) end
+                    numDataSources["#{yy},#{xx}"][tt[1]] += 1
+                    trackList[jj][ii] << "#{dbURIs[tt[1]]}/trk/#{CGI.escape(tt[0])}#{dbGbKeys[tt[1]]}"
+                  }
+                  ystoreBuf << ",#{(trackHash[yy][xx]).length}" # if tracks exist for the cell (x-y pairing) use the count
+                else
+                  ystoreBuf << ",'&nbsp;'"                      # else just leave empty
+                end
+              }
+              ystoreBuf << "]"
+            end
+          }
+          ystoreBuf << "]});"
+         
+         # combostore variable initialization for unique ontology terms and its corresponding
+         # search string.
+         # It is this unique set of ontology terms that is displayed in the combobox. 
+         # The search string is the valueField of the combobox.
+         comboBuf = StringIO.new()
+         comboBuf<< "combostore = new Ext.data.ArrayStore({fields: ['searchStr','ontoTerm'], data:["
+              tmpHash.keys.sort.each{|kk|
+              jj = tmpHash[kk]
+              comboBuf << ",['#{jj}','#{kk}']"
+              }
+           comboBuf << "]});"
+
+          cellColors = {}
+          numDataSources.each_key{|ind|
+            (yy,xx) = ind.split(/,/)
+            if(numDataSources[ind].keys.length == 1)
+              cellColors["#{xvals.find_index(xx)},#{yvals.find_index(yy)}"] = dbColors[trackHash[yy][xx].first[1]]
+            else
+             cellColors["#{xvals.find_index(xx)},#{yvals.find_index(yy)}"] = "#CDCDCD"
+            end
+          }
+
+          # The xstore buff could be avoided with headers for the y store buff corresponding to x value names
+          # It needs to be a separate store if x value filtering is to be supported. Currently EXT Js column filtering is very slow and
+          # hence no x value filtering supported. xstore remains for future use if necessary
+          xstoreBuf = StringIO.new
+          
+          # The xstore has as many rows as the x vallues and only name and id fields
+          xstoreBuf << "xstore = new Ext.data.ArrayStore({fields: ['name','id'],data:["
+          xvals.each_with_index{|xx,ii|
+            xstoreBuf << ",['#{xx}',#{ii}]" # Actual x value
+          }
+          xstoreBuf << "]});"
+
+          columnHeight = 145
+          columnWidthForCalc = 25
+
+          # HTML stuff for first cell of grid. It displays the appropriate x and y labels and a filter for the y store/yvalues only.
+          firstCellHTMLBuf = StringIO.new
+          firstCellHTMLBuf << "<div style=\"height:#{columnHeight}px;position:relative;\" ><div style=\"position:absolute;top:0;right:0;display:table;\"><div style=\"display:table-cell;\"> #{xlabel} </div><div style=\"vertical-align:bottom;\"> <img src=\"/epigenomeatlas/images/right_arrow.gif\"></div></div>"
+          firstCellHTMLBuf << "<div style=\"position:absolute;bottom:0;left:0;\">"
+          firstCellHTMLBuf << "<div style=\"display:table-row;\">"
+          firstCellHTMLBuf << "<div style=\"display:table-cell;vertical-align:bottom;\"> <img src=\"/images/workbench/down_arrow.gif\"> </div>"
+          firstCellHTMLBuf << "<div style=\"display:table-cell;\"> #{ylabel} </div><div style=\"display:table-cell;\">&nbsp;</div></div>"
+          firstCellHTMLBuf << "<div style=\"display:table-row;\">"
+          #firstCellHTMLBuf << "<div style=\"display:table-cell;\">&nbsp;</div>"
+          #firstCellHTMLBuf << "<div style=\"display:table-cell;text-align:right;\"> Filter:&nbsp;</div>"
+          #firstCellHTMLBuf << "<div style=\"display:table-cell;\"> <input type=\"text\" id = \"rowFilterField\" onChange=\"filterRows(this.value,this.id);\">&nbsp; (e.g. \"cell line\")</div></div>"
+          #firstCellHTMLBuf << "<div style=\"display:table-cell;\"> <input type=\"text\" id = \"rowFilterField\">&nbsp; (e.g. \"cell line\")</div></div>"
+          firstCellHTMLBuf << "</div></div>"
+          firstCellHTML = firstCellHTMLBuf.string
+          columnModelBuf = StringIO.new
+          
+          # The column model for the grid which has the first column as the y value and 1 column for every possible x value.
+          columnModelBuf << "columnModel = new Ext.grid.ColumnModel({"
+          
+          # The filtering first cell becomes the header for the yvalue column
+          columnModelBuf << "columns:[{id:'firstCell',dataIndex: 'name',header: '#{firstCellHTML}',width:400,height:#{columnHeight},css:'border-left:1px solid #D0D0D0;padding:0px;position:relative;',renderer:yRenderer}"
+          
+          tdCSS = "padding:0px;height:100%;"
+          
+          # The other column headers are the xvalues they correspond to
+          xvals.each_with_index{|xx,ii|
+           headerHTML = "<div id=\"xdiv-#{ii+1}\" style=\"position:relative;cursor:pointer;width:24px !important; border-left:1px solid #D0D0D0 !important;\" class=\"parentWidth\" onclick=\"showxDialog(#{ii+1},\\\'#{xx}\\\');\"><span class=\"rotateText transformText\">#{xx}</span></div>"            
+            columnModelBuf << ",{id:'tracks',dataIndex: 'xval#{ii}', header: '#{headerHTML}',width:#{columnWidthForCalc} ,height:#{columnHeight} ,css:'#{tdCSS}', renderer:dataRenderer}"
+          }
+          columnModelBuf << "]});"
+
+          # Make stuff available as JS variables
+          scriptOutput << "yattr = '#{yattr}';\n"
+          scriptOutput << "xattr = '#{xattr}';\n"
+          scriptOutput << "dbList = '#{showList.join(",")}';\n"
+          scriptOutput << "dbShow = Ext.util.JSON.decode('#{dbShow.to_json}');\n"
+          scriptOutput << "hosts = Ext.util.JSON.decode('#{hosts.to_json}');\n"
+          scriptOutput << "dbNames = Ext.util.JSON.decode('#{dbNames.to_json}');\n"
+          scriptOutput << "dbDescs = Ext.util.JSON.decode('#{dbDescs.to_json}');\n"
+          scriptOutput << "dbColors = Ext.util.JSON.decode('#{dbColorList.to_json}');\n"
+          scriptOutput << "xvals = Ext.util.JSON.decode('#{xvals.to_json}');\n"
+          scriptOutput << "yvals = Ext.util.JSON.decode('#{yvals.to_json}');\n"
+          scriptOutput << "xlabel = '#{CGI.escape(xlabel)}';\n"
+          scriptOutput << "ylabel = '#{CGI.escape(ylabel)}';\n"
+          scriptOutput << "xtype = '#{CGI.escape(xtype)}';\n"
+          scriptOutput << "ytype = '#{CGI.escape(ytype)}';\n"
+          scriptOutput << "gridTitle = '#{CGI.escape(gridTitleD)}';\n"
+          scriptOutput << "pageTitle = '#{CGI.escape(pageTitle)}';\n"
+          scriptOutput << "genome = '#{genome}';\n"
+          scriptOutput << "userId = '#{@context.cgi["userId"].strip}';\n"
+          scriptOutput << "updateGridFile = '/epigenomeatlas/multiGridViewerPublic.rhtml';\n"
+          scriptOutput << "gridViewerFile = '/java-bin/multiGridViewer.jsp';\n"      
+          scriptOutput << "gridToWorkbenchFile = '/java-bin/workbench.jsp';\n"      
+          scriptOutput << "geneViewerFile = '/epigenomeatlas/multiGeneViewer.rhtml';\n"
+          scriptOutput << "inGenbSession = false;"
+          scriptOutput << "dbTree = Ext.util.JSON.decode('#{dbTree.to_json}');\n"
+          scriptOutput << "cellColors = Ext.util.JSON.decode('#{cellColors.to_json}');\n"
+          scriptOutput << ystoreBuf.string.gsub(/\[,/,"[")
+          scriptOutput << xstoreBuf.string.gsub(/\[,/,"[")
+          scriptOutput << columnModelBuf.string.gsub(/\[,/,"[")
+          scriptOutput << comboBuf.string.gsub(/\[,/,"[")
+          scriptOutput << "maxRows=#{yvals.length};"
+          scriptOutput << "maxColumns=#{xvals.length};"
+          scriptOutput << "userLogin='#{@context.cgi["userLogin"].strip}';\n"
+          scriptOutput << "trackList = Ext.util.JSON.decode('#{trackList.to_json}');\n"
+          if(!(downloadDir.nil? or downloadDir.empty?)) then 
+            scriptOutput << "downloadDir='#{downloadDir}';\n"
+          end
+        else
+          @errorMsg = "Could not retrieve tracks from #{dbList.inspect} with xattr=#{xattr} and yattr=#{yattr}. Either the URIs are incorrect, no such tracks exist or the server is not responding"
+          @errorState = true
+        end
+      else
+        @errorMsg = "All databases in this list do not have the same version. The GridViewer cannot be used with databases that have differing versions.<br>"
+        dbNames.each_index{|ii|
+          @errorMsg << "#{dbNames[ii]}\t - #{dbVersions[ii]}<br>"
+        }
+        @errorState = true
+      end
+      %>
+
+      <title><%= pageTitle %></title>
+
+      <% if(!@errorState) then%>
+        <script type="text/javascript" >
+        var ystore;
+        var xstore;
+        var combostore;
+        var columnModel;
+        var grid;
+        var formPanel;
+        var genome;
+        Ext.onReady(function(){
+          Ext.QuickTips.init();
+          <%= scriptOutput.string %>
+          //This is the menu in the toolbar that goes over the grid as a whole
+          var viewMenu = new Ext.menu.Menu({
+          id: 'mainMenu',
+          items: [{
+            text: "View in",
+            iconCls: "viewClass",
+            menu: {
+              items: [<%if(!disableGeneBrowser) then%>
+                {
+                  text:'Atlas Gene Browser',
+                  iconCls:'agbClass',
+                  handler:sendToGeneBrowser   // for gene visualization
+                },'-',
+                <% end %>
+                {
+                  text: 'Genome Browser',
+                  iconCls:'ucscClass',
+                  menu: {
+                    items: [
+                      // stick any markup in a menu
+                      '<span class="menu-title">Choose a Browser</span>', // for ucsc browser visualizations
+                      {
+                        id:'ucsc',
+                        text: 'UCSC genome browser',
+                        handler: sendToGenomeBrowser,
+                        iconCls:'ucscClass'
+                      },
+                      {
+                        id:'washU',
+                        text: 'WashU browser',
+                        handler: sendToGenomeBrowser,
+                        iconCls:'washuClass'
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          //{
+           // text:'See Database Details',
+           // iconCls:"dbdIconClass",
+           // handler:dbMultiDetailsDialog
+         // },
+          {
+            text:'Clear Selections',
+            iconCls:"clearClass",
+            handler:clearSelections
+          },
+          {
+            text:'Save Selections',
+            iconCls:"saveClass",
+            handler:sendToGridViewer,
+            tooltip:"Save selections as a \"List of Tracks\" for further analysis using Workbench Tools"
+          }
+        ]
+      });
+
+
+     var helpMenu = new Ext.menu.Menu({
+     id: 'mainMenu',
+     items: [
+               {
+                  text:'Data Access and Download',
+                  iconCls:'datadwnldClass',
+                  handler:showDataAccess  
+               }
+              ]
+    });
+
+
+    var gbMenu = new Ext.menu.Menu({
+      id: 'genboreeMenu',
+      items: [
+         {
+            text: 'Populate Input Data',
+            iconCls: "goToWbClass",
+            handler: sendToWorkbench,
+            tooltip: "Go to Genboree Workench for directly analysing the selected tracks at the workbench. This step do not save your selections, but the selected tracks will be populated in the \"Input Data\" field of Genboree workbench"
+          },
+          {
+            text: 'Activate Tools',
+            iconCls: 'goToWbClass',
+            menu:
+            {
+              items: [
+               {
+                id: 'findERChromHMM',
+                text: 'FindERChromHMM',
+                iconCls: 'gotoWbClass',
+                tooltip: "<b>FindERChromHMM</b><br>This tool runs FindER and ChromHMM LearnModel tools.",
+                handler: activateTools 
+               },
+               {
+                id: 'createHub',
+                text: 'Create Hub',
+                iconCls: 'gotoWbClass',
+                tooltip: "<b>Create Hub</b><br>Creates a new track hub in Genboree group.",
+                handler: activateTools 
+               }
+              ]
+            }             
+          }
+      ]
+    });
+      
+      // add menu to toolbar
+      var toolbar = new Ext.Toolbar({
+        items:[
+          '<span style="padding:5px;" >Filter Rows By Sample Type: <input id ="sampleSearch" type="text" onkeyup="filterRows(this.value)"></span>',
+          '<span style="padding:5px;vertical-align:top;"<label style="vertical-align:top;">Filter Rows By Ontology Term:</label></span>',
+            {
+            xtype: 'combo',
+            id: 'ontoCombo',
+            //fieldLabel: 'Choose Ontology Term',
+            width: 250,
+            mode: 'local',
+            queryMode: 'remote',
+            store: combostore,
+            valueField: 'searchStr',
+            displayField :'ontoTerm',
+            forceSelection: true,
+            typeAhead: true,
+            hideTrigger: true,
+            emptyText: 'Type an Ontology Term',
+            renderTo: Ext.getBody(),
+            listeners: {
+            select: function(combo, record, index){
+              var value = combo.getValue();
+              filterRowsByOntology(value);
+             }
+           }
+          },
+          {
+            text: 'Refresh',
+            iconCls:'refreshClass',
+            tooltip: "<b>Refresh</b><br>Use Refresh to clear grid of any search terms or selections. ",
+            handler: function() { 
+                    ystore.clearFilter();
+                    colorCells();
+                    // clear all the searchboxes
+                    Ext.getCmp('ontoCombo').clearValue() ;
+                    document.getElementById("sampleSearch").value = "";
+                    // clear any selections if any
+                    clearSelections() ;
+            ;}
+
+          },
+          {
+            text:'Selections',
+            iconCls: "selectionClass",
+            menu: viewMenu,
+            tooltip: "<b>Selections</b><br> This allows to <b>View</b>, <b>Save</b> and clear your cell selections."
+          },
+          {
+            text: 'Choose Databases',
+            iconCls:'dbClass',
+            handler:dbSelectDialog,
+            tooltip: "<b>Choose</b> and <b>filter</b> databases."
+          },
+          {
+            text: 'Go To Genboree Workbench',
+            iconCls: 'goToWbClass',
+            menu: gbMenu,
+            tooltip: "<b>Go To Genboree Workbench</b><br>Takes the track selections to the Genboree Workbench."
+          }
+          //'<span style="padding:5px;vertical-align:top;" ><input id ="colorBox" type="checkbox" checked="true" onChange="toggleColoring(this.checked)"> <label style="vertical-align:top;" for="colorBox">Color cells with a single source</label></span>'
+        ]
+      });
+      grid = new Ext.grid.GridPanel({
+        border: false,
+        store: ystore,
+        colModel: columnModel,
+        enableHdMenu: false,
+        stripeRows: true,
+        disableSelection: true,
+        trackMouseOver:false,
+        height: 660,
+        width: 1200,
+        deferRowRender:false,
+        title: '<%=gridTitleD%>',
+        renderTo: 'local-states',
+        tbar:toolbar
+      });
+      
+      colorCells();
+
+      // Needed if xvalue filtering is used
+      grid.show();          
+      showAllColumns();
+    });
+    </script>    
+    <% end %>
+
+    <%if(@defaultMode) then %>
+    <script type="text/javascript" src="/epigenomeatlas/scripts/edaccUtil.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+    <script type="text/javascript">
+      //apiHost='<%= apiHost %>';
+      //grpName='<%= CGI.escape(@grpDbDefaults[0][0])%>';
+      //dbName='<%= CGI.escape(@grpDbDefaults[0][1])%>';
+      edaccDbUri = '<%= @grpDbDefaults[0] %>';
+      defaultMode = true;
+    </script>
+
+    <link rel="stylesheet" type="text/css" href="/epigenomeatlas/style/epgStyles.css?jsVer=<%= @context.genbConf.jsVer %>" />
+    <% else %>
+      <script type="text/javascript">
+        defaultMode = false;
+      </script>
+    <% end %>
+  </head>
+
+  <body onmouseup="stopDragOutside();">
+    <%
+      headerFile = "../resources/conf/gridViewer/#{dbHelper.extractPath(dbList[0]).gsub(/\/REST\/v1\//,"")}/header.html"
+      defaultFile = "../resources/conf/gridViewer/default/defHeader.html"
+    %>
+
+    <%= if(File.exists?(headerFile)) then Erubis::Eruby.includeFile(headerFile)  else Erubis::Eruby.includeFile(defaultFile) end %>
+    <div style="background-color:White;margin:0 auto;width:1200px;">          
+    <% if(!@errorState) then%>
+    <div id="local-states" onselectstart="return false;"></div>
+    <form name="mainForm" id="mainForm" action="ucscForwarder.rhtml" method="post">
+      <input type="hidden" id = "xattrVals" name="xattrVals" value= "EA_EMPTY_FIELD">
+      <input type="hidden" id = "yattrVals" name="yattrVals" value= "EA_EMPTY_FIELD">
+      <input type="hidden" id = "dbListInput" name="dbListInput" value= "">
+      <input type="hidden" id = "ucscHost" name="ucscHost" value= "brlMirror">
+      <input type="hidden" id = "genome" name="genome" value= "<%=genome%>">
+    </form>
+    <br>
+    <p>
+    <%
+    end
+    rescue => err
+      $stderr.puts "-"*50
+      $stderr.puts  "ERROR:Problem generating data grid.\n" +
+      "- Exception: #{err.message}\n" +
+      err.backtrace.join("\n")
+      $stderr.puts "-"*50
+      @errorMsg += "ERROR:Problem generating data grid.\n" +"- Exception: #{err.message}\n" + err.backtrace.join("\n")
+      @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+      @errorState = true
+    %>
+    <%
+# --------------------------------------------------------------------------
+# WRAP UP
+# --------------------------------------------------------------------------
+    ensure
+    if(@errorState) then %>
+      <div class="wbDialog" style="height:auto; width:auto; margin-top: 0px;">
+        <div class="wbDialogFeedback wbDialogFail">
+        <span class="wbErrorLabel"><b>ERROR:</b> There was an error creating and displaying the grid.</span>
+        <br><br>
+        <b>Error Details:</b><br>
+        <ul style="color: #C64848;"><li><%= @errorMsg %></li></ul>
+        <br><br>
+        <span class="contact">If you have questions, please contact <a href="mailto:genboree_admin@genboree.org">genboree_admin@genboree.org</a> for assistance.</span>
+        </div>
+      </div>
+    <!--  <div style="background-color:white;font:bold 15px  tahoma,helvetica,verdana;text-align:center;margin:0 auto;width:800px;"><%= @errorMsg %></div>-->
+    <% end
+    %>
+    <div style="text-align:center;font-size:7pt;"><a href="mailto:genboree_admin@genboree.org">Questions or comments?</a></div>
+    <p>
+    </div>
+    <div id="footerHold" style="width: 1200px; background-color: white; margin: 0 auto;">
+      <%= Erubis::Eruby.includeFile("includes/eaFooter.incl"); %>
+    </div>
+  </body>
+  </html>
+<%
+end # begin
+%>

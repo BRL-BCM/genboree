@@ -1,0 +1,14 @@
+
+table.list.rawcontent td.entity {
+  text-align: left ;
+}
+.rawcontent.list_title {
+  font-size : 1.5em ;
+  font-weight : bold ;
+}
+
+.rawcontent.list_entity {
+  font-family : monospace ;
+}
+
+

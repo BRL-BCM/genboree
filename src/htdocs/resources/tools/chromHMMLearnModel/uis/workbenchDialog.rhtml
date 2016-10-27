@@ -1,0 +1,156 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+       "ChromHMM is a software for learning and characterizing chromatin states. ChromHMM LearnModel tool takes a directory, entity list or a set of binarized data files and learns a chromatin state model. It outputs both the learned chromatin-state model parameters and the chromatin-state assignments for each genomic position.<br>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+      })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    genomeVersion = @settings['assembly']
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "32", :value => "ChromHMMLearnModel-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (below \'ChromHMM LearnModel Results\') where LearnModel results are organised' },
+                { :id => 'assembly', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the inputs/outputs"},
+                { :id => 'numStates', :label => 'Number of States', :size => "10", :type => :text , :size => "5" },
+                { :id => 'advancedSettings', :type => :advancedSection,
+                :width => '450px',
+                :text => '(The default values for these settings are what will be used if you do not change them.)',
+                :widgets =>
+                [
+                  
+                  { :id => 'init', :label => 'Parameter Initialization Method', :title => 'Three options: <b>information</b>, <b>load</b> and <b>random</b>. Load uses the parameters specified in a model file (to be provided). Random initializes the parameters from a uniform distribution. [Default: information] <br> <b>Note</b>: This will affect the available advanced Settings and the appropriate default settings.', :type => :select, :onchange => "displayAdvOptions(this.value)", :options =>
+                    {
+                      :information   => { :label => 'information', :selected => true},
+                      :load   => { :label => 'load'},
+                      :random   => { :label => 'random'}
+                    }
+                  },
+                  { :id => 'binsize', :label => 'Bin or Window Size', :type => :text, :size => "10", :value=> "200", :class => 'advSet', :title => 'The number of base pairs in a bin determining the resolution of the model learning and segmentation.'},
+                  { :id => 'convergedelta', :label => 'Converge Delta', :type => :text, :size => "10", :value => "0.001", :class => 'advSet', :title => 'The threshold on estimated log likelihood that if it falls below this value, then parameter training will terminate. Value less than 0 then is not used as part of the stopping
+criteria.'},
+                  {:id => 'stateordering', :label => 'Order of States', :title => 'Two options: <b>emission</b> and <b>transition</b>. States are ordered based on emission or transition parameters. [Default: emission].', :type => :select, :class=> 'advSet', :options =>
+                    {
+                      :emission   => { :label => 'emission', :selected => true},
+                      :transition   => { :label => 'transition'}
+                    }
+                  },
+                  { :id => 'maxiterations', :label => 'Maximum number of Iterations', :type => :text, :size => "10", :value => "200", :class => 'advSet', :title => 'Maximum number of iterations over all the inpput data in the training.'  },
+                  # information specific parameter
+                  { :id => 'informationsmooth', :label => 'Information Smoothing Constant', :type => :text, :size => "10", :value => "0.002", :class => 'advSet', :title => 'A smoothing constant away from 0 for all parameters in the information based initialization. This option is ignored if random or load are selected for the initialization method.' },
+                  { :id => 'loadsmoothemission', :label => 'Load Smoothing Emission', :type => :text, :size=> "10", :value => "0.002", :disabled => true, :class => 'advSet', :title => 'This parameter is specific for the load option only. This parameter controls the smoothing away from 0 when loading a model.'  },
+                  { :id => 'loadsmoothtransition', :label => 'Load Smoothing Transition', :type => :text, :size => "10", :value => "0.5", :disabled => true, :class => 'advSet', :title => 'This parameter is specific for the load option only. This parameter controls the smoothing away from 0 when loading a model.' }
+                  #{ :id => 'seed', :label => 'Specification of Random Seed', :type => :text, :size => "10", :value => "0.5", :disabled => true, :class => 'advSet', :title => 'This parameter is specific for the load option only. This parameter controls the smoothing away from 0 when loading a model.' }
+                ]
+              }
+            ]
+               
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "ChromHMM LearnModel Settings",
+      :widgets => widgets
+    })
+  %>
+  <%=
+     $stderr.puts "SETTINGS: #{@settings.inspect}" 
+     renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+function displayAdvOptions(value)
+{
+  var advSettings = document.getElementsByClassName('advSet') ;
+  var advLength = advSettings.length ;
+  var ii ;
+  if(value == 'information') // disable none
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = false ;
+      if(advSettings[ii].id == 'loadsmoothemission' || advSettings[ii].id == 'loadsmoothtransition')
+      {
+        advSettings[ii].disabled = true;
+      }
+    }    
+  }
+  else if(value == 'load')
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = false;
+      if(advSettings[ii].id == 'informationsmooth'){advSettings[ii].disabled = true;}
+       
+    }    
+  }
+ else
+  {
+    for(ii = 0; ii < advLength; ii ++)
+    {
+      advSettings[ii].disabled = false;
+      if(advSettings[ii].id == 'informationsmooth' || advSettings[ii].id == 'loadsmoothemission' || advSettings[ii].id == 'loadsmoothtransition'){advSettings[ii].disabled = true;}
+       
+    }   
+  }
+}
+ 
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

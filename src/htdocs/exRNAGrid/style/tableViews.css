@@ -1,0 +1,100 @@
+
+/******************************************/
+/*Large Table settings*/
+/******************************************/
+table.gb-grid-large {
+  background-color: #F8F8F8;
+  Border-collapse: collapse;
+  border: 3px solid #3a9ee0;
+  margin-bottom: 10px ;
+}
+
+table.gb-grid-large th{
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 2px;
+  padding-right: 2px;
+  font-size: 14px;
+  font-weight: normal;
+  color: white;
+  background-color: #3a9ee0;
+  border: 1px solid #eeeeee;
+  text-align: center;
+  width:90px;
+
+}
+
+table.gb-grid-large td.gb-dataCell {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 2px;
+  padding-right: 2px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  border: 1px solid #3a9ee0;
+  background-color: white ;
+}
+
+/* Context settings to be change here*/
+table.gb-grid-large th.gb-context{
+  background-color: #0B4FB5;
+  width: 350px;
+  text-align: left;
+  color: #A52A2A;
+}
+table.gb-grid-large span.gb-context-rank1 {
+  color: white;
+  font-size: 14px ;
+  font-weight: bold ;
+}
+
+table.gb-grid-large span.gb-context-rank2 {
+  font-size: 13px;
+  color: yellow;
+}
+
+table.gb-grid-large span.gb-context.rank3 {
+  font-size: 12px;
+  color: #FFFFCC;
+}
+
+table.gb-grid-large span.gb-context-rankX {
+  font-size: 11px;
+  color: black;
+}
+
+
+/* Column main cell */
+table.gb-grid-large th{
+  background-color: #3a9ee0 ;
+  font-weight: normal;
+  color: #white;
+  border: 1px solid #white;
+  font-size: 14px;
+}
+
+table.gb-grid-large td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 2px;
+  padding-right: 2px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  border: 1px solid #3a9ee0;
+  background: white ;
+}
+
+
+
+
+table.gb-grid-large td.gb-dataCell-plain {
+  font-weight: bold;
+  color: #F89829;
+
+}
+
+

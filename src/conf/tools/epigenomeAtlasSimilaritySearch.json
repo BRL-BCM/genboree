@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "epigenomeAtlasSimilaritySearch",
+    "releaseStatus": "deprecated",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "8787mb",
+    "mem" : null,
+    "vmem" : null,
+    "queue": "gbApiHeavy"
+  },
+  "ui": {
+    "label": "Analyze Signals in the Context of Epigenome Atlas -> Search for Similar Signals by Correlation",
+    "shortLabel": "Epigenome Atlas - Similar Signals by Correlation"
+  }
+}

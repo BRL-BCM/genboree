@@ -1,0 +1,175 @@
+<%#
+THIS FILE USES eruby %>
+<%
+# ---------------------------------------------------------------------------
+# SETUP CONVENIENT ENVIRONMENT
+# ---------------------------------------------------------------------------
+require "timeout"
+require "stringio"
+require "cgi"
+require "json"
+require "net/http"
+require "uri"
+require "brl/util/util"
+require "brl/genboree/genboreeUtil"
+require "brl/genboree/genboreeContext"
+require "brl/genboree/rest/apiCaller"
+require 'brl/genboree/abstract/resources/user'
+BRL::Genboree::REST::ApiCaller.usageContext = :serverEmbedded
+
+begin
+  cgi = CGI.new()
+  @req = Apache.request
+  @serverName = cgi.host
+  @serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  self.extend(BRL::Genboree)
+  @errorMsg = ""
+  @errorState = false
+  apiHost = ENV["HTTP_HOST"]
+  inGbSession = true
+  inGbSession = false if(@context.cgi["genbSession"].nil? or @context.cgi["genbSession"].empty?) 
+  unless(inGbSession)
+    @errorMsg = "No permission to access the page. Please <a href='http://#{apiHost}/java-bin/exRNAAnalysisGrid.jsp'>Sign in</a>."
+  %>
+    <html><p> <%= @errorMsg%> </p></html>
+  <%
+  else
+    exGrp = (@context.cgi['exGrp'] =~ /\S/) ? @context.cgi['exGrp'] : nil
+    exKb = (@context.cgi['exKb'] =~ /\S/) ? @context.cgi['exKb'] : nil
+    exColl = (@context.cgi['exColl'] =~ /\S/) ? @context.cgi['exColl'] : nil
+    anDoc = (@context.cgi['anDoc'] =~ /\S/) ? @context.cgi['anDoc'] : nil
+    format = (@context.cgi['format'] =~ /\S/) ? @context.cgi['format'] : nil
+    type = (@context.cgi['type'] =~ /\S/) ? @context.cgi['type'] : nil
+    # get the json with all the grid configurations
+    gridConfPath = @context.genbConf.exRNAGrids
+    begin
+      dbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc()
+      dbrc.user = dbrc.user.dup.untaint
+      dbrc.password = dbrc.password.dup.untaint
+      apiCaller = BRL::Genboree::REST::ApiCaller.new(apiHost, "#{gridConfPath}/data?", dbrc.user, dbrc.password)
+      apiCaller.get()
+      if(apiCaller.succeeded?)
+        confs = apiCaller.parseRespBody
+        defaultGrp = confs['exRNAAnalysisGrid']['defaultGrp'] rescue nil
+        defaultKb = confs['exRNAAnalysisGrid']['defaultKb'] rescue nil
+        defaultColl = confs['exRNAAnalysisGrid']['defaultColl'] rescue nil
+        trRulesDoc = confs['exRNAAnalysisGrid']['trRulesDoc'] rescue nil
+      else
+        @errorMsg += "API_FAILED. Failed to get the grid configuration file, #{apiCaller.parseRespBody()}"
+        @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+        @errorState = true
+      end
+      if(!@errorState and exGrp and exKb and exColl)
+        gridGrp = exGrp
+        gridKb = exKb
+        gridColl = exColl
+      else
+        gridGrp = defaultGrp
+        gridKb = defaultKb
+        gridColl = defaultColl
+      end
+      transfertoJs =  StringIO.new
+      if(gridGrp and gridKb and gridColl and trRulesDoc)
+        transfertoJs =  StringIO.new
+        transfertoJs << "var gridGrp = '#{CGI.escape(gridGrp.strip())}';"
+        transfertoJs << "var gridKb = '#{CGI.escape(gridKb.strip())}';"
+        transfertoJs << "var gridColl = '#{CGI.escape(gridColl.strip())}';"
+        transfertoJs << "var trRulesDoc = '#{CGI.escape(trRulesDoc.strip())}';"
+        transfertoJs << "var anDoc = '#{CGI.escape(anDoc.strip())}';" if(anDoc)
+        transfertoJs << "var format = '#{CGI.escape(format.strip())}';" if(format)
+        transfertoJs << "var type = '#{CGI.escape(type.strip())}';" if(type)
+      else
+        @errorMsg = "Grid configurations are missing. gridGrp: #{gridGrp.inspect}\n gridKb: #{gridKb.inspect}\n gridColl: #{gridColl.inspect}\n trRulesDoc: #{trRulesDoc.inspect}"
+       @errorState = true
+      end
+    rescue => err
+      @errorMsg += "ERROR: Error in reading the configuration file from #{gridConfPath}.\n" +"- Exception: #{err.message}\n" + err.backtrace.join("\n")
+      @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+      @errorState = true
+    end
+
+  unless(@errorState)
+  %>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>GENBOREE GRIDS - exRNAGrid</title>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+        <meta content="utf-8" http-equiv="encoding">
+
+        <link rel="stylesheet" type="text/css" href="/javaScripts/ext-4.0.0/resources/css/ext-all.css?jsVer=<%= @context.genbConf.jsVer %>"/>
+        <link rel="stylesheet" type="text/css" href="/exRNAGrid/style/gridPage.css?jsVer=<%= @context.genbConf.jsVer %>"/>
+        <link rel="stylesheet" type="text/css" href="/exRNAGrid/style/tableViews.css?jsVer=<%= @context.genbConf.jsVer %>"/>
+        <link rel="stylesheet" type="text/css" href="/exRNAGrid/style/histStyles.css?jsVer=<%= @context.genbConf.jsVer %>"/>
+
+        <script type="text/javascript" src="/javaScripts/ext-4.0.0/ext-all.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+        <script type="text/javascript" src="/javaScripts/util.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+        <script type="text/javascript" src="/exRNAGrid/javaScripts/analysisTable.js?jsVer=<%= @context.genbConf.jsVer %>"></script> 
+        <script type="text/javascript" src="/exRNAGrid/javaScripts/treePanel.js?jsVer=<%= @context.genbConf.jsVer %>"></script> 
+        <script type="text/javascript" src="/exRNAGrid/javaScripts/ajax.js?jsVer=<%= @context.genbConf.jsVer %>"></script> 
+        <script type="text/javascript" src="/exRNAGrid/javaScripts/type.js?jsVer=<%= @context.genbConf.jsVer %>"></script>
+        <script type="text/javascript" src="/exRNAGrid/javaScripts/cellWindow.js?jsVer=<%= @context.genbConf.jsVer %>"></script> 
+        <script src="/javaScripts/jquery-1.11.1/jquery-1.11.1.min.js"></script>
+        <script src="/javaScripts/Highcharts-4.0.4/js/highcharts.js"></script>
+        <script src="/javaScripts/Highcharts-4.0.4/js/highcharts-3d.js"></script>
+        <script src="/javaScripts/Highcharts-4.0.4/js/modules/exporting.js"></script>  
+      </head>
+      <body>
+        <div class="outerContainer">
+          <div id="content">
+            <%= Erubis::Eruby.load_file( "includes/exRNAHeader.incl" ).result ; %>
+            <div class="buttonTable">
+              <table class="tbl">
+                 <tr class="buttonRow">
+                   <td class="buttonCell"><a id="profileButton" class="button-link unclicked" href="javascript:displayGrid('profileButton', '')" title="Click to view the grid for exRNA Profiling Studies. When button is highlighted in red, click the same button to go back to the entry page.">Grid for exRNA Profiling Studies</a></td>
+                   <td class="buttonCell"><a id="fluidExpButton" class="button-link unclicked" href="javascript:displayGrid('fluidExpButton', 'fluidVsExp')" title="Click to view the biofluids vs experiment types grid. When button is highlighted in red, click the same button to go back to the entry page.">Biofluids vs Experiment Types</a></td>
+                   <td class="buttonCell"><a id="fluidDisButton" class="button-link unclicked" href="javascript:displayGrid('fluidDisButton', 'fluidVsDis')" title="Click to view the biofluids vs diseases grid. When button is highlighted in red, click the same button to go back to the entry page.">Biofluids vs Diseases</a></td>
+                 </tr>
+               </table>
+            </div>
+            <div class="mainDiv" id="mainDivPanel"></div>
+            <%= Erubis::Eruby.load_file( "includes/exRNAFooter.incl" ).result ; %>            
+          </div>
+          <script type="text/javascript" >
+            //First get the session default variables
+            <%= transfertoJs.string %>
+            welcomeText();
+            function displayGrid(buttonId, type) {
+              var originalHt ;
+              Ext.onReady(function(){
+                Ext.QuickTips.init() ;
+                if (type) {
+                  makeGridForType(buttonId, type);
+                } else {
+                  makePanelWithAnalysisTable(buttonId) ;
+                }
+              });
+            }
+          </script>          
+        </div>
+    </body>
+  </html>
+<%
+  end
+  end #unless(inGbSession)
+  rescue => err
+      $stderr.puts "-"*50
+      $stderr.puts  "ERROR:Problem generating data grid.\n" +
+      "- Exception: #{err.message}\n" +
+      err.backtrace.join("\n")
+      $stderr.puts "-"*50
+      @errorMsg += "ERROR:Problem generating data grid.\n" +"- Exception: #{err.message}\n" + err.backtrace.join("\n")
+      @errorMsg += "<br>The page you are looking for encountered an unexpected error.<br>"
+      @errorState = true
+  ensure
+    if(@errorState) %>
+        <span <b>ERROR:</b> There was an error creating and displaying the grid.</span>
+        <br><br>
+        <b>Error Details:</b><br>
+        <ul style="color: #C64848;"><li><%= @errorMsg %></li></ul>
+        <br><br>
+        <span>If you have questions, please contact <a href="mailto:genboree_admin@genboree.org">genboree_admin@genboree.org</a> for assistance.</span>
+    <% end
+end # begin
+%>

@@ -1,0 +1,106 @@
+<%@ page import="java.util.Iterator,
+                 java.util.Arrays,
+                 org.genboree.util.Util,
+                 java.util.ArrayList"%>
+<TR>
+    <TD ALIGN="center" class="annotation2" colspan="4" >
+        <div style="float:left; width:20%;">&nbsp;
+        </div>
+        <div  class="annotation3" style="width:80%; "><B>Add Attribute Value Pairs (AVP)<B>&nbsp; &nbsp; &nbsp; &nbsp;<input type="button" name="plusButton" id="plusButton" class="btn" value="+"  onClick="addNewAttribute(); ">
+        </div>
+    </TD>
+</TR>
+
+    <TR>
+    <TD  colspan="4" class="form_body" >
+        <div id="attributePairsDiv"  class="scrollable"  style="width:100%; overflow:auto;">
+        <TABLE  width="100%" border="0px" cellpadding="0" cellspacing="0">
+        <TR width="100%">
+        <TD  width="30%"  class="form_body">
+        <div align="center" class="annotation3" style="width:90%" >
+        Attribute Name
+        </div>
+        </TD>
+        <TD width="70%">
+        <div  align="center" class="annotation3" style="width:90%" >
+        Attribute Value
+        </div>
+    </TD>
+    </TR>
+
+  <% 
+    
+      
+      if (groupAVPMap != null && !groupAVPMap.isEmpty()) { 
+       
+        String [] avpNames = new String [groupAVPMap.size()];
+        Iterator it = groupAVPMap.keySet().iterator();
+        int m=0;
+        while (it.hasNext()  ){
+        avpNames[m] = (String)it.next();
+            m++;
+        }
+     
+       Arrays.sort(avpNames);
+       for (int n=0; n<avpNames.length; n++) {
+         String name = avpNames[n];
+           
+         ArrayList tempList = null; 
+           
+           
+           
+         if (groupAVPMap.get(name) != null) {  
+           
+          tempList =  (ArrayList)groupAVPMap.get(name);
+           
+        String value =  (String)tempList.get(0);
+    
+        if (value != null){
+        value = value.replaceAll(";", " " ) ;
+        value = Util.htmlQuote(value);       
+        }
+        %>
+    <TR id="attRowId<%=n%>" width="100%">
+    <TD  width="30%"  class="form_body">
+        <div id="minusDiv<%=n%>" class="minusButton" >
+        <input type="button" id="btnMinus<%=n%>" class="btn1"  value="-" onClick="removeAtt(<%=n%>);" >
+        </div>        
+        <div id="nameInputDiv<%=n%>"  class="attributeName" style="display:block;">
+        <input type="text"  maxLength="255"  class="longInput1" name="atttxtName<%=n%>" id="atttxtName<%=n%>" BGCOLOR="white" value="<%=name%>" >
+        </div>
+        </TD>
+    <TD width="70%">
+        <div id="valueInputDiv<%=n%>" class="attributeValue" style="display:block;">
+        <input type="text"  class="longInput1"  maxLength="255" name="atttxtValues<%=n%>" id="atttxtValues<%=n%>" BGCOLOR="white" value="<%=value%>" >
+        </div>
+    </TD>
+    </TR>
+        <%
+         } 
+             }
+  }
+            else {
+           globalIndex = 5; 
+       for (int j=0; j<6; j++) { 
+        %>
+          <TR id="attRowId<%=j%>" width="100%">
+           <TD  width="30%"  class="form_body">
+            <div id="minusDiv<%=j%>>" class="minusButton" >
+            <input type="button" id="btnMinus<%=j%>" class="btn1" value="-" onClick="removeAtt(<%=j%>);" >
+            </div>
+
+           <div id="nameInputDiv<%=j%>"  class="attributeName" style="display:block;">
+            <input type="text"   class="longInput1" name="atttxtName<%=j%>" id="atttxtName<%=j%>"maxLength="255" BGCOLOR="white" value="" >
+            </div>
+            </TD><TD width="70%">
+            <div id="valueInputDiv<%=j%>" class="attributeValue" style="display:block;">
+            <input type="text"  class="longInput1"  name="atttxtValues<%=j%>"  maxLength="255" id="atttxtValues<%=j%>" BGCOLOR="white" value="" >
+            </div>
+            </TD>
+      </TR>
+  <% }}
+        %>
+      </TABLE>
+      </div>
+ </TD>
+</TR>

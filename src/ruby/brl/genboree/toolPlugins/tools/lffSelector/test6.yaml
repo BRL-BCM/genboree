@@ -1,0 +1,10 @@
+conflict: all
+
+rules:
+  -
+    name: protein
+    condition: ( Primer_tm num_between? (60.0..63.0) )
+    action:
+      - passed += 1
+      - rulesPassed['primerTm'] = nil
+

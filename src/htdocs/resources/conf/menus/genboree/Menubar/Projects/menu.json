@@ -1,0 +1,26 @@
+[
+  {
+    "text": "View Projects",
+    "href": "/java-bin/projectManagement.jsp"
+  },
+  {
+    "text": "Create Project",
+    "href": "/java-bin/projectManagement.jsp?mode=0"
+  },
+  {
+    "text": "Rename Project",
+    "href": "/java-bin/projectManagement.jsp?mode=1"
+  },
+  {
+    "text": "Delete Project",
+    "href": "/java-bin/projectManagement.jsp?mode=2"
+  },
+  {
+    "text": "Copy Project",
+    "href": "/java-bin/projectManagement.jsp?mode=3"
+  },
+  {
+    "text": "Move Project",
+    "href": "/java-bin/projectManagement.jsp?mode=4"
+  }
+]

@@ -1,0 +1,28 @@
+<%
+  require 'brl/genboree/rest/helpers/fileEntityListApiUriHelper'
+%>
+<%
+  @fileEntityList = [ @fileEntityList ] unless(@fileEntityList.is_a?(Array) or @fileEntityList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@fileEntityList.nil? or @fileEntityList.empty?) ? "" : "rowspan='#{@fileEntityList.size}'") %> ><%= (@label || "File Entity List(s)") %>:</th>
+<%  if(@fileEntityList.nil? or @fileEntityList.empty?) %>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      fileEntityListApiHelper = BRL::Genboree::REST::Helpers::FileEntityListApiUriHelper.new()
+      @fileEntityList.each_index { |ii|
+        item = @fileEntityList[ii]
+        fileEntityList = fileEntityListApiHelper.extractName(item)
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== fileEntityList %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

@@ -1,0 +1,59 @@
+div.center
+{
+  padding: 0 100px;
+}
+
+.actions
+{
+  text-align: right;
+}
+
+p
+{
+  margin: 10px 0;
+}
+
+label
+{
+  float: left;
+  font-weight: bold;
+}
+
+label.small
+{
+  float: none;
+  font-size: 0.8em;
+  font-weight: normal;
+}
+
+.col2
+{
+  margin-left: 120px;
+}
+
+.instructions
+{
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+#content form
+{
+  max-width: 600px;
+}
+
+div.field
+{
+  margin: 5px 0;
+}
+
+div.field input[type=text],
+div.field input[type=email]
+{
+  width: 100%;
+  border: 1px solid #1861d6;
+  color: #333;
+  font-size: 1.25em ;
+  padding: 3px ;
+}
+

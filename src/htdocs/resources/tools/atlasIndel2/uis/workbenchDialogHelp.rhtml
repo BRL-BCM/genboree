@@ -1,0 +1,169 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "<img src='/images/workbench/Atlas-Indel2Logotype180Wide.png' style='float:right; width:181px; height:154px; margin: 0px 3px 0px 3px;'>
+        Atlas-Indel2 is aimed at detecting insertion &amp; deletion polymorphisms (indels) from whole-genome
+        resequencing data sets produced by second generation sequencing technologies.
+        <br>&nbsp;<br>
+        If you are interested in substitution SNPs, please try our <code>Atlas-SNP2</code> tool.
+        <br>&nbsp;<br>
+        It will operate on a <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file you provide. While the SAM file can be compressed or
+        plain text, the BAM file should not be as it is already gzip-compressed data. Neither the SAM nor BAM need be sorted.
+        <br>&nbsp;<br>
+        A detailed list of putative indels will be output
+        in <a href='http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40'>VCF</a> format.
+        <br>&nbsp;<br>
+        You optionally have these uploaded into Genboree as a track for visualization or use as inputs to other tools.
+        <br>&nbsp;<br>
+        <b>Prior to Job Submission Review the Inputs and Settings:</b><br>
+        <ul>
+          <li>You have selected the correct <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file to process</li>
+          <li>You've given this analysis job a meaningful name (it will be used as a folder name to store all output files)</li>
+          <li>You've indicated whether the data is from Illumina or ABI SOLiD platforms</li>
+          <li>If uploading the track, make sure the track name is meaningful and preferably doesn't already contain data.</li>
+          <li>You've provided a sample name from which this data was obtained; this sample name will appear as a column header in the VCF output file.</li>
+        </ul>
+        <br>
+        The <code>Advanced Settings</code> section contains parameters you can use to tweak prior probabilities and alignment filters. Currently,
+        the defaults are set for all these options according to the selected platform.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:left; font-size: 80%;'>The <a href='#addendum'>Addendum</a><i> at the bottom of this Help dialog contains additional information concerning:
+        <ul style='text-align:left; font-size:inherit;'>
+          <li>Supported sequencing platforms</li>
+          <li>Other limitations</li>
+          <li>Acceptable use guidelines</li>
+          <li>Organization of the Results Folders</li>
+          <li>Uploading SNPs as an Annotation Track</li>
+        </ul>
+        </i></div>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Optionally drag the BAM/SAM <u>file</u> with the mapping data into &quot;Input Data&quot;.',
+          "Otherwise the settings dialog will prompt you to choose a BAM/SAM file on your local computer. "
+        ],
+        :types              => [ [ 'File', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>Atlas Tool Suite</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Study Name</span> will be used as a sub-folder to hold related Atlas Tools jobs.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ], # Can also give db/{db}/Files as the output destination
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Study Name', 'The top-level output folder used to organize related Atlas2 Suite Tool results.' ],
+          [ 'Job Name', 'Give this Atlas-Indel2 job a unique name.' ],
+          [ 'Platform', 'Select the sequencing platform the data came from. This will affect what Advanced Settings are available and the appropriate defaults.' ],
+          [ 'Sample Name', 'Provide the name of the sample the reads came from. This will be used in formatting the output VCF file.' ],
+          [ 'Upload as a track ?', 'Check this to upload the indels as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.' ],
+          [ 'Track Name', 'If uploading the indels as a track, provide an LFF-style track name. Preferably not an existing track in the output database.' ],
+          [ 'Advanced Settings:',  "The following options are in the Advanced Settings section. Pleae Note: <i>Most of these variables have already been considered by the regression model, so you shouldn't usually need to alter them. However, you are free to override the defaults to meet your specific project requirements.</i><br>&nbsp;<br>" ],
+          [ 'p-CutOff',  'The indel probability (p) cutoff value for the logistic regression model. Indels with a p-value less than this cutoff will not be called. Increasing this cutoff will increase specificity, but will lower sensitivity. If you adjust this cutoff, you should usually also adjust the 1bp p-cutoff (see below). <i>Illumina Suggested value:</i> 0.5 ; <i>SOLiD Suggested value:</i> 0.5' ],
+          [ '1bp p-CutOff', 'The indel probability (p) cutoff value for 1bp deletions. This may be set to a stricter standard than the normal p-cutoff to increase callset specificity. This is very useful for SOLiD data, but should not be generally needed for Illumina data. <i>Illumina Suggested value:</i> 0.5 ; <i>SOLiD Suggested value:</i> 0.88'],
+          [ 'Min. Total Depth', 'The minimum total depth coverage required at an indel site. Indels at a site with less depth coverage will not be called. This cutoff may not be set lower than 4 with the Illumina model. Increasing this value will increase specificity, but lower sensitivity. <i>Suggested range:</i> 2-12' ],
+          [ 'Min. Variant Reads', 'The minimum number of variant reads required for an indel to be called. Increasing this number may increase specificity but will lower sensitivity. <i>Suggested range:</i> 1-5' ],
+          [ 'Min. Variant Ratio',    'The variant-reads/total-reads cutoff. Indels with a ratio less than the specified value will not be called. Increasing this value may increase specificity, but will lower sensitivity. <i>Suggested range:</i> 0-0.15' ],
+          [ 'Strand Direction Filter',  'When included, requires indels to have at least one variant read in each strand direction. This filter is effective at increasing the specificity, but also carries a heavy sensitivity cost.'],
+          [ 'Homozygous Variant CutOff',  'The homozygous variant cutoff. This cutoff is used in the preliminary genotyping performed by Atlas-Indel2. If the variant reads divided by the variant reads + the reference reads is greater than this cutoff it will be marked as a homozygote, otherwise it will be marked as a heterozygote.'],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Atlas-Indel2 created and improved by: Danny Challis, Jin Yu, Uday Evani, and Fuli Yu.', nil],
+                                  [ 'Integration into the Genboree Workbench by Sameer Paithankar and Andrew R Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil  ]
+                                ]
+      })
+  %>
+
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>Supported Platforms:</b><br>
+          Currently, Atlas-Indel2 supports data produced by these platforms:
+          <ul>
+            <li>Illumina</li>
+            <li>ABI SOLiD</li>
+          </ul>
+          <br>
+          Please ensure you correctly indicate the platform that produced your raw data prior to the mapping step, so the correct logistic regression model can be applied.
+          <br>&nbsp;<br>
+          Additionally, the defaults for inputs in the Advanced Settings will differ depending on the platform.
+          <br>&nbsp;<br>
+          <b>Limitations:</b><br>
+          <b>(A)</b> Although you can apply the mapper/aligner of your choice to produce the SAM or BAM file for the Illuina platform, for SOLiD data only mappings produced by <a href='http://sourceforge.net/apps/mediawiki/bfast/index.php?title=Main_Page'>BFAST</a> are supported.
+          <br>&nbsp;<br>
+          <b>(B)</b> For greatest robustness, the reads should have been mapped against a <i>standard</i> genome assembly, such as the <a href='ftp://hgdownload.cse.ucsc.edu/goldenPath/'>ones available at UCSC</a>. UCSC chromosome names and sizes will be used when interpretting the contents of your SAM or BAM file. <i>The genome version associated with the output database will be used to interpret the alignments.</i>
+          <br>&nbsp;<br>
+          <b>(C)</b> Currently, only single-sample BAM/SAM data are supported. However, we are working on exposing the processing of multi-sample alignment data.
+          <br>&nbsp;<br>
+          <b>(D)</b> Pre-processing: We recommend local realignment around indels and high variation regions using GATK or other third party tools prior to running Atlas-Indel2. While you may run Atlas-Indel2 without local realignment, greater sensitivity is possible with it. <span style='font-size:80%;'>(<a href='http://www.broadinstitute.org/gsa/wiki/index.php/Local_realignment_around_indels'>Details on local realignment using GATK</a>)</span>
+          <br>&nbsp;<br>
+          <b>(E)</b> Post-processing: Currently Atlas-Indel2 does not filter results to the capture target region. You may use tools such as <a href='http://vcftools.sourceforge.net'>VCFtools</a> to filter your results to a .bed file.
+          <br>&nbsp;<br>
+          <b>Acceptable Use Guidelines:</b><br>
+          <ul>
+            <li>The tool is currently intended to be used with a single BAM/SAM file at a time.</li>
+            <li>Although the tool will accept very large BAM/SAM files, please do not abuse this public service with many massive BAM/SAM files. Modern sequencing platforms can produce a lot of data quickly. Ideally, your alignments have been well-filtered for quality by your mapper.</li>
+            <li><i>However</i>, if you have many BAM/SAM files to process or have several very large alignment files, please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> for assistance and ideas about how best to proceed.</li>
+          </ul>
+          <br>
+          <b>Organization of the Results Folders</b><br clear='all'>
+          <img src='/images/workbench/help/atlas2suite/atlasIndel2_results.png' style='float:right; width:279px; height:224px; margin: 0px 3px 0px 3px;'>
+          As depicted on the <b>right</b>, within the <u>Atlas2 Suite Analysis</u> files folder, you can use Studies group related analyses. You can have a Study that keeps your analyses
+          separate from other collaborators, or that is topic-oriented, or just have one Study that will contain all results. It is up to you.
+          <p>
+          Within your Study, all Jobs will have sub-folders within <u>Atlas-Indel2</u>; you provide the unique Job Name.
+          <p>
+          Results are available in several formats, including the standard .VCF format. The LFF format is appropriate for uploading into Genboree and
+          is produced whether or not you arrange to have the indel calls uploaded as a track.
+          <br>&nbsp;<br>
+          <b>Uploading Indels as an Annotation Track</b><br clear='all'>
+          <img src='/images/workbench/help/atlas2suite/atlasIndel2_browserExample.png' style='float:right; width:420px; height:130px; margin: 0px 3px 0px 3px;'>
+          If you choose to upload the indel calls as annotations, you will provide a Track Name (comprised of a 'type' and 'subtype')
+          and then can view the indels in the Genboree browser. As depicted <b>above</b>, the user's track name was <code>NA19143:Indels</code>.
+          The annotation names indicate:
+          <ul>
+            <li>Whether the indel is an insertion (<code>Ins</code>) or deletion (<code>Del</code>)</li>
+            <li>The size of the indel (deletions have negative sizes).</li>
+            <li>The nucleotide sequence inserted or deleted (may be truncated when drawing) with respect to th.</li>
+          </ul>
+          <br>
+          Additionally, if you are familiar with Genboree then this track can be configured as a remote track for drawing at UCSC. The <code>BigBed</code> format is the most appropriate.
+          <br>&nbsp;<br>
+          <b>Obtaining the Software:</b><br>
+          If you would like to run Atlas-SNP2 locally yourself, the software is <a href='http://www.hgsc.bcm.tmc.edu/cascade-tech-software_atlas_indel2-ti.hgsc'>available for download</a>.
+        "
+      })
+  %>
+</div>

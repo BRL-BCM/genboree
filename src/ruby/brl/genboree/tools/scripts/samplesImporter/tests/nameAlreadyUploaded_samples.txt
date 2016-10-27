@@ -1,0 +1,2 @@
+#name	biomaterialState	age	sex	isSick
+BAB1	frozen	36	M	TRUE

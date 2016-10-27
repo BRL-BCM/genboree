@@ -1,0 +1,35 @@
+
+ul.sortable_select_list {
+  list-style-image:none;
+  list-style-type:decimal;
+  text-align: justify;
+}
+
+ul.sortable_select_list li {
+  height: 16px ;
+}
+
+div.checkBoxDiv {
+  float: left ;
+  width: 10px ;
+  height: 11px ;
+  background: transparent url(/images/chkbox_both.png) no-repeat ;
+  background-position: 0px 0px ;
+  margin-right: 3px ;
+}
+
+
+div.checkBoxDiv1 {
+  float: left ;
+  width: 10px ;
+  height: 11px ;
+  background: transparent url(/images/chkbox_both.png) no-repeat ;
+  background-position: -10px 0px ;
+  margin-right: 3px ;
+}
+
+
+
+
+
+

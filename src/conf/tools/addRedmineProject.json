@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addRedmineProject",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Redmine Project",
+    "shortLabel": "[NOT SET]"
+  }
+}

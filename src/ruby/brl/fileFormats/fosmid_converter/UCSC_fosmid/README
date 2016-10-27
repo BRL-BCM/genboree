@@ -1,0 +1,4 @@
+USAGE:
+  BRL_UCSC_fosmidlff.rb -r fosEndPairs.txt.gz -t Fosmid:EndPairs >fosEndPairs_LFF.txt
+Notes:
+  The "BRL_UCSC_fosmidlff.rb" has been tested and the input file (fosEndPairs.txt.gz) and output file (fosEndPairs_LFF.txt) have been put under the directory "/users/ybai/work/Project1/Converter/UCSC/fosmid/".

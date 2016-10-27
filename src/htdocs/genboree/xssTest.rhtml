@@ -1,0 +1,42 @@
+<html>
+<head>
+  <link href="/javaScripts/ext-3.2.1/resources/css/ext-all.css?jsVer=1449" type="text/css" rel="stylesheet"></link>
+  <link href="/styles/message.css?jsVer=1449" type="text/css" rel="stylesheet"></link>
+  <script src="/javaScripts/prototype-1.6.js?jsVer=1449" type="text/javascript"></script>
+  <script src="/javaScripts/ext-3.2.1/adapter/prototype/ext-prototype-adapter.js?jsVer=1449" type="text/javascript"></script>
+  <script src="/javaScripts/ext-3.2.1/adapter/ext/ext-base.js?jsVer=1449" type="text/javascript"></script>
+  <script src="/javaScripts/ext-3.2.1/ext-all.js?jsVer=1449" type="text/javascript"></script>
+</head>
+<body>
+<hr>
+<br>
+<b>Checking XSS...</b>
+<br>
+
+<script type="text/javascript">
+  Ext.onReady(function()
+  {
+    Ext.Ajax.request(
+    {
+      url: 'http://10.15.5.109/REST/v1/grp/Epigenomics%20Roadmap%20Repository/db/Release%205%20Repository/trks?gbKey=z1rbszw2&detailed=false&connect=false',
+      method : "GET",
+      success: successFn,
+      failure: failFn,
+      params: { foo: 'bar' }
+    }) ;
+  }) ;
+
+  function successFn(response, opts)
+  {
+    var respObj = Ext.decode(response.responseText) ;
+    console.dir(respObj) ;
+  }
+
+  function failFn(response, opts)
+  {
+    console.log('Server response failure code:' + response.status) ;
+  }
+</script>
+<hr>
+</body>
+</html>

@@ -1,0 +1,517 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1200px;
+  background-image: url("/epigenomeatlas/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("/epigenomeatlas/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeaderContainer {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  width: 1200px;
+  height: 140px;
+}
+
+#dataFreezeHeaderLeft{
+  background-image: url("/epigenomeatlas/images/headerSliver.png");
+  background-repeat: repeat;
+  width: 940px; /*dfHeaderContainer.width - 260(width of bcm logo image border figure)*/
+  height: 140px;
+  float:left;
+}
+
+#centerLogo{
+  width: 680px; /*(940 - 260)* */
+  height:100px;
+  margin-top:30px;
+  float:right;
+}
+
+#dataFreezeHeaderRight{
+  background-image: url("/epigenomeatlas/images/headerCurve.png");
+  background-repeat: no-repeat;
+  float:right;
+  height: 140px;
+  width: 260px;
+}
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 240px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+
+.sample
+{
+background-color: #ffe271;
+padding: 3px;
+font:12px verdana,sans-serif;
+color:#7b3d00;
+width:50%;
+}
+
+.leftRightBottom
+{
+  border-left:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.toolbarCell
+{
+  height:30px;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.imageText
+{
+font:12px verdana,sans-serif;
+text-align:center;
+}
+
+.imageCell
+{
+vertical-align:bottom;
+}
+
+.sampleTextBold
+{
+font:bold 12px verdana,sans-serif;
+color:#7b3d00;
+}
+
+.legend10
+{
+  font:10px verdana,sans-serif;
+}
+
+.legend12
+{
+  font:12px verdana,sans-serif;
+}
+
+
+
+.legendBold10
+{
+font:bold 10px verdana,sans-serif;
+padding: 1px;
+}
+
+.legendBold12
+{
+font:bold 12px verdana,sans-serif;
+padding: 1px;
+}
+.broad
+{
+  background-color: #4f81bd;
+}
+
+.ucsd
+{
+  background-color: #f79646;
+}
+
+.ucsf
+{
+  background-color: #c0504d;
+}
+
+.uw
+{
+  background-color: #9bbb59;
+}
+
+.broad-selected
+{
+  background-color: #aabad7;
+}
+
+.ucsd-selected
+{
+  background-color: #f7d1b1;
+}
+
+.ucsf-selected
+{
+  background-color: #c79190;
+}
+
+.uw-selected
+{
+  background-color: #b2c494;
+}
+
+
+.remc
+{
+font:12px verdana,sans-serif;
+color: White;
+text-align: center;
+height: 20px;
+}
+
+.firstCell
+{
+
+  border-bottom : 1px solid #D0D0D0;
+}
+
+.topBlockRow
+{
+  border-top: 20px solid #D0D0D0;
+}
+
+.header-image
+{
+  height: 140px;
+  width: 1108px;
+}
+
+.expt
+{
+  background-color: #f2f2f2;
+  font:12px verdana,sans-serif;
+  width:50%;
+}
+
+
+.topBottomRight
+{
+  border-top:1px solid #D0D0D0;
+  border-bottom:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+}
+
+
+.bottomRight
+{
+    border-bottom:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+}
+
+
+.exptClass3
+{
+  width: 30px;
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid #D0D0D0;
+  border-top: 2px solid;
+  border-top-color:#7b3d00;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.bigImageCell
+{
+vertical-align:bottom;
+border-bottom:0px solid #D0D0D0;
+}
+
+.textarea
+{
+  width: 1300px;
+}
+
+.filler
+{
+  width: 100px;
+  border-top:0px solid #D0D0D0;
+}
+
+.selected
+{
+background-color: #214c8b;
+}
+
+.button
+{
+font:bold 12px verdana,sans-serif;
+background-color:#f2f2f2;
+border:3px solid #2c5cbc;
+cursor:pointer;
+}
+
+.hiddenDiv
+{
+  visibility:hidden;
+}
+
+.visibleDiv
+{
+  visibility:visible;
+}
+
+.mdExpt
+{
+  margin-left:30px;
+padding-left: 20px;
+background-image:url('/images/expt.png');
+background-repeat: no-repeat;
+}
+
+
+.mdSample
+{
+margin-left:20px;
+padding-left: 20px;
+background-image:url('/images/sample.png');
+background-repeat: no-repeat;
+}
+
+.mdRemc
+{
+  margin-left:40px;
+padding-left:20px;
+background-image:url('/images/silk/building.png');
+background-repeat: no-repeat;
+}
+
+.mdTrack
+{
+  margin-left:50px;
+  padding-left: 20px;
+}
+
+
+.imButton{
+      background-image: url('/images/silk/building.png');
+      background-repeat: no-repeat;
+}
+
+
+.pageList
+{
+  padding-left:10px !important;
+}
+ul.pageList li
+{
+  list-style-type: disc;
+  font:10px verdana,sans-serif;
+}
+
+.introText
+{
+  height:16px;
+  vertical-align:middle;
+}
+
+ .advancedImgToggle {
+  background-image: url('/images/bullet_toggle_plus.png') ;
+  background-position: center center ;
+  background-repeat: no-repeat ;
+  cursor: pointer ;
+  margin-left: 0 ;
+  margin-right: 2px ;
+  padding-left: 8px ;
+}
+.advancedTextToggle {
+  font:italic 11px verdana;
+  text-decoration: none ;
+  cursor: pointer ;
+}
+table.advancedTable {
+  border: 1px dotted black ;
+  padding: 2px ;
+}
+td.advancedTableText {
+  font:11px verdana;
+}
+td.advancedTableSettings {
+  font:11px verdana;
+}
+    .headerText {
+      color: #04468C;
+      font-size: 10px;
+      font-weight: bold;
+      font-family: tahoma,arial,verdana,sans-serif;
+    }
+    .treeHeight
+    {
+
+    }
+    .eraserClass
+    {
+      background-image: url("/images/eraser.png") !important;
+    }
+    .cogClass
+    {
+      background-image: url("/images/silk/cog.png") !important;
+    }
+    .ucscClass
+    {
+      background-image: url("/images/ucsc.png") !important;
+    }
+    .pathClass
+    {
+      background-image: url("/images/pw.png") !important;
+    }
+    .stripe
+    {
+      background-color:#FAFAFA;
+    }
+    .topBorder
+    {
+
+      border-top:1px solid #99BBE8;
+    }
+
+
+    .dashBorder
+    {
+
+      border-top:1px dashed #99BBE8;
+    }
+
+
+    .zeroBorder
+    {
+      border:0px solid;
+    }
+    .nobottom
+    {
+      border-bottom:none;
+    }
+    .notop
+    {
+      border-top:none;
+    }
+
+    .noBorder
+    {
+      border:none !important;
+    }
+
+    .initHeight
+    {
+      height:20px;
+    }
+    .full20
+    {
+      height:20px;
+    }
+
+    .full21
+    {
+      height:21px;
+    }
+
+    .full19
+    {
+      height:19px;
+    }
+
+    .tdClass
+    {
+      width:100% !important;
+      border:1 px solid black;
+      background-color:red;
+    }
+    .x-grid3-header-offset
+    {
+      padding:0px;
+    }
+    .x-grid3-header
+    {
+      padding:0px;
+    }
+
+    .x-grid3-hd-row td
+    {
+      border-right:none;
+    }
+    .x-toolbar
+    {
+      border-bottom:none;
+    }
+
+  
+.legend10
+{
+font:10px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold10
+{
+font:bold 10px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold11
+{
+font:bold 11px sans-serif,verdana;
+padding: 1px;
+}
+
+.legend11
+{
+font:11px sans-serif,verdana;
+padding: 1px;
+}
+
+
+
+.legend12
+{
+font:12px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold22
+{
+font:bold italic 22px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold12
+{
+font:bold 12px sans-serif,verdana;
+padding: 1px;
+}
+

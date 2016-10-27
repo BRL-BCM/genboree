@@ -1,0 +1,34 @@
+<%
+  @filesList = [ @filesList ] unless(@filesList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@filesList.empty?) %>
+      <tr>
+        <th><%= (@label || "Track") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @filesList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        subdir = WorkbenchFormHelper.getNameFromURI(:files, item, true, true)
+%>
+        <tr>
+          <th>Group:</th>
+          <td><i><%== grp %></i></td>
+        </tr>
+        <tr>
+          <th>Database:</th>
+          <td><i><%== db %></i></td>
+        </tr>
+        <tr>
+          <th>Sub-Folder:</th>
+          <td><i><%== subdir %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

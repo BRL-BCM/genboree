@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "alleleReg_v1",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Allele Registration Tool",
+    "shortLabel": "Allele Reg."
+  },
+  "settings" : {
+    "alleleRegConfig" : "http://localhost/REST/v1/grp/Registry/kb/Registry/coll/SAConfig/doc/Config"
+  }
+}

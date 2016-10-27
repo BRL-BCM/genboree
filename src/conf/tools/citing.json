@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "citing",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "cluster": {
+    "queue": "none"
+  },
+  "ui": {
+    "label": "Citing Genboree",
+    "shortLabel": "[NOT SET]"
+  }
+}

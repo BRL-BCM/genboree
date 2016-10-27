@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "filterIncludeSnps",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Filter Include Snps",
+    "shortLabel": "[NOT SET]"
+  }
+}

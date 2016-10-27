@@ -1,0 +1,444 @@
+a
+{
+  outline: none ;
+}
+
+body
+{
+  color: #403C59 ;
+  font-size: 67% ;
+}
+
+fieldset
+{
+  margin: 10px ;
+  padding: 13px 16px 18px 16px ;
+}
+
+legend
+{
+  font-size: 1.3em ;
+  font-weight: bold ;
+}
+
+#modeOpts
+{
+  background-color: #EFEFEF ;
+  border: 1px solid #AAA ;
+  overflow: auto ;
+  padding: 5px ;
+  zoom: 1 ; /* hasLayout hack for IE */
+}
+
+#buttons 
+{
+  margin: 10px 0 ;
+}
+
+#clauseList
+{
+  list-style-type: none ;
+  margin: 0 ;
+  padding: 0 ;
+}
+
+#clauseList label
+{
+  display: inline ;
+  float: none ;
+  font-weight: normal;
+  margin: 0 4px;
+  text-align: left ;
+  width: 12em ;
+}
+
+#clauseList li.clauseContainer
+{
+  clear: both ;
+  margin-left: 0 ;
+  overflow: auto ;
+  padding: 0 3px ;
+}
+
+#content
+{
+  background-color: white ;
+  padding: 10px ;
+  overflow: auto ;
+}
+
+#queryPreview
+{
+  background-color: #EFEFEF ;
+  border: 1px solid #AAA ;
+  margin-bottom: 10px ;
+  padding: 5px ;
+}
+
+#savedLocEdit li
+{
+  clear: left ;
+}
+
+#toolbar
+{
+  background: #eeeeee none repeat-x ;
+  border-top: 1px solid #ffffff ;
+  border-bottom-color: #bbbbbb ;
+}
+
+#toolbar a
+{
+  display: block ;
+  margin: 0 5px ;
+  padding: 3px ;
+}
+
+.accessError
+{
+  background-color: #FFEFEF ;
+  border: 1px solid #C64848 ;
+  color: #C64848 ;
+  line-height: 16px ;
+  margin-left: 5px ;
+  padding: 2px ;
+}
+
+.appendClauseButton
+{
+  clear: left ;
+}
+
+.boolOps
+{
+  float: left ;
+  clear: left ;
+  margin: 5px 0 5px -2px ;
+  overflow: auto ;
+  width: 86px ;
+}
+
+.boolOps div a, .clauseSpecs a, .clauseTools a
+{
+  display: block ;
+  float: left ;
+  text-indent: -9999px ;
+}
+
+.boolOps div a
+{
+  height: 23px ;
+  width: 43px ;
+}
+
+.boolOps div a.or, .boolOps div a.or:visited
+{
+  background: transparent url(/images/query/and_or_v2.png) no-repeat scroll -43px 0 ;
+}
+
+.boolOps div a.or:hover, .boolOps div a.or:focus
+{
+  background-position: -43px -45px ;
+}
+
+.boolOps div a.or.selected
+{
+  background-position: -43px -23px ;
+}
+
+.boolOps div a.and, .boolOps div a.and:visited
+{
+  background: transparent url(/images/query/and_or_v2.png) no-repeat scroll 0 0 ;
+}
+
+.boolOps div a.and:hover, .boolOps div a.and:focus
+{
+  background-position: 0 -45px ;
+}
+
+.boolOps div a.and.selected
+{
+  background-position: 0 -23px ;
+}
+
+a.appendClauseButton:hover
+{
+  text-decoration: underline ;
+}
+
+.checkbox
+{
+  margin-left: 25px ;
+}
+
+.clauseSpecs a
+{
+  background: transparent url(/images/query/not.png) no-repeat scroll 0 0 ;
+  height: 22px ;
+  width: 39px ;
+  margin-right: 5px ; 
+}
+
+.clauseSpecs a:hover
+{
+  background-position: 0 -44px ;
+}
+
+.clauseTools div
+{
+  float: left ;
+}
+
+.clauseTools a
+{
+  height: 22px ;
+  margin-right: 3px ;
+  width: 16px ;
+}
+
+.clauseTools a.nestButton
+{
+  background: transparent url(/images/query/nest_clause.png) no-repeat scroll 0 0 ;
+}
+
+.clauseTools a.unnestButton
+{
+  background: transparent url(/images/query/unnest_clause.png) no-repeat scroll 0 0 ;
+}
+
+.clauseTools a.addClauseButton
+{
+  background: transparent url(/images/query/add_clause.png) no-repeat scroll 0 0 ;
+}
+
+.clauseTools a.deleteClauseButton
+{
+  background: transparent url(/images/query/delete_clause.png) no-repeat scroll 0 0 ;
+}
+
+.clauseTools a:visited
+{
+  background-position: 0 0 ;
+}
+
+.clauseTools a:hover
+{
+  background-position: 0 -22px ;
+}
+
+.clauseTools a:focus
+{
+  background-position: 0 -22px ;
+}
+
+.clauseSpecs a.selected
+{
+  background-position: 0 -22px ;
+}
+
+.clauseGroup
+{
+  float: left ;
+}
+
+.clauseSpecs, .clauseTools
+{
+  clear: left ;
+  float: left ;
+  margin-right: 5px ;
+  width: 99% !important ;
+}
+
+.clauseSpecs div
+{
+  float: left ;
+  margin-right: 3px ;
+}
+
+.contains * 
+{
+  float: left ;
+}
+
+.helpMsg ol li, .helpMsg ul li
+{
+  background-color: #FFF ;
+  border: 1px solid #BBB ;
+  list-style-type: none ;
+  margin: 5px 0 ;
+  padding: 3px ;
+}
+
+.helpMsg .widgetRef
+{
+  color: #4C2399 ;
+  font-style: italic ;
+}
+
+.instruction
+{
+  color: #4C3D99 ;
+  padding: 3px ;
+  border: 1px dashed #CCC ;
+  background-color: #EFEFEF ;
+  margin: 0 ;
+}
+
+a.lBrace
+{
+  background: transparent url(/images/query/set.png) no-repeat scroll 0 0 ;
+  margin-right: 3px ;
+  width: 15px ;
+}
+
+a.lBrace:hover
+{
+  background-position: 0 -22px ;
+}
+
+a.rBrace
+{
+  background: transparent url(/images/query/set.png) no-repeat scroll -15px 0 ;
+  margin-left: 3px ;
+  width: 15px ;
+}
+
+a.rBrace:hover
+{
+  background-position: -15px -22px ;
+}
+
+a.lParenth
+{
+  background: transparent url(/images/query/set.png) no-repeat scroll -30px 0 ;
+  margin-right: 3px ;
+  width: 15px ;
+}
+
+a.lParenth:hover
+{
+  background-position: -30px -22px ;
+}
+
+a.rParenth
+{
+  background: transparent url(/images/query/set.png) no-repeat scroll -45px 0 ;
+  margin-left: 3px ;
+  width: 15px ;
+}
+
+a.rParenth:hover
+{
+  background-position: -45px -22px ;
+}
+
+.nest
+{
+  overflow: auto ;
+}
+
+.nestBoolOps
+{
+  margin-left: 1px ;
+}
+
+.nestContainer
+{
+  background-color: #EEE ;
+  border: 1px solid #CCC ;
+  margin: 10px 0 ;
+  padding: 5px ;
+}
+
+ul.options, .nest ul
+{
+  list-style-type: none ;
+}
+
+ul.options li label
+{
+  float: left ;
+  font-weight: normal;
+  margin: 0 4px;
+  text-align: left ;
+  width: 12em ;
+}
+
+.options li
+{
+  clear: left ;
+  float: left ;
+  line-height: 22px ;
+  margin: 0 0 5px 0 ;
+  /*overflow: auto ;*/
+  width: 100% ;
+}
+
+.options li *
+{
+  float: left ;
+}
+
+.options li.header 
+{
+  font-weight: bold ;
+  padding: 5px 0 ;
+}
+
+fieldset.applyQuery p
+{
+  margin: 0 0 10px 0;
+}
+
+fieldset.applyQuery p em
+{
+  font-weight: bold;
+  font-style: italic;
+}
+
+fieldset.applyQuery div.buttons
+{
+  text-align: right;
+  margin-top: 20px;
+}
+
+fieldset.applyQuery div.buttons input[type=button]
+{
+  min-width: 100px;
+}
+
+/** ExtJS 3.2 bug fix for IE **/
+.ext-ie .x-form-field-wrap
+{
+  position: static ;
+}
+
+.ext-ie .x-form-field-wrap .x-form-trigger
+{
+  position: static ;
+  top: auto ;
+  vertical-align: middle ;
+}
+
+.ext-ie .x-form-field-wrap .x-form-twin-triggers .x-form-trigger
+{
+  position: static ;
+  top: auto ;
+  vertical-align: middle ;
+}
+
+.ext-ie .x-form-cb-label
+{
+  position: static ;
+}
+
+.ext-ie .x-form-check-wrap
+{
+  line-height: 18px ;
+  height: 18px ;
+}
+
+.ext-ie7 .x-window-body
+{
+  position: relative ;
+}

@@ -1,0 +1,298 @@
+<%@ page import="org.genboree.message.GenboreeMessage,
+                 java.util.ArrayList,
+                 java.util.Arrays,
+                 java.util.HashMap,
+                 org.genboree.tabular.AttributeRetriever,
+                 org.genboree.tabular.LffConstants,
+                 org.genboree.tabular.AnnotationSorter,
+                 org.genboree.tabular.LffUtility"%>
+<%   
+if (orderedSortNames == null){
+     if (numLocalAnnos>0) 
+        localfidAttributes= AttributeRetriever.retrieveNonSortFidAtt(con, localftypeids, numLocalAnnos);       
+     if (numShareAnnos>0) 
+        sharefidAttributes= AttributeRetriever.retrieveNonSortFidAtt(sharedConnection, shareftypeids, numShareAnnos);                                             
+        fidAttributes = new String [totalNumAnnotations][1]; 
+       if (localfidAttributes != null) {
+        for (i=0; i<localfidAttributes.length; i++) {
+           fidAttributes[i][0] = localfidAttributes[i][0];
+        }  
+           
+       }
+        if (sharefidAttributes != null) {
+         for (i=0; i<sharefidAttributes.length; i++) {
+        fidAttributes[i + numLocalAnnos][0] = "s" + sharefidAttributes[i][0]; 
+          }
+}
+}
+    else {// has sort 
+    if (sortByAVP) {    
+           
+            String sortName = orderedSortNames[0]; 
+            HashMap localvalue2fids =  null; 
+            String []  localarr =  null; 
+            HashMap localvalueMap  = null;
+            if (localftypeids != null) {    
+                    int localsortNameId  = AttributeRetriever.retrieveNameId(con,sortName); 
+                  //  HashMap localfid2valueid  = AttributeRetriever.retrieveSingleAttributeFidMap (con, localftypeids, localsortNameId);                                                    
+                     // it could be that some fid has no avp, so the number of fids could be large than the fids from avp mapping
+                    localfids = AttributeRetriever.retrieveFidByFtypeids(con, localftypeids);
+               
+                
+                
+                    HashMap localfid2avpValues =  new HashMap (); 
+                       if (localfids != null  && localfids.length >0  && localsortNameId >0 )  {
+                           localfid2avpValues = AttributeRetriever.retrieveAttValueMap(con, localfids, "" + localsortNameId) ;  
+                
+                    String [] localkeys  = (String [])localfid2avpValues.keySet().toArray(new String [localfid2avpValues.size()]);               
+                                                       
+                    String [][]localfidAtts = new String [localfid2avpValues.size()][2];                                             
+                   if (localkeys != null && localkeys.length > 0 ) 
+                    for  (i=0; i<localkeys.length; i++) {                 
+                        localfidAtts[i][0] = localkeys[i]; 
+                        localfidAtts[i][1] = (String)localfid2avpValues.get(localkeys[i] ); 
+                    }  
+                    
+                    
+                    localvalue2fids = AttributeRetriever.populatev2id(localfidAtts);                
+                    localvalueMap  = new HashMap  ();   
+                    for (i=0; i<localfidAtts.length; i++) 
+                    localvalueMap.put (localfidAtts[i][1], "y");            
+                    localarr = (String [])localvalueMap.keySet().toArray(new String [localvalueMap.size()]);             
+            } }
+            String [] sharearr =  null; 
+            HashMap sharevalue2fids = null;
+            HashMap sharevalueMap  = null;
+        
+        
+        
+            if ( shareftypeids != null)  {   
+                    sharevalueMap  = new HashMap  ();   
+                    int sharesortNameId = AttributeRetriever.retrieveNameId(sharedConnection,sortName);
+                
+                
+                
+                    //HashMap sharefid2valueid  = AttributeRetriever.retrieveSingleAttributeFidMap (sharedConnection, shareftypeids, sharesortNameId);                                                    
+                    // it could be that some fid has no avp, so the number of fids could be large than the fids from avp mapping
+                    sharefids = AttributeRetriever.retrieveFidByFtypeids(sharedConnection, shareftypeids);
+                    
+                  
+                  
+                    HashMap sharefid2avpValues =   new HashMap (); 
+                   if (sharefids != null && sharefids.length > 0  && sharesortNameId > 0 ) {
+                            sharefid2avpValues = AttributeRetriever.retrieveAttValueMap(sharedConnection, sharefids, "" + sharesortNameId) ;  
+                            
+                            
+                            String [] sharekeys  = (String [])sharefid2avpValues.keySet().toArray(new String [sharefid2avpValues.size()]);               
+                            String [][]sharefidAtts = new String [sharefid2avpValues.size()][2];
+                       
+                       
+                              for  (i=0; i<sharekeys.length; i++) {  
+                                  
+                                    sharefidAtts[i][0] ="s" +  sharekeys[i]; 
+                                    sharefidAtts[i][1] = (String)sharefid2avpValues.get(sharekeys[i] ); 
+                            } 
+                            sharevalue2fids = AttributeRetriever.populatev2id(sharefidAtts);                
+                            
+                            for (i=0; i<sharefidAtts.length; i++) 
+                            sharevalueMap.put (sharefidAtts[i][1], "y");            
+                            sharearr = (String [])sharevalueMap.keySet().toArray(new String [sharevalueMap.size()]);             
+                   }
+           
+           
+            }
+           HashMap value2fids = new HashMap (); 
+            if (localvalue2fids != null) 
+            value2fids = localvalue2fids;   
+            
+            
+            if (sharevalue2fids != null) {
+                    for (i=0; i<sharearr.length; i++) {
+                        if (sharevalue2fids.get(sharearr[i])!= null) {
+                                if (value2fids.get(sharearr[i])==null) 
+                                    value2fids.put (sharearr[i], sharevalue2fids.get(sharearr[i])); 
+                                else {
+                                    ArrayList list = (ArrayList)sharevalue2fids.get(sharearr[i]);  
+                                    ArrayList list2 = (ArrayList)value2fids.get(sharearr[i]);  
+                                    for (int j=0; j<list2.size(); j++) 
+                                        list.add(list2.get(j)); 
+                                    value2fids.put (sharearr[i], list); 
+                                }
+                        }
+                    }
+            } 
+            
+            String []   arr = (String[]) value2fids.keySet().toArray(new String [ value2fids.size()] );
+           
+            String testValue =  null; 
+            if (arr != null && arr.length > 0 ) {
+            for ( i=0; i<arr.length; i++){
+                if (arr[i] != null && !arr[i].startsWith("zzzz")){ 
+                testValue = arr[i]; 
+                break;
+                }
+            }
+            
+            int type = LffConstants.String_TYPE; 
+            if (testValue != null) 
+            type = LffUtility.findDataType (testValue);
+            
+            if (needSort)               
+                    arr = AnnotationSorter.sortArray(arr, value2fids , type );
+            }
+            
+            ArrayList list = null; 
+            HashMap fidMap = new HashMap();
+           if (localfidAttributes != null) 
+            numLocalAnnos = localfidAttributes.length;
+            if (sharefidAttributes != null) 
+            numShareAnnos = sharefidAttributes.length;
+            totalNumAnnotations = numLocalAnnos + numShareAnnos;
+            fidAttributes = new String [totalNumAnnotations][2]; 
+            
+            // first, populate fid from sorted avp mapping 
+         
+            for (i=0; i<arr.length; i++) {
+                if (arr[i] != null && value2fids.get(arr[i]) != null ) {
+                    list = (ArrayList)value2fids.get(arr[i]); 
+                    for (int j =0; j<list.size(); j++) {                        
+                        if (currentIndex < totalNumAnnotations) 
+                        {
+                        fidAttributes[currentIndex] = (String[])list.get( j ); 
+                        fidMap.put(fidAttributes[currentIndex][0], "0"); 
+                        }
+                        currentIndex ++;  
+                    } 
+                } 
+            }
+        
+        
+            // then poulate of the fids that does not have avp 
+            if (localfids != null && localfids.length >0 ) 
+                for (i =0; i<localfids.length; i++) {
+                if (fidMap.get(localfids[i]) == null  && currentIndex < totalNumAnnotations) {    
+                fidAttributes [currentIndex] [0] = localfids[i];  
+                currentIndex++;
+                }
+            } 
+        // then poulate of the fids that does not have avp 
+            if (sharefids != null && sharefids.length > 0) 
+                for (i =0; i<sharefids.length; i++) {
+                if (fidMap.get(sharefids[i]) == null   && currentIndex < totalNumAnnotations) {    
+                fidAttributes [currentIndex] [0] = sharefids[i];  
+                currentIndex++;
+                } 
+            }     
+    }
+    else {  // sort: non-avp sort
+            needSort = false; 
+            int index = LffUtility.findLffIndex(orderedSortNames[0]);
+            String sortName = LffUtility.findFdataSortName(index); 
+            if (sortName  == null) {
+            // non - text sort 
+            sortName = LffUtility.findNonFdataSortName(index); 
+            needSort = true; 
+            }
+            localfidAttributes  = AttributeRetriever.retrieveFidAtt(con, localftypeids, sortName);               
+            if (sharedConnection != null) 
+                sharefidAttributes  = AttributeRetriever.retrieveFidAtt(sharedConnection, shareftypeids, sortName);
+            if (localfidAttributes != null) 
+            numLocalAnnos = localfidAttributes.length;
+            if (sharefidAttributes != null) 
+            numShareAnnos = sharefidAttributes.length;
+            totalNumAnnotations = numLocalAnnos + numShareAnnos;
+            fidAttributes = new String [totalNumAnnotations][2]; 
+            HashMap localvalue2fids = new HashMap (); 
+            HashMap sharevalue2fids = new HashMap (); 
+            ArrayList list = null; 
+            String []  arr = null; 
+            if (sortName  == null) {
+            // text sort, if not avp and not lff, do text sort 
+            sortName = orderedSortNames[0]; 
+            }
+            if (sortName.equals(LffConstants.LFF_COLUMNS[2])) {
+            AttributeRetriever.populatev2id (localfidAttributes, localftypeid2ftype, 1) ;  
+            AttributeRetriever.populatev2id (sharefidAttributes, shareftypeid2ftype, 1) ;  
+            }
+            else if (sortName.equals(LffConstants.LFF_COLUMNS[3])) {                                              
+            AttributeRetriever.populatev2id (localfidAttributes,localftypeid2ftype, 2) ; 
+            AttributeRetriever.populatev2id (sharefidAttributes, shareftypeid2ftype, 2) ;   
+            }
+            else if (sortName.equals(LffConstants.LFF_COLUMNS[1])){ 
+            AttributeRetriever.populatev2id (localfidAttributes,localftypeid2Gclass) ; 
+            AttributeRetriever.populatev2id (sharefidAttributes,shareftypeid2Gclass) ; 
+            }  
+            else if (sortName.equals(LffConstants.LFF_COLUMNS[4])){               
+            AttributeRetriever.populatev2id (localfidAttributes,localid2Chromosome) ; 
+            AttributeRetriever.populatev2id (sharefidAttributes,shareid2Chromosome) ; 
+            }             
+            else if (sortName.equals(LffConstants.LFF_COLUMNS[12])){
+            localfidAttributes =AttributeRetriever.retrieveFidText (con, localfidAttributes, "s") ;
+                 if (sharedConnection != null) 
+                sharefidAttributes =AttributeRetriever.retrieveFidText (sharedConnection, sharefidAttributes, "s") ;
+            localvalue2fids =  AttributeRetriever.populatev2id(localfidAttributes) ;
+            if (sharedConnection != null) 
+            sharevalue2fids =  AttributeRetriever.populatev2id(sharefidAttributes) ;
+            }
+            else if (sortName.equals(LffConstants.LFF_COLUMNS[13])){
+            localfidAttributes =AttributeRetriever.retrieveFidText (con,  fidAttributes, "t") ; 
+            if (sharedConnection != null) 
+            sharefidAttributes =AttributeRetriever.retrieveFidText (sharedConnection,  fidAttributes, "t") ; 
+            localvalue2fids =  AttributeRetriever.populatev2id(localfidAttributes) ;
+            if (sharedConnection != null) 
+            sharevalue2fids =  AttributeRetriever.populatev2id(sharefidAttributes) ;                                                           
+            } 
+            
+            if (localfidAttributes != null) {
+            for (i=0; i<localfidAttributes.length; i++) {
+            fidAttributes[i] = localfidAttributes[i];                       
+            }                    
+            }
+            if (sharefidAttributes != null) {
+            for (i=0; i<sharefidAttributes.length; i++) {
+            sharefidAttributes[i][0] = "s" + sharefidAttributes[i][0];   
+            fidAttributes [i+ numLocalAnnos] = sharefidAttributes[i]; 
+            } 
+            }
+            if (needSort) { 
+            HashMap temp  = new HashMap  ();   
+            for (i=0; i<fidAttributes.length; i++) 
+            temp.put (fidAttributes[i][1], "");
+            
+            arr = (String [])temp.keySet().toArray(new String [temp.size()]);             
+            if (arr != null) { 
+            Arrays.sort(arr); 
+            
+            
+            
+            for (i=0; i<arr.length; i++) {
+            if (arr[i] != null )  {
+            if (localvalue2fids.get(arr[i]) != null ) 
+            list = (ArrayList)localvalue2fids.get(arr[i]); 
+            else if (sharevalue2fids.get(arr[i]) != null ) 
+            list = (ArrayList)sharevalue2fids.get(arr[i]); 
+            
+            if (list != null && !list.isEmpty()) 
+            for (int j =0; j<list.size(); j++) {
+            fidAttributes[currentIndex] = (String[])list.get( j ); 
+            currentIndex ++;  
+            }
+            }
+            }
+            }
+            }
+ }  
+
+}
+    
+    if (fidAttributes == null){
+GenboreeMessage.setErrMsg(mys, " No annotations are found with the track information provided.");
+//  response.sendRedirect("/java-bin/displaySelection.jsp");
+hasData = false;
+} 
+else
+mys.setAttribute("fid2Attributes", fidAttributes);
+    
+    
+    %>
+    

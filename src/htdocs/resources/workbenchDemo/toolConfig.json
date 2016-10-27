@@ -1,0 +1,291 @@
+[
+  {
+    "tool" : "comparisonTool",
+    "icon" : "compare",
+    "project" : "Epigenome Atlas",
+    "tracks" :
+    [
+      {
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database",
+        "name": "DNAmethylation:H1"
+      },
+      {
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database",
+        "name": "DNAmethylation:IMR90"
+      }
+    ],
+    "url" : "project.jsp?projectName=H1%20-%20IMR90%20Methylation%20Comparison%20Demo&isPublic=yes"
+  },
+  {
+  "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+  "tool": "comparisonTool",
+  "project": "Epigenome Atlas",
+  "icon": "compare",
+  "tracks": [
+    {
+      "name": "H3K27me3:H1",
+      "group": "Epigenome Atlas",
+      "database": "Pre-release Test Database"
+    },
+    {
+      "name": "H3K36me3:H1",
+      "group": "Epigenome Atlas",
+      "database": "Pre-release Test Database"
+    }
+  ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K27me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K4me1:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K27me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K4me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K27me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9ac:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K27me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K36me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K4me1:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K36me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K4me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K36me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9ac:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K36me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K4me1:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K4me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K4me1:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9ac:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K4me1:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K4me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9ac:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K4me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  },
+  {
+    "url": "project.jsp?projectName=H1%20Histone%20Modification%20Comparison%20Demo&isPublic=yes",
+    "tool": "comparisonTool",
+    "project": "Epigenome Atlas",
+    "icon": "compare",
+    "tracks": [
+      {
+        "name": "H3K9ac:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      },
+      {
+        "name": "H3K9me3:H1",
+        "group": "Epigenome Atlas",
+        "database": "Pre-release Test Database"
+      }
+    ]
+  }
+]

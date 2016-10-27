@@ -1,0 +1,180 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+            <p>Cufflinks assembles transcripts, estimates their abundances, and tests for differential expression and regulation in RNA-Seq samples. It accepts aligned RNA-Seq reads and assembles the alignments into a set of transcripts. Cufflinks then estimates the relative abundances of these transcripts based on the number of reads derived from each one, taking into account biases in library preparation protocols.</p>
+
+
+              <p>To set up a Cufflinks analysis:</p>
+
+
+            Populate <strong>Input Data</strong>
+              <ul>
+              <li>Drag one Files Directory with <em>accepted_hits.bam</em> into <strong>Input Data</strong> or,</li>
+                <li>Drag one BAM file into <strong>Input Data</strong></li>
+              </ul>
+
+
+            Populate <strong>Output Targets</strong>
+              <ul>
+              <li>Drag a destination database into <strong>Output Targets</strong></li>
+                <li>Configure &#38; Submit the Cufflinks Job</li>
+              </ul>
+
+
+            Conifigure &#38; Submit Cufflinks Job:
+              <ul>
+              <li>Select <code>Transcriptome</code> &raquo; <code>Analyze RNA-Seq Data</code> &raquo; <code>Assemble and Measure Transcript by Cufflinks</code></li>
+                <li>Click <code>Submit</code></li>
+              </ul>
+
+
+            Cufflinks generates these output files:
+              <ul>
+              <li><em>genes.fpkm_tracking.withGeneName.xls</em> (summed FPKM of transcripts sharing each gene_id)</li>
+                <li><em>isoforms.fpkm_tracking.withGeneName.xls</em> (transcript FPKMs)</li>
+                <li><em>transcripts.withGeneName.gtf</em> (contains Cufflinks’ assembled isoforms with gene name)</li>
+              </ul>
+
+
+            Three raw data files:
+              <ul>
+              <li><em>genes.fpkm_tracking</em> (estimated gene-level expression values in generic FPKM tracking format)</li>
+                <li><em>isoforms.fpkm_tracking</em> (estimated isoform-level expression values in generic FPKM tracking format)</li>
+                <li><em>transcripts.gtf</em> (contains Cufflinks’ assembled isoforms)</li>
+              </ul>
+
+
+            Genboree Job Specification File:
+              <ul>
+              <li><em>jobFile.json</em></li>
+              </ul>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>Files Directory</u> with the <i>accepted_hits.bam</i> file or a different <i>bam</i> file into &quot;Input Data&quot;.'
+        ],
+        :types              => [ [ 'Files Dir', 'min: 1 ; max: 1' ], ['Files', 'min: 1 ; max: 1'] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database under the Files (under \'Cufflinks\') area. ' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder (under 'Cufflinks') used to organize Cufflinks results."],
+          [ 'Mask File', "Ignore all alignment within transcripts in this file"],
+          [ 'Multi Read Correct', "Use 'rescue method' for multi-reads (more accurate).</i><br>&nbsp;<br>"],
+          [ 'Advanced Settings (Advanced Abundance Estimation):<br>',  "" ],
+          [ 'Mean Frag Length', 'Average fragment length (unpaired reads only) [ default: 200 ]'],
+          [ 'Frag Length Stdev', 'Fragment length std deviation (unpaired reads only)  [ default: 80 ]'],
+          [ 'Upper Quart Norm', 'Use upper-quartile normalization [ default:  FALSE ]'],
+          [ 'Max MLE Iterations', 'Maximum iterations allowed for MLE calculation. [Default: 5000]'],
+          [ 'Num Importance Samples', 'Number of importance samples for MAP restimation [ default: 1000]'],
+          [ 'Compatible Hits Norm', 'Count hits compatible with reference RNAs only [ default: FALSE ]'],
+          [ 'Total Hits Norm', 'count all hits for normalization [ default: TRUE ]</i><br>&nbsp;<br>'],
+          [ 'Advanced Settings (Advanced Assembly):<br>',  "" ],
+          [ 'ID Prefix', 'Assembled transcripts have this ID prefix [default: CUFF]'],
+          [ 'Min Isoform Frac',  'Suppress transcripts below this abundance level [ default: 0.10 ]'],
+          [ 'Pre MRNA Frac', 'Suppress intra-intronic transcripts below this level [ default: 0.15 ]'],
+          [ 'Junction Alpha', 'Alpha for junction binomial test filter  [ default:  0.001]'],
+          [ 'Min Frags per Transfrag', 'Minimum number of fragments needed for new transfrags [ default: 10 ]'],
+          [ 'Overhang Tolerance',  'Number of terminal exon bp to tolerate in introns [ default:  8]'],
+          [ 'Max Bundle Length', 'Maximum genomic length allowed for a given bundle [ default: 3500000]'],
+          [ 'Max Bundle Frags', "Maximum fragments allowed in a given bundle [ default: 500000]"],
+          [ 'Min Intron Length', 'Minimum intron size allowed in genome [ default: 50 ]'],
+          [ 'Trim 3 Avg Cov Thresh', 'Minimum avg coverage required to attempt 3\' trimming  [ default: 10]'],
+          [ 'Trim 3 DropOff Frac',  'Fraction of avg coverage below which to trim 3\' end  [ default:  0.1]</i><br>&nbsp;<br>'],
+          [ 'Advanced Settings (Reference Annotation Guided Assembly):<br>',  "" ],
+          [ 'No Faux Reads',  'Disable tiling by faux reads  [ default:  FALSE ]'],
+          [ '3 Overhang Tolerance', "Overhang allowed on 3' end when merging with reference[ default: 600 ]"],
+          [ 'Intron Overhang Tolerance', 'Overhang allowed inside reference intron when merging [ default: 30]'],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [
+                                    'Trapnell C, Williams BA, Pertea G, Mortazavi AM, Kwan G, van Baren MJ, Salzberg SL, Wold B, Pachter L. <i>Transcript assembly and quantification by RNA-Seq reveals
+                                    unannotated transcripts and isoform switching during cell differentiation.</i> Nature Biotechnology. <b>2010</b> May;<b>28(5)</b>:511-5.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/20436464">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Roberts A, Trapnell C, Donaghey J, Rinn JL, Pachter L. <i> Improving RNA-Seq expression estimates by correcting for fragment bias.</i> Genome Biology.
+                                    <b>2011</b> Mar 16;<b>12(3)</b>:R22.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/21410973">PubMed</a>]</span>'
+                                  ],
+                                  [ 'Roberts A, Pimentel H, Trapnell C, Pachter L.  <i>Identification of novel transcripts in annotated genomes using RNA-Seq.</i> Bioinformatics.
+                                    <b>2011</b> Sep 1;<b>27(17)</b>:2325-9.
+                                    <span style="font-size: 78%;">[<a href="http://www.ncbi.nlm.nih.gov/pubmed/21697122">PubMed</a>]</span>'
+                                  ],
+                                  [
+                                    "Cufflinks is a collaborative effort between the <a href=\"http://bio.math.berkeley.edu/\">Laboratory for Mathematical and Computational Biology</a>, led by Lior Pachter at UC Berkeley, Steven Salzberg's <a href=\"http://genomics.jhu.edu\">computational genomics group</a> at the Institute of Genetic Medicine at Johns Hopkins University, and <a href=\"http://woldlab.caltech.edu/\">Barbara Wold's lab</a> at Caltech.", nil
+                                  ],
+                                  [
+                                    "Cufflinks is provided under the OSI-approved <a href=\"http://en.wikipedia.org/wiki/Boost_Software_License\">Boost License</a>", nil
+                                  ],
+                                  [ 'Integrated into the Genboree Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+
+      })
+  %>
+
+  <%# Tool-specific Addendum %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

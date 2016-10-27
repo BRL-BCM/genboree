@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Create Hub",
+    "tooltip": "Creates a new track hub in a group.",
+    "idStr": "createHub"
+  },
+  {
+    "text": "Rename Hub",
+    "tooltip": "Rename a track hub in a group.",
+    "idStr": "renameHub"
+  },
+  {
+    "text": "Delete Hubs",
+    "tooltip": "Delete one or more track hubs in a group.",
+    "idStr": "deleteHubs"
+  }
+]

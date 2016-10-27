@@ -1,0 +1,22 @@
+
+      <link rel="stylesheet" href="/styles/colorWheel.css<%=jsVersion%>" type="text/css">
+    <script src="/javaScripts/util.js<%=jsVersion%>" type="text/javascript"></script>
+    <!-- Prototype/script.aculo.us libraries for great UI effects: -->
+    <script src="/javaScripts/prototype.js<%=jsVersion%>" type="text/javascript"></script>
+
+    <script src="/javaScripts/scriptaculous.js<%=jsVersion%>" type="text/javascript"></script>
+
+    <SCRIPT type="text/javascript" src="/javaScripts/overlib.js<%=jsVersion%>"></SCRIPT>
+    <SCRIPT type="text/javascript" src="/javaScripts/overlib_hideform.js<%=jsVersion%>"></SCRIPT>
+
+    <script type="text/javascript" src="/javaScripts/overlib_cssstyle.js<%=jsVersion%>"></script>
+
+    <SCRIPT type="text/javascript" src="/javaScripts/colorbox.js<%=jsVersion%>"></SCRIPT>
+    <SCRIPT type="text/javascript" src="/javaScripts/trkmgrcolor.js<%=jsVersion%>"></SCRIPT>
+    <SCRIPT type="text/javascript" src="/javaScripts/colorWheel.js<%=jsVersion%>"></SCRIPT>
+
+    <!-- Official extension to use css style classes for the title bar appearance -->
+    <script type="text/javascript" src="/javaScripts/overlib_cssstyle.js<%=jsVersion%>"></script>
+    <!-- Page-specific javascript -->
+   
+    <SCRIPT type="text/javascript" src="/javaScripts/overlib_draggable.js<%=jsVersion%>"></SCRIPT>

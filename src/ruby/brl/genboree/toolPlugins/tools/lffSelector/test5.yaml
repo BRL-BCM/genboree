@@ -1,0 +1,18 @@
+conflict: all
+
+rules:
+  -
+    name: exonCount
+    condition: ( exonCount > 1 )
+    action:
+      - passed += 1
+      - rulesPassed['exonCount'] = "(exonCount num_between? ('1'..'2'))"
+
+  -
+    name: descriptionPresent
+    condition: ( descriptions isPresent? true ) 
+    action:
+      - passed += 1
+      - rulesPassed['descriptionPresent'] = "(descriptions isNotNil? true )"
+  
+ 

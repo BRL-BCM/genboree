@@ -1,0 +1,182 @@
+
+!!!! NOTE: !!!!
+You should follow the guidelines in INSTALL_GUIDE.BRL rather than jumping here directly.
+
+That INSTALL_GUIDE.BRL file will point you to the right docs/files at the right time.
+
+And indicate when to actually start up Redmine. 
+
+And guide you to info about plugins, init.d scripts/nginx integration, etc.
+
+The guide lists all the steps in a good order, referring to dedicated files when appropriate.
+!!!!       !!!!!
+
+
+
+PREREQUISITES:
+
+1. Ruby 1.8.7
+
+2. Rubygems (not part of Ruby 1.8)
+
+3. mysql (Percona's branch preferrably!)
+. To work around a hard-coded assumption in the mysql2 gem spec file,
+  you need to go to your mysql installation directory and then enter
+  its lib/ subdirectory. This will have the value libmysqlclient .so & .a
+  files. The mysql2 gem assumes, however, that it will find thes library
+  files in a subdir of lib/ called "mysql". i.e. that they live not
+  under your mysql's lib/ but in its lib/mysql/ area
+. To workaround this, one solution is to use some softlinks in your mysql
+  installation area:
+    cd {mysql_installation_dir}/lib/mysql
+    for xx in ../*
+    do
+      ln -s $xx
+    done
+    rm mysql # to remove the symbolic link (endless loop)
+. Make sure your mysql.sock file is in a directory which is accessible by nobody
+  - else redmine daemon won't start (mode 2775 is appropriate)
+
+4. mysql2 gem
+. gem install mysql2
+
+5. ImageMagick (as module)
+
+6. RMagick gem
+. First: module load ImageMagick
+. gem install rmagick
+
+-------------------------------------
+SETUP
+
+Ref: http://www.redmine.org/projects/redmine/wiki/RedmineInstall
+
+1. Create a dedicated rails subdir for this redmine service
+    mkdir -p /usr/local/brl/local/rails/redmine_genbKB_dev
+
+2. Copy the downloaded & unpacked redmine installation dir there. Set ownerships
+     and permissions sensibly for user who will be running redmine daemon (e.g. nobody group)
+       cd /usr/local/brl/local/rails/redmine_genbKB_dev
+       find . -type d -exec chmod 2775 {} \;
+       find . -type f -exec chmod 660 {} \;
+       find . -type f -exec chgrp nobody {} \;
+
+3. Create dedicated dirs for "files", "tmp", and "var" on your data partition. e.g.
+    mkdir -p /usr/local/brl/data/rails/redmine_genbKB_dev/tmp/pids
+    mkdir -p /usr/local/brl/data/rails/redmine_genbKB_dev/var
+    mkdir -p /usr/local/brl/data/rails/redmine_genbKB_dev/files
+    # Copy any existing content over
+    cd /usr/local/brl/local/rails/redmine_genbKB_dev
+    mv tmp/* /usr/local/brl/data/rails/redmine_genbKB_dev/tmp
+    mv var/* /usr/local/brl/data/rails/redmine_genbKB_dev/var
+    mv files/* /usr/local/brl/data/rails/redmine_genbKB_dev/files
+    # Remove old versions
+    rmdir tmp files var
+    # Link to data partitions
+    ln -s /usr/local/brl/data/rails/redmine_genbKB_dev/tmp
+    ln -s /usr/local/brl/data/rails/redmine_genbKB_dev/var
+    ln -s /usr/local/brl/data/rails/redmine_genbKB_dev/files
+    cd /usr/local/brl/data/rails/redmine_genbKB_dev/
+    find . -type d -exec chmod 2775 {} \;
+    find . -type f -exec chmod 660 {} \;
+    find . -type f -exec chgrp nobody {} \;
+
+4. Start up mysql, log in via the mysql client shell, and create the specific redmine
+     database to use. e.g.
+       CREATE DATABASE redmine_genbKB CHARACTER SET utf8;
+
+5. Edit config/database.yml (copy database.yml.example, say)
+   * Will have password, make it chmod 640 !
+   * Set up the "production" environment. Comment out "development" and "test".
+   * Need pointers to that mysql database and some authentication info. e.g:
+
+production:
+  adapter: mysql2
+  database: redmine_genbKB_dev
+  host: localhost
+  socket: /usr/local/brl/local/var/mysql/mysql.sock
+  username: genboree
+  password: {PASSWORD}
+  encoding: utf8
+
+6. Edit config/configuration.yml (copy configuration.yml.example, say)
+   * Default needs to be present, it seems, even if you're really setting up "production"
+   * The host names in "default" need to be real, but won't be used
+     - so change "address" to "smtp.bcm.tmc.edu"
+     - so change "domain" to "bcm.tmc.edu"
+   * Comment out the authenication, user_name, and password fields under "default" 
+   * Configure actual "production" settings section AT THE BOTTOM (it is provided):
+
+production:
+  # Outgoing emails configuration  
+  email_delivery:
+    delivery_method: :smtp
+    smtp_settings:
+      tls: false
+      address: smtp.bcm.tmc.edu
+      port: 25
+      domain: bcm.tmc.edu
+
+7. We're going to use "thin" for our Rack-based Web server. Tell redmine so via Gemspec file:
+   * Open/create Gemfile.local in redmine installation dir
+     - add lines: 
+         gem 'thin', ">=1.6.1"
+   * Must rerun bundler (bundle install) when you add gems to Gemfile.local
+     - this will configure Redmine to use the gem
+     - see #8 below for bundle install command
+
+8. Prep your gem bundle for redmine.
+     gem install bundler
+     # Re-run this whenever database.yml is changed, too:
+     # - this will get needed gems, including thin version in your Gemspec.local
+     bundle install --without development test
+     # Use bundle to check it's finding the correct gem versions for:
+     # - thin
+     # - rmagick
+     bundle show 
+
+9. Create some session store secret key thing
+     rake generate_secret_token
+
+10. Create database schema structure (a db migration operation)
+     RAILS_ENV=production rake db:migrate
+
+11. Load defaault config data into the new schema (will ask for lang, make sure keep default "en")
+     RAILS_ENV=production rake redmine:load_default_data
+
+12. This should be done by now, although you may not have a public/plugin_assets. But basically:
+
+     mkdir -p tmp tmp/pdf public/plugin_assets
+     chgrp -R nobody files log tmp public/plugin_assets
+     chmod -R 2775 files log tmp public/plugin_assets
+     chmod g+w log/*log
+
+13. First time login
+. Start redmine temporarily from its installation dir using:
+     ruby script/rails server webrick -e production
+. Login with default admin as user & password
+. Change admin password immediately under My Account
+. Go to Administration -> Settings -> [Host name and path]
+  - Change this to match your host (not localhost), port (if needed)
+  - Mount will be handled by nginx, hopefully
+. Go to Administration -> Settings -> Email notifications
+  - Click "Send a test email".
+  - Did you get it??
+
+14. Problem sending mail?
+
+. See http://www.redmine.org/boards/2/topics/37885
+. gem install --version 2.5.3 mail
+. Change Gemfile.lock to mention this specific version in all locations
+. Also see http://www.redmine.org/boards/2/topics/30851
+. Add the theses setting to your config/configuration.yml under the smtp settings section:
+
+    openssl_verify_mode: 'none'
+    enable_starttls_auto: false
+. Comment out username and password lines, they confuse things
+
+-------------------------------------
+NEST, SEE ALSO
+
+1. CONFIG.BRL
+2. init.d/README.brl

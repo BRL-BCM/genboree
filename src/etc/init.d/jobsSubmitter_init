@@ -1,0 +1,35 @@
+#!/bin/bash
+
+
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+
+start() {
+       su genboree -l -c "${DIR_TARGET}/bin/jobsSubmitter.rb start"
+}
+
+stop() {
+       su genboree -l -c "${DIR_TARGET}/bin/jobsSubmitter.rb stop"
+}
+
+restart() {
+       su genboree -l -c "${DIR_TARGET}/bin/jobsSubmitter.rb stop"
+       su genboree -l -c "${DIR_TARGET}/bin/jobsSubmitter.rb start"
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac

@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "changePass",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Change Password",
+    "shortLabel": "[NOT SET]"
+  }
+}

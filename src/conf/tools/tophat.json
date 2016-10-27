@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "tophat",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "groupAccessUri": "http://genboree.org/REST/v1/grp/Epigenome%20ToolSet%20Demo%20Input%20Data",
+    "label": "Map Reads and Splice Junctions by Tophat",
+    "shortLabel": "Tophat"
+  },
+  "cluster": {
+    "mem": "20gb",
+    "queue": "gbMultiCore",
+    "vmem": "20gb",
+    "ppn": 4
+  }
+}

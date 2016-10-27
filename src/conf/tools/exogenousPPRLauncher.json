@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "exogenousPPRLauncher",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 1,
+    "queue": "gb"
+  },
+  "ui": {
+    "label": "Exogenous Process Pipeline Runs Job Launcher",
+    "shortLabel": "Exogenous Process Pipeline Runs Job Launcher",
+    "groupAccessUri": null
+  }
+}

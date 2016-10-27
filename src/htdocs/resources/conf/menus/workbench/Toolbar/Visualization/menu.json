@@ -1,0 +1,66 @@
+[
+  {
+    "text": "View Track Grid",
+    "idStr": "gridViewer",
+    "tooltip": "Launch the Track grid viewer application."
+  },
+  {
+    "text": "View Sample Grid",
+    "idStr": "sampleGridViewer",
+    "tooltip": "Launch the generic Sample grid viewer application."
+  },
+  {
+    "text": "Tabular Annotation Viewer",
+    "tooltip": "View annotations from one or more tracks in a customizable table.",
+    "idStr": "tabularTrackViewer"
+  },
+  {
+    "text": "Target Interaction Finder",
+    "tooltip": "Target interaction lookup tool for producing tables and network graphs of miRNA-protein interactions",
+    "idStr": "targetInteractionFinder"
+  },
+  {
+    "text": "Pathway Finder",
+    "tooltip": "Pathway finder tool that searches for pathways either containing your miRNAs of interest or protein targets of your miRNAs",
+    "idStr": "pathwayFinder"
+  },
+  {
+    "text": "View Tracks in UCSC Genome Browser",
+    "tooltip": "Visualize tracks in the UCSC Genome Browser.",
+    "idStr": "ucscBrowser"
+  },
+  {
+    "text": "View Track Hub in Genome Browsers",
+    "tooltip": "View a track hub in UCSC and/or WashU genome browsers.",
+    "idStr": "viewHub"
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "<span style=\"color:red\">Genboree Browser (old)</span>",
+    "href": "/java-bin/defaultGbrowser.jsp",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Browse annotations using the built-in Genboree browser, using the old Genboree functionality.<sup style=\"color:red\">(Scheduled for removal end of Oct 2016)</sup>"
+  },
+  {
+    "text": "VGPaint",
+    "href": "/java-bin/vgpConfig.jsp",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "Compose a VGPaint virtual genome painting visualization, using the old Genboree functionality.<br><i><u>Deprecated:</u> this functionality has been deprecated and will likely be discontinued in the future.</i>",
+    "hidden": true
+  },
+  {
+    "text": "VGResults",
+    "href": "/java-bin/vgpResults.jsp",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated",
+    "tooltip": "View previously-generated VGPaint visualizations, using the old Genboree functionality.<br><i><u>Deprecated:</u> like VGPaint, this functionality has been deprecated and will likely be discontinued in the future.</i>",
+    "hidden": true
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "mrfAnnotationCoverage",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 4,
+    "pvmem": "4gb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Calculate coverage using mrfAnnotationCoverage",
+    "shortLabel": "MrfAnnotationCoverage",
+    "groupAccessUri": null
+  }
+}

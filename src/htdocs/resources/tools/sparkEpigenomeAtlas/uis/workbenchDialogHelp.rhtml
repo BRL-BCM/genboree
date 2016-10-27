@@ -1,0 +1,124 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/genboreeUtil'
+  width = (@hasAccess ? 520 : 380)
+  height = (@hasAccess ? 550 : 290)
+%>
+<div style="height: <%= height %>px; width: <%= width %>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg'] and @hasAccess) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks from the user and/or tracks selected from the Epigenome Atlas. This can be useful as a way of exploring the Epigenome Atlas data or viewing one's own methylation data in the context of selected Atlas tracks.
+          <br>&nbsp;<br>
+          Cydney Nielsen's Spark has three phases:<br>
+          <div style='padding-left: 10px;'>
+            <ol>
+              <li>Data file pre-processing</li>
+              <li>Data clustering analysis</li>
+              <li>Visualization of the analysis in a stand-alone GUI.</li>
+            </ol>
+          </div>
+          <br>
+          This interface will help you complete the first two phases&mdash;steps normally executed on the command line after setting up a compliant directory tree for the tool&mdash;and will provide you with the analysis results.
+          <br>&nbsp;<br>
+          You can then download the analysis results and point the Spark stand-alone visualization program at the analysis directory. To obtain the visualization program:
+          <div style='font-size: 80%; margin-top: 10px;'>
+            <ul>
+              <li>In the Job Completion email, click the link to the Spark Java Web Start page.</li>
+              <li>At any time, go to the Spark Java Web Start page to <a href='http://www.bcgsc.ca/downloads/spark/v1.0/start.jnlp'>run the Spark GUI</a> application.</li>
+              <li>You can also <a href='http://www.bcgsc.ca/downloads/spark/v1.0/'>manually download Spark</a>, its documentation, and sample data.
+                <ul>
+                  <li>This also lets you run all phases of Spark locally on your own machine.</li>
+                  <li>Newer versions of the Spark software can be found at <a href='http://www.bcgsc.ca/downloads/spark/'>the Spark download area</a> and may address issues found in older versions.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          "If you have data tracks of your own you want to analysze, drag 1+ data Tracks (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>) into &quot;Input Data&quot;.",
+          "Drag 1 regions-of-interest (ROI) Track (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>) to the <i>bottom</i> of &quot;Input Data&quot;.",
+          "Note that the <i>last</i> track or in &quot;Input Data&quot; will <i>always be used as the regions-of-interest</i> and that an ROI track is required for Spark."
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       =>
+        [
+          "Drag 1 destination Database (<img class='entityIcon' src='/images/workbench/dbTreeNode.png'>) into &quot;Output Targets&quot;.",
+          "In the Files (<img class='entityIcon' src='/images/silk/folder_table.png'>) area of that database, the folder called &quot;Spark - Results&quot; contain the results of your various Spark analyses. Your <code>Analysis Name</code> for this Spark run will determine the sub-folder where the specific results will be placed.",
+          'The genome assembly version of the Database will determine which Atlas data freeze tracks you can select from in the Settings (Freeze 1 for Hg18, Freeze 2 for Hg19).'
+        ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ "Analysis Name", "Give this analysis job a unique name. This name will be used to store result files within the &quot;Spark - Results&quot; file folder." ],
+          [ "Epigenomic Atlas Tracks", "Select tracks from the Epigenome Atlas which you would like to include in the Spark analysis." ],
+          [ "Region Label", "[optional] Defaults to the ROI track name. But you can provide your own label for the regions." ],
+          [ "Statistics Type",  "Should the median and standard deviation be calculated specifically for each region (&quot;regional&quot;), and values be normalized only within a given region? Or should the global median and standard deviation be estimated through random sampling (&quot;global&quot;), but values are normalized inter-regionally across the whole genome?"],
+          [ "# of Clusters",  "The number of clusters (k) to generate. A good rule of thumb is something like <code># of regions / 3000</code>, so that on average each cluster would have ~3000 regions in it. The default of 5 is based on using ~15,000 transcription start sites as the regions. You will want to adjust this if you have many many more regions (or far fewer)." ],
+          [ "Bin Size",  "[Mutally exclusive with <code># of Bins</code>] This option will divide your regions into bins using a fixed bin size. As rule of thumb, a decent bin size is <code>region length / 10</code>. If you want a fixed bin size throughout&mdash;best if your ROIs all have roughly the same length&mdash;check this option and provide the bin size in nucleotides. The default of 200bp is roughly one nucleosome and is provided without knowledge of your specific choice of regions. <i>However, currently Spark <u>requires</u> the Bin Size to be an even multiple of the <code>span</code> size used to upload the data. (e.g. a Bin Size of 50 used on a track that was uploaded with a .wig <code>span</code> size of 20 would fail.)</i>" ],
+          [ "# of Bins",  "[Mutally exclusive with <code>Bin Size</code>] This option will divide each region into this number of bins; so bin size will vary, depending on each region's size. Use this option if you want to divide each region into an equal-sized number of bins. The default of 10 bins per region is a reasonable setting. This option tends to be more robust and not have as many pre-conditions as Bin Size." ],
+          [ "Data Colors",  "For each custom track/file listed, choose a color. Any Atlas tracks you select will be <span style='color:blue; font-weight:bold;'>blue</span>. Currently, Spark supports two colors for tracks: <span style='color:blue; font-weight:bold;'>blue</span> and <span style='color:orange; font-weight:bold;'>orange</span>" ],
+          [ "Submit", "Once you've reviewed the input data, the output destination database, and your settings, click &quot;Submit&quot;." ]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references =>  [
+                          [
+                            '<a href="http://www.bcgsc.ca/downloads/spark/v1.0/">Spark</a> was developed by Cydney Nielsen. A manuscript has been submitted:',
+                            "Nielsen CB, O'Geen H, Xu X, Wang T, Costello JF, Hirst M, Farnham PJ, Jones SJ. <i>Spark: A Tool for Interactive Visual Exploration of Genome-Scale Data</i> In Submission. <b>2011</b> Jan 14."
+                          ],
+                          [ 'The data preprocessing and clustering steps performed by Genboree use Spark 1.0.4', nil ]
+                        ]
+      })
+  %>
+<%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks from the user and/or tracks selected from the Epigenome Atlas. This can be useful as a way of exploring the Epigenome Atlas data or viewing one's own methylation data in the context of selected Atlas tracks.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>A manuscript for this tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <span style='color: red;'>Once the paper is published, the tool will be available for all users.</span>
+          <br>&nbsp;<br>
+          <span style='color: red;'>At that time, the <b>Help</b> information for using the Spark UI will be available as well.</span>
+        "
+      })
+  %>
+<%
+  end
+%>
+</div>

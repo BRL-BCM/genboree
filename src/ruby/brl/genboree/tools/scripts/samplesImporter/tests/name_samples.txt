@@ -1,0 +1,4 @@
+#name	biomaterialState	age	sex	isSick
+BAB1	frozen	36	M	TRUE
+BAB2	frozen	46	M	TRUE
+BAB3	solution	56	F	TRUE

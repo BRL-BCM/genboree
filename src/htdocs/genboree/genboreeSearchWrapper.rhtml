@@ -1,0 +1,242 @@
+<%# THIS FILE USES eruby %>
+
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/genboree/genboreeContext'
+  $VERBOSE = false
+  @cgi = CGI.new()
+  @req = Apache.request
+  @serverName = @cgi.host
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+  # ---------------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  # Constants
+  BLANK_RE = /^\s*$/
+  COMMENT_RE = /^\s*#/
+  BRL_SEARCH_URI = URI.parse("http://#{@serverName}")
+  BRL_SEARCH = '/genboree/protoSearch.rhtml?'
+  GENBOREE_URL = "http://#{@serverName}"
+  EXCEPT_OK, EXCEPT_BAD, PARAM_OK, PARAM_MISSING, HTTP_OK, HTTP_BAD  =  0,1,2,3,4,5
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  @exceptionStatus = EXCEPT_OK
+  @err = nil
+  # ---------------------------------------------------------------------------
+
+begin
+  # Helper Methods
+  def prepForHtml()  # Tell apache we're going to make some html
+    @req.content_type = "text/html"
+    @req.status = 200
+    @req.send_http_header
+  end
+
+  def paramCheck()
+    # Check that correct params were provided
+    if(@cgi.params['query'].to_s.empty? or @cgi.params['refSeqID'].to_s.empty?)
+      # -Try- to get impt params
+      @query = @cgi['query']
+      @refSeqID = @cgi['refSeqID']
+      @isPublic = (@cgi['ip'].nil? or @cgi['ip'].empty?) ? false : true
+      return PARAM_MISSING
+    else  # Process with broken genboree link URLs in mind
+      @query = @cgi.params['query'][0]
+      @refSeqID = @cgi.params['refSeqID'][0]
+      @fromGenboree = (@cgi['fromInternalGbPage'] =~ /true/i ? true : false)
+      @userId = (@cgi.params.key?('userId') ? @cgi['userId'] : nil)
+      @trackName = (@cgi.params.key?('trackName') ? @cgi.params['trackName'][0] : nil) # restrict search to specific track
+       # Get the isPublic param, if it is there
+       @isPublic = (@cgi.params.key?('ip')) ? true : false
+       @doUCSC = (@cgi.params.key?('doUCSC') ? !(@cgi['doUCSC'] =~ /yes|true/i).nil? : true)
+       #$stderr.puts "genboreeSearchWrapper.rhtml: DOING UCSC? (#{@doUCSC} #{@cgi.params.key?('doUCSC')} #{@cgi['doUCSC'] =~ /yes|true/i}) #{@cgi.params.inspect}"
+      @groupAnnos = (@cgi.params.key?('groupAnnos') ? !(@cgi['groupAnnos'] =~ /yes|true/i).nil? : true)
+      return PARAM_OK  # Ok so far
+    end
+  end
+
+  def makeBRLResStr()  # Use all the bits to create the URL to UCSC search tool
+    brlResStr = "#{BRL_SEARCH}query=#{CGI.escape(@query)}&refSeqID=#{CGI.escape(@refSeqID)}&redirAvail="
+    brlResStr << "&trackName=#{CGI.escape(@trackName)}" unless(@trackName.nil?)
+    brlResStr << '&ip=' if(@isPublic)
+    brlResStr << '&doUCSC=false' unless(@doUCSC)
+    brlResStr << '&groupAnnos=false' unless(@groupAnnos)
+    brlResStr << '&fromInternalGbPage=true' if(@fromGenboree)
+    brlResStr << "&userId=#{CGI.escape(@userId)}" if(@userId)
+    return brlResStr
+  end
+
+  def doQuery()  # run a query
+    retVal = HTTP_OK
+    @resp = nil
+    @brlResStr = makeBRLResStr()
+    retries = 0
+    while(retries < 5)
+      begin
+        #$stderr.puts "DEBUG SEARCH: #{BRL_SEARCH_URI.inspect}"
+        http = Net::HTTP.new(BRL_SEARCH_URI.host, BRL_SEARCH_URI.port)
+        http.read_timeout = 900
+        http.start
+        @resp = http.get(@brlResStr)
+        http.finish
+        retries = 5
+        retVal = HTTP_OK
+        break
+      rescue => @err
+        retries += 1
+        retVal =  HTTP_BAD
+      end
+    end
+    return retVal
+  end
+
+  prepForHtml()
+  # ---------------------------------------------------------------------------
+%>
+
+<!-- BEGIN: COMMON HTML HEADER -->
+<HTML><HEAD>
+  <SCRIPT LANGUAGE="JavaScript">
+  <!-- Begin
+    redirectTimeout = "3000" ;
+    redirectURL = "" ;
+    doRedirect = false ;
+    function setRedirect(val) {
+      doRedirect = val ;
+    }
+    function redirect(url) {
+      if(doRedirect)
+      {
+        redirectURL = url ;
+        self.setTimeout("actualRedirect();", redirectTimeout) ;
+      }
+    }
+    function actualRedirect() {
+      if(doRedirect)
+      {
+        self.location.href = redirectURL ;
+      }
+    }
+  //  End -->
+  </SCRIPT>
+  <TITLE>Genboree Search Results</TITLE>
+  <%
+    # ---------------------------------------------------------------------------
+    # DO CHECK/LOAD/CHECK (hierarchical checking)
+    # ---------------------------------------------------------------------------
+      paramStatus = paramCheck()
+      if(paramStatus == PARAM_OK)
+        queryStatus = doQuery()
+      end
+    # ---------------------------------------------------------------------------
+  rescue Exception => @err
+    @exceptionStatus = EXCEPT_BAD
+  ensure
+
+  %>
+  <!-- PAGE HEADER -->
+  <%= (@fromGenboree ? '' : context.includeFile("/genboree/header.rhtml") ) %>
+    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+    <TR>
+    <TD>
+      <P>
+      <H3>Search Results</H3>
+      <P>
+  <!-- END: COMMON HTML HEADER-->
+    <TABLE CELLPADDING="5" CELLSPACING="0" BORDER="0" WIDTH="660" BORDERCOLOR="red">
+    <TR>
+      <TD>
+        <% # 1) general exception thrown %>
+        <% if(@exceptionStatus != EXCEPT_OK) %>
+            A general exception was thrown and caught. Detals:
+            <UL>
+              <LI><%= @req.escape_html(@err.message) %></LI>
+              <LI><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %></LI>
+            </UL>
+            <P>
+        <% # 2) no params provided...show form %>
+        <% elsif(paramStatus != PARAM_OK) %>
+            <FONT color="red"><B>This tool was called incorrectly. Incorrect parameters were provided.<BR>
+            Did you specify a search term in the text box?</B></FONT><P>
+        <% # 3) params provided and got back some text to put %>
+        <% elsif(queryStatus == HTTP_OK and @resp.kind_of?(Net::HTTPOK)) %>
+            <%= @resp.body %>
+        <% # 4) http error occurred %>
+        <% elsif(queryStatus == HTTP_BAD or !@resp.kind_of?(Net::HTTPOK)) %>
+            An HTTP error occured while trying to use the query web service. Details:
+            <P>
+            <% if(queryStatus == HTTP_BAD) %>
+              An exception occurred:
+              <UL>
+                <LI><%= @req.escape_html(@err.message) %></LI>
+                <LI><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %></LI>
+              </UL>
+              <P>
+            <% elsif(!@resp.kind_of?(Net::HTTPOK)) %>
+              An http communication protocol failure occured:
+              <UL>
+                <LI>Code: <%= @req.escape_html(@resp.code) %></LI>
+                <LI>Msg: <%= @req.escape_html(@resp.message) %></LI>
+              </UL>
+              <P>
+            <% else %>
+              An unknown http-related error occurred.
+            <% end %>
+        <% # wtf? %>
+        <% else %>
+            Reached incorrect state. Details:
+            <UL>
+              <LI>paramStatus: (<%= @req.escape_html(paramStatus) %>)</LI>
+              <LI>queryStatus: (<%= @req.escape_html(queryStatus) %>)</LI>
+              <LI>exceptionStatus: (<%= @req.escape_html(@exceptionStatus) %></LI>
+              <LI><%= @req.escape_html(@req.unparsed_uri) %></LI>
+            </UL>
+        <% end %>
+        <% unless(queryStatus == HTTP_OK and @resp.kind_of?(Net::HTTPOK)) %>
+          <UL>
+            <LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+            <LI>Remote http command: <%= @brlResStr %></LI>
+          </UL>
+        <% end %>
+      </TD>
+    </TR>
+    </TABLE>
+
+        <P>
+        <HR>
+        <!-- BEGIN: QUERY FORM -->
+          <P>
+          Or try a different search term.<BR>
+          <FORM METHOD="GET" ACTION="<%= @req.unparsed_uri %>" NAME="form1">
+          <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="1" WIDTH="280" BORDERCOLOR="#c8c5f8">
+          <TR>
+            <TD>
+              <TABLE CELLPADDING="3" CELLSPACING="2" BORDER="0">
+              <TR>
+                <TD ALIGN="left"><INPUT TYPE="text" NAME="query" SIZE="30" MAXLENGTH="80"></TD>
+                <TD ALIGN="left"><INPUT TYPE="submit" NAME="Submit" VALUE="Search"></TD>
+              </TR>
+              </TABLE>
+            </TD>
+          </TR>
+          </TABLE>
+          <INPUT TYPE="hidden" NAME="refSeqID" VALUE="<%= @refSeqID %>" >
+          <INPUT TYPE="hidden" NAME="ip" VALUE="<%= @isPublic ? 'y' : 'n' %>" >
+          </FORM>
+        <!-- END: QUERY FORM -->
+      </TD>
+    </TR>
+    </TABLE>
+  <!-- FOOTER -->
+  <%= (@fromGenboree ? '' : context.includeFile("/genboree/footer.rhtml") ) %>
+
+<% end %><%# begin-rescue-ensure %>

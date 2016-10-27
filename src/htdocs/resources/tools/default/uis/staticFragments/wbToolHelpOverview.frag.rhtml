@@ -1,0 +1,11 @@
+<%
+  releaseStatus = @toolConf.getSetting('info', 'releaseStatus')
+  advisoryHtmlSetting = @toolConf.getSetting('ui', 'advisoryHtml')
+  advisoryHtml = advisoryHtmlSetting[releaseStatus]
+%>
+
+<div class='wbToolDialogInfo'>
+  <%= advisoryHtml %>
+  <%= @toolHelpOverview %>
+  <br>&nbsp;<br>
+</div>

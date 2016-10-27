@@ -1,0 +1,14 @@
+
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <b>Job Id</b>: <i><%= @context['jobId'] %></i>
+    <br/>
+    <br/>The selected sample(s) were successfuly removed from the entity list.
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>

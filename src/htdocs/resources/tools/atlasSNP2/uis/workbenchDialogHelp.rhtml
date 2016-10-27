@@ -1,0 +1,176 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 580px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "<img src='/images/workbench/Atlas-SNP2Logotype180Wide.png' style='float:right; width:181px; height:154px; margin: 0px 3px 0px 3px;'>
+        Atlas-SNP2 is aimed at detecting single nucleotide polymorphisms (SNPs) from whole-genome
+        resequencing data sets produced by second generation sequencing technologies.
+        <br>&nbsp;<br>
+        It will find substitution SNPs. If you are interested in finding insertions/deletions (indels) as well, please try our <code>Atlas-Indel2</code> tool.
+        <br>&nbsp;<br>
+        It will operate on a
+        <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file you provide. While the SAM file can be compressed or
+        plain text, the BAM file should not be as it is already gzip-compressed data. Neither the SAM nor BAM need be sorted.
+        <br>&nbsp;<br>
+        A detailed list of putative SNPs will be output
+        in <a href='http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40'>VCF</a> format.
+        <br>&nbsp;<br>
+        You optionally have these uploaded into Genboree as a track for visualization or use as inputs to other tools.
+        <br>&nbsp;<br>
+        <b>Prior to Job Submission, Review the Inputs and Settings:</b><br>
+        <ul>
+          <li>You have selected the correct <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file to process</li>
+          <li>You've given this analysis job a meaningful name (it will be used as a folder name to store all output files)</li>
+          <li>You've indicated whether the data is from Illumina, 454/Roche, or ABI SOLiD platforms</li>
+          <li>If uploading the track, make sure the track name is meaningful and preferably doesn't already contain data.</li>
+          <li>You've provided a sample name from which this data was obtained; this sample name will appear as a column header in the VCF output file.</li>
+        </ul>
+        <br>
+        The <code>Advanced Settings</code> section contains parameters you can use to tweak prior probabilities and alignment filters. Currently,
+        the defaults are set for all these options according to the selected platform.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:left; font-size: 80%;'>The <a href='#addendum'>Addendum</a><i> at the bottom of this Help dialog contains additional information concerning:
+        <ul style='text-align:left; font-size:inherit;'>
+          <li>Supported sequencing platforms</li>
+          <li>Other limitations</li>
+          <li>Acceptable use guidelines</li>
+          <li>Organization of the Results Folders</li>
+          <li>Uploading SNPs as an Annotation Track</li>
+        </ul>
+        </i></div>
+        <br>
+        <center><span class='footnote'>[ Atlas-SNP2 is described in <a href='http://www.ncbi.nlm.nih.gov/pubmed/20019143'>this journal article</a>. ]</span></center>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Optionally drag the BAM/SAM <u>file</u> with the mapping data into &quot;Input Data&quot;.',
+          "Otherwise the settings dialog will prompt you to choose a BAM/SAM file on your local computer. "
+        ],
+        :types              => [ [ 'File', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>Atlas Tool Suite</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Study Name</span> will be used as a sub-folder to hold related Atlas Tools jobs.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ], # Can also give db/{db}/Files as the output destination
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Study Name', "The top-level output folder used to organize related Atlas2 Suite Tool results."],
+          [ 'Job Name', "Give this Atlas-SNP2 job a unique name."],
+          [ 'Platform', 'Select the sequencing platform the data came from. This will affect what Advanced Settings are available and the appropriate defaults.'],
+          [ 'Sample Name', 'Provide the name of the sample the reads came from. This will be used in formatting the output VCF file.' ],
+          [ 'Upload as a Track ?', 'Check this to upload the SNPs as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.'],
+          [ 'Remove Clonal Duplicates', 'Removes mappings that appear to be due to clonal duplicates, using Picard.'],
+          #[ 'Keep Only Unique Mappings', 'If checked, any read which has been mapped to more than one location will be removed. This will leave only the uniquely mapped reads for downstream analysis.'],
+          [ 'Track Name', 'If uploading the SNPs as a track, provide an LFF-style track name. Preferably not an existing track in the output database.'],
+          [ 'Advanced Settings:',  "The following options are in the Advanced Settings section.</i><br>&nbsp;<br>" ],
+          [ 'Separate SNPs Passing QC', 'If checked, the initial output VCF file will be separated into two VCF files: one with SNPs that passed QC (FILTER: PASS) and the other file with any other value for the FILTER column. This will also include 2 seperate tracks representing SNPs that passed QC and ones which didn\'t. For clarification, the prefix \'PASS_\' will be added to the subtype of the track name for SNPs that passed QC'],
+          [ 'Min. Coverage', 'Alignment quality filter: minimum coverage, for high confidence SNP calls [454, Illumina]' ],
+          [ 'Max. Pile-Up', 'Alignment quality filter: maximum alignment pile-up, for avoiding mapping inaccuracies due to repeats [454, Illumina]' ],
+          [ 'Max. % Substitutions', 'Alignment quality filter: maximum amount of substitutions in an aligned read, as a percentage of read length [454. Illumina]' ],
+          [ 'Max. % Indels', 'Alignment quality filter: maximum amount of indels in an aligned read, as a percentage of read length [454. Illumina]' ],
+          [ 'Insert Size', 'Alignment quality filter: insert size for paired-end resequencing data; 0 disables paired-end sanity checks [454, Illumina]' ],
+          [ 'Posterior Prob. Cutoff', 'Output filter: minimum posterior probablity cutoff [454, Illumina]' ],
+          [ 'Prior Prob. for Coverage &gt;2', 'Prior probability setting: prior(error|c) when variant coverage number is above 2 [454, Illumina]'],
+          [ 'Prio Prob. for Coverage &lt;=2', 'Prior probability setting: prior(error|c) when variant coverage number is 1 or 2 for 454 data [454]' ],
+          [ 'Submit', "Once you've reviewed the input file, the output destination database, and your comparison settings, click &quot;Submit&quot;." ]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Atlas-SNP2 was originally published in the following journal article:',
+                                    'Shen Y, Wan Z, Coarfa C, Drabek R, Chen L, Ostrowski EA, Liu Y, Weinstock GM,
+                                    Wheeler DA, Gibbs RA, Yu F. <i>A SNP discovery method to assess variant allele
+                                    probability from next-generation resequencing data.</i> Genome Res. <b>2010</b>
+                                    Feb;<b>20(2)</b>:273-80. [<a href="http://www.ncbi.nlm.nih.gov/pubmed/20019143">PubMed</a>]</span>'
+                                  ],
+                                  [ 'The Atlas-SNP2 tools have been subsequently fine tuned and improved by: Jin Yu, Danny Challis, Uday Evani, and Fuli Yu.', nil],
+                                  [ 'Integration into the Genboree Workbench by Sameer Paithankar and Andrew R Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>Supported Platforms:</b><br>
+          Currently, Atlas-SNP2 supports data produced by these platforms:
+          <ul>
+            <li>Illumina</li>
+            <li>454 Life Sciences (both GS FLX &amp; Titanium)</li>
+            <li>ABI SOLiD</li>
+          </ul>
+          <br>
+          Please ensure you correctly indicate the platform that produced your raw data prior to the mapping step, so the correct program and trained probability model can be applied.
+          <br>&nbsp;<br>
+          Additionally, the available Advanced Settings will differ depending on the platform.
+          <br>&nbsp;<br>
+          <b>Limitations:</b><br>
+          <b>(A)</b> Although you can apply the mapper/aligner of your choice to produce the SAM or BAM file for Illuina and 454 platforms, for SOLiD data only mappings produced by <a href='http://sourceforge.net/apps/mediawiki/bfast/index.php?title=Main_Page'>BFAST</a> are supported.
+          <br>&nbsp;<br>
+          <b>(B)</b> Note that for SOLiD data that the mapping quality filters are built into the caller and cannot be tweaked at this time. Currently, only reads uniquely mapped by BFAST will be used (mapping quality score == 255) and the mapping must have fewer than 4 substitution or insertion/deletion bases.
+          <br>&nbsp;<br>
+          <b>(C)</b> For greatest robustness, the reads should have been mapped against a <i>standard</i> genome assembly, such as the <a href='ftp://hgdownload.cse.ucsc.edu/goldenPath/'>ones available at UCSC</a>. UCSC chromosome names and sizes will be used when interpretting the contents of your SAM or BAM file. <i>The genome version associated with the output database will be used to interpret the alignments.</i>
+          <br>&nbsp;<br>
+          <b>(D)</b> Currently, only single-sample BAM/SAM data are supported. However, we are working on exposing the processing of multi-sample alignment data.
+          <br>&nbsp;<br>
+          <b>Acceptable Use Guidelines:</b><br>
+          <ul>
+            <li>The tool is currently intended to be used with a single BAM/SAM file at a time.</li>
+            <li>Although the tool will accept very large BAM/SAM files, please do not abuse this public service with many massive BAM/SAM files. Modern sequencing platforms can produce a lot of data quickly. Ideally, your alignments have been well-filtered for quality by your mapper.</li>
+            <li><i>However</i>, if you have many BAM/SAM files to process or have several very large alignment files, please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> for assistance and ideas about how best to proceed.</li>
+          </ul>
+          <br>
+          <b>Organization of the Results Folders</b><br clear='all'>
+          <img src='/images/workbench/help/atlas2suite/atlasSNP2_results.png' style='float:right; width:292px; height:250px; margin: 0px 3px 0px 3px;'>
+          As depicted on the <b>right</b>, within the <u>Atlas2 Suite Analysis</u> files folder, you can use Studies group related analyses. You can have a Study that keeps your analyses
+          separate from other collaborators, or that is topic-oriented, or just have one Study that will contain all results. It is up to you.
+          <p>
+          Within your Study, all Jobs will have sub-folders within <u>Atlas-SNP2</u>; you provide the unique Job Name.
+          <p>
+          Results are available in several formats, including the standard <code>.VCF</code> format. The LFF format is appropriate for uploading into Genboree and
+          is produced whether or not you arrange to have the SNP calls uploaded as a track.
+          <br>&nbsp;<br>
+          <b>Uploading SNPs as an Annotation Track</b><br clear='all'>
+          <img src='/images/workbench/help/atlas2suite/atlasSNP2_browserExample.png' style='float:right; width:386px; height:222px; margin: 0px 3px 0px 3px;'>
+          If you choose to upload the SNP calls as annotations, you will provide a Track Name (comprised of a 'type' and 'subtype')
+          and then can view the SNPs in the Genboree browser. As depicted on the <b>right</b>, the user's track name was <code>NA19143:SNPs</code>.
+          The annotation names indicate the two alleles found at the SNP location (either Ref/Alt or Alt/Alt) and what the nucleotide is in the reference
+          genome.
+          <br>&nbsp;<br>
+          Additionally, if you are familiar with Genboree then this track can be configured as a remote track for drawing at UCSC. The <code>BigBed</code> format is the most appropriate.
+          <br>&nbsp;<br>
+          <b>Obtaining the Software:</b><br>
+          If you would like to run Atlas-SNP2 locally yourself, the software is <a href='http://www.hgsc.bcm.tmc.edu/cascade-tech-software_atlas_snp-ti.hgsc'>available for download</a>.
+        "
+      })
+  %>
+</div>

@@ -1,0 +1,37 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "redmineLabel": [
+        ".+",
+        "A label for a configured Redmine instance must be provided with the \"redmineLabel\" setting"
+      ],
+      "redminePrj": [
+        ".+",
+        "A Redmine project identifier must be provided with the \"redminePrj\" setting"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/grp/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

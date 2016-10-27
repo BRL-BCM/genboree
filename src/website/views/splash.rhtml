@@ -1,0 +1,380 @@
+<%
+#first get the entire splash page content (request everything a single time)
+splashContentArr = GenboreeRedmine.getRedminePage(@server, "SPLASH_CONTENT")
+#splashContentArr = GenboreeRedmine.getRedminePage(@server, "ASHG_MATT_CONTENT")
+
+#then get the content for each section based on hash name (calls a function to search the array, doesn't ping Remdine again)
+ctaHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "CTA")
+commonsHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "COMMONS")
+workbenchHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "WORKBENCH")
+knowledgeHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "KNOWLEDGE")
+epiAtlasHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "EPIGENOME_ATLAS")
+researchHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "RESEARCH")
+aboutHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "ABOUT")
+fundingHash = GenboreeRedmine.getRedminePageSubset(splashContentArr, "FUNDING")
+
+#get content for the TOOLS section based on ID pattern 'TOOLS_'
+toolsArrHash = GenboreeRedmine.getRedminePageCollectionViaPattern(splashContentArr, "TOOLS_")
+aboutFeaturesArrHash = GenboreeRedmine.getRedminePageCollectionViaPattern(splashContentArr, "FEATURES_")
+
+%>
+
+<!-- CTA -->
+<% if not ctaHash.empty? %> 
+	<section id="cta">
+		<div class="container">
+			<div class="col-sm-8">
+				<h1> <%= ctaHash["h1"] %> </h1>
+				<h2> <%= ctaHash["h2"] %> </h2>
+				<p> <%= ctaHash["p"] %> </p>
+				<a href="<%= ctaHash["link"] %>" class="btn btn-primary"> <%= ctaHash["link_text"] %> </a>
+			</div>
+			<div class="col-sm-4">
+				<img src="<%= @redmineUrl %><%= ctaHash["image_path"] %>" alt="<%= ctaHash["alt_image_text"] %>" class="img-responsive hidden-xs">
+			</div>
+		</div>
+	</section>
+<% end %>
+<!-- /CTA -->
+
+<!-- WORKBENCH -->
+<% if not workbenchHash.empty? %>
+	<section id="workbench" class="black-bg">
+		<div class="workbench-bg">
+			<img src="<%= @redmineUrl %><%= workbenchHash["image_path"] %>" alt="" class="img-responsive hidden-xs">
+		</div>
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12 col-sm-12 col-md-7">
+					<p class="tag"> <%= workbenchHash["tag_text"] %> </p>
+					<div class="workbech-cta">
+						<h1> <%= workbenchHash["h1"] %> </h1>
+						<a href="#" class="hidden-xs hidden-md hidden-lg nounder" data-toggle="modal" data-target="#vidmodal">
+							<button class="pull-right btn btn-orange-round-square">
+								<i class="icon-video-01"></i>
+								<p> <%= workbenchHash["p"] %> </p>
+							</button>
+						</a>
+						<h2 class="main-cta"> <%= workbenchHash["h2"] %> </h2> 
+						<p class="main-cta"><a href="<%= workbenchHash["link"] %>" target="_blank"> <%= workbenchHash["link_text"] %> </a></p>
+					</div>
+
+				</div>
+				<div class="col-sm-5">
+
+					<!-- Video Modal -->
+					<a href="#" class="hidden-xs hidden-sm nounder" data-toggle="modal" data-target="#vidmodal">
+						<button class="pull-right btn btn-orange-round-square">
+							<i class="icon-video-01"></i>
+							<p> <%= workbenchHash["video_text"] %> </p>
+						</button>
+					</a>
+				</div>
+
+			</div>
+			<div class="row visible-xs">
+				<div class="col-xs-12 push30">
+				<!-- Video Direct to Youtube for Mobile -->
+					<a href="<%= workbenchHash["video_path"] %>" class=" nounder">
+						<button class="btn btn-orange-round-square center-block">
+							<i class="icon-video-01"></i>
+							<p> <%= workbenchHash["video_text"] %> </p>
+						</button>
+					</a>
+				</div>
+			</div>
+
+			<div id="tools" class="row">
+				<div class="col-sm-10 col-sm-offset-1">
+					<!-- Nav tabs -->
+					<ul class="nav nav-tabs" role="tablist">
+						<!-- set up the navigation based on array of tool hashes -->
+						<%	toolsArrHash.each_with_index{ |toolHash, toolHashCount| %>
+								<% if toolHashCount == 0 %>
+									<li class="active"><a href="#<%= toolHash["tag_text"] %>" role="tab" data-toggle="tab"><%= toolHash["tag_text"] %></a></li>
+								<% else %>
+									<li><a href="#<%= toolHash["tag_text"] %>" role="tab" data-toggle="tab"><%= toolHash["tag_text"] %></a></li>
+								<% end %>
+						<% } %>
+						
+					</ul>
+
+					<!-- Tab panes -->
+					<div class="tab-content push30">
+						<%	toolsArrHash.each_with_index{ |toolHash, toolHashCount| %>
+							<% if toolHashCount == 0 %>
+								<div class="tab-pane fade in active" id="<%= toolHash["tag_text"] %>">
+							<% else %>
+								<div class="tab-pane fade" id="<%= toolHash["tag_text"] %>">
+							<% end %>
+
+							  	<div class="row">
+									<div class="col-xs-12">
+										<h4> <%= toolHash["h4"] %> </h4>
+										<% if toolHash["read_more_link"] == nil %>
+											<p> <%= toolHash["p"] %> <%= toolHash["read_more_link_text"] %></p>
+										<% else %>
+											<p> <%= toolHash["p"] %> <a href="<%= toolHash["read_more_link"] %>"><%= toolHash["read_more_link_text"] %></a></p>
+										<% end %>
+									</div>
+								</div> 
+
+								<% iteratorFlag = 1 %>
+								<% currentPosition = 1 %>
+								<% 
+									while iteratorFlag != 0
+										p = toolHash["p_#{currentPosition}"]
+										image_path = toolHash["image_path_#{currentPosition}"]
+										alt_image_text = toolHash["alt_image_text_#{currentPosition}"]
+										tool_name = toolHash["tool_name_#{currentPosition}"]
+										
+										if tool_name != nil && tool_name != "" %>
+											<div class="row push30">
+												<div class="col-sm-2">
+													<img src="<%= @redmineUrl %><%= image_path %> " alt="<%= alt_image_text %>" class="img-responsive">
+												</div>
+												<div class="col-sm-10">
+													<p class="orange"><i class="fa fa-wrench"></i> <%= tool_name %> </p>
+													<p><%= p %></p>
+												</div>
+											</div> 
+								<%		else
+											iteratorFlag = 0
+										end
+										currentPosition += 1
+									end 
+								%>
+							</div>							
+						<% } %>
+					</div><!-- /Tab Panes -->
+				</div><!-- /col-sm-10 -->
+			</div><!-- /#tools -->
+		</div>
+	</section>
+<% end %>
+<!-- /WORKBENCH -->
+
+<!-- COMMONS -->
+<% if not commonsHash.empty? %>
+	<section id="commons" class="black-bg">
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-7">
+					<p class="tag"> <%= commonsHash["tag_text"] %> </p>
+					<h1> <%= commonsHash["h1"] %> </h1>
+					<h3> <%= commonsHash["h3"] %> </h3>
+					<p> <%= commonsHash["p"] %> </p>
+					<p><a href="<%= commonsHash["link"] %>" target="_blank"> <%= commonsHash["link_text"] %> </a></p>
+				</div>
+				<div class="col-sm-5">
+					<img src="<%= @redmineUrl %><%= commonsHash["image_path"] %>" alt="<%= commonsHash["alt_image_text"] %>" class="img-responsive ">
+				</div>
+			</div>
+		</div>
+	</section>
+<% end %>
+<!-- /COMMONS -->
+
+<!-- BREAK -->
+<% if not commonsHash.empty? %>
+	<section class="black-bg hr">
+		<div class="container">
+			<hr>
+		</div>
+	</section>
+<% end %>
+<!-- /BREAK -->
+
+<!-- KNOWLEDGEBASE -->
+<% if not knowledgeHash.empty? %>
+	<section id="knowledge" class="black-bg">
+		<div class="container">
+			<div class="row push50">
+				<div class="col-xs-12">
+					<p class="tag"><%= knowledgeHash["tag_text"] %></p>
+					<h1><%= knowledgeHash["h1"] %></h1>
+					<p><%= knowledgeHash["p"] %> </p> 
+					<p><a href="<%= knowledgeHash["link"] %>" target="_blank"> <%= knowledgeHash["link_text"] %> </a></p>
+				</div>
+			</div>
+		</div>
+	</section>
+<% end %>
+<!-- /KNOWLEDGEBASE -->
+
+<!-- HUMAN_ATLAS -->
+<% if not epiAtlasHash.empty? %>
+	<section id="human-atlas" class="white-bg">
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-5"><img src="<%= @redmineUrl %><%= epiAtlasHash["image_path"] %>" alt="<%= epiAtlasHash["alt_image_text"] %>" class="img-responsive"></div>
+				<div class="col-sm-7">
+					<h1 class="push50"><%= epiAtlasHash["h1"] %></h1>
+					<h2><%= epiAtlasHash["h2"] %></h2>
+					<p><%= epiAtlasHash["p"] %></p>
+					<p><a href="<%= epiAtlasHash["link"] %>" target="_blank"><%= epiAtlasHash["link_text"] %></a></p>
+				</div>
+			</div>
+			<hr>
+		</div>
+	</section>
+<% end %>
+<!-- /HUMAN_ATLAS -->
+
+<!-- RESEARCH -->
+<% if not researchHash.empty? %>
+	<section id="research" class="white-bg">
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12">
+					<h1><%= researchHash["h1"] %></h1>
+				</div>
+			</div>
+
+			<% #Determine # of entities in array hash based on header to know how to format column size %>
+			<% entities, colSize = 0 %>
+			<% researchHash.each{ |k,v| 
+				entities += 1 if k =~ /^h3_/
+			} %>
+
+			<% 
+				colSize = 12 / entities  
+				colSize = 4 if colSize < 4
+				colSize = 10 if colSize == 12
+			%>
+
+			<!-- <div class="row push50"> -->
+				<% iteratorFlag = 1 %>
+				<% currentPosition = 1 %>
+				<% loopCount = 0 %>
+				<% 
+					while iteratorFlag != 0
+						image_path = researchHash["image_path_#{currentPosition}"]
+						alt_image_text = researchHash["alt_image_text_#{currentPosition}"]
+						h3 = researchHash["h3_#{currentPosition}"]
+						p = researchHash["p_#{currentPosition}"]
+						link = researchHash["link_#{currentPosition}"]
+						link_text = researchHash["link_text_#{currentPosition}"]
+						em = researchHash["em_#{currentPosition}"]
+				%>
+
+						<% if h3 != nil && h3 != "" %>
+							<% if loopCount == 0 %>
+								<div class="row push50">
+							<% end %>
+
+
+							<div class="col-md-<%= colSize %>">
+								<img src="<%= @redmineUrl %><%= image_path %>" alt="<%= alt_image_text %>" class="img-responsive">
+								<em><%= em %></em>
+								<h3><%= h3 %></h3>
+								<p><%= p %></p>
+								<p><a href="<%= link %>" target="_blank"><%= link_text %></a></p>
+							</div>
+
+
+							<% if loopCount == 2 %>
+								</div>
+							<% end %>
+
+				<%		else
+							iteratorFlag = 0
+						end
+
+						
+						currentPosition += 1
+						loopCount += 1
+						loopCount = 0 if loopCount == 3
+					end 
+				%>
+			</div>
+		</div>
+	</section>
+<% end %> 
+<!-- /RESEARCH -->
+
+<!-- ABOUT -->
+<% if not aboutHash.empty? %>
+	<section id="about" class="blue-bg">
+		<div class="about-bg">
+
+			<img src="<%= @redmineUrl %><%= aboutHash["image_path"] %>" alt="<%=  aboutHash["alt_image_text"] %>" class="img-responsive about-img" >
+		</div>
+		<div class="container">
+			<div class="row push50">
+				<div class="col-xs-12 col-sm-8 col-md-8 col-lg-7">
+					<h1><%=  aboutHash["h1"] %></h1>
+					<p><%=  aboutHash["p"] %></p>
+					<p><a href="<%=  aboutHash["link"] %>"><%=  aboutHash["link_text"] %></a></p>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-12">
+					<div class="about-sub">
+						<% aboutFeaturesArrHash.each_with_index{ |featureHash, featureCount| %>
+							<div class="row">
+								<div class="col-sm-2"><i class="<%= featureHash["font_icon"] %>"></i></div>
+								<div class="col-xs-9">
+									<h3><%= featureHash["h3"] %></h3>
+									<p><%= featureHash["p"] %><a href="<%= featureHash["link"] %>"><%= featureHash["link_text"] %></a></p>
+								</div>
+							</div>
+						<% } %>
+
+						<div class="row">
+							<div class="col-sm-12">
+								<div class="push50">
+									<h3 class="text-center"><%= fundingHash["h3"] %></h3>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="funding center-block">
+								<% if fundingHash["image_path_row1_left"] != nil && fundingHash["image_path_row1_left"] != "" %>
+									<a href="<%= fundingHash["link_left"] %>" target="_blank">
+										<img src="<%= @redmineUrl %><%= fundingHash["image_path_row1_left"] %>" alt="<%= fundingHash["alt_image_text_row1_left"] %>" class="img-responsive">
+									</a>
+								<% end %>
+
+								<% if fundingHash["image_path_row1_right"] != nil && fundingHash["image_path_row1_right"] != "" %>
+									<a href="<%= fundingHash["link_right"] %>" target="_blank">
+										<img src="<%= @redmineUrl %><%= fundingHash["image_path_row1_right"] %>" alt="<%= fundingHash["alt_image_text_row1_right"] %>" class="nih-nhgri img-responsive ">
+									</a>
+								<% end %>
+							
+							</div>
+						</div>
+						<div class="row push30">
+							<div class="col-md-12 nih-logo">
+								<% if fundingHash["link_middle"] != nil && fundingHash["link_middle"] != "" %>
+									<a href="<%= fundingHash["link_middle"] %>" target="_blank">
+										<img src="<%= @redmineUrl %><%= fundingHash["image_path_row2_middle"] %>" alt="<%= fundingHash["alt_image_text_row2_middle"] %>" class="img-responsive">
+									</a>
+								<% end %> 
+							</div>
+						</div>
+					</div>
+				</div>
+			</div-->
+		</div>
+	</section>
+<% end %>
+<!-- /ABOUT -->
+
+<!-- VIDEO Modal -->
+<div class="modal fade" id="vidmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div id="login" class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+				<h4 class="modal-title" id="myModalLabel"><%= workbenchHash["video_title"] %></h4>
+			</div>
+			<div class="modal-body">
+				<div class="embed-responsive embed-responsive-4by3 vidmodal">
+					<iframe class="embed-responsive-item" src="<%= workbenchHash["video_path"] %>"></iframe>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- /VIDEO Modal -->

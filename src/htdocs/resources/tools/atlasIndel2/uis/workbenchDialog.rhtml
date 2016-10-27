@@ -1,0 +1,185 @@
+<%# RENDER HTML %>
+<%
+    if(@inputs.size == 0)
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+    else
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+    end
+%>
+<%= formTag %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 480px; height: 372px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "<img src='/images/workbench/Atlas-Indel2Logotype180Wide.png' style='float:right; width:181px; height:154px; margin: 0px 3px 0px 3px;'>
+        Atlas-Indel2 is aimed at detecting insertion &amp; deletion polymorphisms (indels) from whole-genome
+        resequencing data sets produced by second generation sequencing technologies.
+        <br>&nbsp;<br>
+        If you are interested in substitution SNPs, please try our <code>Atlas-SNP2</code> tool.
+        <br>&nbsp;<br>
+        It will operate on a <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file you provide. While the SAM file can be compressed or
+        plain text, the BAM file should not be as it is already gzip-compressed data. Neither the SAM nor BAM need be sorted.
+        <br>&nbsp;<br>
+        A detailed list of putative indels will be output
+        in <a href='http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40'>VCF</a> format.
+        <br>&nbsp;<br>
+        You optionally have these uploaded into Genboree as a track for visualization or use as inputs to other tools.
+        <br>&nbsp;<br>
+        <b>Prior to Job Submission Review the Inputs and Settings:</b><br>
+        <ul>
+          <li>You have selected the correct <a href='http://samtools.sourceforge.net/SAM-1.3.pdf'>SAM or BAM</a> file to process</li>
+          <li>You've given this analysis job a meaningful name (it will be used as a folder name to store all output files)</li>
+          <li>You've indicated whether the data is from Illumina or ABI SOLiD platforms</li>
+          <li>If uploading the track, make sure the track name is meaningful and preferably doesn't already contain data.</li>
+          <li>You've provided a sample name from which this data was obtained; this sample name will appear as a column header in the VCF output file.</li>
+        </ul>
+        <br>
+        The <code>Advanced Settings</code> section contains parameters you can use to tweak prior probabilities and alignment filters. Currently,
+        the defaults are set for all these options according to the selected platform.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:left; font-size: 80%;'><i>Additional details are available in the Help dialog.</i></div>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Data:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    if(@outputs[0] =~ /\/files?/)
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @outputs } )
+      })
+    else
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+    end
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      widgets1 = []
+      if(@inputs.size == 0)
+          widgets1 =
+                    [
+                      { :id => 'wbContext', :type => :hidden },
+                      { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                      { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                    ]
+      end
+      widgets2 =
+              [
+                { :id => 'studyName', :label => 'Study Name', :type => :text , :size => "25", :value => "AtlasTools-Study-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder used to organize related Atlas2 Suite Tool results.' },
+                { :id => 'jobName', :label => 'Job Name', :type => :text , :size => "25", :value => "AtlasIndel2-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :jobName => 'Give this Atlas-Indel2 job a unique name.' },
+                { :id => 'platformType', :label => 'Platform', :type => :select, :onchange => "changeDefaults(this.value)", :options =>
+                  {
+                    :'solid' => { :label => 'SOLiD', :selected => true },
+                    :illumina => { :label => 'Illumina' }
+                  },
+                  :title => 'Select the sequencing platform the data came from. This will affect what Advanced Settings are available and the appropriate defaults.'
+                },
+                { :id => 'sampleName', :label => 'Sample Name', :type => :text, :onblur => "fillTrackName(this.value)", :size => "25", :value => "", :style => 'font-size: 80%', :title => 'Provide the name of the sample the reads came from. This will be used in formatting the output VCF file.'},
+                { :id => 'uploadIndelTrack', :label => 'Upload as a Track ?', :type => :checkbox, :onClick => "toggleTrackNameDisplay(this.checked)", :checked => true, :title => 'Check this to upload the indels as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.'},
+                { :id => 'trackName', :label => 'Indel Track Name', :type => :gbTrackName, :defaultType => '', :defaultSubtype => '', :title => 'If uploading the indels as a track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+                { :id => 'advancedSettings', :type => :advancedSection,
+                  :width => '450px',
+                  :text => '(The default values for these settings are what will be used if you do not change them.)',
+                  :widgets =>
+                  [
+                    { :id => 'zCutOff', :label => 'p-CutOff', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.0", :style => 'font-size: 80%', :title => 'The indel probability (p) cutoff value for the logistic regression model. Indels with a p-value less than this cutoff will not be called. Increasing this cutoff will increase specificity, but will lower sensitivity. If you adjust this cutoff, you should usually also adjust the 1bp p-cutoff (see below). Illumina Suggested value: 0.5 ; SOLiD Suggested value: 0.5'},
+                    { :id => 'z1bpCutOff', :label => '1bp p-CutOff', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "1.0", :style => 'font-size: 80%', :title => 'The indel probability (p) cutoff value for 1bp deletions. This may be set to a stricter standard than the normal p-cutoff to increase callset specificity. This is very useful for SOLiD data, but should not be generally needed for Illumina data. Illumina Suggested value: 0.5 ; SOLiD Suggested value: 0.88'},
+                    { :id => 'minTotalDepth', :label => 'Min. Total Depth', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "2", :style => 'font-size: 80%', :title => 'Alignment quality filter: minimum total depth coverage required at an indel site. Indels at a site with less depth coverage will not be called. This cutoff may not be set lower than 4 with the Illumina model. Increasing this value will increase specificity, but lower sensitivity. Suggested range: 2-12'},
+                    { :id => 'minVarReads', :label => 'Min. Variant Reads', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "2", :style => 'font-size: 80%', :title => 'The minimum number of variant reads required for an indel to be called. Increasing this number may increase specificity but will lower sensitivity. Suggested range: 1-5'},
+                    { :id => 'minVarRatio', :label => 'Min. Variant Ratio', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.07", :style => 'font-size: 80%', :title => 'The variant-reads/total-reads cutoff. Indels with a ratio less than the specified value will not be called. Increasing this value may increase specificity, but will lower sensitivity. Suggested range: 0-0.15'},
+                    { :id => 'strandDirFilter', :label => 'Strand Direction Filter', :labelStyle => 'width:250px;', :type => :checkbox, :title => 'When included, requires indels to have at least one variant read in each strand direction. This filter is effective at increasing the specificity, but also carries a heavy sensitivity cost.'},
+                    { :id => 'homoVarCutOff', :label => 'Homozygous Variant CutOff', :labelStyle => 'width:250px;', :type => :text, :size => "6", :value => "0.5", :style => 'font-size: 80%', :title => 'The homozygous variant cutoff. This cutoff is used in the preliminary genotyping performed by Atlas-Indel2. If the variant reads divided by the variant reads + the reference reads is greater than this cutoff it will be marked as a homozygote, otherwise it will be marked as a heterozygote.'}
+                  ]
+                }
+              ]
+      widgets = widgets1 + widgets2
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Atlas-Indel2 Settings",
+        :widgets => widgets
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>
+<script type="text/javascript">
+function changeDefaults(value)
+{
+  var zCutOff = Ext.get('zCutOff').dom ;
+  var minTotalDepth = Ext.get('minTotalDepth').dom ;
+  var minVarReads = Ext.get('minVarReads').dom ;
+  var minVarRatio = Ext.get('minVarRatio').dom ;
+  var z1bpCutOff = Ext.get('z1bpCutOff').dom ;
+  var homoVarCutOff = Ext.get('homoVarCutOff').dom ;
+  if(value == 'illumina')
+  {
+
+    zCutOff.value = "-1.0" ;
+    minTotalDepth.value = "4" ;
+    minVarReads.value = "1" ;
+    minVarRatio.value = "0.1" ;
+    z1bpCutOff.value = "-1.0" ;
+    homoVarCutOff.value = "0.6" ;
+  }
+  else // SOLiD
+  {
+    zCutOff.value = "0.0" ;
+    minTotalDepth.value = "2" ;
+    minVarReads.value = "2" ;
+    minVarRatio.value = "0.07" ;
+    z1bpCutOff.value = "1.0" ;
+    homoVarCutOff.value = "0.5" ;
+  }
+}
+
+function fillTrackName(sampleName)
+{
+  var type = Ext.get('lffType').dom ;
+  var subtype = Ext.get('lffSubType').dom ;
+  if(type.value == '')
+  {
+    type.value = sampleName ;
+  }
+  if(subtype.value == '')
+  {
+    subtype.value = 'Indels' ;
+  }
+}
+
+function toggleTrackNameDisplay(isChecked)
+{
+  var trackType = Ext.get('lffType').dom ;
+  var trackSubType = Ext.get('lffSubType').dom ;
+  if(isChecked)
+  {
+    trackType.disabled = false ;
+    trackSubType.disabled = false ;
+  }
+  else
+  {
+    trackType.disabled = true ;
+    trackSubType.disabled = true ;
+  }
+}
+
+</script>

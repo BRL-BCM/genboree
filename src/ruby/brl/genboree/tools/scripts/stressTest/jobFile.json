@@ -1,0 +1,33 @@
+{
+  "inputs": [
+    "http://10.15.5.109/REST/v1/grp/raghuram_group/db/datafreeze4/trks/entityList/devbr1?"
+  ],
+  "settings": {
+    "positionalInputsTool": "true",
+    "roiTrack": "http://10.15.5.109/REST/v1/grp/ROI%20Repository/db/ROI%20Repository%20-%20hg19/trk/Promoters%3AALL?",
+    "clusterQueue": "gbApiHeavy",
+    "spanAggFunction": "avg",
+    "removeNoDataRegions": "on",
+    "roiTrkSelect": "http://10.15.5.109/REST/v1/grp/ROI%20Repository/db/ROI%20Repository%20-%20hg19/trk/Promoters%3AALL?",
+    "analysisName": "EpigenomicSlice2012-05-24-14:56:33"
+  },
+  "context": {
+    "apiDbrcKey": "API:10.15.5.109",
+    "jobId": "wbJob-stressTest-1337889403_559617",
+    "toolTitle": "Epigenomic Slice Tool",
+    "toolScriptPrefix": "",
+    "userLastName": "raghuraman",
+    "gbConfFile": "/cluster.shared/local_test/conf/genboree/genboree.config.properties",
+    "userId": "1466",
+    "gbAdminEmail": "genboree_admin@genboree.org",
+    "userEmail": "raghuram@bcm.edu",
+    "gbLockFileKey": "toolJob",
+    "userFirstName": "sriram",
+    "scratchDir": "/scratch/wbJob-epigenomicslice-1337889403_559617",
+    "toolIdStr": "stressTest",
+    "userLogin": "raghuram"
+  },
+  "outputs": [
+    "http://10.15.5.109/REST/v1/grp/raghuram_group/db/datafreeze4?"
+  ]
+}

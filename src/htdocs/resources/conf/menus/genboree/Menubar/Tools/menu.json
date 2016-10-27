@@ -1,0 +1,22 @@
+[
+  {
+    "text": "VGPaint",
+    "href": "/java-bin/vgpConfig.jsp"
+  },
+  {
+    "text": "VGResults",
+    "href": "/java-bin/vgpResults.jsp"
+  },
+  {
+    "text": "Track Operations",
+    "href": "/java-bin/trackOps.jsp"
+  },
+  {
+    "text": "Plug-ins",
+    "href": "/java-bin/PluginsWrapper.jsp"
+  },
+  {
+    "text": "Plug-in Results",
+    "href": "/java-bin/PluginsResults.jsp"
+  }
+]

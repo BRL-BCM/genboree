@@ -1,0 +1,43 @@
+<%@ page import="org.genboree.editor.AnnotationDetail,
+java.util.ArrayList"%>  <%
+boolean doUpdate = false;
+if (lastPageIndex != null ) {
+    if (lastPageIndex.compareTo("" + currentPageIndex)!=0)
+    doUpdate = true;
+    if (!initPage &&  !(updateAll||unselectAll))
+    doUpdate = true;
+}
+if (doUpdate) {
+    if (lastPageIndex != null && page2Annotations.get(lastPageIndex)!= null)
+    lastPageAnnotations  =  (AnnotationDetail[]) page2Annotations.get(lastPageIndex);
+    fids = request.getParameterValues(checkBoxName);
+    if (fids == null && initPage) {
+    if (lastPageAnnotations != null)
+    for (int j=0; j<lastPageAnnotations.length; j++) {
+    if (groupSelectedFidList.contains("" + lastPageAnnotations[j].getFid()))
+    groupSelectedFidList.remove("" + lastPageAnnotations[j].getFid());
+    }
+    }
+    else  if (fids != null) {
+    ArrayList tempList = new ArrayList();
+    for (int j=0; j<fids.length; j++)
+    tempList.add(fids[j]);
+    if(lastPageAnnotations != null) {
+    for (int j=0; j<lastPageAnnotations.length; j++) {
+    if (tempList.contains("" + lastPageAnnotations[j].getFid())){
+    if (!groupSelectedFidList.contains("" +lastPageAnnotations[j].getFid()))
+    groupSelectedFidList.add("" + lastPageAnnotations[j].getFid());
+    }
+    }
+    }
+    if (lastPageIndex != null && page2Annotations.get(lastPageIndex)!= null)
+    lastPageAnnotations  =  (AnnotationDetail[]) page2Annotations.get(lastPageIndex);
+    if (lastPageAnnotations != null)
+    for (int j=0; j<lastPageAnnotations.length; j++) {
+    if (!tempList.contains("" + lastPageAnnotations[j].getFid()))
+    groupSelectedFidList.remove("" + lastPageAnnotations[j].getFid());
+    }
+    }
+    mys.setAttribute("selectedFidList", groupSelectedFidList);
+}
+%>

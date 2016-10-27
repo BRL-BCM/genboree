@@ -1,0 +1,23 @@
+<table class="wbFieldSet" width=100%>
+  <tr>
+    <td colspan=2>
+      <div class="wbFieldSetLegendDiv">
+        <span class="wbFieldSetLegend">References &amp; Attributions</span>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <ol style="margin-left: 10px;">
+        <%  @references.each { |reference| %>
+              <li><%= reference[0] %>
+              <br>
+              <% if(reference[1]) %>
+                <div class="journalRef"><%= reference[1] %></div>
+              <% end %>
+              </li>
+        <%  } %>
+      </ol>
+    </td>
+  </tr>
+</table>

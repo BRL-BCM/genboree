@@ -1,0 +1,276 @@
+<%
+  # ##############################################################################
+  # LIBRARIES
+  # - The first 3 are standard for all apps.
+  # ##############################################################################
+  require 'cgi'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # ##############################################################################
+  # SETUP / INITIALIZATION
+  # ##############################################################################
+
+  # ---------------------------------------------------------------
+  # STANDARD HELPER METHODS
+  # - these appear in most input.rhtml files
+  # - some customization or additions may be necessary
+  # ---------------------------------------------------------------
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+ # ---------------------------------------------------------------
+  # IMPORTANT COMMON VARIABLES
+  # - these and maybe some tool-specific ones are standard
+  # ---------------------------------------------------------------
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  @prepped4output = false
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # ---------------------------------------------------------------
+  # GET TRACK LIST FOR SELECTED DATABASE
+  # - The refSeqId is provided via from the droplist for you
+  # - Feed it to inner.getTracks() to get a list of tracks for this database
+  #   . tracks is a hash of "type:subtype" => <ftype record as Array>
+  #   . so you have all the info for tracks and displayable names too
+  # ---------------------------------------------------------------
+  $stder.err "winnow => cgi: #{cgi.inspect}"
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  tracks = inner.getTracks( refSeqId )
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  # ---------------------------------------------------------------
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  # - You need to have the list of existing job names
+  # - This would be specific for each group, DB, and tool combination)
+  # ---------------------------------------------------------------
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+
+<%# --------------------------------------------------------------- %>
+<%# DYNAMIC PAGE-SPECIFIC JAVASCRIPT (usually data) %>
+<%# --------------------------------------------------------------- %>
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation. %>
+<script type="text/javascript">
+var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+var TOOL_PARAM_FORM = 'pdw' ;
+</script>
+
+<%# --------------------------------------------------------------- %>
+<%# DYNAMIC PAGE-SPECIFIC JAVASCRIPT (usually data) %>
+<%# --------------------------------------------------------------- %>
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation. %>
+<script type="text/javascript">
+var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+var TOOL_PARAM_FORM = 'pdw' ;
+</script>
+
+<%# --------------------------------------------------------------- %>
+<%# STYLESHEETS (tool or GUI specific ones, not general Genboree ones %>
+<%# --------------------------------------------------------------- %>
+
+<%# --------------------------------------------------------------- %>
+<%# NEEDED JS FILES (first bunch are standard %>
+<%# --------------------------------------------------------------- %>
+<script type="text/javascript" SRC="/javaScripts/prototype.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/winnow/winnow.js"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <CENTER><FONT SIZE="4"><B>  Winnow --- A supervised learning algorithm for binary classification problem</B></FONT></CENTER>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+    Winnow is a sparse network of classifiers implementing a variant of the multiplicative weight-update algorithm.
+    <P>
+    <UL class="compact4_bigIndent">
+      <LI>&middot; <u>Motivation</u>: Train and establish a prediction scheme which defines a Boolean function rule regulating the binary classification problem.</LI>
+      <LI>&middot; <u>Output</u>: Prediction performance with different threshold choices.</LI>
+      <LI>&middot; <u>Output</u>: Established model with the threshold generating best performance.</LI>
+      <LI>&middot; <u>Output</u>: Prediction performance with the estalished model.</LI>
+      <LI>&middot; <u>Output</u>: Weighted features in the estalished model.</LI>
+    </UL>
+    </div>
+    <P>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <A HREF="mailto:brl_admin@bcm.tmc.edu?subject=Winnow Tool">brl_admin@bcm.tmc.edu</A>.
+    </font>
+    <P>
+    <%# NEEDED Genboree data to pass to server code that will execute script: %>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER SIZE %>
+    <input type="hidden" id="function" name="function" value="winnowClassify">
+    <%# END: TOOL DESCRIPTION %>
+
+    <%# --------------------------------------------------------------- %>
+
+    <%# --------------------------------------------------------------- %>
+    <%# TOOL GUI sits in a table %>
+    <%# --------------------------------------------------------------- %>
+    <table BGCOLOR="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+    <%# BEGIN: JOB NAME ROW %>
+    <TR>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="expnameLabel"><FONT SIZE="2"><B>Job Name:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('expname');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </TR>
+    <%# END: EXPERIMENT NAME ROW %>
+
+    <%# BEGIN: TRACK SELECTION ROW %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="trackLabel"><FONT SIZE="2"><B>Template Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <%  unless(tracks.empty?) %>
+               <%# NOTE: Using the suffix _lff for id/name here gets you the file for free on server side %>
+                <select id="trueClass_lff" name='trueClass_lff'>
+                  <option value="selectATrack">Select a true class Track</option>
+<%
+                      sortedTrackNames.each { |trackName|
+%>
+                        <option value="<%= CGI.escape(trackName) %>" ><%=CGI.escapeHTML(trackName)%><br /></option>
+<%
+                      }
+%>
+                </select>
+                <select id="falseClass_lff" name='falseClass_lff'>
+                  <option value="selectATrack">Select a false class Track</option>
+<%
+                      sortedTrackNames.each { |trackName|
+%>
+                        <option value="<%= CGI.escape(trackName) %>" ><%=CGI.escapeHTML(trackName)%><br /></option>
+<%
+                      }
+%>
+                </select>
+            <%  else  %>
+                  <font color="red"><b>The database is empty. No tracks present. Plug-in cannot be run.</b></font>
+            <%  end %>
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('template_track');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: TRACK SELECTION ROW %>
+
+    <%# BEGIN: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="classifyWhatHow" name="classifyWhatHow"><FONT SIZE="2"><B>Winnow Parameters</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+
+        <tr>
+          <td>
+            <span id="binaryOption_lbl" name="binaryOption_lbl">binary representation to envoke on the data:</span>&nbsp;
+            <input type="text" id="binaryOption" name="binaryOption" value="0" class="txt" style="width:50px;"> bp</input>
+            &nbsp;
+            <span id="kmerSize_lbl" name="kmerSize_lbl">The kmer size for binary representation:</span>&nbsp;
+            <input type="text" id="kmerSize" name="kmerSize" value="6" class="txt" style="width:50px;"> bp</input>
+            &nbsp;
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tileSize');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span id="cvFold_lbl" name="cvFold_lbl">The number of fold for cross validation:</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="text" id="cvFold" name="cvFold" class="txt" value="5" style="width:50px;">
+            <input type="radio" id="buildOrApply" name="buildOrApply" value="build" class="txt" checked >%</input>
+            <input type="radio" id="buildOrApply" name="buildOrApply" value="apply" class="txt">bp</input>
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tileOverlap');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+
+        </table>
+      </TD>
+    </tr>
+    <%# END: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    </table>
+  </td>
+</tr>
+</table>
+<P>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="WinnowClassifer" id="WinnowClassifer" class="btn" value="Submit">&nbsp;
+<input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="toolReset();">&nbsp;
+<P>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the classification job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

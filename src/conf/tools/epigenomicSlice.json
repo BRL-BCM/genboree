@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "epigenomicSlice",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "2929mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Download Epigenomic Data Slice",
+    "shortLabel": "Epigenomic Data Slice"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "deleteTracks",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Tracks",
+    "shortLabel": "[NOT SET]"
+  }
+}

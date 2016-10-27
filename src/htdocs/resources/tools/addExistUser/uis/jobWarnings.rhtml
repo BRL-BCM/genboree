@@ -1,0 +1,36 @@
+<script type='text/javascript'>
+  Ext.onReady( function()
+  {
+    wbFormSettings.set('warningsSelectRadioBtn', '<%="#{@settings['warningsInfoStruct'][0][0]['login'][:value]}"%>') ;
+  }) ;
+</script>
+<div class="wbDialog" style="height:285px; width:100%; margin-left: auto; margin-right: auto;overflow-y:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolWarningTitle, { :title => @context['toolTitle'] } ) %>
+  <%# RENDER HTML %>
+  <div class="wbDialog" style="height:200px;width:auto;" >
+    <%# Warnings Info %>
+    <div class="wbDialogFeedback wbDialogWarning">
+      <span class='wbWarningLabel'><b>WARNING</b>: Your job generated a warning. The job has not been accepted yet.</span>
+      <br />
+      <br />
+      <b>Warning Details:</b><br>
+      The following user(s) all matched the email address:</br>
+      <%# 'warningsSelectRadioBtn' needs to be set to empty if user clicks on 'No' in the warnings dialog. This is done in dialog.js  %>
+      <%= renderFrag(@toolIdStr, :wbRadioBtnWidget,
+                    { :rows => @settings['warningsInfoStruct'],
+                      :name => 'warningsSelectRadioBtn',
+                      :header => ['', 'User Name', 'First Name', 'Last Name', 'Email'],
+                      :jsTag => "onclick=\"toggleWarningsSelectRadioBtnValue(this.value, this.name)\""
+                    })
+      %>
+      <%
+        buff = %Q^<div style="width:100%; padding-top:5px;">^
+        buff << %Q^Select from one of the options above and click 'Yes' to add the user to the group or click 'No' to cancel the job.^
+        buff << %Q^</div>^
+      %>
+      <%=buff%>
+    </div>
+  </div>
+  <br>
+</div>

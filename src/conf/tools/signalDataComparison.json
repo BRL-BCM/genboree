@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "signalDataComparison",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "queue": "gbApiHeavy"
+  },
+  "ui": {
+    "label": "Analyze Signals -> Find Differences By Regression",
+    "shortLabel": "Analyze Signals - Find Differences By Regression"
+  }
+}

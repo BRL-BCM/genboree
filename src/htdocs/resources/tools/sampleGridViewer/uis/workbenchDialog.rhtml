@@ -1,0 +1,179 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+
+
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool can be used to launch the Sample Grid Viewer application developed by Sriram Raghuraman at <a href=\"http://brl.bcm.tmc.edu\">BRL</a>.
+        <br>&nbsp;<br>
+        <b>The Sample Grid Viewer allows you to:</b><br>
+        <ul>
+          <li>
+            Partition Samples into a table
+            <ul>
+              <li>This is done via the user telling us the name of the sample attribute used to partition along the X-axis and the name of a 2nd sample attribute used to partition along the Y-axis.</li>
+            </ul>
+          </li>
+          <li>
+            Organize ALL the sample in 1+ databases
+            <ul>
+              <li>Only the sample which have the X and Y attribute set will be presentable in the grid</li>
+            </ul>
+          </li>
+        </ul>
+        <br>&nbsp;<br>
+        There are also some useful little customizations that can be supplied as parameters (titles, axis labels, etc).
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Database(s) with sample of interest:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @inputs } )
+    })
+%>
+<%=
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    gbGridXAttr = Hash.new { |hh, kk|
+      hh[kk] = {}
+    }
+    gbGridYAttr = Hash.new { |hh, kk|
+      hh[kk] = {}
+    }
+     xtype = Hash.new { |hh, kk|
+      hh[kk] = {}
+    }
+    ytype = Hash.new { |hh, kk|
+      hh[kk] = {}
+    }
+    attributes = @settings['attributes']
+    sortedAttrKeys = attributes.keys.sort { |aa, bb| aa.downcase <=> bb.downcase }
+    sortedAttrKeys.each_index { |ii|
+      key = sortedAttrKeys[ii]
+      gbGridXAttr[:"#{key}"] = { :label => "#{key}"}
+      gbGridXAttr[:"#{key}"][:selected] = true if(ii == 0)
+      gbGridYAttr[:"#{key}"] = { :label => "#{key}"}
+      gbGridYAttr[:"#{key}"][:selected] = true if(ii == 1)
+    }
+    gridTitle = "Samples from "
+    allDbs = []
+    @inputs.each { |input|
+      allDbs << dbApiHelper.extractName(input)
+    }
+    gridTitle << allDbs.join(",")
+    pageTitle = "Sample Grid Viewer: #{gridTitle}"
+    entityTypes = @genbConf.gbEntityTypes
+    entityTypeTables = @genbConf.gbEntityTypesTableNames
+    # ARJ: This may not apply. It does for Roadmap-grids since the x & y are actually ids in Experiments & Samples tables
+    #entityTypes.each { |type|
+    #  idxOfType = entityTypes.index(type)
+    #  if(idxOfType and (tableName = entityTypeTables[idxOfType]))
+    #    if(type == 'Experiments')
+    #      xtype[:"#{tableName}"] = { :label => "#{type}", :selected => true}
+    #      ytype[:"#{tableName}"] = { :label => "#{type}"}
+    #    elsif(type == '')
+    #      xtype[:"#{tableName}"] = { :label => "#{type}"}
+    #      ytype[:"#{tableName}"] = { :label => "#{type}", :selected => true}
+    #    else
+    #      xtype[:"#{tableName}"] = { :label => "#{type}"}
+    #      ytype[:"#{tableName}"] = { :label => "#{type}"}
+    #    end
+    #  else
+    #    $stderr.debugPuts(__FILE__, __method__, "ERROR", "Bad entity type #{type.inspect} or no matching table in table Array (table array: #{entityTypeTables.inspect}")
+    #  end
+    #}
+    xlabel = sortedAttrKeys[0]
+    ylabel = sortedAttrKeys[1]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        {  :id => 'gbGridXAttr', :label => 'X-axis attribute', :type => :select, :options => gbGridXAttr, :onchange => "enableXLabel(this.value)"},
+        {  :id => 'gbGridYAttr', :label => 'Y-axis attribute', :type => :select, :options => gbGridYAttr, :onchange => "enableYLabel(this.value)"},
+        {  :id => 'pageTitle', :label => 'Page Title', :type => :text, :size => "25", :value => "#{pageTitle}"},
+        {  :id => 'gridTitle', :label => 'Grid Title', :type => :text, :size => "25", :value => "#{gridTitle}"},
+        {  :id => 'xLabel', :label => 'X Label', :type => :text, :size => "25", :value => xlabel, :title => "To enable, select one of the X axis attributes."},
+        {  :id => 'yLabel', :label => 'Y Label', :type => :text, :size => "25", :value => ylabel, :title => "To enable, select one of the Y axis attributes."}
+        # ARJ: This may not apply. It does for Roadmap-grids since the x & y are actually ids in Experiments & Samples tables
+        #{ :id => 'advancedSettings', :type => :advancedSection,
+        #  :width => '450px',
+        #  :text => '(The default values for these settings are what will be used if you do not change them.)',
+        #  :widgets =>
+        #  [
+        #    { :id => 'xtype', :label => 'X Type', :labelStyle => 'width:250px;', :type => :select, :size => "6", :style => 'font-size: 80%', :options => xtype},
+        #    { :id => 'ytype', :label => 'Y Type', :labelStyle => 'width:250px;', :type => :select, :size => "6", :style => 'font-size: 80%', :options => ytype}
+        #  ]
+        #}
+      ]
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+
+</form>
+<script type="text/javascript">
+
+function enableXLabel(value)
+{
+  var xLabelDom = Ext.get('xLabel').dom ;
+  xLabelDom.value = value ;
+  xLabelDom.enable() ;
+}
+
+function enableYLabel(value)
+{
+  var yLabelDom = Ext.get('yLabel').dom ;
+  yLabelDom.value = value ;
+  yLabelDom.enable() ;
+}
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

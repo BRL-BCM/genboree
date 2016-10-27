@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        2,
+        null
+      ],
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 3
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

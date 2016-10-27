@@ -1,0 +1,30 @@
+[
+  {
+    "idStr": "button1",
+    "text": "Button 1"
+  },
+  {
+    "idStr": "specialButton",
+    "text": "Special Button",
+    "listeners": "specialButtonListenerObj"
+  },
+  {
+    "idStr": "submenu1",
+    "text": "Submenu 1"
+  },
+  {
+    "itemType": "CheckItem",
+    "text": "A check item",
+    "idStr": "check1"
+  },
+  {
+    "itemType": "DateItem",
+    "text": "A date item",
+    "idStr": "date1"
+  },
+  {
+    "itemType": "ColorItem",
+    "text": "A color item",
+    "idStr": "color1"
+  }
+]

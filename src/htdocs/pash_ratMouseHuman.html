@@ -1,0 +1,185 @@
+<HTML><HEAD>
+<SCRIPT>
+
+//Popup Window Script
+//By JavaScript Kit (http://javascriptkit.com)
+// With mods by Andrew R. Jackson
+var winpops
+function openpopup(theUrl){
+var popurl= theUrl
+winpops=window.open(popurl,"pgiGlossary","width=475,height=338,scrollbars,resizable,")
+winpops.focus()
+}
+
+var newWin
+function openNewWin(theUrl){
+var winUrl = theUrl
+newWin = window.open(winUrl, "", "width=600,height=440,toolbar,location,directories,status,scrollbars,menubar,resizable,")
+newWin.focus()
+}
+
+</SCRIPT>
+<TITLE>Bioinformatics Research Laboratory - Rat/Mouse/Human Three-Way Comparisome</TITLE>
+<LINK REL="stylesheet" HREF="/images/style_brl.css" TYPE="text/css">
+</HEAD>
+<BODY BGCOLOR="white">
+<TABLE WIDTH="650" CELLPADDING="0" CELLSPACING="3" BORDER="0">
+<TR>
+  <TD>
+  <!-- BEGIN: PAGE HEADER -->
+    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+    <TR>
+      <TD VALIGN="top" ALIGN="left">
+        <A HREF="http://brl.bcm.tmc.edu">
+        <IMG SRC="/images/brl_logo60.gif" WIDTH="60" HEIGHT="60" ALT="BRL" BORDER="0"></A>
+      </TD>
+      <TD VALIGN="top" ALIGN="left">
+        <A HREF="http://brl.bcm.tmc.edu">
+        <IMG SRC="/images/brl_type60.gif" WIDTH="120" HEIGHT="60" ALT="" BORDER="0"></A>
+      </TD>
+      <TD><IMG SRC="/images/spacer.gif" WIDTH="20" HEIGHT="1" ALT="" BORDER="0"></TD>
+      <TD VALIGN="bottom" ALIGN="right">
+        <TABLE CELLSPACING="0" CELLPADDING="0" BORDER="0" WIDTH="450">
+        <TR>
+          <TD CLASS="navbar">&nbsp;<A HREF="http://brl.bcm.tmc.edu/research.html">Research</A></TD>
+          <TD CLASS="navbar">&nbsp;<A HREF="http://brl.bcm.tmc.edu/publications.html">Publications</A></TD>
+          <TD CLASS="navbar">&nbsp;<A HREF="http://brl.bcm.tmc.edu/members.html">Members</A></TD>
+          <TD CLASS="navbar">&nbsp;<A HREF="http://brl.bcm.tmc.edu/contact.html">Contact</A></TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="4" BACKGROUND="/images/bluemed1px.gif">
+            <IMG SRC="/images/spacer.gif" WIDTH="1" HEIGHT="1" ALT="" BORDER="0">
+          </TD>
+        </TR>
+        </TABLE>
+      </TD>
+    </TR>
+    </TABLE>
+   <!-- END: PAGE HEADER -->
+  </TD>
+</TR>
+<TR>
+  <TD>
+  <!-- BEGIN: PAGE CONTENT -->
+    <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+    <TR>
+      <TD VALIGN="top" WIDTH="30">
+        <IMG SRC="/images/bluemed1px.gif" HEIGHT="30" WIDTH="30" ALT="" BORDER="0">
+      </TD>
+      <TD WIDTH="10">
+        <IMG SRC="/images/spacer.gif" HEIGHT="1" WIDTH="10" ALT="" BORDER="0">
+      </TD>
+			<TD VALIGN="top" ALIGN="left">
+				<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+				<TR>
+					<TD COLSPAN="2" VALIGN="top" ALIGN="left">
+		        <BR>
+		        <SPAN CLASS="hdr">Three-Genome Comparision Via <A HREF="#Pash"><U>Pash</U></A></SPAN>
+		        <BR><FONT SIZE="-1"><I>(Version: RN3.1-MM3-Hg15-PASH0.7-3)</I></FONT>
+						<P>
+						Visualization of comparison results is available at three levels:
+								<DL>
+									<DT><U><B>Genome-Level:</B></U></DT>
+									<DD>
+										<TABLE CELLPADDING="5" CELLSPACING="0" BORDER="0" WIDTH="100%">
+										<TR>
+											<TD>
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=8">
+													<IMG SRC="/images/rat_thumb.gif" WIDTH="100" HEIGHT="62" ALT="Rat" BORDER="0">
+												</A>
+											</TD>
+											<TD WIDTH="100%">
+												<FONT SIZE="-1">
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=8">Rat-Centric:</A> Human and Mouse similarites on the Rat genome
+												</FONT>
+											</TD>
+										</TR>
+										<TR>
+											<TD>
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=9">
+													<IMG SRC="/images/mouse_thumb.gif" WIDTH="100" HEIGHT="62" ALT="Mouse" BORDER="0">
+												</A>
+											</TD>
+											<TD WIDTH="100%">
+												<FONT SIZE="-1">
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=9">Mouse-Centric:</A> Human and Rat similarites on the Mouse genome
+												</FONT>
+											</TD>
+										</TR>
+										<TR>
+											<TD>
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=7">
+													<IMG SRC="/images/human_thumb.gif" WIDTH="100" HEIGHT="62" ALT="Human" BORDER="0">
+												</A>
+											</TD>
+											<TD WIDTH="100%">
+												<FONT SIZE="-1">
+												<A HREF="http://www.genboree.org/java-bin/syntenyCompact.jsp?specieId=7">Human-Centric:</A> Rat and Mouse similarites on the Human genome
+												</FONT>
+											</TD>
+										</TR>
+										</TABLE>
+									</DD>
+								<P>
+								<DT><B><U>Chromosome-Level</B></U></DT>
+									<DD>Use the genome-level views above to drill down one level to chromosome views.</DD>
+								<P>
+								<DT><U><B>Detailed Genboree-Level</B></U></DT>
+									<DD>Use the genome-level views above to drill down two levels to the detailed Genboree views.
+									    Alternatively, access the detailed views directly in
+											<A HREF="http://www.genboree.org/java-bin/index.jsp">Genboree</A>.
+									</DD>
+							</DL>
+						<A NAME="Pash">&nbsp;</A>
+						<H4>The Pash Comparison Method</H4>
+			<P>
+			Pash (Kalafus, K., A.R.Jackson, A.Milosavljevic, In Preparation) implements a novel approach to the
+			large-scale comparison problem. The aim of this project is to quickly and sensitively compare entire genomes,
+			or large databases of sequence reads even using modest hardware resources.
+			<P>
+			With sequences of the Human, Mouse and Rat genomes available,
+			we decided to perform genome-scale similarity comparisons between these species
+			using Pash.  The output of Pash was post-processed to retain only the most
+			extensive and significant orthologous hits. Post-processing involved applying a reciprocal-best-match
+			criterion and merging of collinear hits into larger probable orthologous regions.
+			<P>
+			<H4>Genomes Compared</H4>
+						Pash was used for pair-wise comparison between three (3) genomes:
+						<FONT SIZE="-1">
+						<UL>
+							<LI><A HREF="http://www.hgsc.bcm.tmc.edu/projects/rat/">Rat Genome</A> (HGSC v3.1, June 2003).</LI>
+							<LI><A HREF="http://genome.ucsc.edu/downloads.html">Mouse Genome</A> (UCSC mm3, Feb. 2003)</LI>
+							<LI><A HREF="http://genome.ucsc.edu/downloads.html">Human Genome</A> (UCSC hg15, April 2003)</LI>
+						</UL>
+						</FONT>
+						<P>
+						<H4>Pash Performance</H4>
+						The Human/Rat, Mouse/Rat and Human/Mouse comparisons were each completed in 4 days using 6
+						computers in a Linux farm using a non-optimized prototype implementation of Pash.
+						<P>
+				 	</TD>
+				 	<TD VALIGN="top" ALIGN="left">
+
+					</TD>
+				</TR>
+				</TABLE>
+			</TD>
+		</TR>
+		</TABLE>
+	<!-- END: PAGE CONTENT -->
+	</TD>
+</TR>
+<TR>
+	<TD>
+	<!-- BEGIN: PAGE FOOTER -->
+    <BR><BR><CENTER><IMG SRC="/images/bluemed1px.gif" WIDTH="350" HEIGHT="1" ALT="" BORDER="0"></CENTER>
+    <A HREF="http://www.bcm.tmc.edu">
+    	<IMG SRC="/images/bcm_logo_for_brl.gif" WIDTH="54" HEIGHT="60" ALT="" BORDER="0" ALIGN="right" VALIGN="top">
+    </A>
+    <BR><BR>
+    <SPAN CLASS="footer">&copy;2003 Bioinformatics Research Laboratory</SPAN>
+  <!-- END: PAGE CONTENT -->
+  </TD>
+</TR>
+</TABLE>
+</BODY></HTML>

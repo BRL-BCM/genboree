@@ -1,0 +1,116 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will import array data into a target <u>Database</u>. Note that in order for the file to be imported
+          successfully, the file needs to be in a specific <i>tab-delimited</i> format.
+          We support two file formats for uploading array data:
+          <ul>
+            <li>
+              <b>Multi-column format:</b>
+              <ul>
+                <li>The first line of the file MUST be the header line starting with a '#' with <i>tab-delimited</i> column names. </li>
+                <li>The first column is reserved for the probe/Region of Interest name</li>
+                <li>Column names should be unique to avoid duplicacy of data.</li>
+                <li>Each column will be transformed into a wig track and uploaded into the target database as such.</li>
+                <li>If the column names are not compatible with Genboree track names, a ':' will be added to the column name followed by the subtype of the Regions of Interest (ROI) track.</li>
+                <li>
+                  An example of a multi-column file:</br>
+                  #probe col1 col2 col3</br>
+                  cg18191309	  5.0       10.5     30.2 </br>
+                  cg20970086	  8.0       12.3     2.3  </br>
+                  cg26340088	  7.0       14.3     33.4 </br>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <b>Multi-block format:</b>
+              <ul>
+                <li>The first line of the file may or may not be a pragma containing the track name to be used for the probe/array data until the next pragma with a track name is encountered.</li>
+                <li>If no pragma is present, the track name provided via the UI will be used. If a <i>trackName</i> pragma is present, that name will replace the name provided via the UI. </li>
+                <li>A <i>trackName</i> pragma expample:
+                  <ul>
+                    <li>##trackName=my:track</li>
+                  </ul>
+                </li>
+                <li>If you do not provide a track name via the UI then you MUST provide the track name in the pragma. </li>
+                <li>You can have multiple <i>trackName</i> pragmas in the same file for different blocks of probes/array scores: a wig file will be generated for each block. </li>
+                <li>If a pragma is not present then the the first line of the file MUST be a column header line. It must start with a '<b>#</b>'.</li>
+                <li>The first field MUST be the probe name which should be unique for all records and must be one of the entries in the reference Regions of Interest (ROI) track.</li>
+                <li>The second field MUST be the score associated with that probe.</li>
+                <li>All records MUST have the same number of fields/columns.</li>
+                <li>
+                  An example of a multi-block file:</br>
+                  ##trackName=my:track1</br>
+                  cg18191309	  5.0</br>
+                  cg20970086	  8.0</br>
+                  cg26340088	  7.0</br>
+                  ##trackName=my:track2</br>
+                  cg18191309	  5.0</br>
+                  cg20970086	  8.0</br>
+                  cg26340088	  7.0</br>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <br>&nbsp;<br>
+          You can also use compressed files like .gz or .bz2 or a multi-file archive like .tar or .zip
+          <br>&nbsp;<br>
+          Review that the correct file is going to be imported.
+          <br>&nbsp;<br>
+          You can either drag a file which has already been uploaded via the <u>Transfer File</u> utility or you can select a file to import from your machine.
+          <br>&nbsp;<br>
+          Note that this tool is not multi-host compliant and cannot be used across hosts.
+          <br>&nbsp;<br>
+        "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Either Drag the <u>File</u> into &quot;Input Data&quot;, or select a file to be imported from your machine',
+        ],
+        :types              => [ [ 'Files', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The array data will be imported into the target database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Select File', "Select the file to be uploaded. Available when no file has been dragged into &quot;Input Data&quot;."],
+          [ 'Reference Regions of Interest (ROI) Track', "A list with the available ROI Tracks. The array data MUST be a subset of this track."],
+          [ 'Output Track Name (Only with multi-block)', "Type and subtype of the resultant wig track which will be uploaded into the destination <u>database</u> as a High Density High Volume (HDHV) Track in case no track name pragmas are found in the file."],
+          [ 'Delete Pre-existing Tracks', "Check this to delete existing tracks in the target database and replace them with newly created ones if the names match. Non matching tracks will not be changed in anyway. This will avoid duplicacy of imported data [Default: Checked]."],
+          [ 'Ignore columns with keywords (Only with multi-column)', "Enter a keyword or a comma separated list of keywords that will be used for removing columns if any of the keywords is part of the column name [OPTIONAL]."],
+          [ 'Include instead of exclude (Only with multi-column)', "Check this to only include columns that contain the keyword(s). [DEFAULT: unchecked]."],
+          [ 'Submit', "Once you've reviewed the input files, the output destination, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>

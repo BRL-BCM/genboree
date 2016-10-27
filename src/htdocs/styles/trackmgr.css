@@ -1,0 +1,15 @@
+
+ol.sortablelist {
+  list-style-image:none;
+  list-style-type:decimal;
+  text-align: justify;
+}
+
+ol.sortablelist li {
+}
+
+span.handle {
+  color:#E8A400;
+  cursor: move;
+  padding:2px
+}

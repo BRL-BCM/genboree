@@ -1,0 +1,106 @@
+<%# RENDER HTML%>
+<%
+require 'brl/genboree/rest/helpers/trackApiUriHelper'
+require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+require 'brl/genboree/rest/helpers/classApiUriHelper'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/rest/apiCaller'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 500px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "This tool will copy/move tracks from one database to another.
+        You can either drag a track class (to copy all tracks within that class) or drag tracks individually into &quot;Input Data&quot;.
+        <br>&nbsp;<br>
+        Review that the correct tracks are going to be copied/moved.
+        "
+      })
+  %>
+  <%
+    # We need the all the tracks in a hash
+    trkHash = {}
+    trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    classApiHelper = BRL::Genboree::REST::Helpers::ClassApiUriHelper.new()
+    suDbDbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc(@genbConf, @genbConf.dbrcFile)
+    user = suDbDbrc.user
+    pass = suDbDbrc.password
+    @inputs.each { |input|
+      if(input =~ BRL::Genboree::REST::Helpers::TrackApiUriHelper::NAME_EXTRACTOR_REGEXP) # For tracks
+        trkHash[input] = true
+      elsif(input =~ BRL::Genboree::REST::Helpers::ClassApiUriHelper::NAME_EXTRACTOR_REGEXP) # For class
+        className = classApiHelper.extractName(input)
+        dbUri = dbApiHelper.extractPureUri(input)
+        uri = dbUri.dup()
+        uri = URI.parse(uri)
+        rcscUri = uri.path.chomp("?")
+        rcscUri << "/trks?connect=false&class=#{CGI.escape(className)}"
+        # Get all tracks for this class
+        $stderr.puts "host: #{uri.host.inspect}\trcscUri: #{rcscUri.inspect}"
+        apiCaller = ApiCaller.new(uri.host, rcscUri, user, pass)
+        apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+        apiCaller.get()
+        if(!apiCaller.succeeded?)
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'MISSING_RESOURCE', "ApiCaller failed for getting tracks for class: #{className.inspect}. Tracks not present? ")
+          raise wue
+        end
+        resp = apiCaller.respBody()
+        retVal = JSON.parse(resp)
+        tracks = retVal['data']
+        tracks.each { |track|
+          trkUri = "#{dbUri.chomp("?")}/trk/#{CGI.escape(track['text'])}?"
+          trkHash[trkUri] = true
+        }
+      else # For db
+        # For template tracks, set hash value to false: Will NOT be selected by default
+        allFtypes = trkApiHelper.allFtypes(input)
+        dbUri = dbApiHelper.extractPureUri(input)
+        allFtypes.each_key { |key|
+          if(allFtypes[key]['dbNames'].size > 1 or allFtypes[key]['dbNames'][0][2] == :sharedDb) # More than 1 db associated or shared db
+            trkHash["#{dbUri}/trk/#{CGI.escape(key)}?"] = false
+          else
+            trkHash["#{dbUri}/trk/#{CGI.escape(key)}?"] = true
+          end
+        }
+      end
+    }
+  %>
+
+  <%# Input data help %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Tracks:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMultiSelectInputList, { :multiSelectInputHash => trkHash, :label => "Choose tracks to copy", :type => "tracks" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Track(s): Copy or Move",
+      :widgets =>
+      [
+        { :name => "deleteSourceTracksRadio", :id => 'cpSourceTracks', :label => 'Copy Tracks?', :type => :radio, :checked => true, :value => "copy"},
+        { :name => "deleteSourceTracksRadio", :id => 'deleteSourceTracks', :label => 'Move Tracks?', :type => :radio, :value => "move"}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

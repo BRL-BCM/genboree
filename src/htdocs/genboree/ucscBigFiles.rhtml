@@ -1,0 +1,101 @@
+
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/abstract/resources/track'
+  require 'brl/genboree/abstract/resources/wigFile'
+  require 'brl/genboree/abstract/resources/ucscBigFile'
+  require 'brl/genboree/abstract/resources/unlockedGroupResource'
+
+  $VERBOSE = true
+  @req = Apache.request
+  cgi = CGI.new()
+  @serverName = cgi.host
+  #@serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+  @success = false
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+%>
+
+<style>
+.instruction {
+background-color:#EFEFEF;
+border:1px dashed #CCCCCC;
+color:#4C3D99;
+font-size:110%;
+font-style:normal;
+font-weight:normal;
+margin-bottom:0;
+margin-top:0;
+padding:3px;
+}
+.instruction p {
+  line-height:130%;
+}
+span.ext-mb-text ul {
+  padding:0;
+  margin:0;
+}
+span.ext-mb-text ul li, ol li {
+background:#FFFFFF none repeat scroll 0 0;
+border:1px solid #BBBBBB;
+list-style-type:none;
+margin:5px 0;
+padding:3px;
+}
+div.success {
+  background-color:#E6FFEA;
+  background-image:url(/images/vgpCheckmark.png);
+  background-position:0.75em 0.75em;
+  background-repeat:no-repeat;
+  border:2px solid #58A263;
+  color:#58A263;
+  min-height:2.5em;
+  padding-bottom:2em;
+  padding-left:4.5em;
+  padding-top:0.75em;
+}
+div.fail {
+  background-image: url(/images/vgpFailure.png) ;
+  background-color: #FFEFEF ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #C64848 ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+  padding-bottom: 2em ;
+  min-height: 2.5em ;
+  color: #C64848 ;
+}
+
+</style>
+
+<div class="instruction">
+
+<p>
+<b><font color="red">This feature has been relocated to the Genboree Workbench page.</font></b>
+</p>
+<p>
+To go to the Genboree workbench, just click on the <a href="workbench.jsp">Workbench link</a> in the menubar above.
+</p>
+<p>
+The images below show how to access the Big* Files functionality on the Workbench page
+</p>
+<div align="center" style="padding-top:10px;">
+    <p>
+      <b>Generate BigWig/BigBed Files:</b>
+    </p>
+<img style="padding-top:5px;" src="http://<%="#{@serverName}"%>/java-bin/screenshots/bigFilesScaled.png"  />
+</div>
+<div align="center" style="padding-top:10px;">
+    <p>
+      <b>Launch UCSC Browser:</b>
+    </p>
+<img style="padding-top:5px;" src="http://<%="#{@serverName}"%>/java-bin/screenshots/ucscBrowserScaled.png"  />
+</div>

@@ -1,0 +1,50 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will create a new remote storage area in the target <u>Database</u>. The remote storage area will link to a remote server outside of the current Genboree instance (example: ftp.genboree.org). You can find your remote storage area in your database's \"Files\" directory.
+          <br>
+          <br>
+          In order to upload files to your remote storage area, use the \"Transfer File\" tool in the Workbench (just like you would for local files). It is also possible that some tools will automatically upload files to your remote storage area.
+          <br>
+          <br>
+          After you have files in your remote storage area, you can access those files just like you would with local files. You can download the files, delete the files, copy/move the files, etc. The only major difference is that the files are hosted on a remote server versus on the current Genboree instance.
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The new remote storage area will be created in this database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Name of Remote Storage Area', "The name of the folder (in the \"Files\" area) where your remote storage area will be created."],
+          [ 'Remote Storage Type', "The type of remote storage area (\"Genboree Virtual FTP\", hosted on ftp.genboree.org, for example)."],
+          [ 'Submit', "Once you've reviewed the name of the remote storage area to be created, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by William Thistlethwaite at <a href="http://www.genboree.org/site/bioinformatics_research_laboratory">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+
+</div>

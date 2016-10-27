@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "bwa",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 4,
+    "mem": "48gb",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Map Reads by BWA",
+    "shortLabel": "BWA",
+    "groupAccessUri": null
+  }
+}

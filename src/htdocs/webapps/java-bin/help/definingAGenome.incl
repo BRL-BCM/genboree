@@ -1,0 +1,128 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;2. Defining A Genome&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#overview">2.1 Overview</A>
+    <UL class="compact1">
+      <LI><A HREF="#whatAreEPs"><FONT CLASS="tocSmall">2.1.1 What are &quot;entry points&quot;?</FONT></A></LI>
+      <LI><A HREF="#whatIsAGenome"><FONT CLASS="tocSmall">2.1.2 What is a &quot;genome&quot; in Genboree?</FONT></A></LI>
+    </UL>
+  </LI>
+  <LI class="compact1_10"><A HREF="#definingGenomes">2.2 Methods for Defining a Genome</A>
+  	<UL class="compact1">
+      <LI><A HREF="#templates"><FONT CLASS="tocSmall">2.2.1 Use a template genome</FONT></A></LI>
+      <LI><A HREF="#upload"><FONT CLASS="tocSmall">2.2.2 Define a custom genome</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadEPhowto">3. Uploading Entry Points</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadAnnoHowto">4. Uploading Annotations</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="overview">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">2.1. Overview:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="whatAreEPs">&nbsp;</A>
+<DIV class="subsubtopicHeader">2.1.1. What are &quot;entry points&quot;?</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+<SPAN class="genbLabel">Entry points</SPAN> comprise the coordinate system on which annotations are made. For example,
+a chromosome is an entry point. For unassembled genomes, the scaffolds might be the entry points.
+<P class="body">
+Entry points must be defined within Genboree, with a <i>name</i> and a <i>length</i>, so that
+annotations can be placed on them.
+<P class="body">
+Currently, entry points are independent within Genboree; i.e. not directly linked. They are simply
+the names of chromosomes, scaffolds, etc, on which you will place your annotations.
+<P class="body">
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="whatIsAGenome">&nbsp;</A>
+<DIV class="subsubtopicHeader">2.1.2. What is a &quot;genome&quot; in Genboree?</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+A &quot;genome&quot; is a set of <SPAN class="genbLabel">entry points</SPAN>. It is the complete set of valid chromosomes,
+or maybe scaffolds, upon which your annotations can be placed.
+<P class="body">
+In fact, you could have a set of entry points from several species (for example, the
+X chromosomes of several mammals).
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="definingGenomes">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">2.2. Methods for Defining a Genome:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<DIV>
+When creating your <SPAN class="genbLabel">Database</SPAN>, you will use the
+<SPAN class="genbLabel">Reference Sequence</SPAN> droplist to choose to
+either upload your own entry point definitions or use a set of pre-existing
+entrypoints:
+</DIV>
+<P class="body">
+<A NAME="createDBimg">&nbsp;</A>
+<IMG SRC="/images/templateGenome.png" WIDTH="518" HEIGHT="189" BORDER="0">
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="templates">&nbsp;</A>
+<DIV class="subsubtopicHeader">2.2.1. Use a template genome</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+For your convenience, Genboree provides some template genomes, which are predefined
+sets of <SPAN class="genbLabel">entry points</SPAN>, for some of the fully assembled mammals. Simply select which
+template to use when you create your <SPAN class="genbLabel">database</SPAN> (see <A HREF="#createDBimg">image above</A>).
+<P class="body">
+These templates include entry point definitions for the assembled chromosomes,
+and often have sequence data and a few basic annotation tracks.
+<P class="body">
+If you would like to have the unassembled portions of the chromosomes or additional
+annotation tracks included in a particular template definition, please
+<A HREF="mailto:genboree_admin@genboree.org?subject=Template request: ">email your request</A> to us.
+<P class="body">
+You can also add entry points to your Database at any time, by
+<A HREF="showHelp.jsp?topic=uploadEPhowto">uploading your own entry point definitions</A> .
+<P class="body">
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="upload">&nbsp;</A>
+<DIV class="subsubtopicHeader">2.2.2. Define a custom genome</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+Genboree lets you define your own &quot;genome&quot;, perhaps for annotating a newly
+assembled (or partly assembled) species or for a special case not covered by an existing template.
+<P class="body">
+When creating a <SPAN class="genbLabel">Database</SPAN> for a custom genome,
+<SPAN class="genbLabel">** User Will Upload **</SPAN> tells Genboree that you will
+be providing your own chromosome or scaffold definitions later (see <A HREF="#createDBimg">image above</A>).
+<P class="body">
+Please refer to <A HREF="showHelp.jsp?topic=uploadEPhowto"><SPAN class="helpTopic">&quot;3. Uploading Entry Points&quot;</SPAN></A>
+for more information about how to define and upload custom entry points to Genboree.
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

@@ -1,0 +1,11 @@
+<%
+  grp = WorkbenchFormHelper.getNameFromURI(:grp, @target, true)
+  db = WorkbenchFormHelper.getNameFromURI(:db, @target, true)
+%>
+<table width="100%">
+  <tr>
+    <th><%= (@label || "Target") %>:</th>
+    <td><i><%== @type %></i></td>
+    <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></i></td>
+  </tr>
+</table>

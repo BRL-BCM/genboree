@@ -1,0 +1,35 @@
+<%# THIS FILE USES eruby %>
+
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/util/textFileUtil'
+  require 'brl/genboree/genboreeContext'
+  
+  context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+%>
+
+<html>
+<head>
+  <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <title>Genboree Redirect</title>
+</head>
+<body bgcolor="white">
+  <script type="text/javascript" src="/javaScripts/prototype.js?<%=context.jsVerStr%>"></script>          <!-- Official extension to use css style classes for the title bar appearance -->
+  <script type="text/javascript" src="/javaScripts/util.js?<%=context.jsVerStr%>"></script>               <!-- This should be on all pages, but often is not -->
+  <script type="text/javascript">
+    setCookie("GB_INBROWSER", "true") ;
+    var tgt = "<%= context.cgi["gbtgt"] %>" ;
+    window.location = tgt ;
+  </script>
+<center>
+
+</body>
+</html>
+

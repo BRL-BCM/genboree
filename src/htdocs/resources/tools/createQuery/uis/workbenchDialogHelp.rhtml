@@ -1,0 +1,41 @@
+<%# RENDER HTML %>
+<div style="height: 440px;" class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          'This tool allows you to create a query and save it in a destination database. The destination database should be specified in the <em>Output Targets</em>.'
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       => [ 'Drag 1 <i>entity</i> into the &quot;Input Data&quot; section to serve as the template for your query. Note that the parent group and database of your template will be used when gatehring AVPs during query construction' ],
+        :types              => [ [ 'Entity', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <i>database</i> into &quot;Output Targets&quot;.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     => [ [ 'Create', "First review the output database to ensure you have selected the appropriate database.  After you have specified the clauses and operations you want your query to perform click &quot;Create&quot;."] ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed by Bio:Neos for <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

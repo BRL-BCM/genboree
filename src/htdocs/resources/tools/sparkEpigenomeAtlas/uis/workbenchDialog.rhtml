@@ -1,0 +1,187 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+  width = (@hasAccess ? 478 : 380)
+  height = (@hasAccess ? 425 : 260)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%= width %>px; height: <%= height %>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks from the user and/or tracks selected from the Epigenome Atlas. This can be useful as a way of exploring the Epigenome Atlas data or viewing one's own methylation data in the context of selected Atlas tracks.
+          <br>&nbsp;<br>
+          Cydney Nielsen's Spark has three phases:<br>
+          <div style='padding-left: 10px;'>
+            <ol>
+              <li>Data file pre-processing</li>
+              <li>Data clustering analysis</li>
+              <li>Visualization of the analysis in a stand-alone GUI</li>
+            </ol>
+          </div>
+          <br>
+          This interface will help you complete the first two phases&mdash;steps normally executed on the command line after setting up a compliant directory tree for the tool&mdash;and will provide you with the analysis results.
+          <br>&nbsp;<br>
+          You can then download the analysis results and point the Spark stand-alone GUI at the analysis directory.
+          <br>&nbsp;<br>
+          Carefully review the correct tracks and/or files have been selected for analysis. Remember that the <i>last</i> track or file in &quot;Input Data&quot; will be used as the regions-of-interest (ROIs).
+          <div style='font-size: 80%; margin-top: 10px;'>
+            <ul>
+              <li>Use Java Web Start to <a href='http://www.bcgsc.ca/downloads/spark/v1.0/start.jnlp'>install the Spark GUI</a> application.</li>
+              <li>You can also <a href='http://www.bcgsc.ca/downloads/spark/v1.0/'>manually download Spark</a>, its documentation, and sample data.
+                <ul>
+                  <li>This also lets you run all phases of Spark locally on your own machine.</li>
+                  <li>Newer versions of the Spark software can be found at <a href='http://www.bcgsc.ca/downloads/spark/'>the Spark download area</a> and may address issues found in older versions.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    if(@inputs.size > 1)
+      scrTracks = @inputs[0,@inputs.size-1]
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Data Tracks/Files:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => scrTracks, :label => "Data Tracks/Files" } )
+      }) +
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Regions Track/File:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs.last, :label => "Regions Track/File" } )
+      })
+    else
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Regions Track/File:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs.last, :label => "Regions Track/File" } )
+      })
+    end
+
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    roiName = trackApiHelper.extractName(@inputs.last) || File.basename(@inputs.last).split('?').first
+    # Get the db uri for selecting the list of tracks
+    rcscUri = nil
+    dbApiHelperObj =  BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    dbVer = dbApiHelperObj.dbVersion(@outputs[0]).downcase
+    if(dbVer == "hg18")
+      rcscUri = @genbConf.sparkAtlasDbUri_hg18
+    else
+      rcscUri = @genbConf.sparkAtlasDbUri_hg19
+    end
+    # calculate width to use depending on length of file name
+    length = 0
+    @inputs.each { |input|
+      fileName = File.basename(input)
+      length = fileName.length if(fileName.length > length)
+    }
+    widthToUse = length > 30 ? "80%" : "180px"
+    widgetArray = [
+      { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Spark-EpiAtlas-#{Time.now.strftime('%y-%m-%d-%H.%M').gsub('-0', '-')}" },
+      { :id => "epiAtlasScrTracks", :label =>'Epigenome Atlas Tracks:', :type => :selectOnAttribute, :userId => @context['userId'], :rackEnv => @rackEnv,
+          :size => '25', :text => 'Select the tracks you wish to run the tool on', :rcscUri => "#{rcscUri}", :attributeName => 'gbTrackRecordType', :attributeValue => 'floatScore', :selectByDefault => :first, :multiSelect => true, :toggleAllButton => false, :trkListDBRCKey => @genbConf.sparkTrackListDBRCkey },
+      { :id => 'regionLabel', :label => 'Region Label', :type => :text, :size => "25", :value => roiName.gsub(/[^A-Za-z0-9_\-%@]+/, '_')},
+      { :id => 'statsType', :label => 'Statistics Type', :type => :select, :options =>
+        {
+          :regional => { :label => 'regional', :selected => true},
+          :global => { :label => 'global' }
+        }
+      },
+      { :id => 'numClusters', :label => '# of Clusters', :type => :text, :size => "3", :value => "5" },
+      { :name => 'binSizeOrNum', :label => 'Specify Bin Size', :type => :radio, :value => 'useBinSize', :onClick => "showRadioText('binSize', 'numBins')"},
+      { :id => 'binSize', :label => 'Size: ', :labelStyle => 'width:180px ; font-size:80%', :style => 'font-size:80%', :type => :text, :size => "4", :value => "200", :hidden => true, :newline => false},
+      { :name => 'binSizeOrNum', :label => 'Specify # of Bins', :type => :radio, :value => 'useNumBins', :onClick => "showRadioText('numBins', 'binSize')"},
+      { :id => 'numBins', :label => '# of Bins: ', :labelStyle => 'width:180px ; font-size:80%', :style => 'font-size:80%', :type => :text, :size => "4", :value => "10", :hidden => true, :newline => false}
+    ]
+    if(@inputs.size > 1)
+      widgetArray <<  { :id => 'labelOnly', :label => 'Track/File Colors:', :type => 'hidden' }
+      widgetArray <<  { :id => 'colLabel', :labelStyle => "width:#{widthToUse} ; font-size:80%", :style => 'font-size:80%', :type => :eachTrkOrFileWithSelect, :set => scrTracks, :options =>
+                        {
+                          :blue => { :label => 'blue' },
+                          :orange => { :label => 'orange', :selected => true }
+                        }
+                      }
+    end
+    widgetArray << { :id => 'normType', :type => :hidden, :value => 'exp', :newline => false }
+
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Spark Analysis Settings",
+      :widgets => widgetArray,
+      :dbu => @dbu
+    })
+
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+  function showRadioText(idToShow, idToHide)
+  {
+    // For label of text to show
+    var label = Ext.get(idToShow + "Label") ;
+    label.setStyle('display', '') ;
+    // For text to show
+    var style = Ext.get(idToShow) ;
+    style.setStyle('display', 'block') ;
+    // For label of text to hide
+    var label = Ext.get(idToHide + "Label") ;
+    label.setStyle('display', 'none') ;
+    // For text to hide
+    var style = Ext.get(idToHide) ;
+    style.setStyle('display', 'none') ;
+  }
+</script>
+<%
+  else # user doesn't have Spark access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool runs Cydney Nielsen's Spark program on input data tracks from the user and/or tracks selected from the Epigenome Atlas. This can be useful as a way of exploring the Epigenome Atlas data or viewing one's own methylation data in the context of selected Atlas tracks.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>A manuscript for this tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <span style='color: red;'>Once the paper is published, the tool will be available for all users.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

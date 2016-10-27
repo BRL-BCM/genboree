@@ -1,0 +1,450 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;5. The LFF Annotation Format&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#overview">5.1 Overview</A>  </LI>
+  <LI class="compact1_10"><A HREF="#colDesc">5.2 Column Descriptions</A></LI>
+  <LI class="compact1_10"><A HREF="#annoExample">5.3 LFF Annotation Examples</A></LI>
+  <li class="compact1_10"><a href="#specialAttributes">5.4 Special <i>Attribute=Value;</i> Pairs</a></li>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=definingAGenome">2. Defining A Genome</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadEPhowto">3. Uploading Entry Points</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadAnnoHowto">4. Uploading Annotations</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=linkSetup">6. Custom Links</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<A NAME="showContext"></A>
+<input type="checkbox" onClick="javascript: toggleDivDisplay(this);" id="showEgsCheckbox" checked>
+Show expanded help info?
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="overview">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">5.1. Overview:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <P class="body">
+  The Genboree <SPAN class="genbLabel">LFF format</SPAN> is adapted from the LDAS upload format
+  described at <A class="invisiLink" HREF="http://www.biodas.org/">http://www.biodas.org/</A>,
+  specifically from the <i>[ Annotations ]</i> section.
+  <P class="body">
+  These points are generally important:
+  <UL class="indent1">
+    <LI>The <SPAN class="genbLabel">LFF format</SPAN> is tabular; each row is a single annotation record.</LI>
+    <LI>The annotation record is <b>tab</b>-delimited into 10 required columns, with up to 5 additional optional columns.</LI>
+    <LI>Regular <b>spaces</b> are allowed in many columns, because <b>tabs</b> are different than spaces.</LI>
+    <li><font color='red'><b>NOTE:</b> Do not use '{' or '}' characters. Due to a bug in MySQL's Java library code, in
+    certain combinations, the data will not upload even though the data otherwise  appears fine. MySQL is aware of this bug.</font></li>
+  </UL>
+  Thus, it is extremely similar to an MS Excel spreadsheet exported to a text file.
+  <CENTER><DIV class="egDiv" id="egDiv2">
+    HINT:
+    <UL class="indent1">
+      <LI>Avoid LFF files with multiple sections; an annotation file should contain only annotations.</LI>
+      <LI>Use comment lines&mdash;whose 1st non-whitespace character is
+      <SPAN class="genbLabel">&quot;#&quot;</SPAN>&mdash; for example, to list column headers:
+      </LI>
+    </UL>
+    <CENTER><DIV class="annoExample" id="colHeaders">
+      #class  name  type  subtype chrom start stop strand phase score qStart  qStop attribute-comments  sequence  freeform-comments
+    </DIV></CENTER>
+    </P>
+  </DIV></CENTER>
+  <HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="colDesc">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">5.2. Column Descriptions:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<BR CLEAR="all">
+<!--   Topic Content -->
+  The Genboree <SPAN class="genbLabel">LFF Format</SPAN> has:
+  <UL class="indent1">
+    <LI><B>Ten</B> (10) <i>required</i> columns:
+      <UL class="compact3">
+        <LI>- class, name, type, subtype, chrom, start, stop, strand, phase, score</LI>
+      </UL>
+    </LI>
+    <LI><B>Five</B> (5) <i>optional</i> columns:
+      <UL class="compact3">
+        <LI>- qStart, qStop, attribute-comments, sequence, freefrom-comments</LI>
+      </UL>
+    </LI>
+  </UL>
+  <P class="body">
+  A detailed description for each column follows.
+  For a more compact view, you can hide the Genboree context images and text using the
+  <A HREF="#showContext" class="invisiLink"><SPAN class="genbLabel">Show expanded help info?</SPAN> above</A>.
+  <P class="body">
+  <CENTER><DIV class="sectionHeader">LFF Annotation Columns:</DIV></CENTER>
+  <!-- Col #1: Class -->
+  <A NAME="class"></A>
+  <DIV class="colNum">Col. #1:</DIV>
+  <DIV class="colName">class</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Short text.</LI>
+      <LI>- A general 'category' for the annotation's <SPAN class="genbLabel">Track.</SPAN></LI>
+      <LI>- e.g. "Gene Predictions", "Conservation", "Repeats", "Assembly".</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv3">
+    <UL class="compact4_bigIndent">
+      <LI>- Used to categorize annotation tracks;<BR>for example, below the browser picture:</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/classBrowser.png" WIDTH="420" HEIGHT="359"></CENTER>
+  </DIV></CENTER>
+  <!-- Col #2: Name -->
+  <A NAME="name"></A>
+  <DIV class="colNum">Col. #2:</DIV>
+  <DIV class="colName">name</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Short text.</LI>
+      <LI>- A name for the annotation/annotation group.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv4">
+    <UL class="compact4_bigIndent">
+      <LI>- All annotations with the same name are considered <i>grouped</i>.</LI>
+      <LI>- There are group-aware drawing styles that can suitably display such <SPAN class="genbLabel">Annotation Groups</SPAN>.</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/nameBrowser.png" WIDTH="420" HEIGHT="123"></CENTER>
+    <UL class="compact4_bigIndent">
+      <LI>- The exons in the 1st track all have different names and are probably not being drawn as
+      the user would prefer.</LI>
+      <LI>- The exons in the 2nd track, however, are named according to their respective gene transcripts and can be drawn sensibly.</LI>
+      <LI>- Conversely, if <i>all</i> annotations are given the same name, they will <i>all</i> be in the same group.
+      Group-aware drawing styles may not appear as you wish, and performance may suffer.</LI>
+    </UL>
+  </DIV></CENTER>
+  <!-- Col #3: Type -->
+  <A NAME="type"></A>
+  <DIV class="colNum">Col. #3:</DIV>
+  <DIV class="colName">type</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Very short text. E.g. name or acronymn.</LI>
+      <LI>- The type of annotation; a repetition or a sensible sub-category of the <SPAN class="genbLabel">class</SPAN> is best.</LI>
+      <LI>- Actually, any text you like, as long as it doesn't contain the ':' character.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv5">
+    <UL class="compact4_bigIndent">
+      <LI>- See "Note" under <A HREF="#subtype" class="invisiLink"><SPAN class="genbLabel">subtype</SPAN> below</A>.</LI>
+    </UL>
+  </DIV></CENTER>
+  <!-- Col #4: Subtype -->
+  <A NAME="subtype"></A>
+  <DIV class="colNum">Col. #4:</DIV>
+  <DIV class="colName">subtype</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Very short text. E.g. name or acronymn.</LI>
+      <LI>- A more specific sub-type for the annotation; something more specific than <A HREF="#type"><SPAN class="genbLabel">type</SPAN></A> is best.</LI>
+      <LI>- Actually, any text you like, as long as it doesn't contain the ':' character.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv6">
+    <UL class="compact4_bigIndent">
+      <LI>- Together, the <A HREF="#type" class="invisiLink"><SPAN class="genbLabel">type</SPAN></A>
+       and the <A HREF="#subtype" class="invisiLink"><SPAN class="genbLabel">subtype</SPAN></A>
+       comprise the <i>Track Name</i>.</LI>
+      <LI>- To form the <i>Track Name</i>, they are joined by a &quot;:&quot;.
+      For example: &quot;BCM&quot; + &quot;Novel Gene&quot; = &quot;BCM:Novel Gene&quot;</LI>
+      <LI>- Ideally, the combined length of <A HREF="#type" class="invisiLink"><SPAN class="genbLabel">type</SPAN></A>
+       and <A HREF="#subtype" class="invisiLink"><SPAN class="genbLabel">subtype</SPAN></A> should be no
+       longer than <B>18</B> characters.</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/trackBrowser.png" WIDTH="420" HEIGHT="201"></CENTER>
+  </DIV></CENTER>
+  <!-- Col #5: Entry Point -->
+  <A NAME="entrypoint"></A>
+  <DIV class="colNum">Col. #5:</DIV>
+  <DIV class="colName">
+    <A HREF="showHelp.jsp?topic=definingAGenome" class="invisiLink">
+    <SPAN class="genbLabel"><B>Entry Point</B></SPAN></A>
+  </DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Very short text.</LI>
+      <LI>- Name of the <A HREF="showHelp.jsp?topic=definingAGenome" class="invisiLink"><SPAN class="genbLabel">entry point</SPAN></A> (e.g. the chromosome) the annotation is on.</LI>
+      <LI>- It must be one of the <A HREF="showHelp.jsp?topic=definingAGenome" class="invisiLink"><SPAN class="genbLabel">entry points</SPAN></A> defined for the database.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <!-- Col #6: Start -->
+  <A NAME="start"></A>
+  <DIV class="colNum">Col. #6:</DIV>
+  <DIV class="colName">start</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Positive integer.</LI>
+      <LI>- Start of annotation on the <A HREF="showHelp.jsp?topic=definingAGenome" class="invisiLink"><SPAN class="genbLabel">entry point</SPAN></A>.</LI>
+      <LI>- Start values beyond the ends of the entry point are prohibited.</LI>
+      <LI>- Note: the first base of an entry point is 1 (not 0). The start coordinate is included in the annotation.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <!-- Col #7: Stop -->
+  <A NAME="stop"></A>
+  <DIV class="colNum">Col. #7:</DIV>
+  <DIV class="colName">stop</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Positive integer.</LI>
+      <LI>- End of annotation on the <A HREF="showHelp.jsp?topic=definingAGenome" class="invisiLink"><SPAN class="genbLabel">entry point</SPAN></A>.</LI>
+      <LI>- Stop values beyond the ends of the entry point are prohibited.</LI>
+      <LI>- Note: the first base of an entry point is 1 (not 0). The stop coordinate is included in the annotation.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <!-- Col #8: Strand -->
+  <A NAME="strand"></A>
+  <DIV class="colNum">Col. #8:</DIV>
+  <DIV class="colName">strand</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. One of: '+' or '-'.</LI>
+      <LI>- The orientation of the annotation with respect to the entry point.</LI>
+      <LI>- Use '+' if you don't care about strand.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv10">
+    <UL class="compact4_bigIndent">
+      <LI>- The strand is always available by left-clicking the annotation.</LI>
+      <LI>- Some drawing styles are orientation aware:</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/strandBrowser.png" WIDTH="420" HEIGHT="96"></CENTER>
+  </DIV></CENTER>
+  <!-- Col #9: Phase  -->
+  <A NAME="phase"></A>
+  <DIV class="colNum">Col. #9:</DIV>
+  <DIV class="colName">phase</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. One of: 0,1,2 or '.'&nbsp;&nbsp;&nbsp;('.' == n/a).</LI>
+      <LI>- Whether the annotation is &quot;in-phase&quot; or &quot;out-of-phase&quot; with respect to something,
+      such as the reading frame, or the other mate-pair read, etc.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv11">
+    <UL class="compact4_bigIndent">
+      <LI>- Currently, one drawing style is phase-aware: <SPAN class="genbLabel">Paired-End</SPAN></LI>
+      <LI>- Along with <A HREF="#strand" class="invisiLink"><SPAN class="genbLabel">strand</SPAN></A>,
+      it uses <A HREF="#phase" class="invisiLink"><SPAN class="genbLabel">phase</SPAN></A>
+      to visually indicate the relative orientation of mapped mate pair ends (i.e. whether the ends are
+      in-phase or out-of-phase) when represented as a single annotation:</LI>
+      <UL class="compact3">
+        <LI><SPAN class="font10pt">&rarr;&nbsp;&larr;&nbsp;&nbsp;</SPAN>strand: +, phase: 0</LI>
+        <LI><SPAN class="font10pt">&rarr;&nbsp;&rarr;&nbsp;&nbsp;</SPAN>strand: +, phase: 1</LI>
+        <LI><SPAN class="font10pt">&larr;&nbsp;&larr;&nbsp;&nbsp;</SPAN>strand: -, phase: 1</LI>
+        <LI><SPAN class="font10pt">&larr;&nbsp;&rarr;&nbsp;&nbsp;</SPAN>strand: -, phase: 0</LI>
+      </UL>
+      </LI>
+      <LI>- The <SPAN class="genbLabel">Paired-End</SPAN> drawing style does this by
+      representing + oriented ends with a green block and - oriented ends with a yellow block:</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/phaseBrowser.png" WIDTH="420" HEIGHT="138"></CENTER>
+    <UL class="compact4_bigIndent">
+      <LI>- Other representations are possible, given user demand.</LI>
+    </UL>
+  </DIV></CENTER>
+  <!-- Col #10: Score -->
+  <A NAME="score"></A>
+  <DIV class="colNum">Col. #10:</DIV>
+  <DIV class="colName">score</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Required</i>. Real number.</LI>
+      <LI>- A score for the annotation.</LI>
+      <LI>- e.g. 340, 0.871, 1e-10, 0, 1.0, etc</LI>
+      <LI>- We recommend &quot;1.0&quot; when score doesn't matter.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv12">
+    <UL class="compact4_bigIndent">
+      <LI>- The score is always available by left-clicking the annotation.</LI>
+      <LI>- Some drawing styles use the score directly.</LI>
+      <LI>- The minimum/maximum is globally-derived so the y-axis scale is uniform, regardless of location/view.</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/scoreBrowser.png" WIDTH="420" HEIGHT="105"></CENTER>
+  </DIV></CENTER>
+  <!-- Col #11: qStart  -->
+  <A NAME="qstart"></A>
+  <DIV class="colNum">Col. #11:</DIV>
+  <DIV class="colName">qStart</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Optional</i>. Integer.</LI>
+      <LI>- Start of hit in the query. Or '.' for n/a.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <!-- Col #12: qStop  -->
+  <A NAME="qstop"></A>
+  <DIV class="colNum">Col. #12:</DIV>
+  <DIV class="colName">qStop</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Optional</i> Integer.</LI>
+      <LI>- Stop of hit in the query. Or '.' for n/a.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <!-- Col #13: attribute comments  -->
+  <A NAME="comments"></A>
+  <DIV class="colNum">Col. #13:</DIV>
+  <DIV class="colName">attribute<BR>comments</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Optional</i>. A series of <I>attribute=value;</I> pairs.</LI>
+      <LI>- The attribute names are up to you, as are the values.</LI>
+      <LI>- Attribute=value; format is:
+        <UL class="compact4">
+          <LI>&nbsp;&nbsp;&middot; attribute name (any text not '=')<LI>
+          <LI>&nbsp;&nbsp;&middot; then '='<LI>
+          <LI>&nbsp;&nbsp;&middot; then value (any text not ';')</LI>
+          <LI>&nbsp;&nbsp;&middot; then ';'</LI>
+        </UL>
+      <LI>- The <I>attribute</I> cannot be longer than 255 characters.</LI>
+      <LI>- If the <I>value</I> is longer than 65535, it will be truncated.</LI>
+      <LI>- This column can contain multiple attribute=value; pairs.</LI>
+      <LI>- Pairs found in this column are specifically modelled as 'attributes' or 'properties' of your annotation.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <CENTER><DIV class="egDiv" id="egDiv15">
+    <UL class="compact4_bigIndent">
+      <LI>- These <I>attribute-value;</I> pairs have additional advantages:
+        <OL class="compact3_a">
+          <LI>self-documenting comments with a regular structure</LI>
+          <LI>easy to extract data into custom <SPAN class="genbLabel">Link URLs</SPAN></LI>
+          <LI>looks similar to other formats (i.e. GFF)</LI>
+          <LI>users looking at an <SPAN class="genbLabel">Annotation's Details</SPAN> can make use of an
+          'auto-wrap' feature that makes reading such comments user-friendly</LI>
+        </OL>
+      <LI>- LFF attribute-comment example:</LI>
+    </UL>
+    <CENTER><DIV class="annoExample" id="nameValueEx">
+      gi=123987456; extDB_ref=10987K5; percIdent=94.68; e-val=1e-68; region=transmembrane; source=Smith Lab;
+    </DIV></CENTER>
+    <UL class="compact4_bigIndent">
+      <LI>- Comment wrapping example:</LI>
+    </UL>
+    <CENTER><IMG SRC="/images/annoDetails.png" WIDTH="420" HEIGHT="427"></CENTER>
+  </DIV></CENTER>
+  <!-- Col #14: sequence -->
+  <A NAME="sequence"></A>
+  <DIV class="colNum">Col. #14:</DIV>
+  <DIV class="colName">sequence</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Optional</i>. Long text.</LI>
+      <LI>- This is intended for the sequence of the query or protein mapped to this region of the genome.</LI>
+      <LI>- Sometimes the query sequence and the genomic sequence are different (e.g. blating drosophila genes against sea
+      urchin genome) and you want a place to put the query sequence.</LI>
+      <LI>- Be reasonable, however; not appropriate for storing the Mouse genome.</LI>
+      <LI>- Like <A HREF="#comments" class="invisiLink"><SPAN class="genbLabel">comments</SPAN></A>, the sequence associated with
+      an annotation will be available in the browser via left-clicking and choosing <SPAN class="genbLabel">Annotation Details</SPAN>.
+  </DIV><BR CLEAR="all">
+  <!-- Col #15: freeform comments -->
+  <A NAME="freecomments"></A>
+  <DIV class="colNum">Col. #15:</DIV>
+  <DIV class="colName">freeform<BR>comments</DIV>
+  <DIV class="colDesc">
+    <UL class="compact4">
+      <LI>- <i>Optional</i>. Long text.</LI>
+      <LI>- We strongly recommend using the <A HREF="showHelp.jsp?topic=lffFileFormat#comments" class="invisiLink"><SPAN class="genbLabel">attribute comments</SPAN></A>
+            to formally record extra content. It can be used for <I>sub-selection</I>, <I>custom track links</I>, etc.</LI>
+      <LI>- As a last resort, this free-form text column is provided.</LI>
+      <LI>- Be reasonable, however; not appropriate for storing War and Peace.</LI>
+    </UL>
+  </DIV><BR CLEAR="all">
+  <HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<DIV class="topLabel">
+	<A NAME="annoExample"></A>
+	<SPAN class="subtopicHeader">5.3. LFF Annotation Examples:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<BR CLEAR="all">
+<!--   Topic Content -->
+<P class="indentBody">
+Minimal (10 columns; a 2-exon gene):
+<CENTER><DIV class="annoExample" id="annoExample1">
+<PRE>Genes & RNA	AVPR1A	Gene	RefSeq	chr12	63256962	63258172	-	.	0	.	.
+Genes & RNA	AVPR1A	Gene	RefSeq	chr12	63260393	63263337	-	.	0	.	.</PRE>
+</DIV></CENTER>
+<P class="indentBody">
+Standard (12 columns; contigs within a scaffold):
+<CENTER><DIV class="annoExample" id="annoExample2">
+<PRE>Assembly	AAGJ01021111	Assembly	Contig	Scaffold_114754	1	1300	+	.	1.0	1	1300
+Assembly	AAGJ01022222	Assembly	Contig	Scaffold_114754	2195	3504	-	.	1.0	1	1310</PRE>
+</DIV></CENTER>
+<P class="indentBody">
+With comments (13 columns; SNPs):
+<CENTER><DIV class="annoExample" id="annoExample3">
+<PRE>Cancer SNPs	HUR6.188	SNPs	Codon	chr2	19461847	19461847	+	.	0	.	.	allele=G/T; aaChange=A->A; nonSynon=false; refAA=A; mutAA=A; refCodon=GCG; rs_acc=rs123456; leftFlank=TGACGG; rightFlank=GCCAAC; exonPosition=2; proteinPosition=42; ampliconId=25299;
+Cancer SNPs	HUR6.329	SNPs	Codon	chr12	19461988	19461988	+	.	0	.	.	allele=C/T; aaChange=Y->Y; nonSynon=false; refAA=Y; mutAA=Y; refCodon=TAC; rs_acc=rs987654; leftFlank=ACGCGC; rightFlank=GGGCGC; exonPosition=2; proteinPosition=89; ampliconId=25299;
+Cancer SNPs	HUR1D.382	SNPs	Codon	chr18	22989108	22989108	-	.	0	.	.	allele=T/C; aaChange=N->N; nonSynon=false; refAA=N; mutAA=N; refCodon=AAT; rs_acc=rs789123; leftFlank=CTGTGT; rightFlank=GAAGAG; exonPosition=2; proteinPosition=360; ampliconId=25053;
+Cancer SNPs	GRAF3.220	SNPs	Codon	chr19	36753139	36753139	-	.	1	.	.	allele=T/G; aaChange=S->A; nonSynon=true; refAA=S; mutAA=A; refCodon=TCC; rs_acc=rs567891; leftFlank=AGCTCC; rightFlank=CCGAGT; exonPosition=7; proteinPosition=310; ampliconId=24229;</PRE>
+</DIV></CENTER>
+<BR CLEAR="all">
+<HR class="sep">
+
+<!-- TOPIC -->
+<!--   Topic Header -->
+<div class="topLabel">
+  <a name="specialAttributes"></A>
+  <span class="subtopicHeader">5.4. Special <i>Attribute=Value;</i> Pairs:</SPAN>
+</DIV>
+<DIV class="topLink">
+  <A HREF="javascript:scroll(0,0);"></A>
+</DIV>
+<BR CLEAR="all">
+<!--   Topic Content -->
+  <p class="body">
+  Genboree will recognize certain special <i>attributes</i> within the
+  <a href="#comments" class="invisiLink"><span class="genbLabel">attribute comments</span></a> column (13th column).
+  <p class="body">
+  Some of these are experimental, but the generally available and stable ones are listed below.
+  </p>
+  <!-- ATTR. #1: annotationColor -->
+  <A NAME="annotationColor"></A>
+  <DIV class="attrName">annotationColor</DIV>
+  <DIV class="attrDesc">
+    <UL class="compact4">
+      <li>- Use this to set a color <u>specific</u> to this annotation.</li>
+      <li>- The annotation-specific color will override any <i>track</i> color settings.</li>
+      <li>- The color may be specified in the <i>annotationColor</i> attribute's value in one of 3 ways:
+        <ol class="compact3_a">
+          <li><b>RGB Hex Format:</b> <code style="padding: 2px; font-size: 110%; background: #eeeeee;">annotationColor=#FF00AA;</code></li>
+          <li><b>RGB Dec Format:</b> <code style="padding: 2px; font-size: 110%; background: #eeeeee;">annotationColor=255,10,128;</code></li>
+          <li><b>HTML Color Name:</b> <code style="padding: 2px; font-size: 110%; background: #eeeeee;">annotationColor=DarkGoldenRod;</code><br>
+          (<a href="http://www.w3schools.com/html/html_colornames.asp">see full list of color names</a>)</li>
+        </ol>
+      </li>
+    </UL>
+  </DIV><BR CLEAR="all">
+
+
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

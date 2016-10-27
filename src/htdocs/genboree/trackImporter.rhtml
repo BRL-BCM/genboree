@@ -1,0 +1,219 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'fileutils'
+  require 'timeout'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'json'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/projectManagement/projectMainPage'
+  require 'brl/util/util'
+  require 'brl/genboree/abstract/resources/trackImporterInfo'
+
+  $VERBOSE = true
+  cgi = CGI.new()
+  jsonData = cgi["options"]
+  @req = Apache.request
+  @serverName = cgi.host
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = timer = nil
+
+  begin
+    #options = JSON.parse(jsonData)
+    genbConf = BRL::Genboree::GenboreeConfig.load()
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+    # Context In variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    tracks = context.cgi['tracks'].strip
+    build = context.cgi['build'].strip
+    groupName = context.cgi['groupName'].strip
+    context[:userId] = context.cgi['userId']
+    context[:groupId] = getGroupIdXHeader(context.cgi)
+    context[:refSeqId] = getDatabaseIdXHeader(context.cgi)
+    context[:databaseName] = getDatabaseNameXHeader(context.cgi)
+    context[:errCode] = OK
+    context[:err] = nil
+    context[:timer] = timer
+    context[:req] = @req
+    context[:isPublicAccess] = (context.cgi['isPublic'] and context.cgi['isPublic'] =~ /^YES|TRUE$/i) ? true : false
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+    
+%>
+  <p><b>Track Importer</b></p>
+<%
+  if(tracks == "")
+%>
+      <script type="text/javascript">
+      <!--
+        dbName = "<%= context[:databaseName] %>";
+        groupName = "<%= groupName %>";
+        trackWarningNumber = <%= genbConf.importerManyTracksWarning %>;
+        adminEmail = "<%= genbConf.gbAdminEmail %>";
+      // -->
+      </script>
+      <div id="message">
+      </div>
+      <div id="import">
+        <table>
+          <tr>
+            <td>
+              Select tracks to import
+              <a id="helpButton" onclick="return displayHelpPopup(this, helpMessages['trackImporterInstructions'].text, helpMessages['trackImporterInstructions'].title);" href="javascript:void(0);">
+                <img width="16" height="16" border="0" style="margin-left: 5px;" src="/images/gHelp1.png"/>
+              </a>
+            </td>
+            <td align="right">
+              <input type="submit" id="recommendedButton" value="Recommended Tracks" align="right" onClick="getRecommendedTracks()">
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" colspan="2">
+              <div id="tree"></div>
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" colspan="2">
+              <div id="grid"></div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <form name="trackForm" onsubmit="return submitTracks()" method="post">
+                <input type="hidden" name="tracks" id="tracks" value="">
+                <input type="hidden" name="build" id="build" value="">
+                <input type="submit" id="importButton" value="Import">
+              </form>
+            </td>
+          </tr>
+        </table>
+        <br><p><i>Note: While you can import a great many of the tracks and create a very data-heavy database, for best performance apply common sense and import choice tracks that will enhance the context and understanding of your own data.</i></p>
+        <br><p><i>Note: Not all tracks are currently available for every remote source but more tracks will be added shortly.</i></p>
+      </div>
+<%
+  else    
+    # Create the ticket number
+    ticketNumber = "#{Time.now.to_f}_#{rand(65535)}"
+    # make workingDir:
+    workingDir = "#{genbConf.trackImporterBase}/#{context[:groupId]}/#{context[:refSeqId]}/#{context[:userId]}/#{ticketNumber}"
+    FileUtils.mkdir_p(workingDir)
+    cmd = CGI.escape("trackImporter.importer.rb -w #{workingDir} -k #{tracks} -r #{context[:refSeqId]} -u #{context[:userId]} -g #{context[:groupId]} -e #{context.cgi['userEmail']} -v #{build} -d false > #{workingDir}/data.out 2> #{workingDir}/error.out")
+    @cmdBase =  "genbTaskWrapper.rb -c #{cmd} -g #{ENV['GENB_CONFIG']} "
+    @cmdBase << " -v "
+    @cmdBase << " -o #{workingDir}/genbTaskWrapper.out -e #{workingDir}/genbTaskWrapper.err > #{workingDir}/genbTaskWrapper.launch.output 2>&1 "
+    @cmdBase << " & " # necessary to run in background, since genbTaskWrapper.rb will -detach- itself
+    # Execute command...should return right away
+    $stderr.puts "BEFORE launching genbTaskWrapper => (Mem:#{BRL::Util::MemoryInfo.getMemUsageStr()})"
+    `#{@cmdBase}`
+    @cmdExitStatus = $?
+    $stderr.puts "AFTER launching genbTaskWrapper => (Mem:#{BRL::Util::MemoryInfo.getMemUsageStr()})"
+    $stderr.puts "\nAPI CREATE IMPORTER AS DETACHED BACKGROUND PROCESS. Exit status: #{@cmdExitStatus.exitstatus}"
+%>
+    <script type="text/javascript">
+      var ele = document.getElementById("grpDbBarsTable");
+      ele.style.display = "none";
+    </script>
+    <div id="results">
+       <br><p><b>Your data has been submitted for importing</b></p>
+       <br><p>Since the process of importing these tracks may take a while (depending on the number and size of your data file<%= "#{'s' if(tracks.split(',').size > 1)}" %>), we will send you a confirmation email when it is complete.</p>
+       <br><p>If you do not receive an email from us within 48 hours, please feel free to contact our administrator with your job id.</p>
+       <br><p>For your reference, here is your <b>job id: <%= ticketNumber %></b></p>
+       <br><p>
+       <div id="gridResults"></div>
+       </p>
+<%
+    importerInfo = BRL::Genboree::Abstract::Resources::TrackImporterInfo.new(build)
+    records = tracks.split(',')
+    infoRecs = importerInfo.getImporterInfoRecords(records)
+%>
+    <script type="text/javascript">
+      function addSubmittedToGrid()
+      {
+<%
+    infoRecs.each { |arguments|
+        type = arguments[3];
+        subType = arguments[4];
+
+        if(type.length + subType.length > 18)
+          type = /^(\S+)(.+)$/.match(arguments[3])[1].strip
+          subType = /^(\S+)(.+)$/.match(arguments[3])[2].strip
+
+          if(subType.length <= 1)
+            type = /^(\S+)(.+)$/.match(arguments[4])[1].strip
+            subType = /^(\S+)(.+)$/.match(arguments[4])[2].strip
+          end
+
+          if(type.include?(" "))
+            type = type.split(" ")[0]
+          end
+
+          if(subType.include?(" "))
+            subType = subType.split(" ")[0]
+          end
+
+          if(type.length + subType.length > 18)
+            if(type.length > subType.length)
+              newLength = 18 - subType.length
+              type = type[0, newLength]
+            else
+              newLength = 18 - type.length
+              subType = subType[0, newLength]
+            end
+          end
+        end
+        
+        if(arguments[6] != '.')
+          type = arguments[6]
+        end
+        if(arguments[7] != '.')
+          subType = arguments[7]
+        end
+        
+        type = CGI.escapeHTML(type);
+        subType = CGI.escapeHTML(subType);
+        arguments[0] = CGI.escapeHTML(arguments[0]);
+        arguments[1] = CGI.escapeHTML(arguments[1]);
+        arguments[2] = CGI.escapeHTML(arguments[2]);
+        arguments[3] = CGI.escapeHTML(arguments[3]);
+        arguments[4] = CGI.escapeHTML(arguments[4]);
+%>
+        addToResultsGrid('<%= type %>:<%= subType %>', '<%= arguments[1] %>', '<%= arguments[2] %>', '<%= "#{arguments[3]} : #{arguments[4]} (#{arguments[0]})" %>', '<%= arguments[0] %>');
+<%
+    }
+%>
+    }
+    </script>
+    </div>
+<%
+  end
+%>
+<%
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating main project page from pieces.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  end # begin
+%>

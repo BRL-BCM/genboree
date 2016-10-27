@@ -1,0 +1,425 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1200px;
+  background-image: url("/epigenomeatlas/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("/epigenomeatlas/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeaderContainer {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  width: 1200px;
+  height: 140px;
+}
+
+#dataFreezeHeaderLeft{
+  background-image: url("/epigenomeatlas/images/headerSliver.png");
+  background-repeat: repeat;
+  width: 940px; /*dfHeaderContainer.width - 260(width of bcm logo image border figure)*/
+  height: 140px;
+  float:left;
+}
+
+#centerLogo{
+  width: 680px; /*(940 - 260)* */
+  height:100px;
+  margin-top:30px;
+  float:right;
+}
+
+#dataFreezeHeaderRight{
+  background-image: url("/epigenomeatlas/images/headerCurve.png");
+  background-repeat: no-repeat;
+  float:right;
+  height: 140px;
+  width: 260px;
+}
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 240px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+
+
+.legend10
+{
+font:10px sans-serif,verdana;
+padding: 1px;
+background-position: left center;
+}
+
+.legendBold10
+{
+font:bold 10px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold11
+{
+font:bold 11px sans-serif,verdana;
+padding: 1px;
+}
+
+.legend11
+{
+font:11px sans-serif,verdana;
+padding: 1px;
+}
+
+
+
+.legend12
+{
+font:12px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold22
+{
+font:bold italic 22px sans-serif,verdana;
+padding: 1px;
+}
+
+.legendBold12
+{
+font:bold 12px sans-serif,verdana;
+padding: 1px;
+}
+
+.empty
+{
+  background-color: #ffffff;
+}
+
+.empty-selected
+{
+background-color: #d3d3d3;
+}
+
+.firstCell
+{
+  width: 300px;
+  border-bottom : 1px solid black;
+}
+
+.topBlockRow
+{
+  border-top: 20px solid black;
+}
+
+.header-image
+{
+  height: 130px;
+  width: 990px;
+}
+
+.expt
+{
+  width: 33px;
+  height: inherit;
+  user-select:none;
+   -moz-user-select: none;
+   -khtml-user-select: none;
+}
+
+.exptClass1
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-top:1px solid black;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+
+.exptClass2
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.exptClass3
+{
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid black;
+  border-bottom:1px solid black;
+}
+
+.imageCell
+{
+vertical-align:bottom;
+}
+
+.textarea
+{
+  width: 1300px;
+}
+
+.filler
+{
+
+}
+
+.selected
+{
+background-color: #214c8b;
+}
+
+.button
+{
+font:bold 12px verdana,sans-serif;
+background-color:#f2f2f2;
+border:3px solid #2c5cbc;
+cursor:pointer;
+}
+
+.parentWidth{
+  height:160px;
+}
+
+/*     .x-grid3-hd-row
+     {
+      height:160px;
+     }*/
+     .x-grid3-td-tracks
+     {
+      height:100% !important;
+      border-right:none !important;
+      border-left:none !important;
+     }
+     
+     .x-grid3-td-firstCell
+     {
+      border-right:none !important;
+      border-left:1px solid #D0D0D0 !important;
+     }
+     .x-grid3-hd-tracks
+     {
+      width:100% !important;
+      height:100% !important;
+      padding:0;
+     }
+.x-grid3-col-firstCell
+{
+  width:100% !important;
+}
+.x-grid3-cell-last
+{
+  border-right:1px solid #D0D0D0 !important;
+}
+   .rightClass
+   {
+      background-image: url("/images/workbench/right-arrow.gif") !important;
+   }
+   .downClass
+   {
+      background-image: url("/images/workbench/down-arrow.gif") !important;
+   }
+   .clearClass
+   {
+      background-image: url("/images/silk/cancel.png") !important;
+   }
+   .saveClass
+   {
+      background-image: url("/images/silk/disk.png") !important;
+   }
+
+
+   .viewClass
+   {
+      background-image: url("/images/silk/eye.png") !important;
+   }
+   .clearClass
+   {
+      background-image: url("/images/silk/cancel.png") !important;
+   }
+   .ucscClass
+   {
+      background-image: url("/images/ucsc.png") !important;
+   }
+   .agbClass
+   {
+      background-image: url("/images/agb.png") !important;
+   }
+  .dbClass
+   {
+      background-image: url("/images/workbench/dbTreeNode.png") !important;
+   }
+    .selectionClass
+   {
+      background-image: url("/images/selections.png") !important;
+   }
+   .toglClass
+   {
+      cursor:pointer;
+      padding-left:20px;
+      background-image:url('/epigenomeatlas/images/toggle.gif');
+      background-repeat: no-repeat;
+   }
+   .dbdClass
+   {
+      cursor:pointer;
+      padding-left:20px;
+      background-image:url('/images/workbench/dbTreeNode.png');
+      background-repeat: no-repeat;
+   }
+   
+   .dbdIconClass
+   {
+      background-image:url('/images/workbench/dbTreeNode.png');
+   }
+   .dwnldClass
+   {
+    cursor:pointer;
+    padding-left:20px;
+    background-image:url('/epigenomeatlas/images/download.png');
+    background-repeat: no-repeat;
+   }
+
+   .metadClass
+   {
+    cursor:pointer;
+    padding-left:20px;
+    background-image:url('/images/silk/page.png');
+    background-repeat: no-repeat;
+   }
+
+   .x-grid3-col-tracks
+   {
+      padding:1px;
+      height:17px;
+      width:100%;
+   }
+.menu-title {
+    background: none repeat scroll 0 0 #D6E3F2;
+    border-color: #DAE6F4 #99BBE8 #99BBE8 #DAE6F4;
+    border-style: solid;
+    border-width: 1px;
+    color: #15428B;
+    display: block;
+    font: bold 10px tahoma,arial,verdana,sans-serif;
+    margin: -2px -2px 0;
+    padding: 3px;
+}
+
+.rotateText
+{
+/*filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);*/
+-webkit-transform: rotate(-90deg);
+-moz-transform: rotate(-90deg);
+-o-transform: rotate(-90deg);
+-ms-transform: rotate(-90deg);
+}
+
+  .cellSelected{
+   background-color: #DFE8F6;
+   }
+
+ ul.cat {
+  list-style: none outside none;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+  padding-top: 0 !important;
+}
+
+div.results {
+  border: 1px solid black;
+  margin: 0;
+  padding: 5px 5px 10px 10px;
+  overflow:auto;
+}
+
+div.success {
+  font-family: sans-serif;
+  font-size: 11pt;
+  margin: 5px;
+  padding: 5px 5px 10px 10px;
+}
+
+ .advancedImgToggle {
+  background-image: url('/images/bullet_toggle_plus.png') ;
+  background-position: left center ;
+  background-repeat: no-repeat ;
+  cursor: pointer ;
+  margin-left: 0 ;
+  margin-right: 2px ;
+  padding-left: 8px ;
+}
+.advancedTextToggle {
+  font:italic 11px verdana;
+  text-decoration: none ;
+  cursor: pointer ;
+}
+table.advancedTable {
+  border: 1px dotted black ;
+  padding: 2px ;
+}
+td.advancedTableText {
+  font:11px verdana;
+}
+td.advancedTableSettings {
+  font:11px verdana;
+}
+
+
+.pageList
+{
+  padding-left:10px;
+}
+ul.pageList li
+{
+  list-style-type: disc;
+}
+.extColor
+{
+  background-color: #DFE8F6 !important;
+}

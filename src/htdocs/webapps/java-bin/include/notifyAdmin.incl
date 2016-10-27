@@ -1,0 +1,235 @@
+<%@ page import="javax.servlet.http.*, java.util.*, java.sql.*,
+ org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="userinfo.incl" %>
+<%!
+	static String fromEmail = "genboree_admin@genboree.org";
+	static String fromAddress = "\"Genboree Team\" <"+fromEmail+">";
+%>
+<%
+    response.addDateHeader( "Expires", 0L );
+
+    int i = 0;
+    boolean void_page = false;
+    String statMsg = "Operation prohibited.";
+    String canBtnLab = " Cancel ";
+    String refSeqId = null;
+    String groupAllowed = null;
+    String mainDatabase = "genboree";
+    String query = null;
+    boolean need_check = false;
+    GenboreeUser[] gAdmins = null;
+    Refseq rseq = null;
+    Hashtable htug = null;
+    Hashtable htUsr = null;
+    String addrFrom = null;
+    String stdInfo = null;
+    String msgUrl = null;
+    String msgBody = null;
+    String formSubmitted = null;
+    String[] userIds = null;
+    String operationNotPermitted = null;
+
+    myself = (GenboreeUser) mys.getAttribute( "myself" );
+    is_public = userInfo[0].equals("Public");
+
+    if( is_public || myself==null || request.getParameter("btnCancel")!=null )
+    {
+      GenboreeUtils.sendRedirect(request,response,  "/java-bin/index.jsp" );
+      return;
+    }
+
+    refSeqId = (String) mys.getAttribute( "msgRefSeqId" );
+    if( refSeqId == null ) refSeqId = request.getParameter( "msgRefSeqId" );
+    mys.removeAttribute( "msgRefSeqId" );
+    groupAllowed = request.getParameter( "groupAllowed" );
+    formSubmitted = request.getParameter("btnSend");
+    operationNotPermitted = request.getParameter("operationNotPermitted");
+    msgUrl = request.getParameter( "msg_url" );
+    if( msgUrl == null )
+    {
+      msgUrl = (String) mys.getAttribute( "target" );
+    }
+    mys.removeAttribute("target") ; // Unset the target so we don't keep trying to go here.
+    msgBody = request.getParameter( "msg_body" );
+    userIds = request.getParameterValues( "userId" );
+
+    if(operationNotPermitted != null)
+    {
+        mys.setAttribute( "warnMsg", "<strong>Sorry, We have detected a "
+                + "serious problems please contact genboree_admin@genboree.org "
+                +"immediately to fix the problem</strong>" );
+        GenboreeUtils.sendRedirect(request,response,  "/java-bin/warn.jsp" );
+        return;
+    }
+
+    htug = new Hashtable();
+    htUsr = new Hashtable();
+
+    String msgOpener = "\nHello,\nI would like to request access to " ;
+    String msgSig = "My Genboree Login Name is: '" + myself.getName() + "'\n\n" +
+                    "Sincerely,\n" + myself.getFullName() + ".\n" ;
+    if(groupAllowed != null && refSeqId != null)
+    {
+      rseq = new Refseq();
+      rseq.setRefSeqId( refSeqId );
+
+      if( !rseq.fetch(db) )
+      {
+        void_page = true;
+        statMsg = "Sorry, the database ID=" + refSeqId + " cannot be found.";
+      }
+      else
+      {
+        query = "SELECT ug.userId, g.groupName FROM genboreegroup g, " +
+                "usergroup ug WHERE g.groupId=ug.groupId " +
+                "AND g.groupName = '" + groupAllowed + "' AND ug.userGroupAccess='o'";
+        if( msgBody == null)
+        {
+          msgBody = msgOpener +
+                    "the group '" + groupAllowed +"'.\n\n" +
+                    "I am particularly interested in the database '" + rseq.getRefseqName() + "' (ID=" + refSeqId + ").\n\n" +
+                    msgSig ;
+
+        }
+      }
+    }
+    else if(refSeqId != null)
+    {
+      rseq = new Refseq();
+      rseq.setRefSeqId( refSeqId );
+
+      if( !rseq.fetch(db) )
+      {
+        void_page = true;
+        statMsg = "Sorry, the database ID="+refSeqId+" cannot be found.";
+      }
+      else
+      {
+        query = "SELECT u.userId, g.groupName "+
+                "FROM usergroup u, grouprefseq gr, genboreegroup g "+
+                "WHERE u.groupId=gr.groupId AND gr.groupId=g.groupId "+
+                "AND gr.refSeqId=" + refSeqId + " AND u.userGroupAccess='o'";
+        if( msgBody == null)
+        {
+          msgBody = msgOpener +
+                    "the database '" + rseq.getRefseqName() + "' (ID=" + refSeqId + ").\n\n" +
+                    msgSig ;
+        }
+      }
+    }
+    else if(groupAllowed != null)
+    {
+      query = "SELECT ug.userId, g.groupName FROM genboreegroup g, " +
+              "usergroup ug WHERE g.groupId=ug.groupId " +
+              "AND g.groupName = '" + groupAllowed + "' AND ug.userGroupAccess='o'";
+      if( msgBody == null)
+      {
+        msgBody = msgOpener +
+                  "the group '" + groupAllowed +"' .\n\n" +
+                  msgSig ;
+      }
+    }
+
+    if( !void_page )
+    {
+      try
+      {
+        Vector v = new Vector();
+        DbResourceSet dbRes = db.executeQuery( mainDatabase, query );
+        ResultSet rs = dbRes.resultSet;
+        while( rs.next() )
+        {
+            String userId = rs.getString(1);
+            String groupName = rs.getString(2);
+            GenboreeUser usr = new GenboreeUser();
+            usr.setUserId( userId );
+            usr.fetch( db );
+            if( !Util.isEmpty(usr.getEmail()) && !usr.getName().equals("admin") )
+            {
+              v.addElement( usr );
+              htug.put( usr.getName(), groupName );
+              htUsr.put( usr.getUserId(), usr );
+            }
+        }
+        dbRes.close();
+
+        if( v.size() < 1 )
+        {
+          GenboreeUser adm = new GenboreeUser();
+          adm.setName( "admin" );
+          if( !adm.fetchByNameOrEmail(db) )
+          {
+            adm.setUserId( "admin" );
+            adm.setEmail( fromEmail );
+            adm.setName( "admin" );
+            adm.setLastName( "Genboree Administrator" );
+          }
+          v.addElement( adm );
+          htug.put( adm.getName(), "All Groups" );
+          htUsr.put( adm.getUserId(), adm );
+          GenboreeUtils.sendRedirect(request,response,  "/java-bin/defaultGbrowser.jsp" );
+          return;
+        }
+
+        gAdmins = new GenboreeUser[ v.size() ];
+        v.copyInto( gAdmins );
+      }
+      catch( Exception ex00 )
+      {
+        void_page = true;
+      }
+    }
+
+    if(formSubmitted != null && !void_page)
+    {
+      addrFrom = myself.getFullName() + " <" + myself.getEmail() + ">";
+
+      if( userIds == null )
+      {
+        userIds = new String[0];
+      }
+      need_check = true;
+      for( i=0; i<userIds.length; i++ )
+      {
+        GenboreeUser usr = (GenboreeUser) htUsr.get(userIds[i]);
+
+        if( usr == null )
+        {
+          continue;
+        }
+
+        SendMail m = new SendMail();
+        m.setHost( Util.smtpHost );
+        m.setFrom( fromAddress );
+        m.setReplyTo( addrFrom );
+        m.addTo( "\""+usr.getFullName()+"\" <"+usr.getEmail()+">" );
+        m.setSubj( "Message from \""+myself.getName()+"\" "+addrFrom );
+
+        String _msgBody = "";
+        if( !Util.isEmpty(msgUrl) )
+        {
+          _msgBody = _msgBody + "URL: " + msgUrl + "\n\n";
+        }
+        if( !Util.isEmpty(msgBody) )
+        {
+          _msgBody = _msgBody + msgBody + "\n\n";
+        }
+        _msgBody = _msgBody + "*** If you want to reply to this email, "+
+                "please use the following address:\n"+addrFrom+"\n";
+
+        m.setBody( _msgBody );
+        if( m.go() )
+        {
+          statMsg = "Your message has been sent.";
+          void_page = true;
+          need_check = false;
+          canBtnLab = " OK ";
+        }
+      }
+      mys.removeAttribute( "msg_stdinfo" );
+      mys.removeAttribute( "msg_url" );
+      mys.removeAttribute( "msg_body" );
+    }
+
+%>

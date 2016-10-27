@@ -1,0 +1,265 @@
+[
+  {
+    "text": "Home",
+    "href": "index.jsp"
+  },
+  {
+    "hideOnClick": false,
+    "text": "Tools",
+    "menu":
+    {
+      "id": "tools",
+      "items":
+      [
+        {
+          "href": "workbench.jsp",
+          "text": "Workbench"
+        },
+        {
+          "text": "VGP",
+          "menu":
+          {
+            "items":
+            [
+              {
+                "href": "vgpConfig.jsp",
+                "text": "VGP Wizard"
+              },
+              {
+                "href": "vgpResults.jsp",
+                "text": "VGP Results"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Circos",
+          "menu":
+          {
+            "items":
+            [
+              {
+                "href": "vgpConfig.jsp",
+                "text": "Circos Wizard"
+              },
+              {
+                "href": "vgpResults.jsp",
+                "text": "Circos Results"
+              }
+            ]
+          }
+        },
+        {
+          "href": "defaultGbrowser.jsp",
+          "text": "Genome Browser"
+        }
+      ]
+    }
+  },
+  {
+    "text": "Profile",
+    "href": "mygenboree.jsp",
+    "menu":
+    {
+      "items":
+      [
+        {
+          "href": "mygenboree.jsp?eP=yes",
+          "text": "Edit"
+        },
+        {
+          "href": "mygenboree.jsp?cP=yes",
+          "text": "Change password"
+        }
+      ]
+    }
+  },
+  {
+    "text": "Groups",
+    "href": "mygroup.jsp",
+    "menu":
+    {
+      "items":
+      [
+        {
+          "href": "mygroup.jsp?mode=Create",
+          "text": "New"
+        },
+        {
+          "href": "mygroup.jsp?mode=Delete",
+          "text": "Delete"
+        },
+        {
+          "href": "mygroup.jsp?mode=Update",
+          "text": "Update"
+        },
+        {
+          "href": "mygroup.jsp?mode=AddUser",
+          "text": "Add user"
+        },
+        {
+          "href": "mygroup.jsp?mode=SetRols",
+          "text": "Update roles"
+        },
+        {
+          "href": "#needsCallback",
+          "text": "Copy Users"
+        }
+      ]
+    }
+  },
+  {
+    "text": "Projects",
+    "href": "projectManagement.jsp",
+    "menu":
+    {
+      "items":
+      [
+        {
+          "href": "projectManagement.jsp",
+          "text": "View"
+        },
+        {
+          "href": "projectManagement.jsp?mode=0",
+          "text": "New"
+        },
+        {
+          "href": "projectManagement.jsp?mode=1",
+          "text": "Rename"
+        },
+        {
+          "href": "projectManagement.jsp?mode=2",
+          "text": "Delete"
+        },
+        {
+          "href": "projectManagement.jsp?mode=3",
+          "text": "Copy"
+        },
+        {
+          "href": "projectManagement.jsp?mode=4",
+          "text": "Move"
+        }
+      ]
+    }
+  },
+  {
+    "text": "Databases",
+    "href": "myrefseq.jsp",
+    "menu":
+    {
+      "items":
+      [
+        {
+          "href": "myrefseq.jsp?mode=Create",
+          "text": "New"
+        },
+        {
+          "href": "myrefseq.jsp?mode=Delete",
+          "text": "Delete"
+        },
+        {
+          "href": "myrefseq.jsp?mode=Update",
+          "text": "Update"
+        },
+        {
+          "href": "myrefseq.jsp?mode=Upload",
+          "text": "Upload annotations"
+        },
+        {
+          "href": "myrefseq.jsp?mode=EPs",
+          "text": "Upload chromosomes"
+        },
+        {
+          "href": "myrefseq.jsp?mode=Publish",
+          "text": "Publish"
+        },
+        {
+          "href": "myrefseq.jsp?mode=Unlock",
+          "text": "Generate key"
+        },
+        {
+          "href": "trackmgr.jsp",
+          "text": "Manage tracks",
+          "menu":
+          {
+            "items":
+            [
+              {
+                "href": "trackmgr.jsp?mode=Rename",
+                "text": "Rename"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Delete",
+                "text": "Delete"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Order",
+                "text": "Order"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Styles",
+                "text": "Styles"
+              },
+              {
+                "href": "trackmgr.jsp?mode=URL",
+                "text": "URL"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Classify",
+                "text": "Classify"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Access",
+                "text": "Access"
+              },
+              {
+                "href": "trackmgr.jsp?mode=Files",
+                "text": "Manage 'Big' file snapshots"
+              },
+              {
+                "href": "linkmgr.jsp",
+                "text": "Manage links"
+              }
+            ]
+          }
+        },
+        {
+          "href": "linkmgr.jsp",
+          "text": "Manage links",
+          "menu":
+          {
+            "items":
+            [
+              {
+                "href": "linkmgr.jsp?mode=Create",
+                "text": "New"
+              },
+              {
+                "href": "linkmgr.jsp?mode=Delete",
+                "text": "Delete"
+              },
+              {
+                "href": "linkmgr.jsp?mode=Update",
+                "text": "Update"
+              },
+              {
+                "href": "linkmgr.jsp?mode=Assign",
+                "text": "Assign links to tracks"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "href": "showHelp.jsp?topic=top",
+    "text": "Help",
+    "align": "right"
+  },
+  {
+    "href": "login.jsp?rm=logout",
+    "text": "Log Out",
+    "align": "right"
+  }
+]

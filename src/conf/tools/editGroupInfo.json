@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "editGroupInfo",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Edit Group Info",
+    "shortLabel": "[NOT SET]"
+  }
+}

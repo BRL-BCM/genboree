@@ -1,0 +1,36 @@
+<div id="footer">
+  <div id="footerLeft">
+    <!--<div id="footerImageLeft">-->
+      <a href="http://exrna.org" target="_blank">
+       <img border="0" alt="exRNA Portal" src="/exRNAGrid/images/exrna.png" style="float:left; width:75px">
+      </a>
+      <a href="http://genboree.org" target="_blank">
+        <img border="0" alt="Powered by GENBOREE" src="/exRNAGrid/images/genboreeItalicSmallFont.png">
+       </a>
+      <div id="footerText">
+	&copy;2001-2015 Bioinformatics Research Laboratory, Baylor College of Medicine
+	<br>
+	One Baylor Plaza, MS:BCM225 Suite 400D, Houston, TX, 77030
+      </div>
+     </div>
+    <!--</div>-->
+  <!--</div>  -->
+
+  <div id="footerRight">
+    <!--<div id="footerImageRight">-->
+      <div id="fundingText">Funding Agency:</div>
+       <a href="http://commonfund.nih.gov/Exrna/index" target="_blank">
+       <img border="0" alt="National Institutes of Health Common Fund" src="/exRNAGrid/images/ncf.png" style="float:right; width:320px">
+      </a>
+    <!--</div> -->
+  </div>
+</div>  
+
+<br>
+
+<div id="footerCenter">
+  <p>
+   <a href="mailto:genboree_admin@genboree.org">Questions or comments?</a>
+  </p>
+</div>    
+ <!-- End footer -->

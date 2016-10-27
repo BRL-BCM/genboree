@@ -1,0 +1,13 @@
+{
+   "ui" :
+   {
+     "label" : "[Not Set]",
+     "shortLabel" : "[Not Set]"
+   },
+   "info" :
+   {
+     "idStr" : "{toolIdStr}",    
+     "releaseStatus" : "release",
+     "version" : "0.1"
+   }
+}

@@ -1,0 +1,6 @@
+#name	domain	default	item list	required	index	unique	fixed	category	identifier	Is Facet?	Attribute Ontology	JSON-LD Flag	Relation to Subject	Object Type	comments	Notes												
+EHR URL	url			TRUE	TRUE	TRUE			TRUE			@id			URL to the EHR PDF (or whatever url is desired) to be found using one of the AVPs below.													
+* Tags	[valueless]		TRUE				TRUE								List of tags associated with URL. Tags have 2 components: Name and Value													
+*- Tag	autoID(,increment,,)			TRUE		TRUE			TRUE						Tag object ID (not important)													
+*-- Name	string			TRUE	TRUE										Tag NAME. e.g. OMIM, HGNC, ORPHANET, RxNorm (left open / non-enum for other tag names to come)													
+*-- Value	string			TRUE	TRUE										Tag VALUE. e.g. OMIM *code*, HGNC *code*, etc													

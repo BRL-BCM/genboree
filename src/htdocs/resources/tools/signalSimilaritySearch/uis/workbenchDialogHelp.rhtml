@@ -1,0 +1,73 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+          The signal scores in the 'query' track are compared to
+          the signal scores in the other tracks (the 'target' tracks).
+          <br>&nbsp;<br>
+          The UI will present you with the option of selecting your query track. All the other tracks,
+          apart from the Regions-of-Interest track (if you select one) will be part of the 'target' set of tracks
+          and the correlation of each target track to the query track will be reported.
+          <br>&nbsp;<br>
+          By default, the comparison occurs at the level of the average signal found in
+          fixed genomic windows.
+          <br>&nbsp;<br>
+          <i>However</i>, by supplying a 'regions-of-interest' track
+          the comparison can occur at regions you specify.
+          <br>&nbsp;<br>
+          Note that you can also drag over one or more <u>classes</u> as 'target' tracks.
+          "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the query <u>track</u> into &quot;Input Data&quot;.',
+          'Drag 1 or more target <u>tracks</u> or <u>class</u> into &quot;Input Data&quot;.',
+          'Optionally, drag a <u>track</u> with <i>regions-of-interest</i> into &quot;Input Data&quot; (otherwise fixed windows will be used).',
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: any' ], [ 'Class', 'min: 0 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this analysis job a unique name. This name will be used to store result files within the Output Database.' ],
+          ['Query Track', 'Select the score track you wish to use as the query track. The rest of the tracks will be the target set.'],
+          [ 'Aggregating Function', 'Choose between: Avg (default), Median, Sum, Max, Min, Count, Standard Deviation and Average By Length for aggregating scores.' ],
+          [ 'Remove No Data Regions?',  "Filter Data by replacing missing values with '0'" ],
+          [ 'Normalization',  "Choose normalization method (Quantile, Gaussian or none)" ],
+          [ 'Fixed/Custom Resolution', ' (Available if no ROI track is present) The <i>resolution</i> at which to perform the regression.  Either select from the fixed resolution sizes
+           (High: 1000bp, Medium: 10_000bp, Low: 100_000bp) or enter your own custom resolution(an integer less than or equal to 20_000_000 and larger than 0).
+           Note that higher resolutions will take longer to run, but may provide slightly more accurate results. Default: Medium (10_000bp)' ],
+           [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed and integrated into the workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

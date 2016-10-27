@@ -1,0 +1,34 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "required": [
+
+    ]
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

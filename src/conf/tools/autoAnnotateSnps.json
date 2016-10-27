@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "autoAnnotateSnps",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Auto-Annotate SNPs",
+    "shortLabel": "[NOT SET]"
+  }
+}

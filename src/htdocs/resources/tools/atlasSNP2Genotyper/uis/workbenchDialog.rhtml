@@ -1,0 +1,176 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 480px; height: 372px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "<img src='/images/workbench/Atlas-SNP2Logotype180Wide.png' style='float:right; width:181px; height:154px; margin: 0px 3px 0px 3px;'>
+        Although Atlas-SNP2 both calls SNPs and does genotyping, you may wish to redo the genotyping with different parameters.
+        <br>&nbsp;<br>
+        For the 454 and Illumina platforms, this can be done using our <code>Atlas-SNP2 Re-Genotyper</code> tool which will output a new <a href='http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-40'>VCF</a> in a dedicated output directory.
+        <br>&nbsp;<br>
+        As input, you can provide either the <code>Atlas-SNP2</code> results folder or the <code>.snp</code> file itself. Any additional information (platform, previously chosen parameter values, etc) will be pulled automtically from the <code>jobFile.json</code>. In the Settings section, you'll be able to override any settings that impact genotyping.
+        <br>&nbsp;<br>
+        As with our other tools, you can opt to upload the results as an annotation track for visualization or as input for other Workbench tools.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:left; font-size: 80%;'><i>Additional details are available in the Help dialog.</i></div>
+        <br>
+        <center><span class='footnote'>[ Atlas-SNP2 is described in <a href='http://www.ncbi.nlm.nih.gov/pubmed/20019143'>this journal article</a>. ]</span></center>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    input = @inputs[0]
+    folder = false
+    if(input =~ BRL::Genboree::REST::Helpers::FileApiUriHelper::NAME_EXTRACTOR_REGEXP)
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Data:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs, :label => "Data File" } )
+      })
+    else
+      folder = true
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files Directory:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @inputs } )
+      })
+    end
+  %>
+  <%# Output database summary %>
+  <%=
+    if(@outputs[0] =~ /\/files?/)
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @outputs } )
+      })
+    else
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+    end
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      # If input is a folder, we need to parse the json file in the folder and fill out the settings
+      # Otherwise, we use the same defaults that we used for Atlas-SNP2
+      studyName = ""
+      postProbCutOff = ""
+      minCov = ""
+      sampleName = ""
+      platformType = ""
+      lffType = ''
+      lffSubType = ''
+      if(folder)
+        # First check if the correct folder is being dragged, i.e, the job file MUST come from Atlas-SNP2
+        uri = URI.parse(input)
+        host = uri.host
+        rcscUri = uri.path.chomp("?")
+        rcscUri.gsub!("/files/", "/file/")
+        rcscUri << "/jobFile.json/data?"
+        apiDbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc(@genbConf, @genbConf.dbrcFile)
+        apiCaller = ApiCaller.new(host, rcscUri, apiDbrc.user, apiDbrc.password)
+        # Do internal request if enabled (in this case, if we've been given a Rack env hash to work from)
+        retVal = ""
+        apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+        resp = apiCaller.get()
+        if(apiCaller.succeeded?)
+          retVal = apiCaller.respBody
+        else
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', " INCORRECT_INPUT: The input folder MUST be the output folder from a Atlas-SNP2 job.")
+          raise wue
+        end
+        buff = ''
+        buffIO = StringIO.new(retVal)
+        buffIO.each_line { |line|
+          buff << line
+        }
+        jobHash = JSON.parse(buff)
+        if(jobHash['context']['toolIdStr'] != 'atlasSNP2')
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', " INCORRECT_INPUT: The input folder MUST be the output folder from a Atlas-SNP2 job.")
+          raise wue
+        end
+        # Parse required settings
+        settings = jobHash['settings']
+        studyName = settings['studyName']
+        sampleName = settings['sampleName']
+        postProbCutOff = settings['postProbCutOff']
+        minCov = settings['minCov']
+        platformType = settings['platformType']
+        lffType = settings['sampleName']
+        lffSubType = 'GenoType'
+      else
+        studyName = "AtlasTools-Study-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}"
+        sampleName = ""
+        postProbCutOff = "0.95"
+        minCov = "8"
+      end
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Atlas-SNP2 Genotyper Settings",
+        :widgets =>
+        [
+          { :id => 'studyName', :label => 'Study Name', :type => :text , :size => "25", :value => "#{studyName}", :title => 'The top-level output folder used to organize related Atlas2 Suite Tool results.' },
+          { :id => 'jobName', :label => 'Job Name', :type => :text , :size => "25", :value => "AtlasSNP2Genotyper-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'Give this Atlas-SNP2 Re-Genotyper job a unique name.' },
+          { :id => 'sampleName', :label => 'Sample Name', :type => :text, :size => "25", :value => "#{sampleName}", :onblur => "fillTrackName(this.value)", :style => 'font-size: 80%', :title => 'Provide the name of the sample the reads came from. This will be used in formatting the output VCF file.'},
+          { :id => 'uploadSNPTrack', :label => 'Upload as a Track ?', :type => :checkbox, :onClick => "toggleTrackNameDisplay(this.checked)", :checked => true, :title => 'Check this to upload the SNPs as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC.'},
+          { :id => 'trackName', :label => 'Genotype Track Name', :type => :gbTrackName, :defaultType => "#{lffType}", :defaultSubtype => "#{lffSubType}", :title => 'If uploading the SNPs as a track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+          { :id => 'minCov', :label => 'Min. Coverage', :type => :text, :size => "6", :value => "#{minCov}", :style => 'font-size: 80%', :title => 'Alignment quality filter: minimum coverage, for high confidence SNP calls [454, Illumina]'},
+          { :id => 'postProbCutOff', :label => 'Posterior Probablity Cutoff', :type => :text, :size => "6", :value => "#{postProbCutOff}", :style => 'font-size: 80%', :title => 'Output filter: minimum posterior probablity cutoff [454, Illumina]'},
+          { :id => 'platformType', :label => 'Platform Type', :type => :text, :value => "#{platformType}", :hidden => true, :newline => false}
+        ]
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+function fillTrackName(sampleName)
+{
+  var type = Ext.get('lffType').dom ;
+  var subtype = Ext.get('lffSubType').dom ;
+  if(type.value == '')
+  {
+    type.value = sampleName ;
+  }
+  if(subtype.value == '')
+  {
+    subtype.value = 'Genotype' ;
+  }
+}
+
+function toggleTrackNameDisplay(isChecked)
+{
+  var trackType = Ext.get('lffType').dom ;
+  var trackSubType = Ext.get('lffSubType').dom ;
+  if(isChecked)
+  {
+    trackType.disabled = false ;
+    trackSubType.disabled = false ;
+  }
+  else
+  {
+    trackType.disabled = true ;
+    trackSubType.disabled = true ;
+  }
+}
+</script>

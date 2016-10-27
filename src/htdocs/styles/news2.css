@@ -1,0 +1,130 @@
+@CHARSET "ISO-8859-1";
+.content {
+  background-color: white;
+  margin: 0 auto;
+  position: relative;
+  width: 890px;
+  height: 100%;
+  padding: 5px;
+}
+
+.textHeader {
+  text-align: center;
+  font-size: 32px;
+  padding-top: 10px;
+  padding-bottom: 15px;
+}
+
+
+.fullRow {
+  width: 890px;
+  height: 300px;
+}
+
+#topRow {
+  height: 300px;
+}
+
+#newsArticleFeature {
+  float: left;
+  border: 1px solid black;
+  margin: 5px 0px 5px 10px;
+  width: 568px;
+  height: 278px;
+}
+
+#featureImage {
+  margin: 5px;
+  height: 266px;
+  width: 266px;
+  border: 1px solid black;
+  float: left;
+}
+
+.featureTitle {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0px;
+  margin: 0px 10px;
+  border-bottom: 1px solid black;
+  overflow: hidden;
+  font-family: sans-serif, verdana, arial;
+}
+
+.majorNewsTitle {
+  text-align: center;
+  font-size: 16px;
+  text-decoration: bold;
+  padding: 0px;
+  width: 248px;
+  margin: 0px 0px 0px 10px;
+  border-bottom: 1px solid black;
+  overflow: hidden;
+  font-family: sans-serif, verdana, arial;
+}
+
+.articleText {
+  padding: 5px;
+  overflow: hidden;
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+.featureArticleText {
+  padding: 5px;
+  overflow: hidden;
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+#newsArticleSecondFeature{
+  float: right;
+  border: 1px solid black;
+  width: 278px;
+  height: 278px;
+  overflow: hidden;
+}
+
+.mainSubArticle {
+  margin: 5px 0px 5px 20px;
+  border: 1px solid black;
+  width: 273px;
+  height: 278px;
+  float: left;
+  overflow: hidden;
+}
+
+.subArticle {
+  margin: 5px 10px 5px 10px;
+  border: 1px solid black;
+  width: 273px;
+  height: 278px;
+  float: left;
+  overflow: hidden;
+}
+
+
+.archivedArticle {
+  margin: 5px 0px 5px 10px;
+  border: 1px solid black;
+  float: left;
+  width: 865px;
+}
+
+.archivedArticleTitle {
+  text-align: left;
+  font-size: 18px;
+  text-decoration: bold;
+  padding: 0px;
+  margin: 0px 0px 0px 10px;
+  border-bottom: 1px solid black;
+  overflow: hidden;
+  font-family: sans-serif, verdana, arial;
+}

@@ -1,0 +1,420 @@
+<%@ page import="org.genboree.util.SessionManager,
+                 org.genboree.message.GenboreeMessage,
+                 org.genboree.util.GenboreeUtils,
+                 java.util.ArrayList,
+                 org.json.JSONObject,
+                 org.genboree.tabular.LayoutHelper,
+                 org.genboree.tabular.ViewRetrieveException,
+                 org.genboree.manager.tracks.Utility,
+                 org.genboree.dbaccess.Refseq,
+                 java.util.Vector,
+                 java.util.Hashtable,
+                 org.genboree.dbaccess.JSPErrorHandler,
+                 org.genboree.dbaccess.GenboreeGroup"%>
+<%@ page import="org.genboree.util.Util" %>
+
+
+<%
+      /**
+         * the  validation  logic here is: 
+         * 
+         * 1.0. if layout, not provided, error; 
+         * 
+         * 2.0. if trackName not provided, errSessionManageror; 
+         * 
+         * 
+         *3.0 validate refseqid 
+         * 3.1  if not provided, 
+         *      3.1.1.1obtain refseq id from session
+         *          if not in session either, error; 
+         * 
+         * 3.2  if has refseq id, 
+         *      1.2.1  validating from db; 
+         *     if valid refseq id, 
+         *        1.2.1.1  retrive group id
+         * 
+         * 3.3     if has valid group id and refseq id, validate layout
+         * 
+         * 
+         * 3.4   if has valid refseq, layout, 
+         * then validate  track 
+      
+         * 
+         */ 
+           
+     
+    if ( urlLayout == null  && !recurPage)  {   
+        hasErrorParams = true;       
+        missingLayout = true; 
+    }
+                
+   
+ //   case2; validating track id 
+    
+    // missing parameter trackNames      
+    if (request.getParameter("trackNames")  == null)  {  
+        mys.removeAttribute("localftypeids");
+        mys.removeAttribute("shareftypeids");
+        mys.removeAttribute("selectedTrackHash");
+        mys.setAttribute("sessionLayout", urlLayout);
+        hasErrorParams = true; 
+        mys.removeAttribute("urlParams"); 
+        missingTracks = true; 
+    }
+    
+    String nava = request.getParameter("navigator");
+       if ( missingTracks && missingLayout  && !recurPage)  {   
+         
+          ArrayList errMsgList = new ArrayList ();           
+        errMsgList.add( "\"trackNames\" parameter missing in URL" );           
+        errMsgList.add( "\"layoutName\" parameter missing in URL" ); 
+        
+        
+        if ((SessionManager.getSessionDatabaseId(mys) == null)  && urlRefseqId== null) {           
+        errMsgList.add( "\"refSeqId\" parameter missing in URL" ); 
+       
+        }
+        GenboreeMessage.setErrMsg(mys, "Insufficient parameters provided to direct table link. ", errMsgList );
+         
+       
+         
+        GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp?fromUrl=true"); 
+         return;      
+    }
+
+// case 3    
+// if (!missingLayout  && !missingTracks) {     
+if (urlRefseqId!= null) {   
+    int error = SessionManager.setSessionDatabaseIdHard(mys, urlRefseqId, db); 
+    if (error == SessionManager.NO_ERROR) { 
+    groupId = SessionManager.getSessionGroupId(mys);  
+    rseq_id = urlRefseqId; 
+    
+    if (groupId == null    ) { 
+    hasValidRefseqId = false;                                 
+    GenboreeMessage.setErrMsg(mys, "Please select a database " );
+    GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp?fromUrl=true");  
+    return; 
+    } 
+    
+    GenboreeGroup cgrp = null; 
+    for( i=0; i<rwGrps.length; i++ ){
+    cgrp = rwGrps[i];
+    
+    if( cgrp.getGroupId().equals(groupId) )
+    grp = cgrp;
+    }
+    
+//    rseqs = (Refseq[]) mys.getAttribute( "RefSeqs" );
+      rseqs = Refseq.fetchAll( db, rwGrps);
+      if( JSPErrorHandler.checkErrors(request,response, db,mys) )
+      {
+        return;
+      }
+      if(rseqs == null)
+      {
+        rseqs = new Refseq[0];
+      }
+    
+    //  String[] groupRefseqs  = grp.getRefseqs();                                    
+    ArrayList rslist = new ArrayList (); 
+    Refseq rs = null; 
+    for(  i=0; i<rseqs.length; i++ ) {
+    rs = rseqs[i];
+    if( grp.belongsTo(rs.getRefSeqId()) )
+    rslist.add( rs );
+    }
+    rseqs = (Refseq[])rslist.toArray(new  Refseq[ rslist.size() ]);    
+    if (rseq_id != null) {
+    boolean isValidRefseqId = false;
+    for ( i=0; i<rseqs.length; i++) {
+    if (rseqs[i].getRefSeqId().equals(rseq_id)){
+    rseq = rseqs[i];    
+    isValidRefseqId = true; 
+    break;
+    }
+    }
+    
+    if (!isValidRefseqId)  {
+    
+    GenboreeMessage.setErrMsg(mys, "Refseq id: " + rseq_id + " is not valid. " );
+    GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp");  
+    
+    }
+    }
+    
+    }
+    else {  
+    hasErrorParams = true; 
+    hasValidRefseqId = false;                            
+    }
+    }
+    else {
+    // check if session has refseq id     
+    rseq_id = SessionManager.getSessionDatabaseId(mys);                          
+    if (rseq_id == null) {   // not  has database session      
+    hasValidRefseqId = false; 
+    hasErrorParams = true;                            
+    } 
+    else {   // in session , validating          
+    int error = SessionManager.setSessionDatabaseIdHard(mys, rseq_id); 
+    if (error == SessionManager.NO_ERROR) { 
+    groupId = SessionManager.getSessionGroupId(mys); 
+    if (groupId == null ) { 
+    hasErrorParams = true; 
+    hasValidRefseqId = false; 
+    SessionManager.clearSessionDatabase(mys);
+    GenboreeMessage.setErrMsg(mys, "There is no database in the group. " );
+    GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp?fromUrl=true");                          
+    }
+    else {
+    
+    GenboreeGroup cgrp = null; 
+    for( i=0; i<rwGrps.length; i++ ){
+    cgrp = rwGrps[i];
+    
+    if( cgrp.getGroupId().equals(groupId) )
+    grp = cgrp;
+    }
+    
+//    rseqs = (Refseq[]) mys.getAttribute( "RefSeqs" );
+    rseqs = Refseq.fetchAll( db, rwGrps);
+    
+    
+    //  String[] groupRefseqs  = grp.getRefseqs();                                    
+    ArrayList rslist = new ArrayList (); 
+    Refseq rs = null; 
+    for(  i=0; i<rseqs.length; i++ ) {
+    rs = rseqs[i];
+    if( grp.belongsTo(rs.getRefSeqId()) )
+    rslist.add( rs );
+    }
+    rseqs = (Refseq[])rslist.toArray(new  Refseq[ rslist.size() ]); 
+
+    
+    if (rseq_id != null) {
+    boolean isValidRefseqId = false;
+    for ( i=0; i<rseqs.length; i++) {
+    if (rseqs[i].getRefSeqId().equals(rseq_id)){
+    rseq = rseqs[i];           
+    isValidRefseqId = true; 
+    break;
+    }
+    }
+    
+    if (!isValidRefseqId)  {
+    
+    GenboreeMessage.setErrMsg(mys, "Refseq id: " + rseq_id + " is not valid. " );
+    GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp");  
+    
+    }
+    }
+    }
+    }
+    else {  
+    
+    hasErrorParams = true; 
+    hasValidRefseqId = false; 
+    }
+    }
+}   
+
+       String selectedView  = urlLayout; 
+    mys.setAttribute("sessionLayout", selectedView);    
+    JSONObject json  =  null; 
+    
+     if (!missingLayout  && hasValidRefseqId) {     
+              mys.setAttribute("sessionLayout", selectedView);    
+               if (selectedView != null ) {                   
+                  String parentPath =  org.genboree.upload.LffConstants.ROOTDIR_ANNOTATION_TABLE_VIEW +   "/annoTableViews"
+                  + "/"  +  groupId + "/" + rseq_id;                        
+                   String errMsg =null; 
+                  
+                  try {
+                      json = LayoutHelper.retrievesJsonObject (parentPath, selectedView);
+                  } 
+                  catch (ViewRetrieveException e) {
+                        hasValidLayout = false; 
+                        errMsg = e.getMessage();
+                        if (errMsg.indexOf("Error2") >=0) 
+                        GenboreeMessage.setErrMsg(mys, "Error in retrieving saved layout from refseq id: " + urlRefseqId);
+                        else 
+                        if (errMsg.indexOf("Error3") >=0) 
+                        GenboreeMessage.setErrMsg(mys, "Error in retrieving saved layout from layout: " + urlLayout);
+                        
+                        json = null;     
+                  } 
+                  
+                 if (json == null) {
+                        hasErrorParams = true; 
+                        hasValidLayout = false;  
+                        mys.removeAttribute("localftypeids");
+                        mys.removeAttribute("shareftypeids");
+                 }
+              }   
+              mys.setAttribute("urlJson", json);                          
+      }          
+    
+    
+    // validate tracks 
+      if ( !missingTracks  && hasValidRefseqId) { 
+           isFromLayoutURL = true; 
+             // case 1
+            if (rseqs== null || rseqs.length==0 ) {
+                  GenboreeMessage.setErrMsg(mys, "Sorry, there is no database in this group. <br> -- Please create a database and try again.");    
+                 // GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp??fromUrl=true");  
+            } 
+             else { //   == (rseqs != null && rseqs.length >0) {                         
+                    boolean isValidRefseqId = false;
+                     if (rseq_id != null) {
+                        for ( i=0; i<rseqs.length; i++) {
+                            if (rseqs[i].getRefSeqId().equals(rseq_id)){
+                                rseq = rseqs[i];  
+                                 isValidRefseqId = true; 
+                                break;
+                            }
+                        }
+                        
+                        if (!isValidRefseqId)  {
+                            GenboreeMessage.setErrMsg(mys, "Refseq id: " + rseq_id + " is not valid. " );
+                            GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp");  
+                            return; 
+                        }
+                    }
+                 
+                if (rseq != null){
+                        // set dbname and conncetions \
+                        dbName = rseq.getDatabaseName();
+                        dbNames = rseq.fetchDatabaseNames(db); 
+                        mys.setAttribute("dbNames", dbNames); 
+                        SessionManager.setSessionDatabaseName(mys, dbName); 
+                        SessionManager.setSessionDatabaseId(mys, rseq_id); 
+                        int genboreeUserId = Util.parseInt(myself.getUserId(), -1);
+                        for (i=0; i<dbNames.length; i++) {
+                        if (!dbNames[i].equals(dbName)) 
+                        sharedbName = dbNames [i];             
+                        }  
+                       con = db.getConnection(dbName);  
+                        
+                         if (sharedbName != null) {
+                            sharedConnection = db.getConnection(sharedbName);
+
+                           sharedTracks = Utility.retrieveTrackNames( sharedConnection, sharedbName, genboreeUserId );
+                        }         
+                  
+                        if (con != null)
+                               localtracks =  Utility.retrieveTrackNames( con, dbName, genboreeUserId ); 
+                        if (localtracks != null) {
+                            for (i=0; i<localtracks.length; i++) 
+                            trackNameMap.put(localtracks[i], "y");
+                        }
+                      if (sharedTracks  != null) {
+                            for (i=0; i<sharedTracks .length; i++) 
+                                    trackNameMap.put(sharedTracks [i], "y");
+                    } 
+                   String [] urlTracks = null; 
+                    if (params.getTrackNameArr() != null) 
+                 urlTracks = params.getTrackNameArr(); 
+           
+                    
+                   for (i=0; i<urlTracks.length; i++) {  
+                   if (trackNameMap.get(urlTracks[i])  == null) {
+                       invalidTracks = invalidTracks + urlTracks[i] +  ","; 
+                     } 
+                   }
+                  if (invalidTracks.length() >1) 
+                        invalidTracks = invalidTracks.substring(0, invalidTracks.length()-1);
+                        else 
+                        invalidTracks = null; 
+                        if (invalidTracks != null) {     
+                             hasErrorParams = true; 
+                            hasValidTracks = false;                        
+                        }                      
+                 }
+                else  {  // don't have valid rseq                     
+                    GenboreeMessage.setErrMsg(mys, "Refseq id: " + rseq_id + " is not valid. " );
+                    GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp");  
+                  
+                 }
+               }   
+         }
+  
+               
+       ArrayList errMsgList = new ArrayList ();     
+      if (hasErrorParams) {
+          int count = 0; 
+          
+           if (missingTracks) {
+                errMsgList.add( "\"trackNames\" parameter missing in URL" );   
+                count ++;
+                mys.removeAttribute("selectedTrackHash");                
+                errMsgList.add( "please select a track below" );   
+           }
+          
+            
+           if (missingLayout)  {  
+                 count ++; 
+                errMsgList.add( "\"layoutName\" parameter missing in URL" );   
+               if (count ==1)  
+               errMsgList.add( "please select a layout below" );   
+           }
+          
+            if (!hasValidTracks){     
+                mys.removeAttribute("selectedTrackHash");
+                mys.removeAttribute("urlParams"); 
+                count ++; 
+                errMsgList.add( " the track name \"" + urlTrakNames + "\" does not exist." );   
+              if (count ==1) 
+                errMsgList.add( "please select a track below" ); 
+                else if (count > 1) {
+                     errMsgList.remove(1); 
+                }
+                
+            }
+
+             if (!hasValidLayout) {    
+                      count ++; 
+                 errMsgList.add( " the layout name \"" + urlLayout + "\" does not exist." );   
+                 if (count ==1) 
+                 errMsgList.add( "please select a layout below" ); 
+                 
+                  else if (count > 1 ) {
+                     errMsgList.remove(1); 
+                }
+            }
+          
+         if (!hasValidRefseqId) {  
+            count ++; 
+            if (urlRefseqId == null) {
+            errMsgList.add( "\"refSeqId\" parameter missing in URL." );  
+                if (count ==1)
+                errMsgList.add( "please select a database below" ); 
+            } 
+            else {
+            errMsgList.add( "refSeqId: \"" +  urlRefseqId  + "\" does not exist");  
+           if (count ==1) 
+            errMsgList.add( "please select a database below" );
+                 else if (count ==2) {
+                     errMsgList.remove(1); 
+                }
+            }
+          }
+          
+        if (count ==1)  {           
+            GenboreeMessage.setErrMsg(mys, "One of the parameters to this page is not valid: ", errMsgList );
+        }      
+         else {
+            String countWord = "Two";
+            if (count == 3) 
+            countWord = "Three"; 
+            
+            if (count >1 && missingTracks) 
+            errMsgList.remove(1); 
+            
+            GenboreeMessage.setErrMsg(mys, countWord + " of the parameters to this page are not valid: ", errMsgList );
+         }    
+         GenboreeUtils.sendRedirect(request, response, "/java-bin/displaySelection.jsp?fromUrl=true"); 
+           return; 
+      }
+  
+%>

@@ -1,0 +1,47 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will create/add a new Project in the target <u>Group</u>. Note that the project to be created should NOT already exist in the group.
+
+        "
+
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>group</u> into &quot;Output Targets&quot;. The new project will be created in this group. ' ],
+        :types              => [ [ 'Group', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Project Name', "The name of the project to be created/added. [REQUIRED]</br> All characters in the project name MUST come from the following set:</br>
+                              [A-Za-z0-9][A-Za-z0-9._\- \/]"],
+          [ 'Project Title', "The title of the project. [OPTIONAL]"],
+          [ 'Project Description', "The description of the project. [OPTIONAL]"],
+          [ 'Submit', "Once you've reviewed the name of the new sample set to be created, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+
+</div>

@@ -1,0 +1,208 @@
+{
+  "inputs": [
+    "http://genboreeproto.bcmd.bcm.edu/REST/v1/grp/BioNeos/db/VGP%20for%20Hg18%20test/trk/CAR%3AHSA-HC.ANC"
+  ],
+  "settings": {
+    "dbuKey": "genboree"
+  },
+  "context": {
+    "vgpParams" : {
+      "chromosomeView": {
+        "border": false,
+        "labelPosition": "bottom"
+      },
+      "config": {
+        "groupName": "BioNeos",
+        "rseqId": 1062,
+        "userId": 771,
+        "rseqName": "VGP for Hg18 test",
+        "groupId": 1104,
+        "userEmail": "msmith@bioneos.com",
+        "userLogin": "msmith"
+      },
+      "referenceTrack": {
+        "Cyto:Band": [
+          { 
+            "position": 0,
+            "annoColorOverridesTrackColor": true,
+            "zIndex": 1,
+            "displayName": "Cyto:Band",
+            "margin": 0,
+            "border": false,
+            "color": "#000000",
+            "drawingStyle": "cytoband",
+            "width": 75
+          }
+        ]
+      },
+      "figureTitle": "Test",
+      "entryPoints": [
+        { 
+          "name": "chr1",
+          "drawn": true,
+          "length": 247249719
+        },
+        { 
+          "name": "chr10",
+          "drawn": true,
+          "length": 135374737
+        },
+        { 
+          "name": "chr11",
+          "drawn": true,
+          "length": 134452384
+        },
+        {
+          "name": "chr12",
+          "drawn": true,
+          "length": 132349534
+        },
+        {
+          "name": "chr13",
+          "drawn": true,
+          "length": 114142980
+        },
+        {
+          "name": "chr14",
+          "drawn": true,
+          "length": 106368585
+        },
+        {
+          "name": "chr15",
+          "drawn": true,
+          "length": 100338915
+        },
+        {
+          "name": "chr16",
+          "drawn": true,
+          "length": 88827254
+        },
+        {
+          "name": "chr17",
+          "drawn": true,
+          "length": 78774742
+        },
+        {
+          "name": "chr18",
+          "drawn": true,
+          "length": 76117153
+        },
+        {
+          "name": "chr19",
+          "drawn": true,
+          "length": 63811651
+        },
+        {
+          "name": "chr2",
+          "drawn": true,
+          "length": 242951149
+        },
+        {
+          "name": "chr20",
+          "drawn": true,
+          "length": 62435964
+        },
+        {
+          "name": "chr21",
+          "drawn": true,
+          "length": 46944323
+        },
+        {
+          "name": "chr22",
+          "drawn": true,
+          "length": 49691432
+        },
+        {
+          "name": "chr3",
+          "drawn": true,
+          "length": 199501827
+        },
+        {
+          "name": "chr4",
+          "drawn": true,
+          "length": 191273063
+        },
+        {
+          "name": "chr5",
+          "drawn": true,
+          "length": 180857866
+        },
+        {
+          "name": "chr6",
+          "drawn": true,
+          "length": 170899992
+        },
+        {
+          "name": "chr7",
+          "drawn": true,
+          "length": 158821424
+        },
+        {
+          "name": "chr8",
+          "drawn": true,
+          "length": 146274826
+        },
+        {
+          "name": "chr9",
+          "drawn": true,
+          "length": 140273252
+        },
+        {
+          "name": "chrX",
+          "drawn": true,
+          "length": 154913754
+        },
+        {
+          "name": "chrY",
+          "drawn": true,
+          "length": 57772954
+        }
+      ],
+      "drawEmptyCytobands": true,
+      "titleFormat": {
+        "font": "Helvetica",
+        "fontSize": 22,
+        "fontColor": "#000000"
+      },
+      "columns": {
+        "titles": [
+          {
+            "position": 0,
+            "title": "Cytoband",
+            "labelFont": "Helvetica",
+            "labelFontColor": "#000000",
+            "font": "Helvetica",
+            "labelFontSize": 12,
+            "drawLabel": false,
+            "fontSize": 14,
+            "drawTitle": true,
+            "fontColor": "#000000"
+          }
+        ]
+      },
+      "yAxisScaleFormat": {
+        "position": "left",
+        "font": "Helvetica",
+        "fontSize": 14,
+        "fontColor": "#000000"
+      }
+    },
+    "apiDbrcKey": "genboree",
+    "jobId": "vgp-1302818810_037836",
+    "toolTitle": "Tabbed File Viewer",
+    "toolScriptPrefix": "test_",
+    "mode": "upload",
+    "userLastName": "Smith",
+    "gbConfFile": "/usr/local/brl/local/apache/genboree.config.properties",
+    "gbAdminEmail": "msmith@bioneos.com",
+    "userEmail": "msmith@bioneos.com",
+    "gbLockFileKey": "toolJob",
+    "userFirstName": "Michael",
+    "scratchDir": "/usr/local/brl/data/genboree/jobs/msmith/vgp/vgp-1302818810_037836",
+    "toolIdStr": "vgp",
+    "userLogin": "msmith"
+  },
+  "outputs": [
+    // final resting place?
+  ]
+}

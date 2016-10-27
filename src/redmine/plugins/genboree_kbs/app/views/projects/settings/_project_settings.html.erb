@@ -1,0 +1,58 @@
+<%### The controller for this view is projects_controller#settings ###%>
+
+<%
+  @genboreeKb = GenboreeKb.find_by_project_id(@project)
+  #$stderr.puts "Got @genboreeKb for @project '#{@project.inspect}}' ?\n\n#{@genboreeKb.inspect}\n\n"
+  @genboreeKb ||= nil
+  if(@genboreeKb.nil?)
+%>
+  <h3><%= l(:gbkb_label_create_new_kb) %></h3>
+  <%= form_tag("../../../genboree_kbs/create") do %>
+    <table style="padding-top:20px;padding-left:20px;">
+      <tr><td><b><%= label_tag "name", l(:gbkb_label_kb_name) %></b></td><td>
+        <%= text_field_tag "name", "" %>
+      </td></tr>
+      <tr><td><b><%= label_tag "description", l(:gbkb_label_kb_description) %></b></td><td>
+        <%= text_field_tag "description", "" %>
+      </td></tr>
+      <tr><td><b><%= label_tag "gbGroup", l(:gbkb_label_kb_gbGroup) %></b></td><td>
+        <%= text_field_tag "gbGroup", "" %>
+      </td></tr>
+      <tr><td><b><%= label_tag "gbHost", l(:gbkb_label_kb_gbHost) %></b></td><td>
+        <%= text_field_tag "gbHost", "" %>
+      </td></tr>
+    </table>
+    <dl style="padding-left:20px;">
+      <%= hidden_field_tag "project_id", @project.id %>
+      <%= hidden_field_tag "project_ident", @project.identifier %>
+      <%= submit_tag l(:gbkb_button_create) %>
+    </dl>
+   <% end %>
+<%
+  else
+%>
+  <h3><%= l(:gbkb_label_update_kb) %></h3>
+  <%= form_tag("../../../genboree_kbs/update") do %>
+    <table style="padding-top:20px;padding-left:20px;">
+      <tr><td><b><%= label_tag "Kb Name", l(:gbkb_label_kb_name) %></b></td><td>
+        <%= text_field_tag "name", @genboreeKb.name %>
+      </td></tr>
+      <tr><td><b><%= label_tag "description", l(:gbkb_label_kb_description) %></b></td><td>
+        <%= text_field_tag "description", @genboreeKb.description %>
+      </td></tr>
+      <tr><td><b><%= label_tag "gbGroup", l(:gbkb_label_kb_gbGroup) %></b></td><td>
+        <%= text_field_tag "gbGroup", @genboreeKb.gbGroup %>
+      </td></tr>
+      <tr><td><b><%= label_tag "gbHost", l(:gbkb_label_kb_gbHost) %></b></td><td>
+        <%= text_field_tag "gbHost", @genboreeKb.gbHost %>
+      </td></tr>
+    </table>
+    <dl style="padding-left:20px;">
+      <%= hidden_field_tag "project_id", @project.id %>
+      <%= hidden_field_tag "project_ident", @project.identifier %>
+      <%= submit_tag l(:gbkb_button_update) %>
+    </dl>
+  <% end %>
+<%
+  end
+%>

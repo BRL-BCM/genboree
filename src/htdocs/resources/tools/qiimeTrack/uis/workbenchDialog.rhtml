@@ -1,0 +1,180 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+<%
+  if(@hasAccess)
+%>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Inputs:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMixedListSummary, { :list => @inputs, :label => "Track Entity Lists/Tracks" } )
+    })
+  %>
+
+  <%# Output database summary %>
+  <%= if(@outputs.size == 1)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Outputs:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Outputs:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+      end
+
+  %>
+
+  <%=
+    if(@settings['roiList'].empty?)
+      renderFrag(@toolIdStr, :wbSpecialInfoSection,
+        {
+          :sectionTitle => "No ROIs for assembly: #{@settings['dbVer']}",
+          :sectionType => :warningInfoSection,
+          :sectionHtml => "Unfortunately, we do not have any Regions-of-Interest tracks for the genome assembly of your interest. Please select your own ROI track from the list of dragged tracks or use the 'Fixed Resolution' option."
+        })
+    end
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    attributes = @settings['attributesList']
+    widgets = [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "", :title => "The output folder for the Random Forest results" },
+                { :id => 'jobId', :label => 'Job Id', :type => :text , :size => "25", :value => "Qiime-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique name" },
+                { :id => 'minValueCount', :label => 'Min Value Count', :type => :text , :size => "20", :value => "2", :title => "" },
+                { :id => "attributes", :label => "Attributes", :type => :selectWithToggle, :options => attributes.keys, :size => '5', :multiSelect => true, :toggleAllButton => true, :selectByDefault => :all, :width => '170' },
+                { :name => 'roi', :label => 'User ROI Track', :type => :radio ,:title => "Select one of your tracks as the Regions-of-Interest track", :value => "roiTrkUser", :checked => true, :onclick => "toggleROI(this.value)" },
+                { :id => 'userRoiTrk', :label => '', :type => :selectEntityFromList, :setAs => 'userRoiTrk', :trkSrcAsTitle => true, :inputs => @settings['userRoi'], :sortInputs => true, :addEntityListContents => true, :rackEnv => @rackEnv, :title => "Indicate which track is your Regions of Interest (ROI) track.", :userId => @context['userId'], :entityType => :trk, :customOnChange => 'applyRoiSelection' }
+              ]
+
+    roiList = @settings['roiList']
+    if(!roiList.empty?)
+      roiOps = Hash.new { |hh,kk|
+        hh[kk] = {}
+      }
+      roiList.each { |trk|
+        roiOps[:"#{trk}"] = { :label => trk, :selected => true }
+      }
+      widgets.push({ :name => 'roi', :label => 'Repo ROI Track', :type => :radio ,:title => "Select a track from our ROI-Repository as the Regions-of-Interest track", :value => "roiTrkRepo",  :onclick => "toggleROI(this.value)" })
+      widgets.push({ :id => 'repoRoiTrk', :label => '', :type => :select , :size => "5", :options => roiOps, :title => "" })
+    end
+    # Also add 'fixed windows' widget
+    widgets.push({ :name => 'roi', :label => 'Fixed Resolution', :type => :radio, :title => "Use fixed windows as the regions of interest", :value => "fixedWindows", :onclick => "toggleROI(this.value)" })
+    widgets.push({ :id => 'fixedResolution', :type => :select , :label => "",  :options =>
+      {
+        :medium => { :selected => true, :label => "Medium (10,000bp)"},
+        :low => { :label => "Low (100,000bp)"},
+        :high => { :label => "High (1000bp)"}
+      },
+      :title => "" })
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+Ext.onReady(function () {
+  Ext.get('fixedResolution').dom.disabled = true ;
+  Ext.get('fixedResolution').dom.hide() ;
+  if(Ext.get('repoRoiTrk'))
+  {
+    Ext.get('repoRoiTrk').dom.disabled = true ;
+    Ext.get('repoRoiTrk').dom.hide() ;
+  }
+});
+
+function toggleROI(value)
+{
+  var repoRoiTrk = Ext.get('repoRoiTrk').dom ;
+  var fixedWind = Ext.get('fixedResolution').dom ;
+  var userRoiTrk = Ext.get('userRoiTrk').dom ;
+  if(value == 'fixedWindows')
+  {
+    fixedWind.disabled = false ;
+    fixedWind.show() ;
+    repoRoiTrk.disabled = true ;
+    repoRoiTrk.hide() ;
+    userRoiTrk.disabled = true ;
+    userRoiTrk.hide() ;
+  }
+  else if(value == 'roiTrkRepo')
+  {
+    fixedWind.disabled = true ;
+    fixedWind.hide() ;
+    repoRoiTrk.disabled = false ;
+    repoRoiTrk.show() ;
+    userRoiTrk.disabled = true ;
+    userRoiTrk.hide() ;
+  }
+  else
+  {
+    fixedWind.disabled = true ;
+    fixedWind.hide() ;
+    repoRoiTrk.disabled = true ;
+    repoRoiTrk.hide() ;
+    userRoiTrk.disabled = false ;
+    userRoiTrk.show() ;
+  }
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

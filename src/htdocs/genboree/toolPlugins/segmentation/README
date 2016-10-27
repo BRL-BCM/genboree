@@ -1,0 +1,8 @@
+script argument		input field
+---------------		------------
+-f			template_lff
+-o			(output file - from server)
+-c			trackClass
+-t			trackType
+-s 			trackSubtype
+-r			threshold

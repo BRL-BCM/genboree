@@ -1,0 +1,27 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

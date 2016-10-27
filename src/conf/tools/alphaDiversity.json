@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "alphaDiversity",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Alpha Diversity",
+    "shortLabel": "Alpha Diversity"
+  },
+  "cluster": {
+    "walltime": "12:00:00"
+  }
+}

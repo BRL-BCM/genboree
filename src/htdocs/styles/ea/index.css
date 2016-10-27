@@ -1,0 +1,19 @@
+
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 900px;
+  background-image: url("/epigenomeatlas/images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}

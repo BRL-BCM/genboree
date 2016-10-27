@@ -1,0 +1,57 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/class/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

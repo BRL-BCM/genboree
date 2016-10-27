@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "rseqtoolsBatch",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 6,
+    "mem": "4gb",
+    "vmem": "4gb",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Analyze RNA-Seq data by RSEQtools - Batch processing mode",
+    "shortLabel": "RSEQtools Batch",
+    "groupAccessUri": null
+  }
+}

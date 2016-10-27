@@ -1,0 +1,50 @@
+
+# load the R package
+require(DESeq2)
+
+# specify the working dir
+setwd("<%= @outputDirectory %>")
+
+## read the miRNA read counts from exceRpt into an R matrix
+# the header row is sample ID
+# rows are <miRNA name> <read count in sample 1> <read count in sample 2> ...
+countdata <- read.delim("<%= @miRNAReadCountFile %>",row.names=1, header=TRUE,sep="\t",check.names=FALSE)
+# DESeq2 doesn't seem to like non-integers, so let's round our read count values
+countdata <- apply(countdata, c(1,2), function(i) round(i,0))
+
+## read the sample descriptors (factors / factor levels) into an R matrix
+# coldata is an n-column tsv, where n-1 columns are some attribute of the data (disease, biofluid, etc.).
+# example header:                  disease      biofluid
+# example row:    9721_AD_CSF      AD           CSF
+coldata <- read.delim("<%= @sampleDescriptionFile %>",row.names=1,header=TRUE,sep="\t")
+
+# We want to eliminate all rows from coldata (and all columns from countdata) that aren't associated
+# with our factor / factor levels of interest.
+coldata.nonelimrows <- coldata[grep("<%= @descriptor1 %>|<%= @descriptor2 %>",coldata$"<%= @factorName %>",perl=TRUE),,drop=FALSE]
+countdata.nonelimcols <- countdata[,which(colnames(countdata) %in% rownames(coldata.nonelimrows)),drop=FALSE]
+
+# Let's sort our rows / columns so that we're sure the rows / columns match between documents
+countdata.nonelimcols <- countdata.nonelimcols[order(rownames(countdata.nonelimcols)),order(colnames(countdata.nonelimcols)),drop=FALSE]
+coldata.nonelimrows <- coldata.nonelimrows[order(rownames(coldata.nonelimrows)),order(colnames(coldata.nonelimrows)),drop=FALSE]
+
+# DESeqDataSetFromMatrix accepts as input
+# countData -- the matrix of read counts
+# colData - contains metadata for each column of the countData matrix
+# "design = ~ [factorName]" tells DESeq2 to do differential expression on that particular factor
+deseqDataSet <- DESeqDataSetFromMatrix(countData = countdata.nonelimcols,colData = coldata.nonelimrows,design = ~ <%= @factorName %>)
+
+# Sets one of the descriptors (CONTROL, for example), so that log2 fold changes will be compared to that descriptor.
+deseqDataSet$"<%= @factorName %>" <- relevel(deseqDataSet$"<%= @factorName %>","<%= @descriptor2 %>")
+
+# This step performs the differential expression analysis
+deseqDataSet <- DESeq(deseqDataSet)
+
+# results table with log2 fold changes, p values, and adjusted p values
+resultsFC <- results(deseqDataSet)
+
+# results table re-ordered by smallest adjusted p-value
+resultsFC_Ordered <- resultsFC[order(resultsFC$padj),]
+
+# outputs the results
+write.table(resultsFC_Ordered,sep = "\t",file = ("<%= @outputFile %>"))
+

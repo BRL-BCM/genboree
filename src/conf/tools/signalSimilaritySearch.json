@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "signalSimilaritySearch",
+    "releaseStatus": "deprecated",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "8787mb",
+    "mem" : null,
+    "vmem" : null,
+    "queue": "gbApiHeavy"
+  },
+  "ui": {
+    "label": "Search for Similar Signals by Correlation",
+    "shortLabel": "Search for Similar Signals by Correlation"
+  }
+}

@@ -1,0 +1,202 @@
+<%
+  # Here we will retrieve the necessary data from the underlying data file
+  require 'cgi'
+  require 'json'
+  require 'open4'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/util/textFileUtil'
+
+  # Config vars
+  @genbConf = nil
+
+  # File information
+  @grp = ''
+  @db = ''
+  @file = ''
+  @srcFile = ''
+
+  # Data retrieval information
+  @start = -1
+  @limit = -1
+  @totalRecords = -1
+  @sortDir = ''
+  @sortField = ''
+  @quickSort = false
+  @mode = ''
+
+  # Status checking info
+  @sortJob = ''
+  @userEmail = ''
+  @userLogin = ''
+
+  ################################################################
+  # Utility methods to make things cleaner
+  ################################################################
+  def init(cgi)
+    @grp = cgi['grp']
+    @db = cgi['db']
+    @file = cgi['file']
+    @srcFile = cgi['srcFile']
+    @start = cgi['start'].to_i
+    @limit = cgi['limit'].to_i
+    @totalRecords = cgi['total'].to_i
+    @sortDir = cgi['dir']
+    @sortField = cgi['sort']
+    @quickSort = cgi['quickSort']
+    @mode = cgi['mode']
+    @sortJob = cgi['sortJob']
+    @userEmail = cgi['userEmail']
+    @userLogin = cgi['userLogin']
+
+    @genbConf = BRL::Genboree::GenboreeConfig.load()
+  end
+
+  def getDataAndIndexFilePaths()
+    fileName = ''
+    idxFileName = ''
+
+    # Setup our paths to the index file and data file. We need to see if this is a sort request or not.
+    # If this is a sort request, we check to see if the sorted file exists, if so reuse it, otherwise create it
+    if(@sortField.empty?())
+      idxFileName = @file
+      
+      # Our rules ensure that we will be getting a DatabaseFile
+      fileName = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, @file)
+      idxFileName = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, "#{idxFileName.chomp(File.extname(idxFileName))}.idx")
+    else
+      # Our data is going to be sorted, so we need to make sure our file names match the new sorted file name
+      # srcFile is needed here because the user could have clicked Sort for an already sorted file, we dont
+      # want to continue down the path of making data files from already sorted files, so start from the source
+      # (i.e. @file could be user_jobid_type_asc_subtype_desc_entryPoint_asc is not what we want)
+      idxFileName = @srcFile
+      col, index = @sortField.split(":").map { |val| val.chomp() }
+      suffix = "#{col.downcase()}_#{@sortDir.downcase()}#{File.extname(@srcFile)}"
+      fileName = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, "#{@srcFile.chomp(File.extname(@srcFile))}_#{suffix}")
+      idxFileName = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, "#{idxFileName.chomp(File.extname(@srcFile))}_#{suffix}.idx")
+    end
+
+    return [fileName, idxFileName]
+  end
+
+  
+  def createSortedDataFile(sortedFilePath, srcFilePath)
+    sortJob = "sort-#{Time.now().to_f.round.to_s + '_' + rand(1000000).to_s.rjust(6, '0')}"
+    sortOpts = [
+      '-f', CGI.escape(srcFilePath), 
+      '-r', CGI.escape(sortedFilePath), 
+      '-c', @sortField, 
+      '-t', @sortDir, 
+      '-j', sortJob, 
+      '-u', @userLogin,
+      '-g', @grp,
+      '-b', @db,
+      '-o', @srcFile, 
+      '-l', CGI.escape(File.join(@genbConf.gbJobBaseDir, @userLogin, 'tabbedFileViewer', sortJob, 'tabbedFileViewerSort.debug'))
+    ]
+
+    unless(@quickSort == 'true')
+      # If our data set is large, we daemonize so we can return
+      sortOpts << '-d'
+      sortOpts << '-e'
+      sortOpts << @userEmail
+    end
+
+    $stderr.puts "Sort Job #{sortJob}: Executing command 'tabbedFileViewerCoordinator.rb' with these (non-shell expanded) arguments:\n    " + sortOpts.join('  ')
+    sortCoordReturn = system('tabbedFileViewerCoordinator.rb', *sortOpts)
+    $stderr.puts "Sort Job #{sortJob}: command successful?  #{sortCoordReturn}\n"    
+    
+    return sortJob
+  end
+  
+
+  def createJsonData(records, file, fileIdx)
+    # We need to send back the total number of records. Do our best to get it from the server, but if it is not there, 
+    # then we have to determine it. We can use the fact that the last line of the index file is the number of lines (and remove nonrecord lines)
+    if(@totalRecords == -1)
+      @totalRecords = 0
+      fileIdx.rewind()
+
+      # Get our last line
+      lastRec, lastOffset, lastSkip = fileIdx.inject { |_, rec| rec }.split(",").map { |val | val.to_i }
+      @totalRecords = lastRec - lastSkip
+    end
+
+    # Our file pointer should be at the right position, now construct our data to return
+    jsonData = Hash.new()
+    
+    # Setup some necessary return params
+    # NOTE: We send back the name of the data file because this server side processing is stateless. So when the user
+    # attempts to buffer more data, we need to start the process all over. With the ability to sort the data file 
+    # (and thus change the location our data is coming from) we need to make sure the client knows for future buffer 
+    # requests which data file to retrieve the data from. This filename should be relative to the gbDataFileRoot
+    jsonData['file'] = File.join(File.dirname(@srcFile), File.basename(file.path()))
+    jsonData['total'] = @totalRecords
+    jsonData['data'] = records
+
+    return JSON.generate(jsonData)
+  end
+
+  ################################################################
+  # Begin main processing
+  ################################################################
+  init(CGI.new())
+
+  if(@mode == 'data')
+    # Create our data file and index file paths, based on passed params (sort, filename, etc)
+    dataFilePath, indexFilePath = getDataAndIndexFilePaths()
+   
+    if(!@sortField.empty?() and !File.file?(dataFilePath))
+      # We are supposed to return sorted data but our sorted data file doesn't exist, create it
+      # NOTE: We can wait for the sort process to finish here because only a quick sort will 
+      # request the 'data' mode. If it is a long sort, then the client knows the mode should be 'sort'
+      srcFilePath = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, @srcFile)
+      createSortedDataFile(dataFilePath, srcFilePath)
+    elsif(!File.file?(dataFilePath))
+      # Our data file simply doesn't exist! error!
+      $stderr.puts("[tabbedFileViewer:requestHandler] The requested data file could not be found! (#{dataFilePath})")
+      exit()
+    end
+
+    if(!File.file?(indexFilePath))
+      # Our index file does not exist (likely because we have never read this data file), so create it
+      @totalRecords = BRL::Util::TextFileIndexer.createIndexFile(dataFilePath, indexFilePath)
+
+      if(@totalRecords == -1)
+        $stderr.puts("[tabbedFileViewer:requestHandler] The index file #{indexFilePath} could not be created (there are likely no records), exiting...")
+        exit()
+      end
+    end
+    
+    # Open the handles to our data and index files
+    dataFile = File.open(dataFilePath)
+    indexFile = File.open(indexFilePath)
+
+    # Read/Create our JSON data
+    records = BRL::Util::TextFileIndexer.readRecords(@start, @limit, dataFile, indexFile)
+    if(records.empty?())
+      $stderr.puts("[tabbedFileViewer:requestHandler] No records were read from the data file, perhaps it is empty? exiting...")
+      exit()
+    end
+
+    # Return our data and cleanup
+    print createJsonData(records, dataFile, indexFile)
+
+    dataFile.close()
+    indexFile.close()
+  elsif(@mode == 'sort')
+    dataFilePath, indexFilePath = getDataAndIndexFilePaths()
+    srcFilePath = File.join(@genbConf.gbDataFileRoot, "grp", @grp, "db", @db, @srcFile)
+
+    # Run our sort command, getting back the PID of the genbTaskWrapper
+    @sortJob = createSortedDataFile(dataFilePath, srcFilePath)
+  
+    # Now tell the client the sortJob so it can check the status along with the sorted data file name
+    print JSON.generate({'sortJob' => @sortJob, 'file' => File.join(File.dirname(@srcFile), File.basename(dataFilePath))})
+  elsif(@mode == 'status')
+    # Check to see if our sort job is running. We do this by checking the existance of the sortJob lockFile
+    # NOTE: A better way to do this would be if the genbTaskWrapper could return the pid of the executing child
+    #     : then we could just check if that process is still running
+    sortLockFile = File.join(@genbConf.gbJobBaseDir, @userLogin, 'tabbedFileViewer', @sortJob, 'sort.lock')
+    print JSON.generate({'running' => File.exists?(sortLockFile)})
+  end
+%>

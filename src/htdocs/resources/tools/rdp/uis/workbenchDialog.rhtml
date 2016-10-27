@@ -1,0 +1,83 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 520px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+            <a href='http://rdp.cme.msu.edu/'>
+              <img src='/images/workbench/help/microbiomeWorkbench/rdpLogo.png' style='margin:8px;width:56;height:37;' align='left'>
+            </a>
+            This tool will run <a href='http://rdp.cme.msu.edu/'>RDP's</a> Classifier pipeline on the Sample-specific FASTA data you prepared in a prior <span class='wbHelpMonoEntity'>Microbiome Sequence Import</span> step. In the summary documents (.XLSX), the spreadsheets contain per-sample data for each taxonomic rank; a corresponding clustered heatmap for each rank is also output (PDF).
+            <br>&nbsp;<br>
+            <img src='/images/workbench/help/microbiomeWorkbench/heatMap.png' style='margin:0px 8px 8px 8px;width:13;height:34;' align='right'>
+            (<i>Note: due to how our driver uses and manipulates file names, the heatmap images may have corrupted Sample names. We are working on addressing this.</i>)
+            <br>&nbsp;<br>
+            <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+          "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files Directory:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileDirSummary, { :fileList => @inputs } )
+      })
+  %>
+
+  <%# Output database summary %>
+  <%= if(@outputs.size == 1)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database/Project:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+      end
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # for width, should only style input tags with attribute type=text, not checkboxes, radio buttons, etc.
+    # setting labelWidth and setting width should leave about 50px spare room for formatting according to fiddling
+    # labelWidth defaults to 150px and most forms are set to 520px
+    inputFolderPath = @inputs[0]
+    if(inputFolderPath !~ /\/MicrobiomeData\//)
+      wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', "MISSING_DIRECTORY: Input folder/directory for RDP needs to be part of the 'MicrobiomeData' folder ")
+      raise wue
+    end
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'studyName', :label => 'Study Name', :type => :text , :style => "width: 320px", :value => "", :title => "The output folder for the RDP results" },
+        { :id => 'jobName', :label => 'Job Name', :type => :text , :style => "width: 320px", :value => "RDP-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique name" },
+        {  :id => 'rdpBootstrapCutoff', :label => 'rdpBootstrapCutoff', :type => :text, :hidden => true, :size => "25", :value => '0.8'},
+        {  :id => 'rdpVersion', :label => 'rdpVersion', :type => :text, :hidden => true, :size => "25", :value => '2.2'}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

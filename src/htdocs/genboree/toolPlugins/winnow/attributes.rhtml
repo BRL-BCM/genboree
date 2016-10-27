@@ -1,0 +1,4 @@
+Experiment: <%= options[:expname] %>
+<%= Time.now %>
+<% @winnow.model.ranked_attributes.each do |attr| %><%= attr.join(": ") %>
+<% end %>

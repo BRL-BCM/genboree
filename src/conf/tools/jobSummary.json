@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "jobSummary",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Job Summary",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,81 @@
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 275 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will remove one or more <i>File Entity Lists</i> permanently from a target <u>database</u>. Note that the files in the entity lists will not be removed from the database.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Input summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "File Entity Lists to be removed:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbFileEntityListSummary, { :fileEntityList => @inputs } )
+    })
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit, :onClick => "getEntityListNodeIds()" }, { :type => :cancel} ]
+    })
+%>
+</form>
+<script type="text/javascript">
+function getEntityListNodeIds()
+{
+  var ii = 0 ;
+  var tree = Ext.ComponentMgr.get('wbInputsTree') ;
+  var root = tree.getRootNode() ;
+  var nodeIds = new Array() ;
+  var idCount = 0 ;
+  root.eachChild( function(currentNode)
+                  {
+                    nodeIds.push(currentNode.attributes.refsUri) ;
+                  }
+                ) ;
+  wbHash.get('context').set('wbNodeIds', nodeIds) ; //wbHash is a global defined in 'globals.js'
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

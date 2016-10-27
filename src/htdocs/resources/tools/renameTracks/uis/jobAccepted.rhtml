@@ -1,0 +1,32 @@
+
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess" style="overflow-y:auto;">
+    <b>Job Id</b>: <i><%= @context['jobId'] %></i>
+    <br/>
+    <% if(!@context['updatedTrks'].empty?) %>
+      <br/>The following track(s) have been successfully renamed:
+      <%
+        updatedTrksStr = "<ul>"
+        updatedTrks = @context['updatedTrks']
+        updatedTrks.each_key { |key|
+          updatedTrksStr << "<li>#{updatedTrks[key]} has been renamed to #{key}</li>"   
+        }
+        updatedTrksStr << "</ul>"
+      %>
+      <%= updatedTrksStr %>
+    <% end %>
+    <br/>
+    <%=@context['wbStatusMsg']%>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>
+<script type='text/javascript'>
+  /* DO NOT use open ended comments here */
+  var nameMap = JSON.parse('<%=@context['nameMap'].to_json%>') ;
+  renameTreeNodes('wbMainTree', nameMap) ;
+  renameTreeNodes('wbInputsTree', nameMap) ;
+</script>

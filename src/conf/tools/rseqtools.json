@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "rseqtools",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 4,
+    "mem": "6gb",
+    "vmem": "6gb",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Analyze RNA-Seq data by RSEQtools",
+    "shortLabel": "RSEQtools",
+    "groupAccessUri": null
+  }
+}

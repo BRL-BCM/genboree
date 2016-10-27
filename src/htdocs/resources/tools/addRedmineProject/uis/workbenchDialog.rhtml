@@ -1,0 +1,188 @@
+<%
+  require 'brl/sites/redmine'
+%>
+<%
+  # Define outer form tag and its dimensions
+  width = 500
+  height = 330
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+<%=
+  # Tool title
+  renderStaticFrag(@toolIdStr, :wbToolTitle) 
+%>
+
+<%=
+  # Overview text
+  renderStaticFrag(@toolIdStr, :wbToolOverview,
+  { :toolOverview =>
+    "
+      This tool will register a Redmine project with a Genboree group
+      <br>&nbsp;<br>
+    "
+  })
+%>
+
+<%=
+  # Output summary
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Outputs",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs } )
+  })
+%>
+<%= # Tool settings
+
+    # Display a static and a dynamic drop list
+    # The static one displays the configured Redmines
+    # The dynamic one shows the projects with rawcontent available at the
+    #   selected Redmine
+
+    # Get Redmine options for its select widget
+    redmineOptions = {}
+    redmineConfLoc = @genbConf.gbRedmineConfs
+    redmineToUrl = {}
+    File.open(redmineConfLoc) { |fh|
+      redmineConfs = JSON.parse(fh.read())
+      redmineConfs.each_key { |redmine|
+        conf = redmineConfs[redmine]
+        redmineToUrl[redmine] = "http://#{conf["host"]}#{conf["path"]}"
+        redmineOptions[redmine.to_sym] = { :label => redmine }
+      }
+    }
+    if(redmineToUrl.empty?)
+      raise "Error with Redmine configuration"
+    end
+
+    # Configure default selected Redmine option
+    defaultRedmine = "GenboreeKB"
+    defaultSelectedRedmine = nil
+    if(redmineToUrl.key?(defaultRedmine))
+      defaultSelectedRedmine = defaultRedmine
+    else
+      defaultSelectedRedmine = redmineToUrl.keys.sort.first
+    end
+    redmineOptions[defaultSelectedRedmine.to_sym][:selected] = true
+
+    # Configure Redmine select widget
+    redmineSelectWidget = { 
+      :id => 'redmineLabel', 
+      :label => 'Redmine Name', 
+      :title => 'Select the name of the Redmine where you would like tool outputs to be uploaded', 
+      :onChange => 'redmineChangeHandler(this)', 
+      :type => :select, 
+      :options => redmineOptions
+    }
+
+    # Get projects with rawcontent from each of the Redmines
+    redmineToRawProjects = {}
+    redmineToUrl.each_key { |redmine|
+      url = redmineToUrl[redmine]
+      redmineObj = BRL::Sites::Redmine.new(url)
+      redmineObj.verbose = true
+      memberWrap = redmineObj.getProjectsWhereAdminAndRaw(@context["userLogin"])
+      if(memberWrap[:success])
+        redmineToRawProjects[redmine] = memberWrap[:obj]
+      else
+        $stderr.debugPuts(__FILE__, __method__, "ERROR", "Cannot retrieve Redmine projects for user #{@context["userLogin"].inspect} for Redmine instance #{redmine.inspect}")
+        redmineToRawProjects[redmine] = []
+      end
+    }
+
+    # Configure the project select widgets
+    redmineToProjectSelectWidget = {}
+    redmineToRawProjects.each_key { |redmine|
+      hidden = true
+      if(redmine == defaultSelectedRedmine)
+        hidden = false
+      end
+      rawContentProjects = redmineToRawProjects[redmine]
+      projectOptions = {}
+      rawContentProjects.each { |project|
+        projectId = project["identifier"] rescue nil
+        projectName = project["name"] rescue nil
+        raise "Cannot access project id from Redmine project" if(projectId.nil?)
+        raise "Cannot access project name from Redmine project" if(projectName.nil?)
+        projectOptions[projectId] = { :label => projectName } 
+      }
+      projectSelectWidget = {
+        :id => "projectSelect_#{redmine}",
+        :label => "Project Name",
+        :title => "Select the name of the Redmine project where you would like tool outputs to be uploaded",
+        :type => :select,
+        :hidden => hidden,
+        :options => projectOptions
+      }
+      if(projectOptions.empty?)
+        projectSelectWidget[:disabled] = true
+        projectSelectWidget[:options] = { "no_project_id" => { :label => "None: See Help" } }
+      end
+      redmineToProjectSelectWidget[redmine] = projectSelectWidget
+    }
+
+    # Finally, render the widgets
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => [
+        redmineSelectWidget,
+        *redmineToProjectSelectWidget.values
+      ]
+    })
+%>
+
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+
+<script type="text/javascript">
+/* Hide the non-selected Redmines' projects, show the selected Redmine's projects */
+function redmineChangeHandler(selectedElem) {
+  var redmines = [<%=redmineToUrl.keys.map { |xx| "\"#{xx}\"" }.join(", ")%>];
+  var selectedRedmine = selectedElem.value ;
+  var selectedRedmineElem = null;
+  for (var ii = 0; ii < redmines.length ; ii++) {
+    var redmine = redmines[ii];
+    var redmineProjectSelectId = "projectSelect_" + redmine + "Label";
+    var redmineProjectSelectElem = Ext.get(redmineProjectSelectId)
+    redmineProjectSelectElem.setStyle("display", "none");
+    if(redmine == selectedRedmine) {
+      selectedRedmineElem = redmineProjectSelectElem ;
+    }
+  }
+  selectedRedmineElem.setStyle("display", "");
+
+  // @todo would be nice to remove this by changing way select widget is generated with hidden 
+  //   (which is redundant with parent)
+  var redmineProjectInnerId = "projectSelect_" + selectedRedmine;
+  var redmineProjectInnerElem = Ext.get(redmineProjectInnerId);
+  redmineProjectInnerElem.setStyle("display", "");
+}
+
+/* Implement interface to clean job object before submission 
+  @param [Prototype::Hash] jobObj
+  @return [Prototype::Hash]
+*/
+function cleanJobObj(jobObj) {
+  myObj = jobObj;
+  var redmines = [<%=redmineToUrl.keys.map { |xx| "\"#{xx}\"" }.join(", ")%>];
+  var redminePrjSetting = undefined;
+  jobObj.get("settings").each(function(pair) {
+    matchRv = pair.key.match(/projectSelect_.*/g)
+    if(matchRv != null) {
+      redminePrjSetting = pair.key;
+    }
+  });
+  if(redminePrjSetting != undefined) {
+    var redminePrj = jobObj.get("settings").get(redminePrjSetting);
+    jobObj.get("settings").set("redminePrj", redminePrj);
+    jobObj.get("settings").unset(redminePrjSetting);
+  }
+  return jobObj;
+}
+</script>

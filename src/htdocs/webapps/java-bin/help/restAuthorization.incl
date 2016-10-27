@@ -1,0 +1,176 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;8.D REST API &ndash; Authorization&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#intro">8.D.1 Introduction</A>
+  <LI class="compact1_10"><A HREF="#compute">8.D.2 Computing the Token</A>
+    <UL class="compact1">
+      <LI><A HREF="#formula"><FONT CLASS="tocSmall">8.D.2.1 Token Formula</FONT></A></LI>
+      <LI><A HREF="#procedure"><FONT CLASS="tocSmall">8.D.2.2 Token Procedure</FONT></A></LI>
+      <LI><A HREF="#tokenNotes"><FONT CLASS="tocSmall">8.D.2.3 Notes on the Authentication Token</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAPIOverview">8. REST API &ndash; Overview</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restResourceIDs">8.A REST API &ndash; Resource IDs</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restUniformMethods">8.B REST API &ndash; Methods</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restRepresentations">8.C REST API &ndash; Representations</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="intro">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.D.1. Introduction:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      Genboree requires users to <i>authenticate</i> themselves with their username and password when using the
+      web site interface; it also verifies that the user is <i>authorized</i> to view or even alter data to which
+      they have access.
+    <p class="body">
+      The REST API is no different&mdash;it too requires authentication information and verifies the user is
+      authorized to operate on the resource indicated in the URL. The API does this in a careful and secure
+      way. The client creates a token using secret information (the user's password) that only it has, and
+      which the server can verify the client has (without the server actually needing to store the user's password).
+    <p class="body">
+      The REST API requires 3 parameters be appended (in any order) to the end of <u>all</u> resource URLs for authentication/authorization:
+      <dl class="indentedDL">
+        <dt>1. <span class="genbField">gbLogin</span></dt>
+          <dd>Login name of a registered Genboree user with sufficient access to perform the method on the resource.</dd>
+        <dt>2. <span class="genbField">gbTime</span></dt>
+          <dd>Current <a href="http://en.wikipedia.org/wiki/POSIX_time">POSIX time</a> (a.k.a. epoch time or UNIX time) as an integer.
+          This means your computer's time must be <i>reasonably</i> correct (say, within a few hours). This parameter helps avoid replay attacks.</dd>
+        <dt>3. <span class="genbField">gbToken</span></dt>
+          <dd>The core of the authentication scheme, the token is a <i>single-use</i>, <i>location-</i> and <i>time-specific</i> string resulting
+          from a one-way SHA1 digest of the <span class="genbField">rsrcURI</span>, a user &amp; password digest, and the 'current' time. Genboree
+          will use the 2 other parameters above and the resource URI to compute the same token on the server side.</dd>
+      </dl>
+    <p class="body">
+      <i>NOTE: Recall that the <span class="genbField">rsrcURI</span> is the full REST URL, minus
+      the 3 authorization parameters described above.</i>
+    </p>
+<HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="compute">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.D.2. Computing the Token</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <P class="body">
+      The token computation is straight-forward. It requires the ability to compute
+      SHA1 digests as hexidecimal strings, which is available as part of standard
+      or extension libraries of most modern languages.
+    <p class="body">
+    <!--      SUB-TOPIC -->
+    <!--      Sub-topic header -->
+      <A NAME="formula">&nbsp;</A>
+      <DIV class="subsubtopicHeader">
+        8.D.2.1. Token Formula:
+      </DIV>
+    <!--   Sub-topic content -->
+      <p class="body">
+        <center>
+          <span class="genbFixed">
+            token = SHA1(<span class='genbField'>{rsrcURI}</span>
+                    + SHA1(<span class='genbField'>{gbLogin}</span>
+                    + <span class='genbField'>{userPassword}</span>)
+                    + <span class='genbField'>{gbTime}</span>)</li>
+          </span>
+        </center>
+      <p class="body">
+    <!--      SUB-TOPIC -->
+    <!--      Sub-topic header -->
+      <A NAME="procedure">&nbsp;</A>
+      <DIV class="subsubtopicHeader">
+        8.D.2.2. Token Procedure (including appending to the REST URI):
+      </DIV>
+    <!--   Sub-topic content -->
+      <p class="body">
+        <ol class="procedure">
+          <li>Let <span class="genbField">{rsrcURI}</span> be the API URL so far, without the 3 required authentication parameters on the end.</li>
+          <li>
+            Observe that, in <u>all cases</u>, <span class="genbField">{rsrcURI}</span> contains the query-string delimiter '<b>?</b>' because
+            minimally, we will be adding the 3 authentication parameters.
+          </li>
+          <li>
+            Compute
+              <span class="genbFixed">
+                <span class="genbField">{usrPwDigest}</span> = SHA1(<span class='genbField'>{gbLogin}</span> + <span class='genbField'>{userPassword}</span>)
+              </span>
+          </li>
+          <li>Let <span class="genbField">{gbTime}</span> be the current <a href="http://en.wikipedia.org/wiki/POSIX_time">POSIX time</a>, as a string.</li>
+          <li>
+            Compute
+              <span class="genbFixed">
+                <span class="genbField">{gbToken}</span> = SHA1(<span class='genbField'>{rsrcURI}</span> + <span class='genbField'>{usrPwDigest}</span> + <span class="genbField">{gbTime}</span>)
+              </span>
+          </li>
+          <li>Append the 3 required parameters to <span class='genbField'>{rsrcURI}</span> to get the full API URL:<br>
+            <span class="genbFixed">
+              <br>
+              <span class="genbField">{fullURL}</span> = <span class='genbField'>{rsrcURI}</span>
+              + '&gbLogin=' + <span class='genbField'>{gbLogin}</span>
+              + '&gbTime=' + <span class="genbField">{gbTime}</span>
+              + '&gbToken=' + <span class="genbField">{gbToken}</span>
+            </span>
+        </ol>
+      <p class="body">
+        NOTE: The <span class="genbFixed">SHA1()</span> function above is assumed to output the digest value as a 40-digit hexidecimal string.
+      <p class="body">
+    <!--      SUB-TOPIC -->
+      <!--      Sub-topic header -->
+        <A NAME="tokenNotes">&nbsp;</A>
+        <DIV class="subsubtopicHeader">
+          8.D.2.3. Notes on the Authentication Token
+        </DIV>
+      <!--   Sub-topic content -->
+      <p class="body">
+        <ul class="compact1">
+          <li>
+            &middot; The token is <i>single-use</i> as a protection against replay attacks. Subsequent requests, even do-overs of failed requests, will need to compute a new token.
+          </li>
+          <li>
+            &middot; Incorporating the time into the token helps encourage single-use on the client side and speedy verification on the server side.
+          </li>
+          <li>
+            &middot; The token is <i>location-specific</i>; i.e. it is resource-specific. You can't use tokens for resources they weren't intended for.
+          </li>
+          <li>
+            &middot; The <i>secret information</i> the client has is the user's password. Genboree doesn't need to store that password,
+            but can instead store the SHA1 digest of the username + password. This increases security in the face of intrusion and in the
+            face of brute-force password attacks. Hence the need to calculate <span class="genbLabel">SHA1(<span class='genbField'>{gbLogin}</span> + <span class='genbField'>{userPassword}</span>)</span>.
+            This double-digesting of the secret information is also known to protect against clever offline attacks of the SHA1 digest, since
+            not enough of the internal state of the digest can be partially pre-computed based on the known information to be useful.
+          </li>
+          <li>
+            &middot; Be careful with the user's password in your client-side programs. Minimally: avoid putting the password on the command line when
+            calling your program since it could be seen by anyone with a process monitor (e.g. 'top', 'ps'), avoid hard-coding passwords
+            in your application code since it can be read by viewing the source or dumping all the strings from the binary (in the case of C/C++, say),
+            if you put the password in a configuration file or database make sure only you can read (and write) the file/database, etc.
+          </li>
+        </ul>
+      <p class="body">
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

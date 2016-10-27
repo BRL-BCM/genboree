@@ -1,0 +1,127 @@
+<%
+#first get the entire splash page content (request everything a single time)
+commonQsContentArr = GenboreeRedmine.getRedminePage(@server, "COMMON_QUESTIONS")
+tableHelpfulLinksArr = GenboreeRedmine.getRedminePage(@server, "HELPFUL_LINKS_ABOUT_PAGE_TABLE")
+workbenchHelpfulLinksArr = GenboreeRedmine.getRedminePage(@server, "GENBOREE_WORKBENCH_HELPFUL_LINKS_ABOUT_PAGE")
+#then get the content for each section based on hash name (calls a function to search the array, doesn't ping Remdine again)
+headerFooterContentArr = GenboreeRedmine.getRedminePage(@server, "HEADER_FOOTER")
+footerMainArrHash = GenboreeRedmine.getRedminePageSubset(headerFooterContentArr, "FOOTER_MAIN")
+
+additionalAboutPageContentArr = GenboreeRedmine.getRedminePage(@server, "GOOGLE_MAP_ABOUT_PAGE_CONTENT")
+%>
+
+
+
+<section class="white-bg" id="research">
+	<div class="container">
+		<a name="common_questions"></a>
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Common Questions</h1>
+			</div>
+		</div>
+		<div class="row push50">
+			<div class="col-xs-12">
+				<ul class="publications list-unstyled layer1">
+
+					<% commonQsContentArr.each_with_index{ |commonQsArr, commonQsCount| %>
+						<li>
+							<p class="title collapseHeading"><span id="expanderSign" class="">+</span> <%= commonQsArr["header"] %></p>
+							<p class="authors collapseContent"><%= commonQsArr["content"] %></p> 
+						</li>
+					<% } %>
+				</ul>
+			</div>
+		</div>
+
+		<a name="helpful_links"></a>
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Genboree Workbench Helpful Links</h1>
+			</div>
+		</div>
+
+		<div class="row push50">
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+				<div class="panel panel-primary">
+					<div class="panel-body">
+						<% workbenchHelpfulLinksArr.each{ |linksHash| %>
+							<p><a href="<%= linksHash["link"]%>"><%= linksHash["name"]%></a></p></br>
+						<% } %> 
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<a name="genboree_services_toolsets"></a>
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Genboree Services and Toolset Links</h1>
+			</div>
+		</div>
+
+		<div class="row push50">
+			<div class="col-xs-12">
+				<table class="table">
+					<thead>
+						<tr>
+							<th><p>Product / Toolset</p></th>
+							<th><p>FAQs</p></th>
+							<th><p>Tutorial</p></th>
+							<th><p>Video</p></th>
+						</tr>
+					</thead>
+					<tbody>
+						<% tableHelpfulLinksArr.each{ |tableHash| %>
+							<tr>
+							<td><%= tableHash["name"] %></td>
+							<td><a href="<%= tableHash["faq_link"] %>"><%= tableHash["faq_link_text"] %></a></td>
+							<td><a href="<%= tableHash["tutorial_link"] %>"><%= tableHash["tutorial_link_text"] %></a></td>
+							<td><a href="<%= tableHash["video_link"] %>"><%= tableHash["video_link_text"] %></a></td>
+							</tr>
+						<% } %>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<a name="lab_location"></a>
+		<div class="row">
+			<div class="col-xs-12">
+				<h1>Where are we located?</h1>
+			</div>
+		</div>
+		<div class="row push50">
+			<div class="col-xs-12">
+				<div itemscope itemtype="http://schema.org/Organization">
+					<div itemprop="name" style="display:none"><%= footerMainArrHash["name"] %></div>
+					<div itemprop="description">
+						<h4><%= footerMainArrHash["h4"] %></h4>
+						<p><%= footerMainArrHash["p"] %></p>
+					</div>
+					<div itemprop="address" itemscope itemtype="http://schema.org/PostalAddress">
+						<span itemprop="streetAddress"><p><%= footerMainArrHash["streetAddress"] %></p> <p><%= footerMainArrHash["roomLocation"] %></p></span>
+						<p><span itemprop="addressLocality"><%= footerMainArrHash["addressLocality"] %></span>, <span itemprop="addressRegion"><%= footerMainArrHash["addressRegion"] %></span> <span itemprop="postalCode"><%= footerMainArrHash["postalCode"] %></span></p>
+					</div>
+				</div>
+
+			</div>
+
+			<div class="col-xs-12">
+				<div id="map-container" class="col-md-6"></div>
+			</div>
+
+			<div class="col-xs-12">
+				<p><%= additionalAboutPageContentArr[0]["GOOGLE_API_MAP_EXTRA_DIRECTIONS"] %></p>
+			</div>
+		</div>
+	</div>
+</section>
+
+
+<input type="hidden" id="latitude" value="<%= additionalAboutPageContentArr[0]["GOOGLE_API_MAP_LATITUDE"] %>">
+<input type="hidden" id="longitude" value="<%= additionalAboutPageContentArr[0]["GOOGLE_API_MAP_LONGITUDE"] %>">
+
+<script src="http://maps.google.com/maps/api/js?key=<%= additionalAboutPageContentArr[0]["GOOGLE_API_MAP_KEY"]%>"></script>
+<script src="<%= @context %>/js/map.js"></script>

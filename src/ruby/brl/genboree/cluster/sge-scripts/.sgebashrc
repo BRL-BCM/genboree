@@ -1,0 +1,20 @@
+. /etc/bashrc
+export BRLLOCAL=/usr/local/brl/local
+export BRLDATA=/usr/local/brl/data
+export PATH=$BRLLOCAL/mysql/bin:$BRLLOCAL/apache-ant/bin:$BRLLOCAL/jdk/bin:/usr/local/brl/local/bin:/opt/Komodo-Edit-4.2/bin:$PATH
+export INCLUDEFLAGS="-I/usr/local/brl/local/apache/include -I/usr/local/brl/local/apache/include/mysql -I/usr/include/db3 -I/usr/local/brl/local/mysql/include/mysql -I/usr/local/brl/local/include"
+alias d='ls -latrh'
+export GEM_HOME=/usr/local/brl/local/lib/ruby/gems/1.8
+export RUBYLIB=/usr/local/brl/local/lib/ruby:/usr/local/brl/local/lib/ruby/site_ruby/1.8
+export GS_FONTPATH=/usr/local/brl/local/share/ghostscript/fonts
+export LDFLAGS="-L/usr/local/brl/local/lib -L/usr/lib \
+             -L/usr/local/brl/local/apache/lib \
+             -L/usr/local/brl/local/apache/lib/mysql \
+             -L/usr/local/brl/local/mysql/lib/mysql"
+export LD_LIBRARY_PATH=/usr/local/brl/local/lib:/usr/local/brl/local/apache/lib:/usr/local/brl/local/apache/apr/lib:/usr/local/brl/local/apache/lib/mysql:/usr/local/brl/local/mysql/lib:/usr/X11R6/lib:$LD_LIBRARY_PATH
+export LIBRARY_PATH=/usr/local/brl/local/lib:/usr/local/brl/local/apache/lib:/usr/local/brl/local/apache/apr/lib:/usr/local/brl/local/apache/lib/mysql:/usr/local/brl/local/mysql/lib:/usr/X11R6/lib:$LIBRARY_PATH
+export JAVA_HOME=$BRLLOCAL/jdk
+export ANT_HOME=$BRLLOCAL/apache-ant
+export MANPATH=$BRLLOCAL/man:$MANPATH
+# Load SGE settings"
+source /usr/local/brl/local/sge/brl/common/settings.sh

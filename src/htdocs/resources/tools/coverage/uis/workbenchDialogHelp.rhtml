@@ -1,0 +1,73 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "This tool computes the base level coverage using annotations provided by a Genboree track or a raw data file. To use an already uploaded track as the input, drag it into the &quot;Input Data&quot; area.
+          <br>&nbsp;<br>
+          To use a raw data file as the input:<br>
+          <ul>
+            <li>First transfer the file to Genboree via <code>Data -> Upload File</code></li>
+            <li>Following the transfer, drag the transferred file into the &quot;Input Data&quot; area.</li>
+            <li>Your file <i>must</i> be in one of the supported formats: LFF, GFF, GFF3, GTF, BED, or BedGraph.</li>
+          </ul>
+          <br>
+          You can optionally enable certain processing steps, prior to the coverage computation:
+          <ul>
+            <li>You can <i>extend</i> annotations out to a certain mininmum length.</li>
+            <li>You can <i>truncate</i> reads longer than a certain maxikum length.</li>
+            <li>You can opt <i>NOT to separate</i> the positive-strand annotations from the negative-strand annotations. In this case, coverage will be computed regardless of stand rather than separately for each strand.</li>
+          </ul>
+          <br>
+          Following any pre-processing, the base level coverage will be computed from the annotations and uploaded as a High-Density score oriented track (whose name you provide) in the Genboree database you specified in &quot;Output Targets&quot;. You can then visualize this data or download it in a number of formats.
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>track/file</u> with the reads/annos data into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Track or File', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up in that database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this analysis job a unique name. This name will be used to store result files within the <i>Output Database</i>.' ],
+          [ 'File Type', 'The file format of the file (if input is a file; n/a for a Genboree track).' ],
+          [ 'Extend Reads ?',  'Extend annotations to a certain length, if they are shorter.' ],
+          [ 'Extend Reads Value',  'Extend shorter reads to this length.<br><i>Note: To enter a value, first click on Extend Reads</i>' ],
+          [ 'Truncate Reads ?',  'Truncate annotations to a certain maxikum length, if they are longer.'],
+          [ 'Truncate Reads Value',  'Truncate longer reads to this length.<br><i>Note: To enter a value, first click on Truncate Reads </i>' ],
+          [ 'Separate strand coverage?',  'Check this to compute coverage separately for the two strands.' ],
+          [ 'Use Score For Coverage',  'Use score instead of occurrence for computing base level coverage. i.e. check this to compute coverage based on the score column of the input file/track.<br><i>Note: Occurrence (not score) of each base will be used by default</i>' ],
+          [ 'Output Track Name',  'Provide your own name for the output coverage track.<br><i>Note: data will be <u>added</u> to the indicated track if it already exists.</i>' ],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed and implemented by Sameer Paithankar with inputs from Tim Charnecki and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

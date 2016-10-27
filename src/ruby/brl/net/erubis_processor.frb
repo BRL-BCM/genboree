@@ -1,0 +1,83 @@
+## #!/usr/local/brl/local/bin/ruby
+require 'cgi'
+require 'erubis'
+require 'brl/net/fastcgiHandler'
+require 'brl/dataStructure/cache'
+
+# This class will not buffer the content in an array, instead it just prints
+# the page results directly to $stdout. Also, don't do space trimming to save time.
+class StdoutErubis < Erubis::Eruby
+  include Erubis::StdoutEnhancer
+  include Erubis::SimplifyEnhancer
+end
+
+## Basic template class to subclass and override its methods
+## when implementing your own handlers.
+class ErubisProcessor < BRL::Net::FastCGIHandler
+  attr_accessor :eruby
+  
+  # REQUIRED: new() will be called with 2 params, 'cgi' and 'env'.
+  # Use them for any generic info you need to setup.
+  # BUT handleRequest() and clear() will be given request-specific 'cgi' and 'env'
+  # Set up GLOBAL stuff here, used for all requests
+  def initialize(cgi, env)
+    @cachedErubies = BRL::DataStructure::LimitedCache.new(2)
+  end
+
+  # REQUIRED: implement a handleRequest() method. No args.
+  # Set up REQUEST-SPECIFIC stuff here, and process the request
+  def handleRequest(cgi, env)
+    # Get file name
+    fileName = env['SCRIPT_FILENAME']
+
+    # Make sure fileName looks like an rhtml and it exists. Ignore otherwise
+    return if(fileName !~ /\.rhtml$/ or !File.exist?(fileName) )
+
+    # Get file mtime
+    fileMtime = File.stat(fileName).mtime
+    
+    # Cache the object (if needed).
+    eruby = nil
+    oldMtime = @cachedErubies.getInsertTime(fileName)
+    if(oldMtime.nil? or oldMtime < fileMtime) # It's not there or it's out of date.
+      # Regardless of whether cache is updated or not, we get back the cached object:
+      eruby = StdoutErubis.new(nil)
+      eruby.compile!(File.read(fileName.strip.untaint))
+      eruby = @cachedErubies.cacheObject(fileName, eruby, fileMtime)
+    else
+      eruby = @cachedErubies.getObject(fileName)
+    end
+    # Supply some global context variables (accessible as @ instance variables)
+    # This is like binding.
+    outHdrs = Hash.new()  # Available to .rhtml to put http headers into
+    context = {
+                :cgi => cgi,
+                :env => env,
+                :outHdrs => outHdrs
+              }
+    # Evaluate the code
+    result = eruby.evaluate(context)
+    headerStr = cgi.header( outHdrs )
+    cgi.print(headerStr)
+    cgi.print(result)
+  end
+  
+  # REQUIRED: implement a clear() method to clean up cached stuff, etc
+  # TESTING: don't implement clear()
+  def clear(cgi=nil, env=nil)
+  end
+    
+end
+
+class NotImplementedError < ScriptError ; end
+
+# REQUIRED: Return object instance to FCGI eval, so obj.handleRequest() can be called.
+# NOTE: We should have 'cgi' and 'env' from the ruby-cgi.frb dispatch binding.
+#  - cgi is a CGI instance and has things like cgi.out, cgi.err, cgi.in, cgi.print
+#  - env is a hash of various cgi name-value variables
+obj = begin
+        # REQUIRED: Instantiate the object
+        obj = ErubisProcessor.new(cgi, env)
+      rescue Exception => err
+        obj = err
+      end

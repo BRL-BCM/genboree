@@ -1,0 +1,7 @@
+<div class="gbNotificationMsg">
+  <b>NOTICE:</b> GenboreeKB will have a downtime <b>July 30, 2014</b>
+  <ul>
+    <li>14:30 - 16:00</li>
+    <li>(migrating to a new MongoDB backend)</li>
+  </ul>
+</div>

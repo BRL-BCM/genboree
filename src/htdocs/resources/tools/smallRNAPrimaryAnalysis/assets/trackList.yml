@@ -1,0 +1,12 @@
+--- 
+hg18: 
+  trackList: 
+  - http://proline.brl.bcmd.bcm.edu/REST/v1/grp/Small%20RNA%20Analysis%20Resources/db/srnar-hg18/trk/Gene%3ARefSeq
+  - http://proline.brl.bcmd.bcm.edu/REST/v1/grp/Small%20RNA%20Analysis%20Resources/db/srnar-hg18/trk/GC%3ACpgIslands
+  seqFasta: http://proline.brl.bcmd.bcm.edu/REST/v1/resources/sequence/hg18/fasta/genome.fasta.gz
+hg19: 
+  trackList: 
+  - http://proline.brl.bcmd.bcm.edu/REST/v1/grp/Small%20RNA%20Analysis%20Resources/db/srnar-hg19/trk/Gene%3ARefSeq
+  - http://proline.brl.bcmd.bcm.edu/REST/v1/grp/Small%20RNA%20Analysis%20Resources/db/srnar-hg19/trk/GC%3ACpgIslands
+  seqFasta: http://proline.brl.bcmd.bcm.edu/REST/v1/resources/sequence/hg19/fasta/genome.fasta.gz
+

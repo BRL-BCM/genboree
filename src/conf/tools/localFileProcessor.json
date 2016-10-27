@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "localFileProcessor",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "cluster": {
+    "prequeueType": "LocalHost"
+    //"prequeueHost": "localhost"
+  }
+}

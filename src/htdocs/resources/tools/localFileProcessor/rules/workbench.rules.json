@@ -1,0 +1,25 @@
+{
+  "inputs" :
+  {
+    "minItemCount" : 0,
+    "maxItemCount" : 0,
+    "ruleSet" :  [ ]
+  },
+  "outputs" :
+  {
+    "minItemCount" : 0,
+    "maxItemCount" : 0,
+    "ruleSet" :
+    [
+      []
+    ]
+  },
+  "context" :
+  {
+    "required" : [ ]
+  },
+  "settings" :
+  {
+    "patterns" :  { }
+  }
+}

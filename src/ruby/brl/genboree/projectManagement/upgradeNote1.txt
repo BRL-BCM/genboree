@@ -1,0 +1,19 @@
+
+With the new support for sub-projects, the standard project subdirectories Genboree
+uses have been RENAMED to better protect against users using those same names for
+their own sub-projects. The RENAMING adds a highly-Genboree specific prefix (genb^^).
+For robustness, however, new projects/subprojects will be not be allowed to use these
+names.
+
+To upgrade existing projects:
+
+1) Update any projects that have files in SVN (generally under "additional") using SVN.
+Do this by cd to the project directory and doing the svn update.
+
+2) To convert the rest:
+
+for xx in `find . -type d -name required -o -name optional -o -name additionalPages -o -name additionalFiles -o -name BAK`
+do
+  yy=`echo $xx | ruby -pae '$_ =~ /required|optional|additionalPages|additionalFiles|BAK/ ; rr=$&; $_.gsub!(/#{rr}/, "genb^^#{rr}")' `
+  mv $xx $yy
+done

@@ -1,0 +1,92 @@
+
+
+<!--              <div style="height: 16px;">
+                <div style="float:right;">
+                 <a class="btn-landing" href="/site/" target="_blank">Genboree Home</a> 
+                </div>
+              </div> --> 
+                <form name="logusr" id="logusr" action="login.jsp" method='post' class='form-signin'>
+                  <input type='hidden' name='rm' value='userloggedin'>
+                  <input type='hidden' name='title' value='title'>
+                  <!-- div id="loginBox" style="border-style: solid; border-width: 1px; border-color: DarkGoldenRod; margin-top: 10px; margin-bottom: 5px; padding: 10px ; font-size: 67% ; background-color: #ffffe6 ; " -->
+                    <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <!-- <td><b>Login&nbsp;Name:</b></td> -->
+                      <td colspan="2">&nbsp;<input type="text" name="username" id="username" class="txt form-control" onfocus="formInUse = true;" placeholder="Login"></td>
+                    </tr>
+                    <tr>
+                      <!-- <td><b>Password:</b></td> -->
+                      <td colspan="2">&nbsp;<input type="password" name="password" id="password" class="txt form-control" onfocus="formInUse = true;" placeholder="Password"></td>
+                    </tr>
+                    <tr>
+                      <td rowspan="3">&nbsp;</td>
+                      <td style="padding-top: 5px;">
+                        &nbsp;<input type="submit" value='Login' class="btn btn-success">&nbsp;
+<%
+                        if(accessDenied)
+                        {
+%>
+                              <input type="submit" name="loginCancel" id="loginCancel" value="Cancel" class="btn">
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+<%
+                        }
+%>
+                        <a href="forgotten.jsp" style="padding-top:10px"><i>Forgot your password?</i></a>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td colspan="2" style="height:10"></td>
+                    </tr>
+<%
+                    if(!accessDenied || isPublicDb)
+                    {
+%>
+                      <tr>
+<%
+    if(isPublicDb)
+    {
+%>
+                        <td rowspan="3">&nbsp;</td>
+                      <td style="padding-top: 5px;">
+<%
+    }
+    else
+    {
+%>
+     <td colspan="2">
+<%
+    }
+%>
+                          &nbsp;<input type="button" value='Guest/Public View' onclick="document.logpub.submit()" class="btn">&nbsp;
+                        </td>
+                      </tr>
+<%
+                    }
+%>
+                    </table>
+                  </div>
+                  <!--div id="registerBox" style="border-style: solid; border-width: 1px; border-color: IndianRed; margin-top: 5px; margin-bottom: 5px; padding: 5px ; background-color: MistyRose ; ">
+                    New to Genboree? <a href="regform.jsp">Register here</a>!
+                  </div-->
+                </form>
+                <script type="text/javascript">
+                  var formInUse = false;
+
+                  function setFocus()
+                  {
+                    if(!formInUse)
+                    {
+                      document.getElementById('username').focus();
+                    }
+                  }
+
+                  window.onload = setFocus() ;
+                </script>
+<!-- These thee are included by Ronak to use bootstrap styling at the login page -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>

@@ -1,0 +1,70 @@
+{
+  "inputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "studyName": [
+        "^(?:^.+$)$",
+        "Study Name cannot be left blank"
+      ],
+      "sampleName": [
+        "^(?:^.+$)$",
+        "Sample Name cannot be left blank"
+      ],
+      "minVarRatio": [
+        "^\\d+(?:\\.\\d+)?$",
+        "Minimum Var Ratio must be a float."
+      ],
+      "z1bpCutOff": [
+        "^(?:\\+|\\-|)\\d+(?:\\.\\d+)?$",
+        "Z-1bp Cut Off value must be a float."
+      ],
+      "zCutOff": [
+        "^(?:\\+|\\-|)\\d+(?:\\.\\d+)?$",
+        "Z Cut Off value must be a float."
+      ],
+      "minVarReads": [
+        "^\\d+$",
+        "Minimum Var Reads must be a positive integer."
+      ],
+      "minTotalDepth": [
+        "^\\d+$",
+        "Minimum total depth must be a postive integer."
+      ],
+      "jobName": [
+        "^(?:^.+$)$",
+        "Job Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/files/?",
+        0,
+        1
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

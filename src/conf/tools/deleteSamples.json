@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "deleteSamples",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Samples",
+    "shortLabel": "[NOT SET]"
+  }
+}

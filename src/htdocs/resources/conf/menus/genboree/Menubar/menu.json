@@ -1,0 +1,43 @@
+[
+  {
+    "text": "Home",
+    "href": "/java-bin/index.jsp"
+  },
+  {
+    "text": "Workbench",
+    "href": "/java-bin/workbench.jsp"
+  },
+  {
+    "text": "Browser",
+    "href": "/java-bin/defaultGbrowser.jsp"
+  },
+  {
+    "text": "Profile",
+    "href": "/java-bin/mygenboree.jsp"
+  },
+  {
+    "text": "Groups"
+  },
+  {
+    "text": "Projects"
+  },
+  {
+    "text": "Databases"
+  },
+  {
+    "text": "Tools"
+  },
+  {
+    "text": "Log Out",
+    "href": "/java-bin/login.jsp?rm=logout"
+  },
+  {
+    "text": "Help",
+    "href": "/java-bin/showHelp.jsp?topic=top"
+  },
+  {
+    "text": "Genboree Home",
+    "href": "/site/",
+    "hrefTarget" : "_blank"
+  }
+]

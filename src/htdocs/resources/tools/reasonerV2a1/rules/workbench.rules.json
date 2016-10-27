@@ -1,0 +1,30 @@
+{
+  "inputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/kb/[^/?]+/coll/[^/?]+/doc/[^/?]+/?(?:$|\\?)",
+        1,
+        null
+      ],
+      [
+        "/kb/[^/?]+/(trRulesDoc|transform)/[^/?]+/?(?:$|\\?)",
+        1,
+        null
+      ]
+    ],
+    "minItemCount": 2
+  },
+  "settings": {
+    "patterns": {
+      "rulesDoc": [
+        "/kb/[^/?]+/coll/[^/?]+/doc/[^/?]+/?(?:$|\\?)",
+        "rulesDoc must refer to a valid kbDoc URL"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  }
+}

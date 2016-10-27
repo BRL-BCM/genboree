@@ -1,0 +1,50 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "maxReadLength": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Maximum Read Length should either be empty or an integer."
+      ],
+      "minReadLength": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Minimum Read Length should either be empty or an integer."
+      ],
+      "minReadOccurance": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Minimum Read Occurance should either be empty or an integer."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/files\\?$",
+        0,
+        1
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

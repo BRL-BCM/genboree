@@ -1,0 +1,507 @@
+<%@ page import="java.util.*, java.io.*, javax.servlet.http.*,
+	org.genboree.dbaccess.*, org.genboree.gdasaccess.*,
+	org.genboree.upload.*, org.genboree.util.*, javax.servlet.*,
+	java.sql.*, java.lang.*, java.text.SimpleDateFormat" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="group.incl" %>
+
+<%!
+	// static properties defined here
+	// mode IDs
+	static String[] modeIds =
+	{
+		"Combine", "Intersect", "Non-Intersect"
+	};
+
+	static final int MODE_DEFAULT = -1;
+	static final int MODE_COMBINE = 0;
+	static final int MODE_INTERSECT = 1;
+	static final int MODE_NONINTERSECT = 2;
+
+	static String[] modeLinks =
+	{
+		"trackOps.jsp?mode=Combine",
+		"trackOps.jsp?mode=Intersect",
+		"trackOps.jsp?mode=Non-Intersect"
+	};
+
+	// condition IDs
+	static String[] condIds =
+	{
+		"Any", "All"
+	};
+
+	static final int COND_ANY = 0;
+	static final int COND_ALL = 1;
+	static String fromAddress = "\"Genboree Team\" <genboree_admin@genboree.org>";
+	static String bccAddress = "genboree_admin@genboree.org";
+%>
+<%
+    //--------------------------------------------------------------------------------
+    // track class, type, and subtype parameter values
+    String newTrackClassName = null;
+    String newTrackTypeName = null;
+    String newTrackSubTypeName = null;
+    String [] trackNames = null;
+    ArrayList threadList = new ArrayList();
+    ArrayList trackOperationList = new ArrayList();
+    int genboreeUserId = Util.parseInt(myself.getUserId(), -1);
+      //--------------------------------------------------------------------------------
+    	// get appropriate group and database information
+    	response.addDateHeader( "Expires", 0L );
+        	response.addHeader( "Cache-Control", "no-cache, no-store" );
+
+    	if( myself==null || grps == null )
+    	{
+    		GenboreeUtils.sendRedirect(request,response,  "/java-bin/login.jsp" );
+    		return;
+    	}
+
+	    // set to original track class, type, and subtype parameter values if not found
+    	if ( ( newTrackClassName = (String) mys.getAttribute( "newTrackClassName" ) ) == null )
+    		newTrackClassName = "TrackOp";
+    	if ( ( newTrackTypeName = (String) mys.getAttribute( "newTrackTypeName" ) ) == null )
+    		newTrackTypeName = "";
+    	if ( ( newTrackSubTypeName = (String) mys.getAttribute( "newTrackSubTypeName" ) ) == null )
+    		newTrackSubTypeName = "";
+    	Vector limitedDBVector = new Vector();
+    	limitedDBVector.copyInto( rseqs );
+    	Refseq refSeq = null;
+    	boolean db_selected = false;
+    	ResultSet rs = null;
+    	String dbName = null;
+    	RefseqEntryPoint [] rseps = null;
+    	String [][] srcEps = null;
+    	int nsz = 0;
+    	DbFtype[] trks = null;
+    	if( rseq_id != null )
+    	{
+           SessionManager.setSessionDatabaseId(mys, rseq_id );
+
+    		for( int i=0; i<rseqs.length; i++ )
+    			if( rseqs[i].getRefSeqId().equals(rseq_id) )
+    			{
+    				refSeq = rseqs[i];
+    				break;
+    			}
+
+    	}
+
+    	if( refSeq == null )
+    	{
+            rseq_id = "#";
+    	}
+
+    	if( refSeq != null )
+    	{
+    		// get the name of appropriate database
+    		dbName = refSeq.getDatabaseName();
+            mys.setAttribute( "selectedDatabase", dbName );
+    		srcEps = refSeq.fetchEntryPoints( db.getConnection( dbName ) );
+
+
+    		nsz = srcEps.length;
+    		rseps = new RefseqEntryPoint[ nsz ];
+    		for ( int i = 0; i < nsz; i++ )
+    		{
+    			String [] rsep = srcEps[i];
+    			RefseqEntryPoint ep = new RefseqEntryPoint();
+    			ep.setId( rsep[0] );
+    			ep.setSegmentName( rsep[0] );
+    			ep.setStart( "1" );
+    			ep.setStop( rsep[2] );
+    			ep.setEntryPointClass( rsep[1] );
+    			rseps[i] = ep;
+    		}
+
+
+    		// get tracks of selected reference sequence from database
+    		trks = refSeq.fetchTracks( db, null, genboreeUserId );
+    		if ( JSPErrorHandler.checkErrors(request, response, db, mys ) ) return;
+
+            if (trks != null && trks.length >0) {
+                trackNames = new String[ trks.length ];
+                for ( int i = 0; i < trks.length; i++ )
+                {
+                    trackNames[i] = trks[i].getFmethod() + " : " + trks[i].getFsource();
+                }
+                Arrays.sort( trackNames );
+            }
+            else {
+                trackNames = new String [0];
+
+            }
+    	}
+	//--------------------------------------------------------------------------------
+	// contains list of errors encountered
+	Vector verr = new Vector();					// vector containing list of errors
+
+	//--------------------------------------------------------------------------------
+	// contains radius parameter (for intersect and non-intersect operations)
+	int radius = 0;							// set default radius to 0
+
+  //--------------------------------------------------------------------------
+  // contains number required overlapping annotations number
+  int reqOverlap = 1 ;
+
+	//--------------------------------------------------------------------------------
+	// condition parameter (for intersect and non-intersect operations)
+	int cond = COND_ANY;						// set default condition to "any"
+
+	//--------------------------------------------------------------------------------
+	// mode (or operation) parameter
+	int mode = MODE_DEFAULT;					// set default operation to "none"
+
+	// find current selected operation ( "Combined", "Intersect", or "Non-Intersect" )
+	String pMode = request.getParameter("mode");
+	if( pMode != null )
+	{
+		for( int i=0; i<modeIds.length; i++ )
+			if( pMode.equals(modeIds[i]) )
+			{
+				mode = i;
+				break;
+			}
+	}
+	else
+	{
+		pMode = (String) mys.getAttribute( "mode" );
+		if ( pMode != null )
+		{
+			for( int i=0; i<modeIds.length; i++ )
+				if( pMode.equals(modeIds[i]) )
+				{
+					mode = i;
+					break;
+				}
+			mys.removeAttribute( "mode" );
+		}
+	}
+
+
+   boolean hasTracks = true;
+   if (trackNames == null || trackNames.length ==0) {
+        hasTracks = false;
+        String temp = request.getParameter("rseq_id");
+    }
+	    //--------------------------------------------------------------------------------
+    	// action to be taken when button is pressed
+
+    	// if the "Cancel" button was pressed
+    	if( request.getParameter("btnCancel") != null )
+    	{
+    		GenboreeUtils.sendRedirect(request,response,  (mode == MODE_DEFAULT) ? "/java-bin/index.jsp" : "/java-bin/trackOps.jsp" );
+    		return;
+    	}
+    	else if( request.getParameter("btnExecute") != null )
+    	{
+        // if the "Execute" button was pressed
+    		//------------------------------------------------------------------------
+    		// check if first, second, and combine (if appropriate) track names are appropriate
+
+        String selectedDatabase = (String )mys.getAttribute( "selectedDatabase");
+        CacheManager.clearCache( db, selectedDatabase, refSeq );
+
+    		String firstTrack = null;
+    		String firstTrackClassName, firstTrackTypeName, firstTrackSubTypeName;
+    		firstTrackClassName = firstTrackTypeName = firstTrackSubTypeName = null;
+
+    		String [] secondTrack = null;
+    		String [] secondTrackClassName, secondTrackTypeName, secondTrackSubTypeName;
+    		secondTrackClassName = secondTrackTypeName = secondTrackSubTypeName = null;
+
+    		String [] combineTrack = null;
+    		String [] combineTrackClassName, combineTrackTypeName, combineTrackSubTypeName;
+    		combineTrackClassName = combineTrackTypeName = combineTrackSubTypeName = null;
+
+    		// check if fields are correct
+    		switch( mode )
+    		{
+    			case MODE_COMBINE:
+    				combineTrack = request.getParameterValues( "trkId" );
+    				mys.setAttribute( "combineTrack", combineTrack );
+
+    				// error if no track is selected
+    				if ( combineTrack == null || !( combineTrack.length > 1 ) )
+    				{
+    					verr.addElement( "At least two tracks must be selected." );
+    					mys.removeAttribute( "combineTrack" );
+    				}
+    				break;
+    			case MODE_INTERSECT:
+    			case MODE_NONINTERSECT:
+
+    				mys.setAttribute( "condition", request.getParameter( "conditionButton" ) );
+    				for ( int i = 0; i < condIds.length; i++ )
+    				{
+    					if ( condIds[i].equals( request.getParameter( "conditionButton" ) ) )
+    						cond = i;
+    				}
+
+    				firstTrack = request.getParameter( "firstTrackSelect" );
+    				secondTrack = request.getParameterValues( "trkId" );
+
+    				mys.setAttribute( "firstTrack", firstTrack );
+    				mys.setAttribute( "secondTrack", secondTrack );
+
+    				// error if no first track is selected
+    				if ( firstTrack == null )
+    				{
+    					verr.addElement( "One of the first tracks must be selected." );
+    					mys.removeAttribute( "firstTrack" );
+    				}
+
+    				// error if no second track is selected
+    				if ( secondTrack == null || !( secondTrack.length > 0 ) )
+    				{
+    					verr.addElement( "At least one of the second tracks must be selected." );
+    					mys.removeAttribute( "secondTrack" );
+    				}
+
+    				if ( firstTrack != null && secondTrack != null )
+    				{
+    					// first track must not match any of the selected second tracks
+    					for ( int i = 0; i < secondTrack.length; i++ )
+    					{
+    						if ( firstTrack.equals( secondTrack[i] ) )
+    						{
+    							verr.addElement( "First track must not match with any of the selected second tracks." );
+    							break;
+    						}
+    					}
+    				}
+    				break;
+    		};
+
+    		//------------------------------------------------------------------------
+    		// check if new track class, type, and subtype parameter values are appropriate
+
+    		// obtain class, type, and sub-type names of new track
+    		newTrackClassName = request.getParameter( "classField" );
+    		newTrackTypeName = request.getParameter( "typeField" );
+    		newTrackSubTypeName = request.getParameter( "subTypeField" );
+
+    		// error if class name of new track is blank
+    		if ( newTrackClassName == null ) newTrackClassName = "";
+    		else newTrackClassName = newTrackClassName.trim();
+    		if ( Util.isEmpty(newTrackClassName) )
+    			verr.addElement( "Invalid new track class name." );
+
+    		mys.setAttribute( "newTrackClassName", newTrackClassName );
+
+    		// error if type name of new track is blank
+    		if ( newTrackTypeName == null ) newTrackTypeName = "";
+    		else newTrackTypeName = newTrackTypeName.trim();
+    		if ( Util.isEmpty(newTrackTypeName) )
+    			verr.addElement( "Invalid new track type name." );
+
+    		mys.setAttribute( "newTrackTypeName", newTrackTypeName );
+
+    		// error if sub-type name of new track is blank
+    		if ( newTrackSubTypeName == null ) newTrackSubTypeName = "";
+    		else newTrackSubTypeName = newTrackSubTypeName.trim();
+    		if ( Util.isEmpty(newTrackSubTypeName) )
+    			verr.addElement( "Invalid new track sub-type name." );
+
+    		mys.setAttribute( "newTrackSubTypeName", newTrackSubTypeName );
+
+    		boolean newTrackAlreadyListed = false;
+
+    		// check if class, type, AND sub-type names of new track does not already exist in database
+    		for ( int i = 0; i < trackNames.length; i++ )
+    		{
+    			if ( trackNames[i].equals( newTrackTypeName + " : " + newTrackSubTypeName ) )
+    			{
+    				verr.addElement( "Track name already exists." );
+    				newTrackAlreadyListed = true;
+    				break;
+    			}
+    		}
+
+    		// check if class, type, AND sub-type names of new track is not already being used in other threads
+    		String [] newTrackBuffer = { newTrackClassName, newTrackTypeName, newTrackSubTypeName };
+    		if ( TrackOperation.isNewTrackActive( newTrackBuffer ) == true && newTrackAlreadyListed == false )
+    			verr.addElement( "Track name already being processed." );
+    		//------------------------------------------------------------------------
+    		// if there are no problems, create temporary source LFF file and execute selected operation
+    		if ( verr.size() == 0 )
+    		{
+    			int size = trackOperationList.size();
+    			trackOperationList.add( new TrackOperation() );
+    			( (TrackOperation) trackOperationList.get( size ) ).setMode( mode );
+    			( (TrackOperation) trackOperationList.get( size ) ).setCondition( cond );
+    			( (TrackOperation) trackOperationList.get( size ) ).setMyself( myself );
+    			( (TrackOperation) trackOperationList.get( size ) ).setGroup( grp );
+    			( (TrackOperation) trackOperationList.get( size ) ).setRefSeq( refSeq );
+    			( (TrackOperation) trackOperationList.get( size ) ).setRefSeqId(rseq_id );
+    			( (TrackOperation) trackOperationList.get( size ) ).setFilter( "b" );
+    			( (TrackOperation) trackOperationList.get( size ) ).setDB( db );
+          ( (TrackOperation) trackOperationList.get( size ) ).setGenboreeUserId(  genboreeUserId );
+          if ( firstTrack != null )
+    			{
+    				( (TrackOperation) trackOperationList.get( size ) ).setFirstTrack( firstTrack );
+    				mys.removeAttribute( "firstTrack" );
+    			}
+    			if ( secondTrack != null )
+    			{
+    				( (TrackOperation) trackOperationList.get( size ) ).setSecondTrack( secondTrack );
+    				mys.removeAttribute( "secondTrack" );
+    			}
+    			if ( combineTrack != null )
+    			{
+    				( (TrackOperation) trackOperationList.get( size ) ).setCombineTrack( combineTrack );
+    				mys.removeAttribute( "combineTrack" );
+    			}
+    			if ( newTrackClassName != null && newTrackTypeName != null && newTrackSubTypeName != null )
+    			{
+    				( (TrackOperation) trackOperationList.get( size ) ).setNewTrackClassName( newTrackClassName );
+    				( (TrackOperation) trackOperationList.get( size ) ).setNewTrackTypeName( newTrackTypeName );
+    				( (TrackOperation) trackOperationList.get( size ) ).setNewTrackSubTypeName( newTrackSubTypeName );
+
+    				mys.removeAttribute( "newTrackClassName" );
+    				mys.removeAttribute( "newTrackTypeName" );
+    				mys.removeAttribute( "newTrackSubTypeName" );
+    			}
+
+    			File workFile = null;
+    			String workFileName = null;
+    			File outputFile = null;
+    			String outputFileName = null;
+    			try
+    			{
+    				switch( mode ) {
+    					case MODE_COMBINE:
+    						workFile = File.createTempFile( "tempLffCombine", ".lff" );
+    						outputFile = File.createTempFile( "lffCombine", ".lff" );
+    						break;
+    					case MODE_INTERSECT:
+    						workFile = File.createTempFile( "tempLffIntersect", ".lff" );
+    						outputFile = File.createTempFile( "lffIntersect", ".lff" );
+    						( (TrackOperation) trackOperationList.get( size ) ).setRadius( Integer.parseInt( request.getParameter( "radiusField" ) ) );
+    						( (TrackOperation) trackOperationList.get( size ) ).setMinNumOverlaps( Integer.parseInt( request.getParameter( "reqOverlap" ) ) );
+    						mys.removeAttribute( "radius" );
+    						break;
+    					case MODE_NONINTERSECT:
+    						workFile = File.createTempFile( "tempLffNonIntersect", ".lff" );
+    						outputFile = File.createTempFile( "lffNonIntersect", ".lff" );
+    						( (TrackOperation) trackOperationList.get( size ) ).setRadius( Integer.parseInt( request.getParameter( "radiusField" ) ) );
+    						( (TrackOperation) trackOperationList.get( size ) ).setMinNumOverlaps( Integer.parseInt( request.getParameter( "reqOverlap" ) ) );
+    						mys.removeAttribute( "radius" );
+    						break;
+    				};
+    			}
+    			catch ( Exception ex )
+    			{
+    				// print out error stack via standard output
+    				System.out.println( "----------------------------------------" );
+    				System.out.println( "EXCEPTION CAUGHT IN trackOps.jsp (temporary source file creation)" );
+    				ex.printStackTrace();
+    				System.out.println( "----------------------------------------" );
+    		   	}
+
+    			if ( workFile != null && outputFile != null )
+    			{
+    				workFileName = workFile.toString();
+    				outputFileName = outputFile.toString();
+
+    				( (TrackOperation) trackOperationList.get( size ) ).setWorkFile( workFile );
+    				( (TrackOperation) trackOperationList.get( size ) ).setWorkFileName( workFileName );
+    				( (TrackOperation) trackOperationList.get( size ) ).setOutputFile( outputFile );
+    				( (TrackOperation) trackOperationList.get( size ) ).setOutputFileName( outputFileName );
+
+    				mys.setAttribute( "workFile", workFile );
+    				mys.setAttribute( "outputFile", outputFile );
+    			}
+
+    			( (TrackOperation) trackOperationList.get( size ) ).addToEmail( myself.getEmail() );
+    			( (TrackOperation) trackOperationList.get( size ) ).addBccEmail( bccAddress );
+    			( (TrackOperation) trackOperationList.get( size ) ).setSmtpHost( Util.smtpHost );
+    			( (TrackOperation) trackOperationList.get( size ) ).setFromAddress( fromAddress );
+
+    			// clean up left-over threads
+    			for ( int i = 0; i < threadList.size(); i++ )
+    			{
+    				if ( ( (Thread) threadList.get( i ) ).isAlive() == false )
+    					threadList.remove( i );
+    			}
+    			
+    			String useClusterForLFFIntersect = GenboreeConfig.getConfigParam("useClusterForLFFIntersect");
+    			if ((useClusterForLFFIntersect.equals("true") || useClusterForLFFIntersect.equals("yes"))&& mode == MODE_INTERSECT)
+          {
+            String hostname = request.getServerName();
+            StringBuffer secondTrackList = new StringBuffer();
+            secondTrackList.append(Util.urlEncode(secondTrack[0]));
+            if(secondTrack.length > 1)
+            {
+              for(int i=1; i < secondTrack.length; i++)
+              {
+                secondTrackList.append(","+Util.urlEncode(secondTrack[i]));
+              }
+            }
+            
+            StringBuffer newTrack = new StringBuffer();
+            newTrack.append(Util.urlEncode(newTrackClassName));
+            newTrack.append(","+Util.urlEncode(newTrackTypeName));
+            newTrack.append(","+Util.urlEncode(newTrackSubTypeName));
+            StringBuffer trackOperationCmd = new StringBuffer();
+            trackOperationCmd.append("trackOperation.rb ");
+            String clusterOutputDir = outputFileName.replaceFirst("[^/]*$","");
+            outputFileName = outputFileName.replaceFirst(".*/","");
+            outputFileName = "./" + outputFileName;
+            workFileName = workFileName.replaceFirst(".*/","");
+            workFileName = "./" + workFileName;
+             
+            if(cond == COND_ALL) 
+            { 
+              trackOperationCmd.append(" -c "+ cond);
+            }
+            trackOperationCmd.append(" -r "+ rseq_id);
+            trackOperationCmd.append(" -g "+ genboreeUserId);
+            trackOperationCmd.append(" -f "+ Util.urlEncode(firstTrack.toString()));
+            trackOperationCmd.append(" -s "+ Util.urlEncode(secondTrackList.toString()));
+            trackOperationCmd.append(" -w "+ workFileName);
+            trackOperationCmd.append(" -o "+ outputFileName);
+            trackOperationCmd.append(" -d "+request.getParameter( "radiusField" ));
+            trackOperationCmd.append(" -v "+request.getParameter( "reqOverlap" ));
+            trackOperationCmd.append(" -n "+ Util.urlEncode(newTrack.toString()) );
+            
+            Random random = new Random();
+            Long randomNumber = new Long(random.nextInt(65525));
+            String jobId = "job-"+System.currentTimeMillis()+"_"+randomNumber.toString();
+            trackOperationCmd.append(" --clusterOutputDir ").append(Util.urlEncode(hostname+":"+clusterOutputDir));
+            trackOperationCmd.append(" --parentJobName ").append(Util.urlEncode(jobId));
+            
+
+            String clusterAdminEmail = "raghuram@bcm.edu";
+            StringBuffer clusterSchedulerString = new StringBuffer("clusterJobScheduler.rb");
+            
+            clusterSchedulerString.append(" -o ").append(hostname).append(":").append(clusterOutputDir);
+            clusterSchedulerString.append(" -e ").append(clusterAdminEmail);
+            clusterSchedulerString.append(" -c ").append(Util.urlEncode(Util.urlEncode(trackOperationCmd.toString())));  
+            clusterSchedulerString.append(" -r "+GenboreeConfig.getConfigParam("clusterLFFIntersectResourceFlag")+"=1 ");
+            //Supply the jobId so that the upload portion of the intersect can be created as a separate cluster job
+            clusterSchedulerString.append(" --jobName ").append(jobId);
+            if ((GenboreeConfig.getConfigParam("retainClusterLFFIntersectDir").equals("true") || GenboreeConfig.getConfigParam("retainClusterLFFIntersectDir").equals("yes"))&& mode == MODE_INTERSECT)
+            {
+              clusterSchedulerString.append(" -k ");
+            }
+            RunExternalProcess rn = new RunExternalProcess(clusterSchedulerString.toString());                       
+
+            System.err.println(trackOperationCmd.toString());                       
+
+          }
+          else
+          {
+      			threadList.add( new Thread( (TrackOperation) trackOperationList.get( size ) ) );
+      			( (Thread) threadList.get( threadList.size() - 1 ) ).setDaemon( true );
+      			( (Thread) threadList.get( threadList.size() - 1 ) ).start();
+          }
+    			mys.removeAttribute( "condition" );
+    			mys.setAttribute( "currentMode", modeIds[ mode ] );
+
+    			// go to the complete confirmation page if operation is successful
+    			GenboreeUtils.sendRedirect(request,response,  (mode == MODE_DEFAULT) ? "/java-bin/index.jsp" : "/java-bin/trackOpsComplete.jsp" );
+    			return;
+    		}
+    	}
+%>

@@ -1,0 +1,72 @@
+<div class="center">
+<form id="reg" name="reg" method="post" action="<%= @server.registerUrl %>">
+  <h1>Genboree New User Registration</h1>
+  <div class="field">
+    <label>Username *:</label>
+    <div class="col2">
+      <input name="user_name" id="user_name" type="text" size="40" maxlength="40">
+      <div class="instructions">
+        Any name from 5 to 40 characters long. Only letters, digits and underscores are allowed.
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Email *:</label>
+    <div class="col2">
+      <input name="user_email" id="user_email" type="email" size="40" maxlength="80">
+      <div class="instructions">
+        Must be your valid email address.
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>First Name *:</label>
+    <div class="col2">
+      <input name="first_name" id="first_name" type="text" size="40" maxlength="40">
+    </div>
+  </div>
+  <div class="field">
+    <label>Last Name *:</label>
+    <div class="col2">
+      <input name="last_name" id="last_name" type="text" size="40" maxlength="40">
+    </div>
+  </div>
+  <div class="field">
+    <label>Institution:</label>
+    <div class="col2">
+      <input name="institution" id="institution" type="text" size="40" maxlength="40">
+    </div>
+  </div>
+  <div class="field">
+    <label>Telephone:</label>
+    <div class="col2">
+      <input name="telephone" id="telephone" type="text" size="40" maxlength="40">
+    </div>
+  </div>
+  <div class="field">
+    <div class="col2">
+      <input name="whatnews" id="whatnews" type="checkbox" value="y" checked>
+      <label class="small">
+        I want to receive occasional emails about Genboree updates and have access to software download.
+      </label>
+    </div>
+  </div>
+  <div class="actions">
+    <input type="submit" name="cmdReg" id="cmdReg" value="Submit>" class="button">
+  </div>
+</form>
+<p>
+  Please choose a "login name" which will be used to identify you when logging to Genboree, and provide
+  at least the required (*) personal information. Note that the user name must be unique within our
+  system. If it conflicts with an existing registration, you will be prompted to reenter.
+</p>
+<p>
+  Please note also that your email address is required to complete the registration, so be sure to
+  provide a valid one.
+</p>
+<p class='strong'>
+  We will never share any personal information (such as emails and telephones) with any third-party
+  persons or organizations. All your personal data will never be used by ourselves but for the purpose
+  of improving your experience with Genboree.
+</p>
+</div>

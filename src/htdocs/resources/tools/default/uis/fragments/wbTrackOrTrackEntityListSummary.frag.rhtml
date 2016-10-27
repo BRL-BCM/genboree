@@ -1,0 +1,38 @@
+<%
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+%>
+<%
+  @trackOrtrackEntityList = [ @trackOrtrackEntityList ] unless(@trackOrtrackEntityList.is_a?(Array) or @trackOrtrackEntityList.nil?)
+%>
+<table width="100%">
+<tr>
+  <th <%= ((@trackOrtrackEntityList.nil? or @trackOrtrackEntityList.empty?) ? "" : "rowspan='#{@trackOrtrackEntityList.size}'") %> ><%= (@label || "Track Entity List(s)") %>:</th>
+<%  if(@trackOrtrackEntityList.nil? or @trackOrtrackEntityList.empty?) %>
+      <td><i>n/a</i></td>
+      <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      trkEntityListApiHelper = BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper.new()
+      @trackOrtrackEntityList.each_index { |ii|
+        item = @trackOrtrackEntityList[ii]
+        if(item =~ BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper::NAME_EXTRACTOR_REGEXP)
+          trkOrtrkEntityList = trkEntityListApiHelper.extractName(item)
+          grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+          db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        else
+          trkOrtrkEntityList = WorkbenchFormHelper.getNameFromURI(:trk, item, true)
+          grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+          db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        end 
+%>
+        <%= (ii <= 0 ? '' : '<tr>') %>
+          <td><i><%== trkOrtrkEntityList %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+       </tr>
+<%
+      }
+    end
+%>
+</table>

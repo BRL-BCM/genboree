@@ -1,0 +1,11 @@
+{
+  "rsrc" : {
+    "pathBase" : "/REST-ext/EHR/assets/files"
+  },
+  "records" : {
+    "host" : "",
+    "grp"  : "",
+    "kb"   : "",
+    "coll" : ""
+  }
+}

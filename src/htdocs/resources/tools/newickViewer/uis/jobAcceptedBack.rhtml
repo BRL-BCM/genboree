@@ -1,0 +1,84 @@
+<div class="wbDialogAcceptedNewickViewer" id="wbDialogAcceptMsgDiv" >
+<%
+  if(@settings['d3JsCode'].nil? or @settings['d3JsCode'].empty?)
+%>
+      <div class="wbToolTitleInDialog wbSubmitMsg">
+        <%= @context['toolTitle'] %>
+      </div>
+      <div class="wbDialogFeedback wbDialogSuccess">
+        <br/>
+        <br/>
+        No Data Found
+        <br/>
+        <br/>
+        If you have questions, please contact <a href="mailto:<%= @context['gbAdminEmail'] %>"><%= @context['gbAdminEmail'] %></a> for assistance.
+      </div>
+<%
+  else
+    d3type = @settings['dendogram']
+    buff = nil
+    js = @settings['d3JsCode']
+    if(d3type == 'cd' or d3type == 'hd')
+      buff = %Q^<div  id="container" name='container' style="background-color: white; height:auto; width:auto;overflow-y:auto;"><b>stuff<br>more stuff</b></div>^
+    elsif()
+      
+    elsif()
+    
+    end
+%>
+  
+  <%= buff %>
+  <style type="text/css">
+    <%
+      if(d3type == 'cd' or d3type == 'hd')
+    %>
+        .node circle {
+          fill: #fff;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+        
+        .node {
+          font: 10px sans-serif;
+        }
+        
+        .link {
+          fill: none;
+          stroke: #ccc;
+          stroke-width: 1.5px;
+        }
+    <%
+      else
+    %>
+    
+    <%
+      end
+    %>
+    .compass{
+      fill:  #fff;
+      stroke:  #000;
+      stroke-width:  1.5;
+    }
+    .svgButton{
+      fill:  #225EA8;
+      stroke:  #0C2C84;
+      stroke-miterlimit:	6;
+      stroke-linecap:  round;
+    }
+    .svgButton:hover{
+      stroke-width:  2;
+    }
+    .svgPlusMinus{
+      fill:  #fff;
+      pointer-events: none;
+    }
+  </style>
+  <script type="text/javascript">
+    debugger ;
+    <%=js%>
+    debugger ;
+  </script>
+<%
+  end
+%>
+</div>

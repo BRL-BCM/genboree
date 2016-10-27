@@ -1,0 +1,132 @@
+<%
+  require 'brl/genboree/rest/wrapperApiCaller'
+  uriObj = URI.parse(@outputs[0])
+  apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/eps?", @context['userId'])
+  apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+  apiCaller.get()
+  resp = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+  epArray = []
+  resp.each { |ep|
+    epArray << ep['name']
+  }
+  height = '500px'
+  if(epArray.size <= 500 and epArray.size > 0)
+    height = '500px'
+  else
+    height = '250px'
+  end
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 600px; height: #{height};\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%=
+      renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <code>bowtie2-build</code> builds a Bowtie index from a set of DNA sequences. <code>bowtie2-build</code> outputs a set of 6 files with suffixes <code>.1.bt2, .2.bt2, .3.bt2, .4.bt2, .rev.1.bt2, .rev.2.bt2</code>. In the case of a large index these suffixes will have a bt2l termination. These files together constitute the index: they are all that is needed to align reads to that reference. The original sequence FASTA files are no longer used by Bowtie 2 once the index is built.
+          <br>&nbsp;<br>
+          This tool allows selecting <i>Entrypoints/Chromosomes</i> from a target database to build Bowtie2 index.
+          <br>&nbsp;<br>
+          To build Bowtie2 index for your custom reference sequences, you can upload the FASTA reference sequence as a new entrypoint by selecting <code>Data</code> &raquo; <code>Entrypoints</code> &raquo; <code>Upload Entrypoints</code> from the menu.
+          <br>&nbsp;<br>
+          Bowtie 2 was developed by Ben Langmead at the <a href='http://cs.jhu.edu/~langmea/index.shtml' target='_blank'>Department of Computer Science</a> at Johns Hopkins University.
+          <center><span class='footnote'>[ Bowtie 2 is described in <a href='http://www.nature.com/nmeth/journal/v9/n4/full/nmeth.1923.html' target='_blank'>this journal article</a>. ]</span></center>
+
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%
+    if(epArray.size <= 500 and epArray.size > 0)
+  %>
+      <%# Output summary %>
+      <%=
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Entrypoints belong to:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs} )
+        })
+      %>
+      <%=
+          genomeVersion = @settings['genomeVersion']
+          # Get the list of eps
+          renderFrag(@toolIdStr, :wbToolSettingsUI,
+          {
+            :sectionTitle => "Select Entrypoint/Chromosome for building Bowtie 2 index",
+            :widgets =>
+            [
+              { :id => 'indexBaseName', :label => 'Bowtie Index Name', :type => :text, :value => genomeVersion, :size => '15', :maxlength => '30', :title => "Base name that will be used for bowtie2 index. Default: GenomeVersion" }, 
+              { :id => 'selectEps', :toggleText => "Select Entrypoints/Chromosomes", :type => :advancedSection, :startWithExpanded => false, :title => "Select list of entrypoints/chromosomes for building Bowtie2 index. If no entrypoint is chosen, the job will not be accepted." , :widgets =>
+                [
+                  { :id => "epArray", :label => "", :labelWidth => '100px', :type => :tableWithCheckboxSection, :rows => epArray, :headerRow => ['Entrypoint', 'Select'] },
+                  { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'epArray'}
+                ]
+              }
+            ]
+          })
+
+      %>
+
+      <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+            {
+              :buttons => [ { :type => :submit }, { :type => :cancel} ]
+            })
+      %>
+      </form>
+  <%
+    elsif(epArray.size == 0)
+  %>
+      <div align="center">
+        This database has no entrypoints. You may have created a custom database without a template assembly. Upload your entrypoints and try again.
+      </div>
+      <br>&nbsp;<br>
+      <%= renderFrag(@toolIdStr, :wbToolButtons,
+          {
+            :buttons => [ { :type => :cancel} ]
+          })
+      %>
+  <%
+    else
+  %>
+      <div align="center">
+        This database has too many entrypoints to list. Selecting via the workbench is not allowed. Please create a new database or contact <%=@genbConf.gbAdminEmail%>
+        for support.
+      </div>
+      <br>&nbsp;<br>
+    <%=
+      renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+    %>
+  <%
+    end
+  %>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

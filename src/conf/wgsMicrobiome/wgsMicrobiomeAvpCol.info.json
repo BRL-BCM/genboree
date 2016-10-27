@@ -1,0 +1,233 @@
+
+{
+  "name" :
+  {
+    "type"        : "string",
+    "columnInfo"  :
+    {
+      "#\\s*name" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter", "wgsMicrobiomeSeqImport",  "wgsMicrobiomePipeline", "wgsMicrobiomeSeqImport",  "wgsMicrobiomeDigNorm",  "wgsMicrobiomeFuncAnno" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsInsertSize" :
+  {
+    "type"        : "float",
+    "columnInfo"  :
+    {
+      "INSERT_SIZE" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter", "wgsMicrobiomeSeqImport", "wgsMicrobiomePipeline" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsInsertSizeStdev" :
+  {
+    "type"        : "float",
+    "columnInfo"  :
+    {
+      "INSERT_SIZE_STD" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter", "wgsMicrobiomeSeqImport", "wgsMicrobiomePipeline" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsKmerSize" :
+  {
+    "type"        : "float",
+    "columnInfo"  :
+    {
+      "KMER_SIZE" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter", "wgsMicrobiomeSeqImport", "wgsMicrobiomePipeline" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsFastaMate1" :
+  {
+    "type"        : "uriCsv",
+    "columnInfo"  :
+    {
+      "#FP-1_1" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter" ],
+        "optional"  : [ ]
+      },
+      "#FP-\\d+_1" :
+      {
+        "fromUser"    : true,
+        "required"  : [ ],
+        "optional"  : [ "sampleImporter" ]
+      },
+      "CLUSTER#FP-1_1" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeSeqImport", "wgsMicrobiomePipeline" ],
+        "optional"  : [ ]
+      },
+      "CLUSTER#FP-\\d+_1" :
+      {
+        "fromUser"    : false,
+        "required"  : [ ],
+        "optional"  : [ "wgsMicrobiomeSeqImport", "wgsMicrobiomePipeline" ]
+      }
+    }
+  },
+  "wgsFastaMate2" :
+  {
+    "type"        : "uriCsv",
+    "columnInfo"  :
+    {
+      "#FP-1_2" :
+      {
+        "fromUser"    : true,
+        "required"  : [ "sampleImporter" ],
+        "optional"  : [ ]
+      },
+      "#FP-\\d+_2" :
+      {
+        "fromUser"    : true,
+        "required"  : [ ],
+        "optional"  : [ "sampleImporter" ]
+      },
+      "CLUSTER#FP-1_2" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeSeqImport" ],
+        "optional"  : [ ]
+      },
+      "CLUSTER#FP-\\d+_2" :
+      {
+        "fromUser"    : false,
+        "required"  : [ ],
+        "optional"  : [ "wgsMicrobiomeSeqImport" ]
+      }
+    }
+  },
+  "wgsSRA" :
+  {
+    "type"        : "uriCsv",
+    "columnInfo"  :
+    {
+      "#SRA-\\d+" :
+      {
+        "fromUser"    : true,
+        "required"  : [ ],
+        "optional"  : [ "sampleImporter" ]
+      },
+      "CLUSTER#SRA-\\d+" :
+      {
+        "fromUser"    : false,
+        "required"  : [ ],
+        "optional"  : [ "wgsMicrobiomeSeqImport" ]
+      }
+    }
+  },
+  "wgsSingleEnd" :
+  {
+    "type"        : "uriCsv",
+    "columnInfo"  :
+    {
+      "#SE-\\d+" :
+      {
+        "fromUser"    : true,
+        "required"  : [ ],
+        "optional"  : [ "sampleImporter" ]
+      },
+      "CLUSTER#SE-\\d+" :
+      {
+        "fromUser"    : false,
+        "required"  : [ ],
+        "optional"  : [ "wgsMicrobiomeSeqImport" ]
+      }
+    }
+  },
+  "wgsCombinedMate1" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#_1" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeTaxAbun", "wgsMicrobiomeDigNorm" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsCombinedMate2" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#_2" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeTaxAbun", "wgsMicrobiomeDigNorm" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsCombinedSingleEnd" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#_S" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeTaxAbun", "wgsMicrobiomeDigNorm" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsMetaphlanOutput" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#M" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMetaphlanReport" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsPredictedORFSeq" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#O" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeFuncAnno" ],
+        "optional"  : [ ]
+      }
+    }
+  },
+  "wgsUnassembledReads" :
+  {
+    "type"        : "uriStr",
+    "columnInfo"  :
+    {
+      "CLUSTER#U" :
+      {
+        "fromUser"    : false,
+        "required"  : [ "wgsMicrobiomeFuncAnno" ],
+        "optional"  : [ ]
+      }
+    }
+  }
+}

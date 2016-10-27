@@ -1,0 +1,23 @@
+[
+  {
+    "text": "2nd Generation exceRpt small RNA-seq Pipeline (Stable)",
+    "tooltip": "exceRpt small RNA-seq Pipeline for Extracellular RNA Profiling (v2, sRNAbench-based, stable)",
+    "idStr": "smRNAPipeline",
+    "hidden": "true"
+  },
+  {
+    "text": "exceRpt small RNA-seq Pipeline",
+    "tooltip": "exceRpt small RNA-seq Pipeline for Extracellular RNA Profiling (v3, new endogenous engine)",
+    "idStr": "exceRptPipeline"
+  },    
+  {
+    "text": "exceRpt small RNA-seq Post-processing",
+    "tooltip": "This tool consolidates and summarizes results from exceRpt small RNA-seq Pipeline runs.",
+    "idStr": "processPipelineRuns"
+  },
+  {
+    "text": "KNIFE (Known and Novel IsoForm Explorer)",
+    "tooltip": "This tool performs statistically based splicing detection for circular and linear isoforms from RNA-Seq data.",
+    "idStr": "knife"
+  }
+]

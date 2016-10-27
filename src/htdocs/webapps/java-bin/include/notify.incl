@@ -1,0 +1,119 @@
+<%@ page import="javax.servlet.http.*,
+ org.genboree.dbaccess.*, org.genboree.util.*, org.genboree.upload.*" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="userinfo.incl" %>
+<%!
+	static String fromAddress = "\"Genboree Team\" <genboree_admin@genboree.org>";
+%>
+<%
+    response.addDateHeader( "Expires", 0L );
+
+	int i;
+
+
+	boolean void_page = false;
+
+	if( is_public || myself==null || grps==null )
+	{
+		void_page = true;
+	}
+
+	String groupId = request.getParameter( "groupId" );
+	if( groupId == null ) groupId = (String) mys.getAttribute( "uploadGroupId" );
+	if( groupId == null ) groupId = "#";
+
+	GenboreeGroup grp = null;
+
+	if( !void_page )
+	{
+		for( i=0; i<grps.length; i++ )
+		if( grps[i].getGroupId().equals(groupId) )
+		{
+			grp = grps[i];
+			break;
+		}
+
+		if( grp == null && grps.length > 0 )
+		{
+			grp = grps[0];
+			groupId = grp.getGroupId();
+		}
+
+		if( grp == null ) void_page = true;
+	}
+
+	String addrFrom = null;
+	String stdInfo = null;
+	String msgUrl = null;
+	String msgBody = null;
+    StringBuffer msgTo = new StringBuffer( 200 );
+
+	String statMsg = "Operation prohibited.";
+
+	if( !void_page )
+	{
+		addrFrom = myself.getFullName() + " <" + myself.getEmail() + ">";
+		stdInfo = request.getParameter( "msg_stdinfo" );
+		if( stdInfo == null ) stdInfo = (String) mys.getAttribute( "msg_stdinfo" );
+		msgUrl = request.getParameter( "msg_url" );
+		if( msgUrl == null ) msgUrl = (String) mys.getAttribute( "msg_url" );
+		msgBody = request.getParameter( "msg_body" );
+		if( msgBody == null ) msgBody = (String) mys.getAttribute( "msg_body" );
+
+
+		if( request.getParameter("btnSend") != null )
+		{
+			String[] userIds = grp.getUserIds( db );
+
+
+			for( i=0; i<userIds.length; i++ )
+			{
+				GenboreeUser usr = new GenboreeUser();
+				usr.setUserId( userIds[i] );
+				if( !usr.fetch(db) ) continue;
+
+                if(i > 0)
+                    msgTo.append(", ");
+
+                msgTo.append("\"");
+                msgTo.append(usr.getFullName());
+                msgTo.append("\" <");
+                msgTo.append(usr.getEmail());
+                msgTo.append(">");
+            }
+
+            SendMail m = new SendMail();
+			m.setHost( Util.smtpHost );
+			m.setFrom( fromAddress );
+			m.setReplyTo( addrFrom );
+			m.addTo( msgTo.toString() );
+			m.setSubj( "Message from \""+myself.getName()+"\" "+addrFrom );
+
+			String _msgBody = stdInfo;
+			if( Util.isEmpty(_msgBody) ) _msgBody = "";
+			else _msgBody = _msgBody + "\n\n";
+			if( !Util.isEmpty(msgUrl) )
+			{
+				_msgBody = _msgBody + "URL: " + msgUrl + "\n\n";
+			}
+			if( !Util.isEmpty(msgBody) )
+			{
+				_msgBody = _msgBody + msgBody + "\n\n";
+			}
+			_msgBody = _msgBody + "*** If you want to reply to this email, "+
+			"please use the following address:\n"+addrFrom+"\n";
+
+			m.setBody( _msgBody );
+			if( m.go() )
+			{
+				statMsg = "Your message has been sent.";
+				void_page = true;
+			}
+		}
+	}
+
+	mys.removeAttribute( "msg_stdinfo" );
+	mys.removeAttribute( "msg_url" );
+	mys.removeAttribute( "msg_body" );
+
+%>

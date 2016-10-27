@@ -1,0 +1,231 @@
+<%# THIS FILE USES eruby %>
+
+<%
+	# ---------------------------------------------------------------------------
+	# SETUP CONVENIENT ENVIRONMENT
+	# ---------------------------------------------------------------------------
+  require 'cgi'
+  $VERBOSE = false
+  @cgi = CGI.new()
+	@req = Apache.request
+	@serverName = @req.server_name
+	#@serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+	# ---------------------------------------------------------------------------
+%>
+
+<%
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	# Constants
+	BASE_URL = 'http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?size=2&cmd=retrieve&s=search&m=obtain'
+	URL_SUFFIX = '&dispmax=20&seeas.x=35&seeas.y=13'
+	PARAM_OK, PARAM_MISSING, BAD_TYPE_PARAM, BAD_READ_NAME, UNK_TRACE_END_CODE = 0,1,2,3,4
+	EXCEPT_OK = MAKE_URL_OK = PARAM_OK
+	EXCEPT_BAD = 1
+	HGSC_READ_RE = /^(\D{5,5})\d(\D)(\d+)/
+	PROJ, TRACE_END, READ_CODE = 0,1,2
+
+	# Resource Definitions
+	@resourceTypes = 	{
+											'info' 		=> '',
+											'fasta' 	=> '',
+											'quality' => ''
+										}
+	@orientationMap = {
+											'D' => 'F',
+											'E' => 'R'
+										}
+	# globals
+	exceptionStatus = EXCEPT_OK
+	err = nil
+
+# !!! BEGIN: PROTECTED SECTION 1 !!!
+begin
+	# Helper Methods
+	def prepForHtml()	# Tell apache we're going to make some html
+		@req.content_type = "text/html"
+		@req.status = 200
+		@req.send_http_header
+	end
+
+	def doRelocate(url)	# Tell apache we want to redirect to a different url
+		@req.content_type = 'text/html'
+		@req.headers_out['Location'] = url
+		@req.status = 302
+		@req.send_http_header
+		exit(Apache::HTTP_MOVED_TEMPORARILY)
+	end
+
+  def paramCheck()
+  	# Check that correct params were provided
+  	if(	@cgi.params['resType'].to_s.empty? or
+  			@cgi.params['resName'].to_s.empty?)
+  		return PARAM_MISSING
+  	else	# Process with broken genboree link URLs in mind
+  		@resType = @cgi.params['resType'][0]
+ 			@resName = @cgi.params['resName'][0].gsub(' ', '+')
+ 			# Check that resType is one of the official values
+  		unless(@resourceTypes.key?(@resType))
+  			return BAD_TYPE_PARAM
+  		else
+  			@resType.untaint	# It's ok to use in file names, we checked it.
+  		end
+  		# Ok so far
+  		return PARAM_OK
+  	end
+  end
+
+	def parseHGSCRead(readName)
+		if(md = HGSC_READ_RE.match(readName))
+			aa = md.to_a
+			aa.shift
+			return aa
+		else
+			return BAD_READ_NAME
+		end
+	end
+
+  def makeResURL(readName)	# Construct a resource URL to redirect to
+  	readParts = parseHGSCRead(readName)
+  	if(readParts == BAD_READ_NAME)
+  		return BAD_READ_NAME
+  	end
+  	@traceEndCode = readParts[TRACE_END]
+  	@traceEnd = @orientationMap[readParts[TRACE_END]]
+  	if(@traceEnd.nil?)
+  		return UNK_TRACE_END_CODE
+  	end
+  	@templateID = "#{readParts[PROJ]}#{readParts[READ_CODE]}"
+  	@url = "#{BASE_URL}&val=TEMPLATE_ID%3D%27#{@templateID}%27+AND+TRACE_END%3D%27#{@traceEnd}%27&dopt=#{@resType}#{URL_SUFFIX}"
+  	return MAKE_URL_OK
+  end
+
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# INITIALIZATION
+	# ---------------------------------------------------------------------------
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# DO CHECK/LOAD/CHECK (hierarchical checking)
+	# ---------------------------------------------------------------------------
+	paramStatus = paramCheck()						# Check. Security hole 1 plugged.
+	if(paramStatus == PARAM_OK)
+		makeURLStatus = makeResURL(@resName)
+	end
+	# ---------------------------------------------------------------------------
+
+rescue Exception => err
+	exceptionStatus = EXCEPT_BAD
+	$stderr.puts "\n\n#{Time.now} ERROR: resource locator threw exception:\n  #{err.message}\n#{err.backtrace}\n\n"
+ensure
+# !!! END: PROTECTED SECTION 1 !!!
+
+	# ---- OK? ----
+	if(	exceptionStatus == EXCEPT_OK and
+			paramStatus == PARAM_OK and
+			makeURLStatus == MAKE_URL_OK)
+		doRelocate(@url)
+	# ---- NOT OK ----
+	else
+%>
+
+<!-- BEGIN: COMMON HTML -->
+<HTML><HEAD>
+<TITLE>Bioinformatics Research Laboratory - Resource Locator</TITLE>
+<LINK REL="stylesheet" HREF="/style_brl.css" TYPE="text/css">
+</HEAD>
+<BODY BGCOLOR="white">
+<TABLE WIDTH="650" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+		<TR>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="/graphics/brl_logo60.gif" WIDTH="60" HEIGHT="60" ALT="BRL" BORDER="0"></A>
+			</TD>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="/graphics/brl_type60.gif" WIDTH="120" HEIGHT="60" ALT="" BORDER="0"></A>
+				</TD>
+			<TD><IMG SRC="/graphics/spacer.gif" WIDTH="20" HEIGHT="1" ALT="" BORDER="0"></TD>
+			<TD VALIGN="bottom" ALIGN="right">
+				<TABLE CELLSPACING="0" CELLPADDING="0" BORDER="0" WIDTH="450">
+				<TR>
+					<TD COLSPAN="4" BACKGROUND="http://<%= @serverName %>/graphics/bluemed1px.gif">
+						<IMG SRC="/graphics/spacer.gif" WIDTH="1" HEIGHT="1" ALT="" BORDER="0">
+					</TD>
+				</TR>
+				</TABLE>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+		<TR>
+			<TD VALIGN="top" WIDTH="30">
+				<IMG SRC="/graphics/bluemed1px.gif" HEIGHT="30" WIDTH="30" ALT="" BORDER="0">
+			</TD>
+			<TD WIDTH="10">
+				<IMG SRC="/graphics/spacer.gif" HEIGHT="1" WIDTH="10" ALT="" BORDER="0">
+			</TD>
+			<TD>
+				<BR>
+<!-- END: COMMON HTML -->
+
+				<SPAN CLASS="hdr">
+			<%
+				if(	exceptionStatus != EXCEPT_OK or
+						paramStatus != PARAM_OK or
+						makeURLStatus != MAKE_URL_OK)
+			%>
+					RESOURCE LOCATION ERROR</SPAN>
+					<P>
+					We encountered a problem trying to relocate to the NCBI trace archive.
+					<P>
+					Please contact <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">our admin (brl_admin@brl.bcm.tmc.edu)</A>
+					with the following information (you can copy and paste):
+					<UL>
+						<LI>Error Type:
+						<% if(exceptionStatus != EXCEPT_OK) %>
+							Exception thrown. (<%= @req.escape_html(err.message) %>)<P><%= err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %><P>
+						<% elsif(paramStatus != PARAM_OK) %>
+							Bad parameter provided. (<%= paramStatus %>)
+						<% elsif(makeURLStatus == BAD_READ_NAME) %>
+							The read name &quot;<%= @resName %>&quot; doesn't look like an HGSC read name. Example: PDAAP1D0228A.
+						<% elsif(makeURLStatus == UNK_TRACE_END_CODE) %>
+							The read trace-end (or orientation) code &quot;<%= @traceEndCode %>&quot; isn't known to us.
+							The following codes are understood: <%= @orientationMap.keys.join(',') %>. Please <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">
+							tell us</A> the FWD/REV directionality of any other codes you have and we will fix this.
+						<% else %>
+							Unknown Error (?)
+						<% end %>
+						</LI>
+						<LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+					</UL>
+			<% end %>
+<!-- BEGIN: COMMON HTML -->
+				<BR>&nbsp;<BR>
+				<A HREF="http://www.bcm.tmc.edu">
+				<IMG SRC="/graphics/bcm_logo_for_brl.gif" WIDTH="54" HEIGHT="60" ALT="" BORDER="0"
+					ALIGN="right" VALIGN="top"></A>
+				<CENTER><IMG SRC="/graphics/bluemed1px.gif" WIDTH="350" HEIGHT="1" ALT="" BORDER="0"></CENTER>
+				<BR><BR>
+				<SPAN CLASS="footer">&copy;2003 Bioinformatics Research Laboratory</SPAN>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+</TABLE>
+</BODY></HTML>
+<!-- END: COMMON HTML -->
+
+<% end %><%# if-else %>
+<% end %><%# begin-rescue-ensure %>

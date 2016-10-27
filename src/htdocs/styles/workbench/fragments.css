@@ -1,0 +1,40 @@
+/* ------------------------------------------------------------------
+ * WORKBENCH FRAGMENT RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+/* Advanced Section Styling */
+.advancedImgToggle {
+  background-image: url('/images/bullet_toggle_plus.png') ;
+  background-position: center center ;
+  background-repeat: no-repeat ;
+  cursor: pointer ;
+  margin-left: 0 ;
+  margin-right: 2px ;
+  padding-left: 8px ;
+}
+.advancedImgToggleWithNegSign {
+  background-image: url('/images/bullet_toggle_minus.png') ;
+  background-position: center center ;
+  background-repeat: no-repeat ;
+  cursor: pointer ;
+  margin-left: 0 ;
+  margin-right: 2px ;
+  padding-left: 8px ;
+}
+.advancedTextToggle {
+  color: #403C80 ;
+  font-weight: bold ;
+  text-decoration: none ;
+  cursor: pointer ;
+}
+table.advancedTable {
+  border: 1px dotted black ;
+  padding: 2px ;
+}
+td.advancedTableText {
+  font-size: 0.66em ;
+  text-align: center ;
+}
+td.advancedTableSettings {
+  font-size: 1.0em ;
+}

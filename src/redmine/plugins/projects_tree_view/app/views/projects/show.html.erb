@@ -1,0 +1,179 @@
+<%= javascript_include_tag 'projects_tree_view', :plugin => 'projects_tree_view' %>
+<%= stylesheet_link_tag 'projects_tree_view', :plugin => 'projects_tree_view' %>
+
+<div class="contextual">
+  <% if User.current.allowed_to?(:add_subprojects, @project) %>
+    <%= link_to l(:label_subproject_new), new_project_path(:parent_id => @project), :class => 'icon icon-add' %>
+  <% end %>
+  <% if User.current.allowed_to?(:close_project, @project) %>
+    <% if @project.active? %>
+      <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_are_you_sure)}, :method => :post, :class => 'icon icon-lock' %>
+    <% else %>
+      <%= link_to l(:button_reopen), reopen_project_path(@project), :data => {:confirm => l(:text_are_you_sure)}, :method => :post, :class => 'icon icon-unlock' %>
+    <% end %>
+  <% end %>
+</div>
+
+<h2><%=l(:label_overview)%></h2>
+<% unless @project.active? %>
+  <p class="warning"><span class="icon icon-lock"><%= l(:text_project_closed) %></span></p>
+<% end %>
+
+<div class="splitcontentleft">
+  <% if @project.description.present? %>
+  <div class="wiki">
+    <%= textilizable @project.description %>
+  </div>
+  <% end %>
+  <ul>
+    <% unless @project.homepage.blank? %>
+      <li><%=l(:field_homepage)%>: <%= link_to h(@project.homepage), @project.homepage %></li>
+    <% end %>
+  </ul>
+
+  <% if @subprojects.any? %>
+    <% project_id = "%04d" % @project.id %>
+    <% showHideOnclick = "onclick=\"toggleShowHide('#{project_id}')\"".html_safe %>
+    <table class="list">
+      <tbody>
+        <tr class="open show parent subprojectRoot" id="<%= project_id %>" >
+          <td class="name" style="padding-left: 0em;">
+            <span class="expander" <%=showHideOnclick%> >&nbsp; </span>
+            <%= h("Sub Projects") %><span class="empty" <%=showHideOnclick%> >&nbsp;</span>
+          </td>
+        </tr>
+<%
+        # First, let's put the full project sub-tree into a nice array structure
+        projTree = [ @project ]
+        currIdx = 1
+        loop {
+          currParent = projTree[currIdx - 1]
+          break if(currParent.nil?)
+          if(!currParent.children.empty?)
+            sortedChildren = currParent.children.sort { |aa, bb| aa.name.downcase <=> bb.name.downcase }
+            sortedChildren.each_index { |ii|
+              projTree[currIdx + ii,0] = sortedChildren[ii]
+            }
+          end
+          currIdx += 1
+        }
+
+        # Next, loop over the sub-tree array elements and make the HTML rows
+        projTree.each_index { |ii|
+          if(ii > 0)  # We'll skip the tree root
+            rowid = classes = spanicon = openonclick = "".html_safe
+            classes = " child " # every sub-project is a child of the root (this project) ; it may also be a parent
+            project = tmpProj = projTree[ii]
+            # Getting the full ancestor of each project need only take a little iteration code
+            ancestorIds = [ ]
+            (ii-1).downto(0) { |jj|
+              if(tmpProj.parent_id == projTree[jj].id)  # We found the parent of tmpProj, next find ITS parent, etc
+                ancestorIds << ("%04d" % projTree[jj].id)
+                tmpProj = projTree[jj]
+              end
+            }
+            # Let's only show the immediate subprojects (sub-sub projects will be hidden until user expands)
+            if(project.parent_id == @project.id)
+              classes += " show "
+            else
+              classes += " hide "
+            end
+            # Set up classes and such for the rows, depending on whether has children or not
+            projIdStr = "%04d" % project.id
+            rowid = "id=\"#{projIdStr}\"".html_safe
+            if(!project.children.empty?)
+              classes += " closed parent " + cycle("odd", "even")
+              openonclick = "onclick=\"toggleShowHide('#{projIdStr}')\"".html_safe
+              spanicon = "<span #{openonclick} class=\"expander\">&nbsp; </span>".html_safe
+            else
+              classes += " closed child " + cycle("odd", "even")
+            end
+            #classes += " #{ancestorIds.join(' ')} "
+            classes += " #{"%04d" % project.parent_id} "
+            # Does this project have boards? If so, we'll provide a direct link to its Forums page
+            if(!project.boards.empty?)
+              forumsStr = "<a href=\"#{url_for({ :controller => 'projects', :action => 'show', :id => project})}/boards\"><span class=\"forumsLink\">" +
+                          image_tag("user_comment.png", :plugin => "projects_tree_view") +
+                          "</span></a>"
+            else
+              forumsStr = ""
+            end
+            # Does this project have a wiki? If so, we'll provide a direct link to its main Wiki page
+            if(project.wiki)
+              wikiStr = "<a href=\"#{url_for({ :controller => 'projects', :action => 'show', :id => project})}/wiki\"><span class=\"wikiLink\">" +
+                        image_tag("page_white_wrench.png", :plugin => "projects_tree_view") +
+                        "</span></a>"
+            else
+              wikiStr = ""
+            end
+%>
+            <tr <%= rowid %> class="<%= classes %>" >
+              <td class="name" style="padding-left: <%= 2*project.level %>em;">
+                <%= spanicon %>
+                <%= project.active? ? link_to(h(project.name), {:controller => 'projects', :action => 'show', :id => project}, :class => "project") : h(project.name) %>
+                <span <%= openonclick %> class="empty <%=User.current.member_of?(project) ? 'my-project' : nil%>">&nbsp;</span>
+                <%= forumsStr.html_safe %><%= wikiStr.html_safe %>
+              </td>
+            </tr>
+<%
+          end
+        }
+%>
+         </tbody>
+       </table>
+  <% end %>
+  <% @project.visible_custom_field_values.each do |custom_value| %>
+  <% if !custom_value.value.blank? %>
+     <li><%=h custom_value.custom_field.name %>: <%=h show_value(custom_value) %></li>
+  <% end %>
+  <% end %>
+
+  <% if User.current.allowed_to?(:view_issues, @project) %>
+  <div class="box">
+    <h3 class="icon22 icon22-tracker"><%=l(:label_issue_tracking)%></h3>
+    <ul>
+    <% for tracker in @trackers %>
+      <li><%= link_to h(tracker.name), project_issues_path(@project, :set_filter => 1, :tracker_id => tracker.id) %>:
+          <%= l(:label_x_open_issues_abbr_on_total, :count => @open_issues_by_tracker[tracker].to_i,
+                                                    :total => @total_issues_by_tracker[tracker].to_i) %>
+      </li>
+    <% end %>
+    </ul>
+    <p><%= link_to l(:label_issue_view_all), :controller => 'issues', :action => 'index', :project_id => @project, :set_filter => 1 %></p>
+  </div>
+  <% end %>
+  <%= call_hook(:view_projects_show_left, :project => @project) %>
+</div>
+
+<div class="splitcontentright">
+  <%= render :partial => 'members_box' %>
+
+  <% if @news.any? && authorize_for('news', 'index') %>
+  <div class="box">
+    <h3><%=l(:label_news_latest)%></h3>
+    <%= render :partial => 'news/news', :collection => @news %>
+    <p><%= link_to l(:label_news_view_all), project_news_index_path(@project) %></p>
+  </div>
+  <% end %>
+  <%= call_hook(:view_projects_show_right, :project => @project) %>
+</div>
+
+<% content_for :sidebar do %>
+    <% if @total_hours.present? %>
+    <h3><%= l(:label_spent_time) %></h3>
+    <p><span class="icon icon-time"><%= l_hours(@total_hours) %></span></p>
+    <p>
+    <% if User.current.allowed_to?(:log_time, @project) %>
+      <%= link_to l(:button_log_time), new_project_time_entry_path(@project) %> |
+    <% end %>
+    <%= link_to(l(:label_details), project_time_entries_path(@project)) %> |
+    <%= link_to(l(:label_report), report_project_time_entries_path(@project)) %></p>
+    <% end %>
+    <%= call_hook(:view_projects_show_sidebar_bottom, :project => @project) %>
+<% end %>
+
+<% content_for :header_tags do %>
+<%= auto_discovery_link_tag(:atom, {:controller => 'activities', :action => 'index', :id => @project, :format => 'atom', :key => User.current.rss_key}) %>
+<% end %>
+
+<% html_title(l(:label_overview)) -%>

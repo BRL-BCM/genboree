@@ -1,0 +1,28 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [ "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$", 1, null]
+    ],
+    "minItemCount": 1
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/grp/[^/?]+/kb/[^/?]+/coll/[^/?]+/?(?:$|\\?)",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+    }
+  },
+  "context": {
+    "required": [
+    ]
+  }
+}

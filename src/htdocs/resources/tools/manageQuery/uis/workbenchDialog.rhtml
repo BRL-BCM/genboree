@@ -1,0 +1,213 @@
+<%# INIT %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/apiCaller'
+  $VERBOSE = false
+
+  # Every input comes as a full URL, need to try to pull off the URI portion
+  @queryUri = URI.parse(@inputs[0]).path()
+%>
+
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="height: 500px ;" onsubmit="return submitToolJob(this);" class="wbDialog wbForm">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Manage a Boolean Query" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview => 'Edit the clauses to modify the query or delete the query completely' })
+  %>
+  <%# Input resource summary
+  %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Query",
+        :sectionHtml => renderFrag(@toolIdStr, :wbQueryListSummary, { :queryList => @queryUri } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <table class="wbFieldSet" width=100%>
+    <tr>
+      <td colspan=2>
+        <div class="wbFieldSetLegendDiv">
+          <span class="wbFieldSetLegend">
+            Design Query
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.defineQuery.text, helpMessages.defineQuery.title);">
+              <img src="/images/gHelp1.png" border="0" width="12" height="12" style="margin-left:5px;">
+            </a>
+          </span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan=2>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          1. Choose a type of resource against which your query will typically be applied. This will affect what fields are automatically available
+             as you add new clauses to your query
+        </div>
+        <ul class="options" style="overflow: auto ; margin-bottom: 10px ;">
+          <li>
+            <label for="templateCombo">Query Template:</label>
+            <div id="tmpls"></div>
+          </li>
+        </ul>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          2. Create boolean clauses for the query
+        </div>
+        <div id="queryPreview">
+          <span style="font-weight: bold">Query Preview:</span>
+          <div id="queryCode">
+            Loading query...
+          </div>
+        </div>
+        <ul id="clauseList">
+        </ul>
+        <a href="#" class="appendClauseButton" onclick="BHI.appendClause('clauseList', true) ; return false ;">+ Append Clause</a>
+      </td>
+    </tr>
+  </table>
+  <table class="wbFieldSet" width=100%>
+    <tr>
+      <td colspan=2>
+        <div class="wbFieldSetLegendDiv">
+          <span class="wbFieldSetLegend">
+            Query Properties
+            <a href="javascript:void(0);" onclick="return displayHelpPopup(this, helpMessages.queryProps.text, helpMessages.queryProps.title);">
+              <img src="/images/gHelp1.png" border="0" width="12" height="12" style="margin-left:5px;">
+            </a>
+          </span>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan=2>
+        <div class="instruction" style="margin-bottom: 10px ;">
+          Specify attributes about the new query and where the query should be saved. Note that you must have write permission
+          of a group to save a query to it
+        </div>
+        <ul id="queryOpts" class="options">
+          <li>
+            <label for="qName">Query Name:</label>
+            <div id="qName"></div>
+            <img id="nameLoadingInd" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ; float: left ;" />
+          </li>
+          <li>
+            <label for="qDesc">Description:</label>
+            <div id="qDesc"></div>
+          </li>
+          <li>
+            <div id="sharedEdit">
+              <label for="qShared">Share query:</label>
+              <div id="qShared"></div>
+            </div>
+          </li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons =>
+        [
+          {
+            :type     => :submit,
+            :id       => 'updateButton',
+            :value    => 'Update Query',
+            :onClick  => 'return (setAction(\'update\') && prepareQuery()) ;'
+          },
+          {
+            :type     => :submit,
+            :id       => 'deleteButton',
+            :value    => 'Delete Query',
+            :onClick  => 'return setAction(\'delete\') ;'
+          },
+          {
+            :type   => :cancel,
+            :postambleHTML  => '<img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />'
+          }
+        ]
+      })
+  %>
+  <div class="feedback" id="feedback"></div>
+</form>
+<%# Tool-specific javascript and css %>
+<%= renderStaticFrag(@toolIdStr, :wbCssSrcs,
+    {
+      :srcs =>
+      [
+        '/styles/statusInfo.css',
+        '/styles/query.css'
+      ],
+      :genbConf => @genbConf
+    })
+%>
+<script>
+<%=
+  # Putting these declarations in a static fragment would make them cached from load to load, these need to be variable
+  # since fileUri will change as the user selects different nodes from the workbench
+  WorkbenchFormHelper.addToFormContext({'queryUri' => @queryUri}) +
+  WorkbenchFormHelper.addToFormContext({'group' => WorkbenchFormHelper.getNameFromURI(:grp, @inputs[0], true)}) +
+  WorkbenchFormHelper.addToFormContext({'db' => WorkbenchFormHelper.getNameFromURI(:db, @inputs[0], true)})
+%>
+<%
+  # To avoid asynchronous loading of external scripts by Ext, we need to provide all our query js as inline here
+  [
+    "#{@genbConf.resourcesDir}/query/BooleanQueryUI.js",
+    "#{@genbConf.resourcesDir}/query/RemoteValidator.js",
+    "#{@genbConf.resourcesDir}/query/help.js",
+    "#{@genbConf.toolViewRoot}/manageQuery/uis/manage.js"
+  ].each { |src|
+    if(File.exists?(src))
+      File.open(src) { |file|
+        file.each_line { |line|
+%>
+<%= "  #{line}" =%>
+<%
+        }
+      }
+    end
+  }
+%>
+
+  function setAction(action)
+  {
+    if(typeof(action) === 'undefined' || !action)
+    {
+      return false ;
+    }
+
+    wbFormContext.set('action', action) ;
+
+    return true ;
+  }
+
+  function prepareQuery()
+  {
+    // Finalize all our values in the wbFormContext and wbFormSettings so they can be properly serialized
+    if((typeof(BHI) === 'undefined') || !BHI)
+    {
+      Ext.fly('feedback').update('<div class="failure">An internal error has occurred on this page. Please contact your Genboree administrator!</div>') ;
+      return false ;
+    }
+
+    // Cannot submit with errors
+    if(Ext.query('.x-form-invalid').length > 0)
+    {
+      var fbDiv = Ext.get('feedback') ;
+      fbDiv.update('<div class="failure">Please correct the highlighted errors above before attempting to update the query.</div>') ;
+      fbDiv.scrollIntoView(dialogWindow.body) ;
+
+      return false ;
+    }
+
+    // set the query obj string
+    wbFormSettings.set('queryObjStr', Ext.util.JSON.encode(BHI.createQueryObj())) ;
+
+    // Disable our buttons and indicate we are doing something
+    if(Ext.fly('loadingImg'))
+    {
+      Ext.fly('loadingImg').setVisibilityMode(Ext.Element.DISPLAY).show() ;
+    }
+
+    return true ;
+  }
+</script>

@@ -1,0 +1,101 @@
+<%# RENDER HTML %>
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+  formTag = "<div style=\"height: #{height}px; width: #{width}px; \" class=\"wbDialog wbHelp\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+
+<%# Error Message if it exists %>
+<%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool takes as input SAM/BAM files resulted from mate pair experiments on the Illumina or SOLID platforms.
+          <br>&nbsp;<br>
+          It considers the range for consistent mate pairs (as determined by the user, with the help of the \"Insert Size Collection Tool\").
+          It determines the inconsistent mate pairs, defines as having the ends map on different chromosomes or on the same chromosome,
+          but with the insert size outside of the user specified range.
+          <br>&nbsp;<br>
+          It clusters the inconsistent mate pairs using Breakout, and reports to the user the putative breakpoints having a coverage of at least 3 mate pairs.
+          <br>&nbsp;<br>
+          The breakpoints are reported both in the Genboree LFF format and in a spreadsheet format accessible with programs such as Microsoft Excel.
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the BAM/SAM <u>files</u> with the mapping data into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'File', 'min: 2 ; max: any' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [  'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The results data will end up under the <u>Structural Variation</u> folder in the <u>Files</u> area of your output database.',
+                                  'Within that folder, your <span class="wbHelpMono">Analysis Name</span> will be used as a sub-folder under the sub-folder <u>BreakPoints</u>.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ], # Can also give db/{db}/Files as the output destination
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', "The top-level output folder used to organize related Cancer Analysis results."],
+          [ 'Platform Type', "Select the sequencing platform the data came from (Illumina or SOLiD)."],
+          [ 'Forward Suffix', ""],
+          [ 'Reverse Suffix', ""],
+          [ 'Lower Bound', ""],
+          [ 'Upper Bound', ""],
+          [ 'Uppe Bound Failed', ""],
+          [ 'Upload as Track?', ""],
+          [ 'Input Type (File #)', "Select input type (Fwd or Rev) for each of the input file. This order will match the order of the input files."],
+          [ 'Submit', "Once you've reviewed the input tracks, the output destination database, and your comparison settings, click &quot;Submit&quot;." ]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally by Arpit Tandon and Christian Coarfa; integrated into the Workbench by Sameer Paithankar and Andrew Jackson at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

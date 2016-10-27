@@ -1,0 +1,25 @@
+<%@ page import="java.sql.Connection,
+                 java.sql.PreparedStatement,
+                 java.sql.ResultSet"%>
+<%!
+  static String[] modeIds =
+  {
+    "Create", "Update", "Delete", "Assign"
+  };
+  static String[] modeLabs =
+  {
+    "Create", "Update", "Delete", "Assign"
+  };
+  static final int MODE_DEFAULT = -1;
+  static final int MODE_CREATE = 0;
+  static final int MODE_UPDATE = 1;
+  static final int MODE_DELETE = 2;
+  static final int MODE_ASSIGN = 3;
+  static final int MODE_HELP = 4;
+
+  static final String[] btnCreate = { "submit", "btnCreate", " Create ", null };
+  static final String[] btnApply = { "submit", "btnApply", " Save ", null };
+  static final String[] btnDelete = { "submit", "btnDelete", " Delete ", null };
+  static final String[] btnAssign = { "submit", "btnAssign", " Assign ", null };
+  static final String[] btnClear = { "button", "btnClear", "Clear All", "clearAll();" };
+%>

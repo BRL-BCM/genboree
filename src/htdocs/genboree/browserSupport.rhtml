@@ -1,0 +1,77 @@
+<%# THIS FILE USES erubis %>
+<%
+# ==================================================================
+# REQUIRED LIBS
+# ==================================================================
+require 'cgi'
+require 'net/http'
+require 'uri'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/conf/headerFooterConfig'
+require 'brl/genboree/tools/workbenchRulesHelper'
+# ==================================================================
+# SETUP CONVENIENT ENVIRONMENT
+# ==================================================================
+$VERBOSE = false
+@cgi = CGI.new()
+@req = Apache.request
+@serverName = @cgi.host
+
+# ==================================================================
+# INITIALIZE
+# ==================================================================
+
+# ==================================================================
+# HELPER METHODS
+# ==================================================================
+# Helper Methods
+def prepForHtml()
+  # Tell apache we're going to make some html
+  @req.content_type = "text/html"
+  @req.status = 200
+  @req.send_http_header()
+end
+
+# Initialize a context object for this page.
+# - include adding of key header-related properties for this page (so it's available in header.rhtml)
+def initContext()
+  context = BRL::Genboree::GenboreeContext.new(@cgi, ENV)
+  # Page title (set in header)
+  context.title = "Browser Support"
+  context.addHeadData = ''
+  # WORKBENCH CSS:
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/misc.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/layouts.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/toolbars.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/panels.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/dialogs.css?#{context.jsVerStr}\">\n"
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/fragments.css?#{context.jsVerStr}\">\n"
+  # MENUBAR CSS:
+  context.addHeadData << "<link rel=\"stylesheet\" type=\"text/css\" href=\"/styles/workbench/menubar.css?#{context.jsVerStr}\">\n"
+  # IE-ONLY FIXES CSS (use sparingly!):
+  context.addHeadData << "<!--[if IE]>\n<style type=\"text/css\" media=\"all\">\n@import \"/styles/workbench/ie.css?#{context.jsVerStr}\"\n</style><![endif]-->\n"
+
+  context['hostedSite'] = hostedSite = (@cgi['hostedSite'] or "default")
+  context['hdrFtrConf'] = hdrFtrConf = BRL::Genboree::Conf::HeaderFooterConfig.load()
+  return context
+end
+
+# ==================================================================
+# RENDER PAGE
+# ==================================================================
+begin
+  # Initialize a context object to get the genbConf and jsVerStr() and such
+  context = initContext()
+  prepForHtml()
+%>
+  <%#<!-- Page Header -->%>
+  <%= context.includeFile("/genboree/workbench/header.rhtml") %>
+
+  <!-- Page Content -->
+  Browser Info Here
+  <div style="clear: both;"></div>
+  <!-- Page footer -->
+  <%= context.includeFile("/genboree/workbench/footer.rhtml") %>
+<%
+end # begin-rescue-ensure
+%>

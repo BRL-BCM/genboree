@@ -1,0 +1,12 @@
+[
+  {
+    "text": "Download Epigenomic Data Slice",
+    "tooltip": "Project epigenomic score tracks over ROIs and generate a data matrix for viewing in Microsoft Excel and further off-line analysis." ,
+    "idStr": "epigenomicSlice"
+  },
+  {
+    "text": "Download Epigenomic Data Slice by Gene Element",
+    "tooltip": "Builds matrix of scores of epigenome data for custom ROIs or selected Genes." ,
+    "idStr": "geneElementDataSlice"
+  }
+]

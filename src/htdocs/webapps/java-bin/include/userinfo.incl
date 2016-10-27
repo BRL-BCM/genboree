@@ -1,0 +1,132 @@
+<%@ page import="org.genboree.util.*" %><%@ include file="common.incl" %><%
+    // NO NEWLINES BETWEEN % >< % in this FILE !!! IMPORTANT.
+    String fullName = null ;
+    String[] userInfo = new String[3] ;
+    boolean public_view = false ;
+    boolean is_public = false ;
+    boolean is_admin = false ;
+    GenboreeUser myself = null ;
+    int iUserId = 0 ;
+    String publicValue = "NO" ;
+    String tempRef = "-1" ;
+    GenboreeGroup[] grps = null ;
+    GenboreeGroup currentGroup = null ;
+    String currentGroupName = null ;
+    boolean isDbPublic = false ;
+
+    userInfo[0] = (String) mys.getAttribute("username") ;
+    userInfo[1] = (String) mys.getAttribute("pass") ;
+    userInfo[2] = (String) mys.getAttribute("userid") ;
+    publicValue = request.getParameter("isPublic") ;
+    tempRef = request.getParameter("refSeqId") ;
+
+    if(Util.parseInt(tempRef, -1) > 0)
+    {
+      isDbPublic = Refseq.isPublished(db, tempRef ) ; // Not used here, used in files including this userinfo.incl
+    }
+
+    if(publicValue != null && publicValue.equalsIgnoreCase("YES"))
+    {
+      is_public = true ;
+    }
+
+    if(userInfo[0] == null || userInfo[1] == null || userInfo[2] == null)
+    {
+      if(is_public)
+      {
+        //System.err.println("  => Setting current userInfo to the Public/Guest account because isPublic=YES") ;
+        userInfo[0] = "Public" ;
+        userInfo[1] = "" ;
+        userInfo[2] = "0" ;
+        mys.setAttribute("username", userInfo[0]) ;
+        mys.setAttribute("pass", userInfo[1]) ;
+        mys.setAttribute("userid", userInfo[2]) ;
+      }
+      else
+      {
+        //System.err.println("  => Not an isPublic=YES access attempt, clear userInfo completely.") ;
+        userInfo = null ;
+      }
+    }
+
+    if(userInfo != null)
+    {
+      if(userInfo[0].equals("Public"))
+      {
+        fullName = "Guest" ;
+      }
+      else
+      {
+        fullName = db.setUserInfo(userInfo) ;
+        if(fullName == null)
+        {
+            System.err.println("the fullName is empty why the username = " + userInfo[0] + ", password = " + userInfo[1] + " userid = " + userInfo[2]) ;
+            userInfo = null ; // Do not understand why have to do this???
+        }
+      }
+      mys.removeAttribute("accessDenied") ;
+    }
+    else // userInfo == null
+    {
+      //    System.err.println("  => userInfo is null (probably not logged on). Redirect to login.jsp but save current target." ) ;
+      mys.setAttribute("accessDenied", "true") ;
+      GenboreeUtils.sendRedirectSaveTarget(mys, request, response, "/java-bin/login.jsp") ;
+      return ;
+    }
+
+    is_public = Util.areEqual(userInfo[0], "Public") ;
+    is_admin = userInfo[0].equals("admin") ;
+
+    myself = (GenboreeUser) mys.getAttribute("myself") ;
+    if(myself == null)
+    {
+      myself = new GenboreeUser() ;
+      myself.setUserId(userInfo[2]) ;
+      myself.fetch(db) ;
+      if (JSPErrorHandler.checkErrors(request, response, db, mys)) return ;
+      myself.fetchGroups(db) ;
+      if (JSPErrorHandler.checkErrors(request, response, db, mys)) return ;
+      mys.setAttribute("myself", myself) ;
+    }
+    iUserId = Util.parseInt(myself.getUserId(), -1) ;
+
+    grps = GenboreeGroup.recreateteGroupList(db, myself.getUserId()) ;
+    if(grps == null)
+    {
+      GenboreeUtils.sendRedirect(request, response, "/java-bin/login.jsp") ;
+      return ;
+    }
+
+    String currentGroupId = request.getParameter("groupId") ;
+    if(currentGroupId != null)
+    {
+      for (int i = 0 ; i < grps.length ; i++)
+      {
+          if (grps[i].getGroupId().equals(currentGroupId))
+          {
+              currentGroup = grps[i] ;
+              break ;
+          }
+      }
+    }
+    else
+    {
+        if (currentGroup == null && grps.length > 0)
+        {
+            currentGroup = grps[0] ;
+        }
+    }
+
+    if (currentGroup != null)
+    {
+        currentGroupName = currentGroup.getGroupName() ;
+        currentGroupId = currentGroup.getGroupId() ;
+    }
+    else
+    {
+        currentGroup = grps[0] ;
+        currentGroupName = currentGroup.getGroupName() ;
+        currentGroupId = currentGroup.getGroupId() ;
+        mys.setAttribute("uploadGroup", currentGroup) ;
+    }
+%>

@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "editProfile",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Edit Profile",
+    "shortLabel": "[NOT SET]"
+  }
+}

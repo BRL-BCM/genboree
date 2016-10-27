@@ -1,0 +1,189 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 500 : 320)
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => GenboreeRESTRackup.toolIdMap[@context['toolIdStr']] } ) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+           <img src='/images/silk/error.png' style='width:16px;height:16px;display:block;float:left;margin-right: 6px;'>
+           This tool is a recent addition. Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will combine two or more tracks into a single track.
+        <br>&nbsp;<br>
+        NOTE: Choosing to merge overlapping annotations will cause the final track to lose attribute-value pairs contained in the original annotations.
+        <br>&nbsp;<br>  
+      "
+    })
+%>
+<%# Input summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Tracks of Interest:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbTrackListSummary, { :trackList => @inputs } )
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+    })
+%>
+<%=
+    widgets = [
+      { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => 'combined', :defaultSubtype => 'track'},
+      { :id => 'trackClassName', :label => 'Track Class', :type => :text, :value => 'Combined'},
+      { :id => "removeDuplicates", :label => "Remove Duplicates?", :type => :checkbox, :checked => false, :onclick => "toggleUseStrandForDup(this.checked)", :title => "Check this option to remove duplicate annotations from final track."},
+      { :id => "useStrand", :list => ['Use strand for removing duplicates'], :cboxScroll => false, :boxHeight => '20', :checkFirstItem => 'false', :label => '', :type => :extCheckboxGroup, :title => "Use strand for removing duplicates. [Default: Do not use strand: Only use chr, start and stop information]"},
+      { :id => "mergeAnnos", :label => "Merge Annotations?", :type => :checkbox, :checked => false, :onclick => "toggleUseStrandForMerging(this.checked)", :title => "Check this option to merge annotations using the BEDTOOLS utility."},
+      { :id => "useStrandForMerging", :list => ['Merge only if same strand'], :cboxScroll => false, :boxHeight => '20', :checkFirstItem => 'false', :label => '', :type => :extCheckboxGroup, :title => ""},
+      { :id => 'scoreType', :label => 'Score Type', :type => :select, :title => "What should scores be for resulting annotations?",
+        :options => {
+                      :sum => { :label => "sum" },
+                      :max => { :label => "max"},
+                      :min => { :label => "min" },              
+                      :min => { :label => "min" },
+                      :mean => { :label => "mean", :selected => true },
+                      :median => { :label => "median" },
+                      :mode => { :label => "mode" },
+                      :antimode => { :label => "antimode" },
+                      :mergedAnnos => { :label => "# annotations merged" }
+                    }
+        
+        
+      },
+      { :id => 'featureDistance', :label => 'Force Merge Distance', :type => :text, :value => '0', :title => "[Signed integer] Force merge to combine more distant features. For example, if set to 1000, any features that overlap or are within 1000 base pairs of one another will be combined."}
+    ]
+    annosCount = @settings['annosCount']
+    if(annosCount.to_i <= 20_000_000)
+      widgets << { :id => 'namingType', :boxHeight => '90', :label => '', :type => :extRadioGroup, :list => ['Use semi-colon separated names in merged annotations', 'Use prefix followed by an incremental value as name for each annotation'], :hideBox => false }
+    end
+    widgets << { :id => 'namePrefix', :label => 'Name Prefix', :type => :text, :value => 'merged_', :title => "This prefix (followed by an incremental value) will be added to the name of every annotation in the final merged track."}
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets => widgets
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<script type="text/javascript">
+Ext.onReady(function(){
+  document.getElementById('featureDistance').style.display = 'none' ;
+  document.getElementById('featureDistanceLabel').style.display = 'none' ;
+  document.getElementById('scoreType').style.display = 'none' ;
+  document.getElementById('scoreTypeLabel').style.display = 'none' ;
+  document.getElementById('namePrefix').style.display = 'none' ;
+  document.getElementById('namePrefixLabel').style.display = 'none' ;
+  document.getElementById('textCheckboxGroup_useStrand').style.display = 'none' ;
+  document.getElementById('textCheckboxGroup_useStrandForMerging').style.display = 'none' ;
+  var namingTypeRGroup = Ext.getCmp('radioGroup_namingType') ;
+  if(namingTypeRGroup && namingTypeRGroup != null && namingTypeRGroup != undefined )
+  {
+    var namePrefix = document.getElementById('namePrefix') ;
+    namePrefix.disabled = true ;
+    namingTypeRGroup.on('change', function(){
+      if(namingTypeRGroup.getValue().inputValue != 'Use semi-colon separated names in merged annotations')
+      {
+        
+        namePrefix.disabled = false ;
+      }
+      else
+      {
+        namePrefix.disabled = true ;
+      }
+    }) ;
+    namingTypeRGroup.hide() ;  
+  }
+  
+}) ;
+function toggleUseStrandForDup(checked)
+{
+  var useStrand = Ext.get('textCheckboxGroup_useStrand') ;
+  if(checked)
+  {
+    useStrand.setStyle('display', 'block') ;  
+  }
+  else
+  {
+    useStrand.setStyle('display', 'none') ;
+  }
+}
+function toggleUseStrandForMerging(checked)
+{
+  var useStrand = Ext.get('textCheckboxGroup_useStrandForMerging') ;
+  if(checked)
+  {
+    useStrand.setStyle('display', 'block') ;
+    Ext.getCmp('radioGroup_namingType').show() ;
+    document.getElementById('featureDistance').style.display = '' ;
+    document.getElementById('featureDistanceLabel').style.display = '' ;
+    document.getElementById('scoreType').style.display = '' ;
+    document.getElementById('scoreTypeLabel').style.display = '' ;
+    document.getElementById('namePrefix').style.display = '' ;
+    document.getElementById('namePrefixLabel').style.display = '' ;
+  }
+  else
+  {
+    useStrand.setStyle('display', 'none') ;
+    Ext.getCmp('radioGroup_namingType').hide() ;
+    document.getElementById('featureDistance').style.display = 'none' ;
+    document.getElementById('featureDistanceLabel').style.display = 'none' ;
+    document.getElementById('scoreType').style.display = 'none' ;
+    document.getElementById('scoreTypeLabel').style.display = 'none' ;
+    document.getElementById('namePrefix').style.display = 'none' ;
+    document.getElementById('namePrefixLabel').style.display = 'none' ;
+  }
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

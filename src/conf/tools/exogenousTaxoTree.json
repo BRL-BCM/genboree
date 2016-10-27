@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "exogenousTaxoTree",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 1,
+    "mem": "94gb",
+    "vmem": "94gb",
+    "walltime": "240:00:00",
+    "queue": "gbRamHeavy"
+  },
+  "ui": {
+    "label": "Exogenous Taxonomy Tree Generation for exceRpt (One Sample)",
+    "shortLabel": "Exogenous Taxonomy Tree Generation for exceRpt (One Sample)",
+    "groupAccessUri": null
+  }
+}

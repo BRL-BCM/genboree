@@ -1,0 +1,40 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%
+    fontSize = 'font-size:9pt;'
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+          This tool allows you to generate BAI (index) files for SAM/BAM files.
+          <br>&nbsp;<br>
+          The resultant BAI (.bai) files will be created in the same folder(s) as your input SAM/BAM file(s) and will overwrite pre-existing BAI files if present.
+          <br>&nbsp;<br>
+          NOTE: If your input file is a SAM file, a corresponding BAM file will first be generated to create the BAI file. Both the BAI and the BAM files will then be copied over
+          to the same folder as that of the SAM file.
+          "
+      })
+  %>
+  <%# Input resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       => [ "Drag 1 or more BAM/SAM file(s) into &quot;Input Data&quot;. The resultant BAI (.bai) files will be created in the same folder(s) as the input file(s)" ],
+        :types              => [ [ 'File', 'min: 0 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+</div>

@@ -1,0 +1,24 @@
+ja:
+  label_wikiextensions_tags: タグ
+  label_wikiextensions_new: New
+  wiki_extensions: Wiki Extensions
+  label_wikiextensions_tab: タブ
+  wiki_extensions_add_tab: "プロジェクトメニューにタブを追加"
+  permission_add_wiki_comment: Wikiにコメントを追加
+  permission_delete_wiki_comments: Wikiのコメントを削除
+  permission_edit_wiki_comments: Wikiのコメントを編集
+  permission_wiki_extensions_settings: Wiki Extensions の管理
+
+  field_auto_preview_enabled: オートプレビューを有効にする
+  field_sidebar_disabled: サイドバーを無効にする
+  wiki_extensions_vote: 投票
+
+
+  
+  wiki_page_commented_header: プロジェクト"%{project_name}"のWikiページ "%{page_title}" へのコメントが %{author}によって追加されました。
+  wiki_page_commented_comment_head: 'コメント:'
+  wiki_page_commented_url: 'コメントへのリンク:'
+  label_wiki_comment_added: Wikiコメントが追加されました
+  label_wiki_comment_plural: Wiki コメント 
+  
+  wiki_extensions_new_wiki_page: 新規ページ

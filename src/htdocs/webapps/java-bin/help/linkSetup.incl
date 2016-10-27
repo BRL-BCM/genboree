@@ -1,0 +1,317 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;6. Custom Links&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#overview">6.1 Overview</A></LI>
+  <LI class="compact1_10"><A HREF="#create">6.2 Creating Custom Links</A>
+    <UL class="compact1">
+      <LI><A HREF="#patterns"><FONT CLASS="tocSmall">6.2.1 Constructing URL patterns</FONT></A></LI>
+      <LI><A HREF="#examplePatterns"><FONT CLASS="tocSmall">6.2.2 Example URL patterns</FONT></A></LI>
+      <LI><A HREF="#simpleTags"><FONT CLASS="tocSmall">6.2.3 Simple tags</FONT></A></LI>
+      <LI><A HREF="#regexpTags"><FONT CLASS="tocSmall">6.2.4 Regular expression tags</FONT></A></LI>
+      <LI><A HREF="#specialTags"><FONT CLASS="tocSmall">6.2.5 Special tags</FONT></A></LI>
+      <li><a href="#genboreeTags"><font class="tocSmall">6.2.6 Genboree-specific tags</font></a></li>
+    </UL>
+  </LI>
+  <LI class="compact1_10"><A HREF="#assign">6.2 Assigning Links to Tracks</A></LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI><A HREF="showHelp.jsp?topic=lffFileFormat"><NOBR>5. The LFF Annotation Format</NOBR></A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="overview">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">6.1. Overview:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <P class="body">
+  Genboree lets you describe <SPAN class="genbLabel">custom links</SPAN> for integrating
+  your annotations with other web-sites, databases, and services. This is done through
+  HTTP &quot;GET&quot;-style URLs containing <SPAN class="genbLabel">substitution tags</SPAN>
+  which Genboree will automatically fill in.
+  <P class="body">
+  The general process is:
+  <OL>
+    <LI class>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+    <LI>Navigate via the menu to <SPAN class="genbLabel">My Databases / Manage Tracks / Link Setup</SPAN>.</LI>
+    <LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the droplists.</LI>
+    <LI><A HREF="#create" class="invisiLink">Create</a> the custom link.</LI>
+    <LI><A HREF="#assign" class="invisiLink">Assign</a> the link to one or more tracks.</LI>
+    <LI>NOTE: to manage custom links, you must have at least the <SPAN class="genbLabel">Author</SPAN> role in the <SPAN class="genbLabel">Group</SPAN>.</LI>
+  </OL>
+  <P class="body">
+  Once you have done this, the custom link(s) will be listed in the annotation's pop-up dialog and
+  any <SPAN class="genbLabel">substitution tags</SPAN> will be replaced with the appropriate annotation-specific
+  data:
+  <A NAME="linkBrowserImg">&nbsp;</A>
+  <CENTER><IMG SRC="/images/linksBrowser.png" WIDTH="420" HEIGHT="293" BORDER="0"></CENTER>
+  <P class="body">
+  To manage your custom links, Genboree provides the following functions:
+  <UL class="compact4">
+    <LI>
+      <DIV class="defTerm"><i>Create</i></DIV>
+      <DIV class="defDef">- Describe the custom link's URL pattern.
+       (<A HREF="#create" class="invisiLink">details below</A>)</DIV>
+      <BR CLEAR="all">
+    </LI>
+    <LI>
+      <DIV class="defTerm"><i>Edit</i></DIV>
+      <DIV class="defDef">- Edit the link definition.</DIV>
+      <BR CLEAR="all">
+    </LI>
+    <LI>
+      <DIV class="defTerm"><i>Delete</i></DIV>
+      <DIV class="defDef">- Delete links (entirely).</DIV>
+      <BR CLEAR="all">
+    </LI>
+    <LI>
+      <DIV class="defTerm"><i>Assign</i></DIV>
+      <DIV class="defDef">- Assign links to tracks.
+       (<A HREF="#create" class="invisiLink">details below</A>)
+      </DIV>
+      <BR CLEAR="all">
+    </LI>
+  </UL>
+  <HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="create">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">6.2. Creating Custom Links:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <P class="body">
+  To generate a custom link, you need to:
+  <OL>
+    <LI>Decide on a <SPAN class="genbLabel">Name</SPAN> for the link. This is what users will see in the pop-up.</LI>
+    <LI>Construct a URL <SPAN class="genbLabel">Pattern</SPAN>. This will be a dynamically-generated URL.</LI>
+  </OL>
+  <P class="body">
+  <!--      SUB-TOPIC -->
+  <!--      Sub-topic header -->
+  <A NAME="patterns">&nbsp;</A>
+  <DIV class="subsubtopicHeader">6.2.1. Constructing URL patterns</DIV>
+  <!--   Sub-topic content -->
+  <P class="body">
+  To generate a URL <SPAN class="genbLabel">Pattern</SPAN>, you can usually:
+  <UL class="compact2">
+    <LI>- start with a specific URL that works in your browser</LI>
+    <LI>- identify the parameters the URL needs</LI>
+    <LI>- then replace any parameter <i>values</i> with
+    <SPAN class="genbLabel">substitution tags</SPAN> where annotation-specific data will be placed.</LI>
+  </UL>
+  <P class="body">
+  Thus, seeing a specific URL such as:
+  <P class="body">
+  <SPAN class="exampleURL">http://genome.ucsc.edu/cgi-bin/hgTracks?position=chr6:2891241-2892562&org=Mouse</SPAN>
+  <P class="body">
+  We would probably create a URL pattern like this:
+  <P class="body">
+  <DIV class="linkExample">
+  http://genome.ucsc.edu/cgi-bin/hgTracks?position=<B>$entrypoint</B>:<B>$start</B>-<B>$stop</B>&amp;org=Mouse
+  </DIV>
+  In this example, the Annotation's <A HREF="showHelp.jsp?topic=definingAGenome"><SPAN class="genbLabel">entry point</SPAN></A>
+  (eg. chromosome name), <B>start</B>, and <B>end</B> fields are used to construct the value for the &quot;position&quot;
+  parameter. This will provide a link from the annotation in Genboree to the equivalent region in the UCSC browser.
+  <P class="body">
+
+  <!--      SUB-TOPIC -->
+  <!--      Sub-topic header -->
+  <A NAME="examplePatterns">&nbsp;</A>
+  <DIV class="subsubtopicHeader">6.2.2. Example URL patterns</DIV>
+  <!--   Sub-topic content -->
+  <P class="body">
+  Static link (same URL for all annotations):
+  <P class="body">
+  <DIV class="linkExample">
+  http://genetics.sefu.edu/~debruin/index.html
+  </DIV>
+  <P class="body">
+  Simple link (annotation name determines an HTML page name):
+  <P class="body">
+  <DIV class="linkExample">
+  http://genetics.sefu.edu/~debruin/geneAnalysis/<B>$name</B>.html
+  </DIV>
+  <P class="body">
+  Standard link (annotation data used for various parameters):
+  <P class="body">
+  <DIV class="linkExample">
+  http://msinfor.imgen.bcm.tmc.edu/hmprocess/showwin.cgi?begin=<B>$start</B>&end=<B>$stop</B>&chr=<B>$entrypoint</B>
+  </DIV>
+  <!--      SUB-TOPIC -->
+  <!--      Sub-topic header -->
+  <A NAME="simpleTags">&nbsp;</A>
+  <DIV class="subsubtopicHeader">6.2.3. Simple tags</DIV>
+  <!--   Sub-topic content -->
+  <P class="body">
+  The following tags are simply replaced by the corresponding data from the annotation. The names
+  correspond very closely to the <A HREF="showHelp.jsp?topic=lffFileFormat#colDesc">
+  <SPAN class="helpTopic">LFF columns</SPAN></A>:
+  <UL class="compact4_bigIndent">
+    <LI><b>$class</b></LI>
+    <LI><b>$name</b> (but see <A HREF="#specialTags"><SPAN class="helpTopic">6.2.5. Special tags</SPAN></A>)</LI>
+    <LI><b>$type</b></LI>
+    <LI><b>$subtype</b></LI>
+    <LI><b>$entrypoint</b></LI>
+    <LI><b>$start</b></LI>
+    <LI><b>$stop</b> (or <b>$end</b>)</LI>
+    <LI><b>$strand</b></LI>
+    <LI><b>$phase</b></LI>
+    <LI><b>$score</b></LI>
+    <LI><b>$qstart</b></LI>
+    <LI><b>$qstop</b></LI>
+    <LI><b>${&quot;attributeName&quot;}</b> (but see <A HREF="#regexpTags"><SPAN class="helpTopic">6.2.4. Regular expression tags</SPAN></A>)</LI>
+    <LI><b>$comments</b> (but see <A HREF="#regexpTags"><SPAN class="helpTopic">6.2.4. Regular expression tags</SPAN></A>)</LI>
+    <LI><b>$sequence</b></LI>
+  </UL>
+
+  <!--      SUB-TOPIC -->
+  <!--      Sub-topic header -->
+  <A NAME="regexpTags">&nbsp;</A>
+  <DIV class="subsubtopicHeader">6.2.4. Regular expression tags</DIV>
+  <!--   Sub-topic content -->
+  <P class="body">
+  Regular expression tags are used for extracting a specific piece of information from a selected field.
+  The format of a regular expression tag is:
+  <UL class="compact4_bigIndent">
+    <LI><b>${<FONT color="blue">&lt;fieldName&gt;</FONT>:<FONT color="blue">&lt;regexp&gt;</FONT>}</b></LI>
+    <li><b>${<font color="blue">&lt;&quot;attributeName&quot;&gt;:&lt;regexp&gt;</font>}</b></li>
+  </UL>
+  <P class="body">
+  <UL class="compact4">
+    <LI>- <FONT color="blue">&lt;fieldName&gt;</FONT> is one of the fields listed under
+    <A HREF="#simpleTags" class="invisiLink">&quot;6.2.2 Simple tags&quot; above</A></LI>
+    <li>- <font color="blue">&lt;attributeName&gt;</FONT> is quoted and refers to a custom attribute in your annotations.</li>
+    <LI>- <FONT color="blue">&lt;regexp&gt;</FONT> is a Perl5-syntax regular expression with exactly one (<B>1</B>) <i>sub-group</i>.</LI>
+  </UL>
+  <P class="body">
+  <CENTER><DIV class="egDiv">
+  NOTE: The text matched by the <i>sub-group</i> will be used for tag substitution.
+  </DIV></CENTER>
+  <P class="body">
+  For example, the following URL <SPAN class="genbLabel">Pattern</SPAN> has a regular expression tag
+  that extracts everything before a version number from the <SPAN class="genbLabel">name</SPAN> field for
+  use in the URL:
+  <P class="body">
+  <DIV class="linkExample">
+  http://www.hapmap.org/cgi/gbrowse/hapmap?name=<B>${name:([^.]+)}</B>
+  </DIV>
+  <P class="body">
+  The following two examples are essentially identical and use custom attributes associated with the annotations to link
+  to a matching region within Genboree itself. Both are placing the annotation's value for that attribute into the link:
+  <P class="body">
+  <DIV class="linkExample">
+  http://www.genboree.org/java-bin/gbrowser.jsp?entryPointId=<B>${"matePairChr"=(.+)}</B>&from=<B>${"matePairStart"=(.+)}</B>&to=<B>${"matePairStop"=(.+)}</B>&refSeqId=$genboreeRefSeqId
+  </DIV>
+  <P class="body">
+  <DIV class="linkExample">
+  http://www.genboree.org/java-bin/gbrowser.jsp?entryPointId=<B>${"matePairChr"}</B>&from=<B>${"matePairStart"}</B>&to=<B>${"matePairStop"}</B>&refSeqId=778
+  </DIV>
+  <P class="body">
+  <CENTER><DIV class="egDiv">
+  NOTE: These are just examples from specific user databases and will almost certainly not as-is for your data.
+  </DIV></CENTER>
+  <CENTER><DIV class="egDiv">
+  NOTE: If you are trying to make custom links that point within Genboree itself&mdash;even to another one of your databases&mdash;you
+  will need a specific &quot;<span class="genbLabel">refSeqId</span>&quot; parameter as suggested by the examples above. This arbitrary value indicates
+  the target database for the link.
+  <p>&nbsp;<br>
+  If the link it to a Genboree view within the same database, simply use <b>$genboreeRefSeqId</b>. If the link is to a view in another of your databases,
+  you will need its id value. The easiest way to get this value for your database is to use the &quot;<span class="genbLabel">Full URL</span>&quot; menu
+  item in the graphical <span class="genbLabel">Browser</span>; that will also show the general form of a Genboree link. Examples of both of these cases are shown
+  above.
+  </DIV></CENTER>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="specialTags">&nbsp;</A>
+<DIV class="subsubtopicHeader">6.2.5. Special Tags</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+  Special tags cause the annotation data to first be processed in some way before
+  being used in the URL. Currently there is a single such tag:
+  <P class="indentBody">
+  <UL class="compact4_bigIndent">
+    <LI><b>$stripName</b>
+      <UL class="compact3_b">
+        <LI>- Removes any characters after, and including, the last <SPAN class="genbLabel">&quot;.&quot;</SPAN> from the annotation's <SPAN class="genbLabel">name</SPAN>.</LI>
+        <LI>- Useful for removing version numbers or unique suffices.</LI>
+        <LI>- Equivalent to this regular expression tag: <b>${name:(.+?)(?:\.[^\.]*)?$}</b>
+      </UL>
+    </LI>
+  </UL>
+<br>
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="genboreeTags">&nbsp;</A>
+<DIV class="subsubtopicHeader">6.2.6. Genboree-Specific Tags</DIV>
+<!--   Sub-topic content -->
+<P class="body">
+  These tags can be used for links to Genboree pages requiring special parameters. Currently there is a single such tag:
+  <P class="indentBody">
+  <UL class="compact4_bigIndent">
+    <LI><b>$genboreeRefSeqId</b>
+      <UL class="compact3_b">
+        <li>- The current database's id number. This value is most often used for the refSeqId parameter.</li>
+        <li>- Useful for Genboree Browser links to other locations within the same database.</LI>
+      </UL>
+    </LI>
+  </UL>
+<HR class="sep">
+
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="assign">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">6.3. Assigning Links to Tracks:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+  <P class="body">
+  Each track can be assigned one or more links. These links will show up
+  when the user clicks an annotation in the track (depicted <A HREF="#linkBrowser" class="invisiLink">above</A>), and the link URL will be
+  filled in with any annotation data you specified when creating the link.
+  <P class="body">
+  This also means that a link you create can be used in multiple tracks.
+  <P class="body">
+  To assign links to a track:
+  <OL>
+    <LI class>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+    <LI>Navigate via the menu to <SPAN class="genbLabel">My Databases / Manage Tracks / Link Setup / Assign</SPAN>.</LI>
+    <LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the droplists.</LI>
+    <LI>Select a track from the list on the <i>left</i>.</LI>
+    <LI>After a brief pause, any links assigned to the track will be highlighted on the <i>right</i>.</LI>
+    <LI>You can change the selections to add or remove assigned links for this track.</LI>
+    <LI>When finished with the selections for the track, click <SPAN class="genbLabel">Assign</SPAN>.
+  </OL>
+  <CENTER><IMG SRC="/images/linkAssign.png" WIDTH="420" HEIGHT="274" BORDER="0"></CENTER>
+  <CENTER><DIV class="egDiv">
+  NOTE: The link list on the <i>right</i> is a standard multiple-selection list widget. On MS Windows,
+  <i>Ctrl-Click</i> can be used to make multiple selections. Other operating systems may use another
+  button combination, such as <i>Open Apple-Click</i></A>.
+  </DIV></CENTER>
+
+
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

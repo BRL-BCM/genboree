@@ -1,0 +1,834 @@
+<%@ page import="javax.servlet.http.*,
+                 java.net.*,
+                 java.sql.*,
+                 java.util.*,
+                 org.genboree.dbaccess.*,
+                 org.genboree.dbaccess.util.*,
+                 org.genboree.util.*,
+                 java.io.IOException,
+                 org.genboree.message.GenboreeMessage,
+                 org.genboree.manager.tracks.*,
+                 org.genboree.manager.tracks.TrackSortManager" %>
+<%@ include file="fwdurl.incl" %>
+<%@ include file="group.incl" %>
+<%!
+    // declare of static variables
+    static Hashtable htSampleStyleMap = new Hashtable();
+    public static String[] btn = new String[]{"submit", "back", " Cancel ", "Cancel", null};
+
+    static
+    {
+      for (int i = 0; i < org.genboree.manager.tracks.TrackMgrConstants.sampleStyleIds.length; i++)
+      {
+          htSampleStyleMap.put(org.genboree.manager.tracks.TrackMgrConstants.sampleStyleIds[i], org.genboree.manager.tracks.TrackMgrConstants.sampleStyleUrls[i]);
+      }
+    }
+
+    public static final String[] btnCreate = {"submit", "btn_Create", " Create ", null};
+    public static final String[] btnUpdate = {"submit", "btn_Update", " Update ", ""};
+    public static final String[] btnDelete = {"button", "btn_Delete", " Delete ", "confirmDelete()"};
+    public static final String[] btnAssign = {"submit", "btn_Assign", " Assign ", null};
+    public static final String[] btnHelp = {"submit", "btnClear", "Help", null};
+    public static final String[] btnSelectAll = {"button", "btn_SelectAll", " Select All ", "checkAll(true)"};
+    public static final String[] btnUnselectAll = {"button", "btn_UnselectAll", " Unselect All ", "checkAll(false)"};
+    static DbFtype[] emptyTracks;
+    static boolean urlDeletable = false;
+%>
+<%
+
+    // Get correct path to use in building REDIRECT urls and LINKS.
+    // ** DO NOT HARDCODE /java-bin/foobar.jsp !!! **  This breaks certain older project that have their own path! use relRequestUriPath to build proper links/redirect urls!!
+    String relRequestUriPath = RequestUtils.getRelativeUriPath(request) ;
+    // Timer
+    TimingUtil timer = new TimingUtil(userInfo) ;
+
+    GenboreeMessage.clearMessage(mys);
+    response.addDateHeader("Expires", 0L);
+    response.addHeader("Cache-Control", "no-cache, no-store");
+    TrackManagerInfo info = new TrackManagerInfo();
+
+    info.init(userInfo, rseqs, mys, request, response, out, db, userId);
+    String urlMessage = null;
+    String checked = "";
+    String localdbName = info.getDbName();
+    mys.setAttribute("TrackManagerInfo", info);
+    mys.setAttribute("pagename", "tkmgr");
+
+    boolean fromShareDb = false;
+    String editClassName = info.getEditClassName();
+    if (editClassName != null)
+        mys.setAttribute("oldClassName", info.getEditClassName());
+    boolean emptyURL = false;
+    DbGclass editClass = null;
+    String command = null;
+    Vector vBtn = info.getvBtn();
+    int mode = info.getMode();
+    int i = 0;
+    DbFtype[] tracks = info.getTracks();
+    DbFtype[] orderTracks = info.getOrderTracks();
+    DbFtype[] localTracks = info.getLocalTracks();
+    DbFtype[] allLocalTracks = info.getAllLocalTracks();
+    DbFtype[] shareTracks = info.getShareTracks();
+    ArrayList shareTrackList = new ArrayList();
+    ArrayList allLocalTrackNameList = info.getAllLocalTrackNameList();
+    if (shareTracks != null && shareTracks.length > 0)
+    {
+        for (i = 0; i < shareTracks.length; i++)
+        {
+            shareTrackList.add(shareTracks[i].toString());
+        }
+    }
+
+    ArrayList sharedOnlyTrackNameList = info.getSharedOnlyTrackNames();
+    // Here, we want to display them in *alphabetical* sort order:
+    Comparator alphaComparer = new Comparator() {
+        public int compare(Object aa, Object bb)
+        {
+            return aa.toString().toLowerCase().compareTo(bb.toString().toLowerCase());
+        }
+    };
+
+    if (localTracks != null && (localTracks.length > 0))
+        Arrays.sort(localTracks, alphaComparer);
+    else
+        localTracks = new DbFtype[0];
+    if (shareTracks != null && (shareTracks.length > 0))
+        Arrays.sort(shareTracks, alphaComparer);
+    else
+        shareTracks = new DbFtype[0];
+
+    if (tracks == null)
+        tracks = new DbFtype[0];
+
+    String[] dbNames = info.getDbNames();
+    if (request.getParameter("back") != null)
+    {
+      boolean bk2Browser = (request.getParameter("b2b").compareTo("-1") == 0) ? true : false ;
+      String destback = (String) mys.getAttribute("lastBrowserView") ;
+      if(bk2Browser)
+      {
+        if(destback != null)
+        {
+          GenboreeUtils.sendRedirect(request, response, destback) ;
+        }
+        else
+        {
+          GenboreeUtils.sendRedirect(request, response, relRequestUriPath + "/defaultGbrowser.jsp") ;
+        }
+      }
+      else
+      {
+        GenboreeUtils.sendRedirect(request, response, relRequestUriPath + "/trackmgr.jsp") ;
+      }
+    }
+    Refseq rseq = info.getRseq();
+    int origMode = info.getMode();
+    mys.setAttribute("lastmode", "" + mode);
+
+    Connection con = null;
+    if (localdbName != null)
+        con = db.getConnection(localdbName);
+
+    int cmd = 0;
+    boolean no_acs = false;
+
+    Style[] styles = info.getStyleMap() ;
+    Style[] styleList = info.getStyleList() ;
+
+    timer.addMsg("DONE: trackmgr.jsp setup, right up to mode switch-case") ;
+
+    switch(mode)
+    {
+        case TrackMgrConstants.MODE_RENAME:
+            if (rseqs != null && rseqs.length > 0)
+                info.setTracks(TrackSortManager.topShareTracks(tracks, info.getDbName(), info.getDbNames(), db, out));
+            if (acs_level < 1)
+            {
+                mode = TrackMgrConstants.MODE_DEFAULT;
+                info.setNo_acs(true);
+            }
+            else
+            {
+                if (rseq != null)
+                {
+                    vBtn.addElement(TrackMgrConstants.btnApply);
+                    if (rseqs != null || rseqs.length > 0)
+                        if (request.getParameter(TrackMgrConstants.btnApply[1]) != null)
+                        {
+                            TrackManager.renameTracks(info, mys, request, db, out);
+                        }
+                }
+            }
+            break; // MODE_RENAME
+
+        case TrackMgrConstants.MODE_DELETE:
+            if (acs_level < 1)
+            {
+                mode = TrackMgrConstants.MODE_DEFAULT;
+                info.setNo_acs(true);
+            }
+            else
+            {
+                if (rseq != null)
+                {
+                    vBtn.addElement(btnSelectAll);
+                    vBtn.addElement(btnUnselectAll);
+                    vBtn.addElement(btnDelete);
+                    //   vBtn.addElement(btnDeleteAll);
+                    if (rseqs != null && rseqs.length > 0)
+                    {
+                        long nDel = 0;
+                        String dflag = request.getParameter("deleteTrack");
+                        String refseqId = info.getRefSeqId();
+                        if (dflag != null && dflag.compareTo("1") == 0 && refseqId != null && !refseqId.equals(""))
+                        {
+                            final String[] trkIds = request.getParameterValues("delTrkId");
+                            if (trkIds != null && trkIds.length > 0)
+                            {
+                                String databaseName = info.getDbName();
+                                Connection tConn = db.getConnection(databaseName);
+                                // Delete track related files from the filesystem (annotationDataFiles, Hdhv bin files)
+                                // These are dependant on information in the db so do this first, (before deleting db records)
+                                TrackManager.deleteTrackHdhvFiles(tConn, trkIds);
+                                TrackManager.deleteTrackAnnotationDataFiles(db, tConn, trkIds, rseq);
+                                // Delete anything from the Main genboree db
+                                TrackManager.deleteTracksFromMainDb(db, trkIds);
+                                // *immediately* delete the track from the cheap tables (not fdata, fid2attribute, or fidText)
+                                //        From the user perspective, this should largely delete the tracks, although in reality
+                                //        some clean up of expensive tables is awaiting permission.
+                                nDel = TrackManager.cheapDeleteTracks(tConn, trkIds);
+
+                                db.closeConnection(tConn);
+
+                                /************************* New code using and external class to delete tracks *******************************/
+                                StringBuffer taskWrapper = new StringBuffer();
+                                taskWrapper.append(Constants.JAVAEXEC).append(" ").append(Constants.UPLOADERCLASSPATH);
+                                taskWrapper.append("-Xmx1800M org.genboree.util.TaskWrapper");
+                                taskWrapper.append(" -a -c ");
+
+
+                                StringBuffer trackBuff = new StringBuffer();
+
+                                for (int ii = 0; ii < trkIds.length; ii++)
+                                {
+                                    trackBuff.append(trkIds[ii]);
+                                    if (ii < (trkIds.length - 1)) // then not the last one, add a ','
+                                    {
+                                        trackBuff.append(",");
+                                    }
+                                }
+                                String trackIds = trackBuff.toString();
+
+
+                                StringBuffer deleteCmdLine = new StringBuffer();
+                                deleteCmdLine.append(Constants.JAVAEXEC).append(" ").append(Constants.UPLOADERCLASSPATH).append(Constants.TRACKDELETERCLASS);
+                                deleteCmdLine.append(" -c ").append(" -s ").append(" -u ").append(myself.getUserId()).append(" -r ").append(info.getRefSeqId()).append(" -t ").append(trackIds);
+                                System.err.println("using the new delete tracks class = " + deleteCmdLine.toString());
+                                taskWrapper.append(Util.urlEncode(deleteCmdLine.toString()));
+
+                                RunExternalProcess rn = new RunExternalProcess(taskWrapper.toString());
+
+                                /***************************************************************/
+                                // Deletion is "DONE" from user perspective. Create message:
+                                ArrayList messageList = new ArrayList();
+                                String be = (nDel == 1) ? "  track was deleted" : "  tracks were deleted";
+                                messageList.add("" + nDel + be);
+                                GenboreeMessage.setSuccessMsg(mys, "The track deletion is complete.", messageList);
+                                tracks = info.getRseq().fetchTracksSorted(db, info.getUserId());
+                                if (tracks != null)
+                                {
+                                    Arrays.sort(tracks);
+                                    tracks = TrackSortManager.topShareTracks(tracks, info.getDbName(), dbNames, db, out);
+                                }
+
+                            }
+                        }
+                    }//  rseqs != null
+                }
+            }
+
+            CacheManager.clearCache(db, info.getDbName(), info.getRseq());
+            break ; // MODE_DELETE;
+
+        case TrackMgrConstants.MODE_ORDER:
+          if(rseq != null)
+          {
+            // SAVE order button config
+            String[] btnApply = { "submit", "btnApply", " Save ", " &nbsp;Save personal track order. ", null } ;
+            vBtn.addElement(btnApply) ;
+            // SET AS DEFAULT button config (only if author or admin)
+            if(acs_level > 1)
+            {
+              String[] btnSetDefault = { "submit", "btnSetDefault", "Set As Default", "&nbsp;Set track order as group default. ", null } ;
+              vBtn.addElement(btnSetDefault) ;
+            }
+            // ARJ: we will likely eliminate LOAD DEFAULT. It is confusing and doesn't do anything really. For now, disabled by commenting out.
+            // LOAD DEFAULT button config
+            // String[] btnLoadDefault = { "submit", "btnLoadDefault", "Load Default", "&nbsp;Load group default track order. ", null } ;
+            // vBtn.addElement(btnLoadDefault) ;
+            // RESET TO DEFAULT button config
+            String[] btnReset2Default = { "button", "btnReset2Default", "Reset to Default", "&nbsp;Use group default track order.", "confirmReset ('You are about to permenantly REMOVE your personal track order.  \\nThe track order will be set to the default group order.  \\n\\n  &nbsp&nbsp;Are you sure? ')" } ;
+            vBtn.addElement(btnReset2Default) ;
+            command = request.getParameter("btnReset2Default") ;
+
+            if(info.isIs_preview() || (request.getParameter(TrackMgrConstants.btnApply[1]) != null))
+            {
+              cmd = 1 ; // SAVE button
+            }
+            // ARJ: we will likely eliminate LOAD DEFAULT. It is confusing and doesn't do anything really. For now, disabled by commenting out.
+            //else if (request.getParameter(TrackMgrConstants.btnLoadDefault[1]) != null)
+            //{
+            //  cmd = 2 ; // LOAD DEFAULT button
+            //}
+            else if (acs_level > 1 && request.getParameter(TrackMgrConstants.btnSetDefault[1]) != null)
+            {
+              cmd = 3 ; // SET AS DEFAULT button
+            }
+            else if(request.getParameter(btn[1]) != null)
+            {
+              cmd = 4 ;
+            }
+            else if(command != null && !command.equals("")) // RESET TO DEFAULT
+            {
+              cmd = 5 ;
+            }
+
+            // Process SAVE or SET AS DEFAULT
+            if((cmd == 1) || (cmd == 3))
+            {
+              for(i = 0; i < orderTracks.length; i++)
+              {
+                DbFtype ft = tracks[i] ;
+                // Get the order value for the track by name
+                String ord = request.getParameter(ft.toString()) ;
+                if(ord != null) // Track has some order sent from form, skip
+                {
+                  int iOrd = Util.parseInt(ord, -1) ;
+                  if(iOrd == -1) // Not given a sensible number as order or it's missing...get the current order for this track
+                  {
+                    iOrd = ft.getSortOrder() ;
+                  }
+                  // Fix order numbers that are out of range
+                  if(iOrd < 1)
+                  {
+                    iOrd = 1 ;
+                  }
+                  else if(iOrd > orderTracks.length)
+                  {
+                    iOrd = orderTracks.length ;
+                  }
+                  // If the sort order provided is not the same as it was, then set it as the new order number for this track
+                  if(iOrd != ft.getSortOrder())
+                  {
+                    ft.setSortOrder(iOrd) ;
+                  }
+                }
+              }
+              // Sort the tracks using new orders
+              orderTracks = TrackSortManager.reorderTracks(orderTracks) ;
+              // Save new track settings in the database
+              if(cmd == 3) // SET AS DEFAULT
+              {
+                TrackSortManager.setTrackOrders(con, orderTracks, 0, sharedOnlyTrackNameList) ;
+                TrackSortManager.setTrackOrders(con, orderTracks, info.getUserId(), sharedOnlyTrackNameList) ;
+                if(JSPErrorHandler.checkErrors(request, response, db, mys))
+                {
+                  return ;
+                }
+              }
+              else if(!info.isIs_preview() && cmd == 1) // SAVE for user
+              {
+                TrackSortManager.setTrackOrders(con, orderTracks, info.getUserId(), sharedOnlyTrackNameList) ;
+              }
+              String message = " The reorder operation was successful. " ;
+              GenboreeMessage.setSuccessMsg(mys, message) ;
+            }
+            // ARJ: we will likely eliminate LOAD DEFAULT. It is confusing and doesn't do anything really. For now, disabled by commenting out.
+            //else if(cmd == 2) // LOAD DEFAULT
+            //{
+            //  orderTracks = TrackSortManager.getTrackOrders(info.getDbName(), dbNames, con, tracks, allLocalTracks, info.getSharedOnlyTracks(), db, 0, out) ;
+            //  orderTracks = TrackSortManager.reorderTracks(tracks) ;
+            //}
+            else if(cmd == 5) // RESET TO DEFAULT
+            {
+              // reset to default: remove user settings
+              TrackSortManager.deleteUserOrder(con, userId) ;
+              orderTracks = TrackSortManager.getTrackOrders(info.getDbName(), dbNames, con, tracks, allLocalTracks, info.getSharedOnlyTracks(), db, 0, out) ;
+              orderTracks = TrackSortManager.reorderTracks(tracks) ;
+              String message = " The track order was set to group default successful. " ;
+              GenboreeMessage.setSuccessMsg(mys, message) ;
+            }
+
+            // Do we need to clear the image cache?
+            if(cmd == 1 || cmd == 3 || cmd == 5 && !info.isIs_preview())
+            {
+              CacheManager.clearCache(db, info.getDbName(), info.getRseq()) ;
+            }
+          }
+          break ; // MODE_ORDER
+
+        case TrackMgrConstants.MODE_STYLES:
+        {
+            if (rseq != null)
+            {
+                String[] btnApply = {"submit", "btnApply", " Save ", "&nbsp;Save personal track styles.", null};
+                vBtn.addElement(btnApply);
+                if (acs_level > 1)
+                {
+                    String[] btnSetDefault = {"submit", "btnSetDefault", "Set As Default", "&nbsp;Set track styles as group default.", null};
+                    vBtn.addElement(btnSetDefault);
+                }
+                String[] btnLoadDefault = {"submit", "btnLoadDefault", "Load Default", "&nbsp;Load group default track styles.", null};
+                vBtn.addElement(btnLoadDefault);
+                String[] btnReset2Default = {"button", "btnReset2Default", "Reset to Default", "&nbsp; Use group default track styles.", "confirmReset ('You are about to permenantly REMOVE your personal track styles.  \\nThe tracks will be set to the default group styles.  \\n\\n  &nbsp&nbsp;Are you sure? ')"};
+
+                vBtn.addElement(btnReset2Default);
+
+                if (request.getParameter(TrackMgrConstants.btnApply[1]) != null)
+                    cmd = 1;
+                else if (request.getParameter(TrackMgrConstants.btnLoadDefault[1]) != null)
+                    cmd = 2;
+                else if (acs_level > 1 && request.getParameter(TrackMgrConstants.btnSetDefault[1]) != null)
+                    cmd = 3;
+
+                if (rseqs != null && rseqs.length > 0)
+                {
+                    styles = TrackManager.findStyles(info.getRseq(), db, info.getUserId());
+                    styles = Utility.alphabeticStyleSort(styles);
+                    // create a hashtable of style name:  stle object
+                    Hashtable htStyle = new Hashtable();
+                    for (i = 0; i < info.getStyleList().length; i++)
+                    {
+                        htStyle.put(info.getStyleList()[i].name, info.getStyleList()[i]);
+                    }
+
+                    ArrayList deletelist = new ArrayList();
+                    ArrayList updatedlist = new ArrayList();
+                    if (cmd == 1 || cmd == 3)
+                    {
+                        for (i = 0; i < styles.length; i++)
+                        {
+                            Style st = styles[i];
+                            String trackName = st.fmethod + ":" + st.fsource;
+                            if (trackName.compareToIgnoreCase("Component:Chromosome") == 0 ||
+                                    trackName.compareToIgnoreCase("Supercomponent:Sequence") == 0)
+                                continue;
+                            String stName = request.getParameter(trackName + ":style");
+                            Style cst = (stName != null) ? (Style) htStyle.get(stName) : (Style) null;
+                            String encodedTrackName = Util.urlEncode(trackName);
+                            String curColor = request.getParameter(encodedTrackName);
+                            if (cst == null && curColor == null)
+                                continue;
+                            boolean changed = false;
+                            // set style object  to current
+                            if ((cst != null) && (cst.name.compareToIgnoreCase(st.name) != 0))
+                            {
+                                changed = true;
+                            }
+                            // update style.color
+                            if ((curColor != null) && (curColor.compareToIgnoreCase(st.color) != 0))
+                            {
+                                changed = true;
+                            }
+                            boolean doUpdate = false;
+                            String sessionDbName = SessionManager.getSessionDatabaseName(mys);
+                            if (sessionDbName == null)
+                                sessionDbName = info.getDbName();
+
+                            if (cst != null)
+                            {
+                                st.name = cst.name;
+                                st.description = cst.description;
+                            }
+
+                            if (curColor != null)
+                            {
+                                curColor = curColor.toUpperCase();
+                                if (curColor.indexOf('#') < 0)
+                                    curColor = "#" + curColor;
+                                st.color = curColor;
+                            }
+
+                            if (st.databaseName.compareTo(sessionDbName) != 0 && changed)
+                            {
+                                TrackManager.updateFtype(st, db, info.getDbName());
+                                st.ftypeid = TrackManager.findFtypeId(st, db, info.getDbName());
+                                st.databaseName = info.getDbName();
+                                doUpdate = true;
+                            }
+
+                            if (changed)
+                            {
+                                deletelist.add(st);
+                                updatedlist.add(st);
+                            }
+                        }
+                    }
+                    Style[] delst = (Style[]) deletelist.toArray(new Style[deletelist.size()]);
+                    // delete existing
+                    info.getRseq().deleteStyleMap(db, delst, info.getUserId());
+                    if (JSPErrorHandler.checkErrors(request, response, db, mys)) return;
+                    Style[] updst = (Style[]) updatedlist.toArray(new Style[updatedlist.size()]);
+                    String message = "The styles were updated successfully. ";
+                    if (cmd == 1)
+                    {
+                        boolean success = false;
+                        success = Style.setStyleMap(con, db, updst, info.getUserId());
+
+                        if (success)
+                        {
+                            GenboreeMessage.setSuccessMsg(mys, message);
+                        }
+                        styleList = rseq.fetchStyles(db);
+                        //  info.setStyleList(styleList);
+                        //  Style []   colorList = Style.fetchColors(db.getConnection(rseq.getDatabaseName()));
+                        //     info.setColorList(colorList);
+                        styles = TrackManager.findStyles(info.getRseq(), db, info.getUserId());
+                    }
+                    if (cmd == 3)
+                    {
+                        boolean success = false;
+                        success = Style.setStyleMap(con, db, updst, 0);
+                        success = Style.setStyleMap(con, db, updst, info.getUserId());
+
+                        if (success)
+                        {
+                            GenboreeMessage.setSuccessMsg(mys, message);
+                        }
+                        styleList = rseq.fetchStyles(db);
+                        styles = TrackManager.findStyles(info.getRseq(), db, 0);
+                    }
+                    else if (cmd == 2)
+                    {
+                        styles = TrackManager.findStyles(info.getRseq(), db, 0);
+                        GenboreeMessage.setSuccessMsg(mys, message);
+                    }
+
+                    // reset to defauult: remove user setting
+                    command = request.getParameter("btnReset2Default");
+                    if (command != null && !command.equals(""))
+                    {
+                        TrackSortManager.deleteUserStyles(con, userId);
+                        styles = TrackManager.findStyles(info.getRseq(), db, 0);
+                        message = "The styles were set to group default successfully. ";
+                        GenboreeMessage.setSuccessMsg(mys, message);
+                    }
+                    styles = Utility.alphabeticStyleSort(styles);
+
+                }
+                CacheManager.clearCache(db, info.getDbName());
+            }
+            timer.addMsg("DONE: trackmgr.jsp - setup all the style info.") ;
+        }
+        break;
+
+        case TrackMgrConstants.MODE_URL:
+            urlMessage = "";
+            if (acs_level < 1)
+            {
+                mode = TrackMgrConstants.MODE_DEFAULT;
+                info.setNo_acs(true);
+            }
+            else
+            {
+                if (allLocalTrackNameList != null)
+                    info.init(userInfo, rseqs, mys, request, response, out, db, userId);
+                allLocalTrackNameList = info.getAllLocalTrackNameList();
+
+                if (rseqs != null && rseqs.length > 0)
+                {
+                    vBtn.addElement(TrackMgrConstants.btnApply);
+                    DbFtype[] urltracks = info.getUrltracks(); // Gets *all* tracks, even if shared
+                    if (info.getUrltracks() != null)
+                    {
+                        // original if( tracks != null ){
+                        CacheManager.clearCache(db, info.getDbName(), info.getRseq());
+                        String editTrackName = request.getParameter("ftypeid");
+
+                        if (request.getParameter("trackName") != null)
+                        {
+                            editTrackName = request.getParameter("trackName");
+                            editTrackName = Util.urlDecode(editTrackName);
+                            //    editTrackName = Util.htmlUnQuote(editTrackName);
+                            if (editTrackName != null)
+                            {
+                                editTrackName = editTrackName.trim();
+                            }
+                        }
+
+                        int iEditTrackId = 0;
+                        DbFtype ft = null;
+                        boolean found = false;
+
+                        if (editTrackName != null)
+                        {
+                            for (i = 0; i < urltracks.length; i++)
+                            {
+                                ft = urltracks[i];
+                                //   for( i=0; i<tracks.length; i++ ){
+                                //DbFtype ft = tracks[i];
+                                if (ft.toString().compareTo(editTrackName) == 0)
+                                {
+                                    info.setEditTrack(ft);
+                                    found = true;
+                                    if (shareTrackList.contains(ft.toString()) && !allLocalTrackNameList.contains(ft.toString()))
+                                    {
+                                        // if(ft.getDatabaseName().compareTo(localdbName)== 0)
+                                        urlDeletable = false;
+                                    }
+                                    else
+                                    {
+                                        if (allLocalTrackNameList.contains(ft.toString()))
+                                        {
+                                            if (ft.getDatabaseName() != null && ft.getDatabaseName().compareTo(localdbName) != 0)
+                                                urlDeletable = false;
+                                            else
+                                                urlDeletable = true;
+
+                                            if (ft.getDatabaseName() != null && ft.getDatabaseName().compareTo("#") == 0)
+                                                urlDeletable = true;
+                                        }
+                                        else
+                                        {
+                                            urlDeletable = false;
+                                        }
+                                        // urlMessage = " URL from template track." ;
+                                        //GenboreeMessage.setSuccessMsg(mys, urlMessage);
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if (!found)
+                            {
+                                for (i = 0; i < info.getUrltracks().length; i++)
+                                {
+                                    ft = urltracks[i];
+                                    if (ft.getDatabaseName().compareTo(localdbName) == 0)
+                                        continue;
+
+                                    // int tempID = findId(db, localdbName, ft.getFmethod(), ft.getFsource(), out);
+                                    if (ft.toString().compareTo(editTrackName) == 0)
+                                    {
+                                        info.setEditTrack(ft);
+                                        urlDeletable = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (editTrackName == null && urltracks.length > 0 && (tracks != null && tracks.length > 0))
+                        {
+                            info.setEditTrack(tracks[0]);
+                            // iEditTrackId = info.getEditTrack().getFtypeid();
+                            editTrackName = tracks[0].toString();
+                        }
+
+                        if (info.getEditTrack() == null)
+                        {
+                            iEditTrackId = -1;
+                            editTrackName = "";
+                            info.setEditTrack(new DbFtype());
+                        }
+                        else
+                        {
+                            boolean urlEmpty = false;
+                            boolean urlLabelEmpty = false;
+                            boolean urlDescEmpty = false;
+
+                            if (urlDeletable)
+                                vBtn.addElement(TrackMgrConstants.btnDelete);
+
+                            Connection tConn = db.getConnection(localdbName);
+                            boolean localURLNull = TrackManager.localEmpty(tConn, info.getEditTrack().getFmethod(), info.getEditTrack().getFsource());
+                            String trackUrl = request.getParameter("track_url");
+                            String urlLabel = request.getParameter("url_label");
+                            String urlDescr = request.getParameter("url_description");
+
+                            if (trackUrl != null)
+                            {
+                                String surl = trackUrl.trim();
+                                if (surl.compareTo("") == 0)
+                                    urlEmpty = true;
+                            }
+                            else
+                                urlEmpty = true;
+                            if (urlLabel != null)
+                            {
+                                String slabel = urlLabel.trim();
+                                if (slabel.compareTo("") == 0)
+                                    urlLabelEmpty = true;
+                            }
+                            else
+                                urlLabelEmpty = true;
+
+                            if (urlDescr != null)
+                            {
+                                String desc = urlDescr.trim();
+                                if (desc.compareTo("") == 0)
+                                    urlDescEmpty = true;
+                            }
+                            else urlDescEmpty = true;
+
+                            if (urlEmpty && urlLabelEmpty && urlDescEmpty)
+                                emptyURL = true;
+                            if (localURLNull && !urlDescEmpty)
+                                fromShareDb = true;
+
+                            DbFtype editTrack = info.getEditTrack();
+                            if (tConn == null || tConn.isClosed())
+                            {
+                                tConn = db.getConnection(localdbName);
+                            }
+
+
+                            if (tConn == null && tConn.isClosed())
+                            {
+                                urlMessage = " We are sorry that there is an error happened in database connection. ";
+                                GenboreeMessage.setErrMsg(mys, urlMessage, null);
+                                break;
+                            }
+
+
+                            if (request.getParameter(TrackMgrConstants.btnApply[1]) != null && !tConn.isClosed())
+                            {
+                                if (!urlDescEmpty)
+                                {
+                                    editTrack.setUrl(trackUrl);
+                                    editTrack.setUrlLabel(urlLabel);
+                                    editTrack.setUrlDescription(urlDescr);
+                                    editTrack = TrackManager.updateURL2(tConn, info.getEditTrack(), trackUrl, urlLabel, urlDescr, 0, out);
+                                    editTrack = TrackManager.updateURL2(tConn, info.getEditTrack(), trackUrl, urlLabel, urlDescr, info.getUserId(), out);
+                                    //info.getEditTrack().setDatabaseName(localdbName);
+                                    if (info.isHasSubordinateDB())
+                                    {
+                                        SubOrdinateDBManager.updateURL(info.getSubdbNames(), info.getEditTrack().getFmethod(), info.getEditTrack().getFsource(), trackUrl, urlDescr, urlLabel);
+                                    }
+                                    urlMessage = " The URL was created successfully. ";
+                                    GenboreeMessage.setSuccessMsg(mys, urlMessage);
+                                    if (!vBtn.contains(TrackMgrConstants.btnDelete))
+                                        vBtn.addElement(TrackMgrConstants.btnDelete);
+                                    urlDeletable = true;
+                                    info.init(userInfo, rseqs, mys, request, response, out, db, userId);
+                                    info.setEditTrack(editTrack);
+                                }
+                                else
+                                {
+                                    urlMessage = " URL description field is required. ";
+                                    GenboreeMessage.setErrMsg(mys, urlMessage, null);
+                                }
+                            }
+                            else if (request.getParameter(TrackMgrConstants.btnDelete[1]) != null)
+                            {
+                                if (tConn == null && tConn.isClosed())
+                                {
+                                    tConn = db.getConnection(localdbName);
+                                }
+                                int rc = 0;
+
+                                if (urlLabelEmpty && urlEmpty && urlDescEmpty)
+                                {
+                                    urlMessage = " The track has no associated URL.";
+                                    GenboreeMessage.setErrMsg(mys, urlMessage);
+                                }
+                                else if (tConn != null && !tConn.isClosed())
+                                {
+                                    //   editTrack = info.getEditTrack();
+                                    if (editTrack != null)
+                                    {
+                                        rc = TrackManager.deleteURL(tConn, editTrack.getFmethod(), editTrack.getFsource(), out);
+
+                                        if (rc > 0)
+                                        {
+                                            urlMessage = "  The URL was deleted successfully. ";
+                                            GenboreeMessage.setSuccessMsg(mys, urlMessage);
+                                        }
+                                    }
+
+                                    if (rc > 0)
+                                    {
+                                        rc = 0;
+                                        vBtn.remove(TrackMgrConstants.btnDelete);
+                                    }
+                                    if (info.isHasSubordinateDB())
+                                    {
+                                        // SubOrdinateDBManager.deleteURL(info.getSubdbNames(), info.getEditTrack().getFmethod(), info.getEditTrack().getFsource(), trackUrl, urlDescr, urlLabel);
+                                    }
+
+                                    editTrack.setUrl(null);
+                                    editTrack.setUrlLabel(null);
+                                    editTrack.setUrlDescription(null);
+
+                                    if (dbNames != null && dbNames.length > 0)
+                                        for (i = 0; i < dbNames.length; i++)
+                                        {
+                                            String dbname = dbNames[i];
+                                            if (dbname.compareTo(localdbName) == 0)
+                                                continue;
+
+                                            String[] arrUrl = TrackManager.getDbftype(db, dbname, editTrack.getFmethod(), editTrack.getFsource(), out);
+                                            if (editTrack != null && editTrack.getUrl() == null && arrUrl[0] != null)
+                                                editTrack.setUrl(arrUrl[0]);
+
+                                            if (editTrack != null && arrUrl[2] != null)
+                                            {
+                                                editTrack.setUrlDescription(arrUrl[2]);
+                                            }
+                                            if (editTrack != null && editTrack.getUrlLabel() == null && arrUrl[1] != null)
+                                                editTrack.setUrlLabel(arrUrl[1]);
+                                        }
+
+                                    if (editTrack.getUrlDescription() != null)
+                                    {
+                                        info.setEditTrack(editTrack);
+                                        urlMessage = "  The URL was deleted successfully. ";
+                                        ArrayList list = new ArrayList();
+                                        list.add("The current URL is from template");
+                                        GenboreeMessage.setSuccessMsg(mys, urlMessage, list);
+                                    }
+                                }
+                            }  // delete
+                        }
+                    }// get urls
+                }
+                CacheManager.clearCache(db, info.getDbName(), info.getRseq());
+            }
+            break ; // end MODE_URL
+
+        case TrackMgrConstants.MODE_CLASSIFY:
+          if(acs_level < 1)
+          {
+            mode = TrackMgrConstants.MODE_DEFAULT ;
+            info.setNo_acs(true) ;
+          }
+          else if(acs_level >= 1)
+          {
+            GenboreeUtils.sendRedirect(request, response, relRequestUriPath + "/trackClassify.jsp") ;
+          }
+          break ;
+        case TrackMgrConstants.MODE_ACCESS:
+          GenboreeUtils.sendRedirect(request, response, relRequestUriPath + "/trackAccessControl.jsp?mode=Access") ;
+          break ;
+
+        case TrackMgrConstants.MODE_FILES:
+          GenboreeUtils.sendRedirect(request, response, relRequestUriPath + "/ucscBigFiles.jsp?mode=Files") ;
+          break ;
+
+
+
+        case TrackMgrConstants.MODE_DEFAULT:
+          break ;
+    }
+
+    if (mode != TrackMgrConstants.MODE_DEFAULT && rseqs != null && rseqs.length > 0)
+        vBtn.addElement(btn);
+
+    DbFtype defaultTrack = new DbFtype();
+    defaultTrack.setFmethod("-- No tracks available --");
+
+    if (info == null || info.getUrltracks() == null)
+        info.setUrltracks(tracks);
+
+    if (info.getTracks() != null) mys.setAttribute("previewTracks", info.getTracks());
+%>

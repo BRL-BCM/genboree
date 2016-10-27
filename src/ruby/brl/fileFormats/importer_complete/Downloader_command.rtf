@@ -1,0 +1,89 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf480
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww19980\viewh13800\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 USAGE: ruby BRL_UCSC_universial_downloader.rb -o host -a assembly_for_a_species -f fileList -d directoryOutputFileGo -e email_address\
+  i.e. \
+Human:\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f fosEndPairs.txt.gz -d /users/ybai/work/Project1/test_Downloader -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f chr*_chainPanTro2.txt.gz -d /users/ybai/work/Project1/test_Downloader -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f hapmap*.txt.gz -d /users/ybai/work/Project4/HapMap_SNPs/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpIafrate2.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpIafrate2/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpLocke.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpLocke/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpRedon.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpRedon_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpSebat2.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpSebat2_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpSharp2.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpSharp2/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cnpTuzun.txt.gz -d /users/ybai/work/Structural_Variants/converter_cnpTuzun_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f delConrad2.txt.gz -d /users/ybai/work/Structural_Variants/converter_delConrad2_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f delHinds2.txt.gz -d /users/ybai/work/Structural_Variants/converter_delHinds2_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f delMccarroll.txt.gz -d /users/ybai/work/Structural_Variants/converter_delMccarroll_new/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f *.hg18.* -d /users/ybai/work/Variants_TCAG/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f cccTrendPval*.txt.gz -d /users/ybai/work/Project3/DIS_CCC/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f gad.txt.gz -d /users/ybai/work/Project3/DIS_GAD/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f nimhBipolar*.txt.gz -d /users/ybai/work/Project3/NIMH_BIPOLAR/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f rgdQtl*.txt.gz -d /users/ybai/work/Project3/RGD_QTL/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f knownGene.txt.gz -d users/ybai/work/Project4/UCSC_Genes/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f bacEndPairs.txt.gz -d /users/ybai/work/Human_Project5/BAC_EndPairs/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f microsat.txt.gz -d /users/ybai/work/Human_Project5/Microsatellites/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f simpleRepeat.txt.gz -d /users/ybai/work/Human_Project5/Simple_Repeats/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f wgRna.txt.gz -d /users/ybai/work/Human_sno-miRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f snp128.txt.gz -d /users/ybai/work/Project4/SNPs_128/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f affyGnf1h.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_GNF1H/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f affyHuEx1.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_HuEx/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f affyU95.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U95/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f gnfAtlas2.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/GNF_Atlas2/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f affyU133.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f affyU133Plus2.txt.gz -d /users/ybai/work/Human_Project6/Expression_Regulation/Affy_U133Plus2/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f hapmapLd*.txt.gz -d /users/ybai/work/Human_Project6/Variation_Repeats/HapMap_LD/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f genomicSuperDups.txt.gz -d /users/ybai/work/Human_Project6/Variation_Repeats/Segmental_Dups/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f *_rmsk.txt.gz -d /users/ybai/work/Human_Project5/Repeat_Masker -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f *_est.txt.gz -d /users/ybai/work/Human_Project6/mRNA_EST/All_EST -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f *_mrna.txt.gz -d /users/ybai/work/Human_Project6/mRNA_EST/All_mRNA -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f *_intronEst.txt.gz -d /users/ybai/work/Human_Project6/mRNA_EST/Spliced_EST -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f xenoEst.txt.gz -d /users/ybai/work/Human_Project6/mRNA_EST/Other_EST -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f uniGene_3.txt.gz -d /users/ybai/work/Human_Project6/mRNA_EST/Uni_Gene -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f jaxQtl*.gz -d /users/ybai/work/Project3/MGI_MOUSE_QTL -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg18 -f rgdRatQtl*.gz -d /users/ybai/work/Project3/RGD_RAT_QTL -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg17 -f snp125.txt.gz -d /users/ybai/work/Project4/SNPs_hg17/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg16 -f snp.txt.gz -d /users/ybai/work/Project4/SNPs_hg16/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg16 -f miRNA.txt.gz -d /users/ybai/work/Human_hg16-miRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a hg15 -f rnaGene.txt.gz -d /users/ybai/work/Human_hg15-miRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+\
+Mouse:\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f snp128.txt.gz -d /users/ybai/work/Project5/SNP128/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f knownGene.txt.gz -d /users/ybai/work/Mouse_Project4/UCSC_Genes/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f bacEndPairs.txt.gz -d /users/ybai/work/Project5/BAC_EndPairs/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f microsat.txt.gz -d /users/ybai/work/Project5/Microsatellites/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f chr*_rmsk.txt.gz -d /users/ybai/work/Project5/Repeat_Masker/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f simpleRepeat.txt.gz -d /users/ybai/work/Project5/Simple_Repeats/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f chr*_est.txt.gz -d /users/ybai/work/Project6/mRNA_EST/All_EST/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f chr*_mrna.txt.gz -d /users/ybai/work/Project6/mRNA_EST/All_mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f xenoMrna.txt.gz -d /users/ybai/work/Project6/mRNA_EST/Other_mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f chr*_intronEst.txt.gz -d /users/ybai/work/Project6/mRNA_EST/Spliced_EST/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f miRNA.txt.gz -d /users/ybai/work/Mouse_mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm7 -f miRNA.txt.gz -d /users/ybai/work/Mouse_mm7-mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm6 -f miRNA.txt.gz -d /users/ybai/work/Mouse_mm6-mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm5 -f miRNA.txt.gz -d /users/ybai/work/Mouse_mm5-mRNA/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyGnf1m.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_GNF1M/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyMOE430.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_MOE430/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyU74.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f gnfAtlas2.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/GNF_Atlas2/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyGnfU74A.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74A/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyGnfU74B.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74B/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm9 -f affyGnfU74C.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_U74C/ -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm8 -f jaxQTL*.gz -d /users/ybai/work/Mouse_Project3/MGI_QTL -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm5 -f jaxQTL*.gz -d /users/ybai/work/Mouse_Project3/MGI_QTL_mm5 -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm8 -f wssdCoverage.txt.gz -d /users/ybai/work/Mouse_Project3//WSSD_Coverage -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm6 -f *_chainSelf*.txt.gz -d /users/ybai/work/Project5/Self_Chain -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm8 -f rinnSex.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Rinn_Sex_Exp -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm8 -f affyMoEx1Probe.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/Affy_Exon -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm7 -f picTarMiRNAChicken.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/PicTar_miRNA -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm7 -f picTarMiRNADog.txt.gz -d /users/ybai/work/Project6/Expression_Regulation/PicTar_miRNA -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm8 -f cgapSage*.txt.gz -d /users/ybai/work/Project6/mRNA_EST/CGAP_SAGE -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm7 -f rikenCageTc.txt.gz -d /users/ybai/work/Project6/mRNA_EST/CAGE_TC -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm6 -f rikenCageTc.txt.gz -d /users/ybai/work/Project6/mRNA_EST/CAGE_TC -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm5 -f rikenCageTc.txt.gz -d /users/ybai/work/Project6/mRNA_EST/CAGE_TC -e ybai@ws59.hgsc.bcm.tmc.edu\
+ruby BRL_UCSC_universial_downloader.rb -o hgdownload.cse.ucsc.edu -a mm5 -f tigrGeneIndex.txt.gz -d /users/ybai/work/Project6/mRNA_EST/TIGR_Gene_Index -e ybai@ws59.hgsc.bcm.tmc.edu\
+}

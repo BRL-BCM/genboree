@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "epigenomePercentileQC",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Calculate Percentile Quality Scores",
+    "shortLabel": "[NOT SET]"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "walltime": "12:00:00",
+    "pvmem": "8787mb"
+  }
+}

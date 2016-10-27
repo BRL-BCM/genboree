@@ -1,0 +1,42 @@
+[
+  {
+    "text": "Create Group",
+    "idStr": "createGroup",
+    "tooltip": "Create a new group."
+  },
+  {
+    "text": "Edit Group Info",
+    "idStr": "editGroupInfo",
+    "tooltip": "Edit information of an existing group (name and description)."
+  },
+  {
+    "text": "Delete Group",
+    "idStr": "deleteGroup",
+    "tooltip": "Delete a group and all its contents permanently."
+  },
+  {
+    "text": "Add Existing User To Group",
+    "idStr": "addExistUser",
+    "tooltip": "Add an existing Genboree user to a target group."
+  },
+  {
+    "text": "Add New User To Group",
+    "idStr": "addNewUser",
+    "tooltip": "Add a new user to a target group."
+  },
+  {
+    "text": "Update Roles",
+    "idStr": "updateRoles",
+    "tooltip": "Update the roles of users in a target group."
+  },
+  {
+    "text": "Copy Users",
+    "idStr": "copyUsers",
+    "tooltip": "Copy users from a source group to a target group."
+  },
+  {
+    "text": "Message to Group",
+    "idStr": "messageGroup",
+    "tooltip": "Send a message to all the users of a target group."
+  }
+]

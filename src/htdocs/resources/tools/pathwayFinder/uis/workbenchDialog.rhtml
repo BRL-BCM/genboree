@@ -1,0 +1,93 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :includeToolVersion => true }) %>
+
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <p>This tool takes a column of miRNA identifiers from an input TXT file and performs a search for pathways either containing your miRNAs of interest or protein targets of your miRNAs. A table of pathway results and an interactive pathway viewer are displayed (see screenshot). The first column of the table lists a clickable pathway title that updates the viewer. The second column lists pathway identifers that link to WikiPathways.org. The list is sorted by the number of \"miRNAs\" (primary) and by \"miRNA Targets\" (secondary) found on each pathway. The top 20 results are listed.</p>
+      "
+    })
+%>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # Options for ERCC PI
+    erccPI = @settings['piName']
+    erccGrantNumbers = @settings['grantNumbers']
+    erccGrantOptions = {}
+    erccGrantNumbers.each { |currentGrant|
+      currentGrantLabel = currentGrant.clone()
+      currentGrant.insert(0, "0_") if(currentGrant.include?("Primary"))
+      erccGrantOptions[currentGrant] = { :label => currentGrantLabel}   
+    }
+    # Options for anticipated data repository 
+    anticipatedDataRepos = @settings['anticipatedDataRepos'] 
+    anticipatedDataRepoOptions = {}
+    anticipatedDataRepos.each { |currentOption|
+      currentAnticipatedDataRepoLabel = currentOption.clone()
+      currentOption.insert(0, "0_") if(currentOption.include?("None"))
+      anticipatedDataRepoOptions[currentOption] = { :label => currentAnticipatedDataRepoLabel }
+    }
+    # Options for submission categories for data repository submission (DCC or not DCC)
+    submissionCategoryOptions = {}
+    submissionCategoryOptions[:"DCC Submission"] = { :label => "Submission Meant for DCC" }
+    submissionCategoryOptions[:"Samples Not Meant for Submission to DCC"] = { :label => "Submission Not Meant for DCC" }
+    # Options for whether PI has registered project with dbGaP (Yes / No / Not Applicable)
+    dbGaPOptions = {}
+    dbGaPOptions[:"Yes"] = { :label => "Yes - Project Registered with dbGaP"}
+    dbGaPOptions[:"No"] = { :label => "No - Project Not Registered with dbGaP"}
+    dbGaPOptions[:"Not Applicable"] = { :label => "Not Applicable", :selected => true}
+    widgets = []
+    widgets =
+              [ 
+                { :id => 'erccSubmissionOptions', :toggleText => "ERCC Submission Options", :type => :advancedSection, :startWithExpanded => true, :text => "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter.", :widgets =>
+                  [
+                    { :id => 'piName', :label => 'ERCC PI', :type => :text, :size => "30", :readOnly => true, :value => erccPI, :title => "This box contains the name of your PI."},
+                    { :id => 'grantNumber', :label => 'ERCC Grant Number', :title => 'Choose the appropriate grant number for your submission.', :type => :select, :options => erccGrantOptions },
+                    { :id => 'anticipatedDataRepo', :label => 'Anticipated Data Repository', :title => 'Choose the appropriate option for your anticipated data repository.', :onChange => "showDataRepoOptions(this.value)", :type => :select, :options => anticipatedDataRepoOptions },
+                    { :id => 'otherDataRepo', :label => 'Other Data Repository', :hidden => true, :type => :text, :size => "30", :title => "If you are submitting to a data repository that is not dbGaP / GEO, put that data repository here."},
+                    { :id => 'dataRepoSubmissionCategory', :label => 'Submission Category', :hidden => true, :title => 'Choose the appropriate option to indicate whether your samples are intended for the DCC or not.', :type => :select, :options => submissionCategoryOptions },
+                    { :id => 'dbGaP', :label => 'Project Registered with dbGaP?', :hidden => true, :title => 'Choose the appropriate option to indicate whether this project has been registered with dbGaP by your PI.', :type => :select, :options => dbGaPOptions }
+                  ]
+                }              
+              ]
+
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Target Interaction Finder Settings",
+      :widgets => widgets
+    })
+  %>  
+ 
+ <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+<script type="text/javascript">
+wbGlobalSettings.set("successDialogWidth", "750")
+wbGlobalSettings.set("successDialogHeader", "")
+</script>
+</form>

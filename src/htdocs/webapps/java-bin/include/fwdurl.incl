@@ -1,0 +1,56 @@
+<%@ page import="java.net.*, java.util.regex.Matcher, org.genboree.util.GenboreeUtils, org.genboree.util.Constants" %><%
+
+  // NO NEWLINES BETWEEN % >< % in this FILE !!! IMPORTANT.
+
+  String jsVersion = "?jsVer=" + GenboreeUtils.getJsVer();
+
+  String originalHostName = request.getHeader("host");
+  originalHostName = originalHostName.replaceFirst(":[0-9]+$", "") ;
+  String myBase = "http://" + originalHostName; // only to support subprojects index.jsp like Hs.chr3
+  boolean needToFwd = false;
+  // Does the requested host name look like our configured bad pattern?
+  // - yes if it matches and if the first match group is not "www".
+  Matcher matchBadPattern = Constants.compiledBadPattern.matcher(originalHostName);
+  needToFwd = (matchBadPattern.matches() && (matchBadPattern.group(1).toLowerCase().indexOf("www") < 0) );
+
+  // NO! THIS IS VERY BAD AND IS CAUSING MULTI-HOSTING PROBLEMS!
+  // - it says "if we don't need to forward, but the host name doesn't match EXACTLY the host name
+  //   listed in the Constants.java (based on machineName -only- from config file), then FORCE the host
+  //   to be the machineName.
+  // - that's B.S. for any multi-hosting situation (can't have multiple domain names)
+  // if(!needToFwd)
+  // {
+  //   needToFwd = !originalHostName.equalsIgnoreCase(Constants.REDIRECTTO);
+  // }
+
+  if(needToFwd)
+  {
+    String myServerName = Constants.REDIRECTTO ;
+    String myContext = request.getContextPath() ;
+    String myServletPath = request.getServletPath() ;
+
+    System.err.println("CHECK THIS: fwdurl.incl says we have to redirect/fwd the request to " +
+                       request.getHeader("host") +
+                       "to the host name in the config file: " + myServerName + ". Is that the RIGHT THING TO DO? ") ;
+
+    String qs = request.getQueryString() ;
+    if(qs == null || qs.length() < 1)
+    {
+      qs = "" ;
+    }
+    else
+    {
+      qs = "?" + qs ;
+    }
+//        System.err.println("myServerName = " + myServerName );
+//        System.err.println("myContext =  " + myContext );
+//        System.err.println("myServletPath =  " + myServletPath );
+//        System.err.println("the query is  =  " + qs );
+
+    String allowedHostName = "http://" + myServerName + myContext + myServletPath + qs ;
+//        System.err.println("the allowedHostName is  =  " + allowedHostName );
+//        System.err.flush();
+    response.sendRedirect(allowedHostName);
+    return;
+  }
+%>

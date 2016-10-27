@@ -1,0 +1,65 @@
+<%
+# This file is the default text provided when a job is submitted to the toolJob API resource
+# This can bee overridden for a tool using the file
+# /usr/local/brl/local/apache/htdocs/resources/tools/#{@toolIdStr}/uis/jobDeletion.rhtml
+%>
+
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+<%
+  if(@context['wbErrorMsg'].nil? or @context['wbErrorMsg'].empty?)
+%>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <b>Job Id</b>: <i><%= @context['jobId'] %></i>
+    <br/>
+    <br/>
+    <%
+      if(!@context['wbAcceptMsg'])
+        msg = "The #{@context['resourceType']}(s) were successfully deleted."
+      else
+        msg = WorkbenchFormHelper.overflowMsgFromContext(@context)
+      end
+    %>
+    <%= msg %>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @context['gbAdminEmail'] %>"><%= @context['gbAdminEmail'] %></a> for assistance.
+  </div>
+<%
+  else
+%>
+  <div class="wbDialogFeedback wbDialogFail">
+    <b>There has been an error.  See below for more information about this.</b>
+    <br/>
+    <br/>
+    <b>Error:</b> <%=  @context['wbErrorName']
+                        # Symbol that is the name of the error. As much as possible, use HTTP status names (as Symbols, just like the API does). They have lots, so this is pretty expressive.
+                  %>
+    <br>
+    <b>Message:</b> <%= @context['wbErrorMsg']
+                        # A String with something suitable to display to the user. HTML & organization encouraged where helpful.
+                    %>
+  </div>
+
+<%
+  end
+%>
+</div>
+
+<%# Construct js programtically since killList is a ruby variable and we need to set it on the js side %>
+<%
+  killListJsArray = "['#{@context['killList'].join("','")}']"
+  #$stderr.puts "killListJsArray: #{killListJsArray.inspect}"
+%>
+
+<script type='text/javascript'>
+  /* DO NOT use open ended comments here */
+  wbHash.get('context').set('killList', <%=killListJsArray%>) ;
+  killList = wbHash.get('context').get('killList') ;
+  removeTreeNode('wbMainTree', killList) ;
+  removeTreeNode('wbInputsTree', killList) ;
+  updateWorkbenchObj() ;
+  toggleToolsByRules() ;
+</script>

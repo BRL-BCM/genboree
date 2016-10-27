@@ -1,0 +1,46 @@
+<%
+require 'cgi'
+require 'brl/util/util'
+require 'brl/genboree/genboreeContext'
+require 'brl/genboree/pathwayUtil'
+
+
+
+cgi = CGI.new()
+@context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+@pathwayHash=nil
+success = false
+@geneName = @context.cgi['geneName'].to_s.strip
+if(!@geneName.nil?)
+  @pathwayHash = BRL::Genboree::PathwayUtil.findPathways(@geneName)
+  if (!@pathwayHash.nil?) then
+    success = true
+  else
+    success = false
+  end
+end
+
+# HTML to show our user.
+# - show pathways if any found
+#   * link to our special rendering page to "augment" Kegg's pathway page with some Genboree stuff
+# - show informative message if no pathways found for gene
+%>
+
+<%  if(success) %>
+<div class="success">
+<div class="title">Pathways associated with the gene &quot;<span class="fixed"><%== @geneName %></span>&quot;:</div>
+<div class="results" style="height:400px;overflow:auto;">
+<ul class="cat">
+<%= BRL::Genboree::PathwayUtil.renderPathwayHash(@pathwayHash,@geneName) %>
+</ul>
+</div>
+<div style="text-align:center;padding-top:10px;">
+<input type="button" id="submitGenes" value="Submit Genes" onClick="addGenesAndSubmit();">
+<input type="button" id="cancel" value="Cancel" onClick="pwDialogWindow.close();">
+</div>
+</div>
+<%  else %>
+<div class="msg fail">
+Could not find a pathway associated with a gene name of<br>&quot;<span class="fixed"><%== @geneName %></span>&quot;.
+</div>
+<%  end %>

@@ -1,0 +1,29 @@
+<div class="wbDialog" style="height:600px; width:750px;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialog" style="height:500px; width:650px; overflow-y:auto; overflow-x:auto; background-color: #FFFFFF; border: 2px solid; padding: 25px;">
+    <br>
+    <br>
+    <% if(@settings['htmlResponse'].nil? or @settings['htmlResponse'].empty?)
+        errorMsg = @settings['errorMsg']
+        errorMsg.gsub!("\r\n", "<br>")
+        errorMsg.gsub!("\r", "<br>")
+        errorMsg.gsub!("\n", "<br>")
+        msg = "<font size=\"3\" color=\"red\"><b>An error has occurred:</b></font><br><br>"
+        msg << errorMsg
+    else
+        msg = @settings['htmlResponse']
+    end
+    %>
+    <%= msg %> 
+    <% if(@settings['htmlResponse']) %>
+    <br>
+    <br>
+    If the Interactive Pathway Finder is not displaying any results, it is likely that your input miRNA list was too large for processing. Please trim your input list and then try again if this happens. 
+    <% end %>
+    <br>
+    <br>
+    If you have questions, please contact <a href="mailto:<%= "sailakss@bcm.edu" %>"><%= "sailakss@bcm.edu" %></a> or <a href="mailto:<%= "thistlew@bcm.edu" %>"><%= "thistlew@bcm.edu" %></a> for assistance.
+  </div>
+</div>

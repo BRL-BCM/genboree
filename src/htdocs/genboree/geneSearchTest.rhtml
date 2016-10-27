@@ -1,0 +1,78 @@
+<html>
+<head>
+    <title>Simple ComboBox - Live Search</title>
+    <link rel="stylesheet" type="text/css" href="/javaScripts/ext-3.2.1/resources/css/ext-all.css" />
+    <script type="text/javascript" src="/javaScripts/ext-3.2.1/adapter/ext/ext-base.js"></script>
+    <script type="text/javascript" src="/javaScripts/ext-3.2.1/ext-all.js"></script>
+    <script type="text/javascript">
+      Ext.onReady(  function()
+      {
+        var store = new Ext.data.Store(
+        {
+          proxy: new Ext.data.HttpProxy(
+          {
+            url: 'http://proline.brl.bcmd.bcm.edu/REST/v1/resources/plainTexts/epigenomeAtlas/gene_names.arj.txt?gbKey=TNkdABu0&connect=no&maxNumRecords=500',
+            method: 'GET'
+          }),
+          reader: new Ext.data.JsonReader(
+          {
+              root: 'data',
+              fields:
+              [
+                { name: 'text' }
+              ]
+          })
+        }) ;
+        store.load() ;
+        var geneBox = new Ext.form.ComboBox(
+        {
+          renderTo: 'geneBoxDiv',
+          store: store,
+          displayField: 'text',
+          queryParam: 'prefixFilter',
+          forceSelect: true, // select only one of genes we supply, not arbitrary text
+          minChars: 1,
+          loadingText: 'Searching...',
+          width: 270,
+          pageSize: 0,
+          hideTrigger: false,
+          triggerAction: 'all',
+          typeAhead: true,
+          typeAdeadDelay: 50,
+          tpl: '<tpl for="."><div class="x-combo-list-item"><span style="font-weight: bold;">Gene: </span>{text}</div></tpl>',
+          title: "Gene List",
+          shadow: "drop",
+          resizable: true,
+          onSelect: function(record)
+          {
+            alert("You selected '" + record.data.text + "'. Don't use alerts().") ;
+          }
+          // NOTE NOTE NOTE:
+          // There is a "beforequery" event. I think this can be used for doing rsrcPath-only "queries"
+          // which are the dominant kind for a RESTful API. (No "queryParam" needed, see.)
+          // . Register beforequery handler. Will receive a "queryEvent" argument
+          // . Modify contents of queryEvent.combo.store.proxy.url using query value in
+          //   queryEvent.query
+          //   - For example, say your set up the store such that queryEvent.combo.store.proxy.url is a
+          //     ExtJs Template. Like "/REST/v1/grp/{grp}?detailed=yes".
+          //   - Then could compile and apply({ grp: queryEvent.query })
+          //   - This begs the question of how to restore proxy.url back to a template
+          //   - Better approach: when make store, set proxy.urlTemplate to a new, immediate compile
+          //     ExtJs Template object. Then in "beforequery", use proxy.urlTemplate to set proxy.url as described.
+          //   - Make sure queryParam value for the ComboBox is set to something that will be ignored when ExtJs adds it
+          //     on automatically.
+          //   - Done.
+        }) ;
+      }) ;
+    </script>
+</head>
+<body>
+<p>
+  Type a gene name:
+</p>
+
+<div id='geneBoxDiv' style="width:300px;">
+</div>
+
+</body>
+</html>

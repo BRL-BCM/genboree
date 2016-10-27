@@ -1,0 +1,85 @@
+Developer Documentation:
+========================
+
+Usage:
+--------
+Run scripts with no arguments for usage info.
+
+
+Notes:
+--------
+- The ruby 'pack' command is very slow, and should probably be rewritten in C for speed.
+
+- The SQL queries are currently being put in one at a time.  It would probably be more efficient to batch them.
+
+- the file 'unpackFunction.rb' contains two functions that will unpack the data and deal with the special values we use to represent empty fields.
+
+
+
+=================
+Database Schema:
+=================
+
+Table: expDataTypes
++------------+------------------+------+-----+---------+----------------+
+| Field      | Type             | Null | Key | Default | Extra          |
++------------+------------------+------+-----+---------+----------------+
+| typeId     | int(10) unsigned |      | PRI | NULL    | auto_increment |
+| typeName   | varchar(255)     | YES  |     | NULL    |                |
+| recordSize | int(11)          | YES  |     | NULL    |                |
++------------+------------------+------+-----+---------+----------------+
+
+Table: expDataFields
++------------+------------------+------+-----+---------+----------------+
+| Field      | Type             | Null | Key | Default | Extra          |
++------------+------------------+------+-----+---------+----------------+
+| fieldId    | int(10) unsigned |      | PRI | NULL    | auto_increment |
+| typeId     | int(11)          | YES  |     | NULL    |                |
+| fieldName  | varchar(255)     | YES  |     | NULL    |                |
+| fieldOrder | int(11)          | YES  |     | NULL    |                |
+| dataType   | int(11)          | YES  |     | NULL    |                |
+| size       | int(11)          | YES  |     | NULL    |                |
+| offset     | int(11)          | YES  |     | NULL    |                |
++------------+------------------+------+-----+---------+----------------+
+
+Table: expData;     
++--------------+------------------+------+-----+---------+----------------+
+| Field        | Type             | Null | Key | Default | Extra          |
++--------------+------------------+------+-----+---------+----------------+
+| id           | int(10) unsigned |      | PRI | NULL    | auto_increment |
+| sampleId     | int(11)          | YES  |     | NULL    |                |
+| fileLocation | varchar(255)     | YES  |     | NULL    |                |
+| typeId       | int(11)          | YES  |     | NULL    |                |
+| insert_date  | date             | YES  |     | NULL    |                |
+| expRun       | int(11)          | YES  |     | NULL    |                |
++--------------+------------------+------+-----+---------+----------------+
+
+
+======================
+File Examples:
+======================
+
+
+----------------------------------------
+Sample Schema File (tab-delimited)
+----------------------------------------
+DATATYPE        Agilent_244k_array
+FIELD   f1      f2      f3      f4      f5
+TYPE    float   text    bool    date    int
+SIZE    4       4       1       50      4
+
+Note: Valid Data types are 
+- float	   (8 bytes)
+- text	   (variable)
+- bool	   (1 byte)
+- date	   (10 bytes)
+- int	   (4 bytes)
+
+
+
+-----------------------------------------
+Sample Data File  (tab-delimited)
+-----------------------------------------
+Agilent_244k_array	1.02    asdf    f       05/06/07        1
+Agilent_244k_array	0.8     asd2    t       05/08/07        5
+Agilent_244k_array	0.9     asd3    0       05/08/07        5

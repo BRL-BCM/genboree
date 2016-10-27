@@ -1,0 +1,99 @@
+<%
+  require 'json'
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      {
+        :toolHelpOverview =>
+        "
+        This tool will add a new hub in the target <u>Group</u>. Note that this tool will also update an existing hub in the group. The new hub created will be <u>public</u> for UCSC and WashU Genome Browsers to access the hub data.
+        <br>&nbsp;<br>
+        
+        <b>Inputs</b> Create Hub supports four track data types -  bigWig, bigBed, BAM or VCF.
+        <ul>
+          <li>bigWig and bigBed supported through track inputs (tracks, track entity lists or classes)</li>
+          <li>BAM and VCF supported through file inputs (files or file entity lists). Input files must follow the format specifications followed by UCSC for <a href='http://genome.ucsc.edu/goldenPath/help/bam.html' target='_blank'>BAM</a> and <a href='http://genome.ucsc.edu/goldenPath/help/vcf.html' target='_blank'>VCF</a> formats. </li> 
+          
+        </ul>
+
+        <br>
+        Note: This tool will unlock and make all the source databases public, provided the user has sufficient permissions for it. 
+        <br>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+       :instructions       =>
+        [
+          'Drag the <u>Track(s)</u> and/or <u>Classes</u> and/or <u>Tracks Entity List(s)</u> and/or <u>File(s)</u> and/or <u></u>File Entity List(s) into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Tracks', 'min: 0 ; max: any' ], [ 'Class', 'min: 0 ; max: any' ], [ 'Track Entity List', 'min: 0 ; max: any' ], [ 'File', 'min: 0 ; max: any' ], ['File Entity', 'min: 0 ; max: any'] ],
+        :beEmpty            => false
+
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+         :instructions       => [ 'Drag 1 destination <u>group</u> into &quot;Output Targets&quot;. The new Hub will be created in this group. After your destination group is in &quot;Output Target&quot;, select <code>Data </code> &raquo; <code>Tracks </code> &raquo; <code>Track Hubs </code> &raquo; <code>Create Hub</code>' ],
+        :types              => [ [ 'Group', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+           [
+            [ 'Hub Name', "Name of the hub that will be displayed in \"hub.txt\"."],
+            ['Short Label', "Shot label of the hub. Length of the label must not exceed 17 characters."],
+            ['Long label', "Long Label of the hub. Length of the label must not exceed 80 characters."],
+            ['Email',  "Email that appears on hub settings (\"hub.txt\")."]
+           ]
+      })
+  %>
+
+
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Integrated into the Genboree workbench by Neethu Shah and Aaron Baker at <a href="http://brl.bcm.tmc.edu" target="_blank">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

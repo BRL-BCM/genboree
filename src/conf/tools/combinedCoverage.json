@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "combinedCoverage",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Profile Combined Coverage",
+    "shortLabel": "Profile Combined Coverage",
+    "groupAccessUri": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/class/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+},
+ "outputs" :
+  {
+    "minItemCount" : 2,
+    "maxItemCount" : 2,
+    "ruleSet" :
+    [
+      [ "/db/[^/ \\t\\n]+(\\?.*)?$", 
+        1, 
+        1
+      ],
+      [
+        "/prj/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ]
+  },
+  "context" :
+  {
+    "required" :
+    [ ]
+  },
+  "settings" :
+  {
+    "patterns" :
+    {
+      "analysisName" : ["^(?:^.+$)$", "Study Name cannot be left blank"],
+       "states": ["^(?:^.+$)$","Number of states cannot be left blank"]
+
+    }
+  }
+}

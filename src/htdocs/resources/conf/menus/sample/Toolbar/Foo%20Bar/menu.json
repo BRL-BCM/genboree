@@ -1,0 +1,13 @@
+[
+  {
+    "idStr": "foo",
+    "text": "Foo Button",
+    "tooltip": "This is the Foo button. There are many like it.<br>This is but one.",
+    "icon": "/images/silk/page_edit.png"
+  },
+  {
+    "idStr": "bar",
+    "text": "Bar Button",
+    "disabled": true
+  }
+]

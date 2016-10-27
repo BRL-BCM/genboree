@@ -1,0 +1,127 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/apiCaller'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 520px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          <b>Overview:</b><br>
+          This tool prepares the Samples and related sequence files for use in Microbiome Workbench analyses.
+          <br>&nbsp;<br>
+          Using the sample-specific <span class='wbHelpMono'>barcode</span> and primer-pair information, it will <i>identify</i> and <i>extract</i> the sample-specific sequence records, and also perform some bookkeeping operations.
+          <br>&nbsp;<br>
+          <b>Requirements:</b><br>
+          Samples which you want processed must already have been associated with a specific <a href='http://www.ncbi.nlm.nih.gov/Traces/sra/static/SRAToolkit.pdf'>.SRA</a> or <a href='http://www.ncbi.nlm.nih.gov/Traces/trace.cgi?cmd=show&f=formats&m=doc&s=formats#sff'>.SFF</a> sequence file. For example, using the <span class='wbHelpMonoEntity'>Data &raquo; Samples &raquo; Sample - File Linker</span> tool. The sequence file associated with the Sample will be the one from which sample - specific sequences are extracted.
+          <br>&nbsp;<br>
+          <b>Output:</b><br>
+          Archives of the sequences in <a href='http://en.wikipedia.org/wiki/FASTA_format'>FASTA</a> &amp; <a href='http://en.wikipedia.org/wiki/Fastq'>FASTQ</a> formats will be available in a folder matching your <span class='wbHelpMono'>Sample Set Name</span> setting, along with some additional bookkeeping files. This <i>sample set folder</i> is used as an input for several Microbiome Workbench analysis tools.
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+        "
+      })
+  %>
+   <%# Input data summary %>
+  <%=
+    # Build a hash with all the samples
+    sampleHash = {}
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    sampleApiHelper = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new()
+    sampleSetApiHelper = BRL::Genboree::REST::Helpers::SampleSetApiUriHelper.new()
+    dbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc(@genbConf, @genbConf.dbrcFile)
+    user = dbrc.user
+    pass = dbrc.password
+    @inputs.each { |input|
+      if(input =~ BRL::Genboree::REST::Helpers::SampleApiUriHelper::NAME_EXTRACTOR_REGEXP) # For samples
+        sampleHash[input] = true
+      elsif(input =~ BRL::Genboree::REST::Helpers::SampleSetApiUriHelper::NAME_EXTRACTOR_REGEXP) # For sample sets
+        uri = URI.parse(input)
+        rcscUri = uri.path.chomp("?")
+        apiCaller = ApiCaller.new(uri.host, "#{rcscUri}?detailed=true", user, pass)
+        apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+        apiCaller.get()
+        if(apiCaller.succeeded?)
+          retVal = JSON.parse(apiCaller.respBody)
+          data = retVal['data']
+          data.each_key { |key|
+            if(key == 'sampleList')
+              data[key].each { |sampleEntity|
+                sampleHash[sampleEntity['refs'][BRL::Genboree::REST::Data::BioSampleEntity::REFS_KEY]] = true
+              }
+              break
+            end
+          }
+        else
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'MISSING_RESOURCE', "ApiCaller failed for getting samples for: #{input.inspect}. Samples missing?")
+          raise wue
+        end
+      else # For db/Samples
+        input = dbApiHelper.extractPureUri(input)
+        uri = URI.parse(input)
+        rcscUri = uri.path.chomp("?")
+        rcscUri << "/bioSamples?detailed=false"
+        apiCaller = ApiCaller.new(uri.host, rcscUri, user, pass)
+        apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+        apiCaller.get()
+        if(!apiCaller.succeeded?)
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'MISSING_RESOURCE', "ApiCaller failed for getting samples for: #{input.inspect}. Samples not present? ")
+          raise wue
+        end
+        resp = apiCaller.respBody()
+        retVal = JSON.parse(resp)
+        samples = retVal['data']
+        samples.each { |sample|
+          sampleHash[sample['refs'][BRL::Genboree::REST::Data::BioSampleEntity::REFS_KEY]] = true
+        }
+      end
+    }
+
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Samples:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMultiSelectInputList, { :multiSelectInputHash => sampleHash, :label => "Select Samples", :type => "samples" } )
+    })
+
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Target:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    # for width, should only style input tags with attribute type=text, not checkboxes, radio buttons, etc.
+    # setting labelWidth and setting width should leave about 50px spare room for formatting according to fiddling
+    # labelWidth defaults to 150px and most forms are set to 520px
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Filter Reads Settings",
+      :widgets =>
+      [
+        { :id => 'sampleSetName', :label => 'Sample Set Name', :type => :text , :style => "width: 320px", :value => "Sequence-Import-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "The name of the sample set, for example 'Control set', 'Treatment set'" },
+        { :id => 'blastDistalPrimer', :label => 'Trim At Distal Primer', :type => :checkBox, :title => "Trim at distal primer location (up to 3 mismatches)"},
+        { :id => 'cutAtEnd', :label => 'Trim At N/n', :type => :checkBox, :checked => true, :title => "Trim reads at the first location of N/n if it occurs before distal primer location"},
+        { :id => 'trimLowQualityRun', :label => 'Trim At Low Quality Window', :type => :checkBox, :title => "Trim reads when the average quality drops below a given threshold set in Min_Average_Quality", :hidden => true, :newline => false},
+        { :id => 'removeNSequences', :label => 'Remove N Sequences?', :type => :checkBox, :title => "Ignore any reads with that contain an N/n"},
+        { :id => 'minSeqLength', :label => 'Min Read Length', :type => :text, :size => "6", :value => "200", :style => 'font-size: 80%', :title => "Set the minimum read length to filter the FASTQ file"},
+        { :id => 'minAvgQuality', :label => 'Min Average Quality', :type => :text, :size => "6", :value => "20", :style => 'font-size: 80%', :title => "Ignore sequences that do not meet the minimum average quality"},
+        { :id => 'minSeqCount', :label => 'Min Sequence Count', :type => :text, :size => "6", :value => "1000", :style => 'font-size: 80%', :title => "Ignore samples that do not meet the minimum sequence count"}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

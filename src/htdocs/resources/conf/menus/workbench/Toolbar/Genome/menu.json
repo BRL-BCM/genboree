@@ -1,0 +1,21 @@
+[
+  {
+    "text" : "Analyze Structural Variants",
+    "hidden": true
+  },
+  {
+    "text" : "Find Motifs"
+  },
+  {
+    "text" : "SNPs"
+  },
+  {
+    "text" : "GREAT",
+    "tooltip" : "GREAT - Genomic Regions Enrichment of Annotations Tool",
+    "idStr" : "great"
+  },
+  {
+    "text" : "Pre-processing",
+    "hidden": true
+  }
+]

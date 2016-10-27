@@ -1,0 +1,4 @@
+#biomaterialState	sampleName	age	sex	isSick
+frozen	dAB1	36	M	TRUE
+frozen	dAB2	46	M	FALSE
+solution	dAB3	56	F	TRUE

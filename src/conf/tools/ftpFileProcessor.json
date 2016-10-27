@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "ftpFileProcessor",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "cluster": {
+    "prequeueType": "LocalHost"
+    //"prequeueHost": "localhost"
+  },
+  "ui": {
+    "label": "[NOT SET]",
+    "shortLabel": "[NOT SET]"
+  }
+}

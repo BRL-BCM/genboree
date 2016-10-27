@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "legend",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "cluster": {
+    "queue": "none"
+  },
+  "ui": {
+    "label": "Legend",
+    "shortLabel": "Legends"
+  }
+}

@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+
+# ##########################
+# ENVIRONMENT
+# ##########################
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+
+umask 002
+
+ulimit -c unlimited
+#
+# Set this variable to a command that increases the maximum
+# number of file descriptors allowed per child process. This is
+# critical for configurations that use many file descriptors,
+# such as mass vhosting, or a multithreaded server.
+export ULIMIT_MAX_FILES="ulimit -S -n `ulimit -H -n`"
+# Set the maximum number of file descriptors allowed per child process.
+if [ "x$ULIMIT_MAX_FILES" != "x" ] ; then
+    $ULIMIT_MAX_FILES
+fi
+
+
+# #########################
+# MAIN
+# #########################
+
+RETVAL=0
+
+start() {
+    echo -n $"Starting THIN_WEBSITE:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_website.conf start
+    RETVAL=$?
+}
+
+stop() {
+    echo -n $"Shutting down THIN_WEBSITE:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_website.conf stop
+    RETVAL=$?
+}
+
+restart() {
+    echo -n $"Restarting THIN_WEBSITE:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_website.conf restart
+    RETVAL=$?
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac
+
+
+if [ $RETVAL = 0 ] ; then
+    echo "**SUCCESS**"
+else
+    echo "FAILURE: '$0 $1' command failed, check logs ( exit code $RETVAL )"
+fi
+
+exit $RETVAL 

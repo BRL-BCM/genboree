@@ -1,0 +1,28 @@
+<%
+  
+# This file is the default text provided when a job is submitted to the toolJob API resource
+# This can bee overridden for a tool using the file
+# /usr/local/brl/local/apache/htdocs/resources/tools/#{@toolIdStr}/uis/jobFailure.rhtml
+%><div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  
+  <%= renderStaticFrag(@toolIdStr, :wbToolErrorTitle, { :title => @context['toolTitle'] } ) %>
+  <div class="wbDialogFeedback wbDialogFail">
+    <b>There has been an error.  See below for more information about this.</b>
+    <br/>
+    <br/>
+    <b>Error:</b> <%=  @context['wbErrorName'] 
+                        # Symbol that is the name of the error. As much as possible, use HTTP status names (as Symbols, just like the API does). They have lots, so this is pretty expressive.
+                  %>
+    <br>              
+    <b>Message:</b> <%= #@context['wbErrorMsg']
+                        # A String with something suitable to display to the user. HTML & organization encouraged where helpful.
+                        WorkbenchFormHelper.overflowMsgFromContext(@context)
+                    %>
+                    
+  </div>
+  <div>
+  If you have questions, please contact <a href="mailto:<%= @context['gbAdminEmail'] %>"><%= @context['gbAdminEmail'] %></a> for assistance.
+  </div>
+</div>
+

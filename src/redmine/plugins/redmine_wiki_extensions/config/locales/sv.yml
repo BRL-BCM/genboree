@@ -1,0 +1,24 @@
+# Swedish strings go
+sv:
+  label_wikiextensions_tags: Taggar
+  label_wikiextensions_new: Ny
+  wiki_extensions: Wiki Extensions
+  label_wikiextensions_tab: Tabb
+  wiki_extensions_add_tab: "Lägg till tabbar till projektmenyn."
+  permission_add_wiki_comment: Lägg till Wiki kommentarer
+  permission_delete_wiki_comments: Ta bort Wiki kommentarer
+  permission_edit_wiki_comments: Ändra Wiki kommentarer
+  permission_wiki_extensions_settings: Hantera Wiki Extensions
+
+  field_auto_preview_enabled: Aktivera automatisk förhandsgranskning
+  field_sidebar_disabled: Disable side bar
+  wiki_extensions_vote: vote
+  
+    
+  wiki_page_commented_header: Comment to wiki page "%{page_title}" of project "%{project_name}" added by user %{author}
+  wiki_page_commented_comment_head: 'Comment:'
+  wiki_page_commented_url: 'You can see page with comment by the following link:'
+  label_wiki_comment_added: 'Wiki comment added'
+  label_wiki_comment_plural: 'Wiki comments'
+  
+  wiki_extensions_new_wiki_page: 'New page'

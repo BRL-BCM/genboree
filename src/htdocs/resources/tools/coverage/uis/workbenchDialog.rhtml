@@ -1,0 +1,105 @@
+<%# RENDER HTML %>
+<% require 'brl/genboree/rest/helpers/trackApiUriHelper'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 472px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          Carefully review:
+          <ul>
+            <li>The correct track/file is selected for processing.</li>
+            <li>The output track should be uploaded to the database and track name indicated.</li>
+            <li>Extension, truncation, etc, are turned enabled or disabled correctly, and have the values you desire.</li>
+          </ul>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    if(@inputs[0] =~ BRL::Genboree::REST::Helpers::TrackApiUriHelper::NAME_EXTRACTOR_REGEXP)
+      typeStr = 'Track'
+    else
+      typeStr = 'File'
+    end
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input #{typeStr}:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbTrackOrFileListSummary, { :trackOrFileList => @inputs[0], :label => "#{typeStr} Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      widgetsArray = []
+
+      # Start with analysis name:
+      widgetsArray <<
+      {
+        :id => 'experimentName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "Coverage-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}"
+      }
+
+      # Do we need to ask for the format of the file (if track, then don't bother)
+      if(@inputs[0] !~ BRL::Genboree::REST::Helpers::TrackApiUriHelper::NAME_EXTRACTOR_REGEXP)
+        widgetsArray  <<
+        {
+          :id => 'fileType', :label => 'File Type', :type => :select, :options =>
+          {
+            :lff   => { :label => 'LFF' },
+            :bed => { :label => 'BED', :selected => true },
+            :gtf    => { :label => 'GTF'},
+            :gff    => { :label => 'GFF'},
+            :gff3    => { :label => 'GFF3'},
+            :bedGraph    => { :label => 'BedGraph'}
+          }
+        }
+      end
+
+      # Now Rest of widgets:
+      widgetsArray +=
+      [
+        { :id => 'extendReads', :label => 'Extend Reads ?', :type => :checkbox, :onClick => "toggleCheckBoxDiv('extendReadsValue', this.checked)"},
+        { :id => 'extendReadsValue', :label => 'Length: ', :labelStyle => 'width:180px ; font-size: 80%', :style => 'font-size: 80%', :type => :text, :size => "6", :value => "", :hidden => true, :newline => false},
+        { :id => 'truncateReads', :label => 'Truncate Reads ?', :type => :checkbox, :onClick => "toggleCheckBoxDiv('truncateReadsValue', this.checked)" },
+        { :id => 'truncateReadsValue', :label => 'Length: ', :labelStyle => 'width:180px ; font-size: 80%', :style => 'font-size: 80%', :type => :text, :size => "6", :value => "", :hidden => true, :newline => false},
+        { :id => 'noStrandForSorting', :label => 'Separate Strand Coverage?', :type => :checkbox },
+        { :id => 'useScore', :label => 'Use Score For Coverage?', :type => :checkbox },
+        { :id => 'lffTrackName', :label => 'Output Track Name', :type => :gbTrackName, :defaultType => 'Coverage', :defaultSubtype => 'Results' }
+      ]
+
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Coverage Computation Settings",
+        :widgets => widgetsArray
+      })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+  function toggleCheckBoxDiv(id, isChecked)
+  {
+    // For label of checkbox
+    var label = Ext.get(id + "Label") ;
+    if(label)
+    {
+      label.setStyle('display', (isChecked ? '' : 'none') ) ;
+    }
+    // For checkbox itself:
+    var style = Ext.get(id) ;
+    style.setStyle('display', (isChecked ? 'block' : 'none')) ;
+  }
+</script>

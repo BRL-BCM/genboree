@@ -1,0 +1,61 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Example/Dev Tool" }) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview => 'Put any orienting remarks here.' }
+  %>
+  <%# Input resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Summary:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbGenericRsrcSummary, { :rsrcs => @inputs } )
+      })
+  %>
+  <%# Output targets summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Summary:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbGenericRsrcSummary, { :rsrcs => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%= renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Tool-Specific Settings",
+        :widgets =>
+        [
+          { :id => 'example', :label => "A setting widget", :type => "text", :value="Some default" }
+        ]
+      })
+  %>
+
+  <%# DEVELOPMENT ONLY. so you can see what you've got available so far in Workbench JSON "context" %>
+  <fieldset>
+    <legend>Context</legend>
+    <% @context.each_pair { |kk, vv| %>
+      <%= CGI.escapeHTML(kk) %> = <%= CGI.escapeHTML(vv) %><br>
+    <% } %>
+  </fieldset>
+  <!-- DEVELOPMENT ONLY. so you can see what you've got available so far in Workbench JSON "settings" -->
+  <fieldset>
+    <legend>Settings</legend>
+    <% @settings.each_pair { |kk, vv| %>
+      <%= CGI.escapeHTML(kk) %> = <%= CGI.escapeHTML(vv)%><br>
+    <% } %>
+  </fieldset>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+
+<script>
+<!-- if needed. Some args to those calls could be determined programmatically in code above, but -->
+<!-- we expect them usually to be hard-coded key-values that need to be added. -->
+<!-- WorkbenchFormHelper.addToFormContext({'example' => 'value'}) -->
+<!-- NONE FOR THIS TOOL -->
+</script>

@@ -1,0 +1,95 @@
+<%
+  width = (@hasAccess ? 700 : 320)
+  height = (@hasAccess ? 525 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle, { :includeToolVersion => true }) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+    <% if !@context['wbErrorMsg'].nil? and !@context['wbErrorMsg'].empty? %> 
+      <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+    <% end %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      {
+        :toolHelpOverview =>
+        "
+        <b>Overview</b>
+        <p>This tool takes a column of miRNA identifiers from an input TXT file and performs a search for pathways either containing your miRNAs of interest or protein targets of your miRNAs. A table of pathway results and an interactive pathway viewer are displayed (see screenshot). The first column of the table lists a clickable pathway title that updates the viewer. The second column lists pathway identifers that link to WikiPathways.org. The list is sorted by the number of \"miRNAs\" (primary) and by \"miRNA Targets\" (secondary) found on each pathway. The top 20 results are listed.</p>
+        <br>
+        <img src='/images/workbench/pathwayFinderResults.png' width:663px; height:510px;'>
+        <br>
+        <br>
+        <b>Inputs</b>: Drag the input text file with a column of miRNA identifiers into \"Input Data\". Identifiers should be in the first column.
+        <br>
+        <br>
+        <u>NOTE</u>: To upload input files to your database, use <code>Data</code> &raquo; <code>Files</code> &raquo <code>Transfer File</code> from the toolset menu.
+        <br>
+        <br>
+        <b>Outputs</b>: A table of pathway results and an interactive pathway viewer will be displayed in a new window.
+        <br>
+        <br>
+        <b>Video Tutorial</b>: Please view the video tutorial for using the \"Pathway Finder\" tool:
+        <br><br>
+        <iframe src=\"https://www.youtube.com/embed/H5432ZxU38I?rel=0&html5=1\"
+        width=\"420\" height=\"315\" frameborder=\"0\" allowfullscreen></iframe>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag 1 input text file with a column of miRNA identifiers into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'File', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'ERCC Submission Options', "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter."], 
+          [ 'Submit', "After reviewing the input text file, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'WikiPathways, source for curated pathways and miRNA content: Pico AR, et al. (2008) WikiPathways: Pathway Editing for the People. PLoS Biol 6(7). http://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.0060184' ],
+                                  [ 'miRTarBase source database for experimentally validated miRNA-protein target interactions: Chou et al. miRTarBase 2016: updates to the experimentally validated miRNA-target interactions database. NAR, Database Issue, Vol 44(D1). http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4702890/' ],
+                                  [ 'Pathway Finder tool was designed and implemented by Anders Riutta and Alexander Pico, and the video tutorial was produced by Kristina Hanspers, all at the Gladstone Institutes, San Francisco, CA.' ],
+                                  [ 'Integrated into the Genboree Workbench by William Thistlethwaite at <a href="http://genboree.org/site/bioinformatics_research_laboratory" target="_blank">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

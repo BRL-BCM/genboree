@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "sampleFileLinker",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "cluster": {
+    "pvmem": "750mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Sample File Linker",
+    "shortLabel": "Sample File Linker"
+  }
+}

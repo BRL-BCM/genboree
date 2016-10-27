@@ -1,0 +1,14 @@
+./bin/mysqld_safe --user=root &
+
+Function:
+#####################
+The file "BRL_UCSC_importer_complete.rb" takes the user input of a genome assembly version and/or remote UCSC track information, and download the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF.
+
+To run correctly,
+All sources files including downloader and converter files, "BRL_UCSC_importer_complete.rb", and "data_acquisition_complete_data.txt", "BRL_UCSC_universial_downloader.rb", "BRL_UCSC_fosmidlff.rb", "BRL_UCSC_chimpchainlff.rb", ..., should be put in the same direcory in a machine with MySQL server installed in order to run them successfully.
+#####################
+
+The input usage info is:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+ruby BRL_UCSC_importer_complete.rb -a assembly -t trackName -e emailAddress
+^^^^^^^^^^^^^^^^^^^^^^^^^^

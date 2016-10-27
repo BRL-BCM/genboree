@@ -1,0 +1,268 @@
+<%# THIS FILE USES eruby %>
+
+<%
+	# ---------------------------------------------------------------------------
+	# SETUP CONVENIENT ENVIRONMENT
+	# ---------------------------------------------------------------------------
+  require 'cgi'
+  require 'net/http'
+	require 'uri'
+
+  $VERBOSE = false
+  @cgi = CGI.new()
+	@req = Apache.request
+	@serverName = @req.server_name
+	#@serverName += ":#{@req.server_port}" if(@req.server_port != 80)
+	# ---------------------------------------------------------------------------
+%>
+
+<%
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	# Constants
+	EXCEPT_OK = HTTP_OK = PARAM_OK = 0
+	PARAM_MISSING, BAD_NAME_PARAM, LOOKUP_OK, NO_REMOTE_CHR, EXCEPT_BAD = 1,2,3,4,5
+	CHR, START, STOP, REMOTE_CHR = 0,1,2,3
+	REMOTE_URL = 'http://www.snprc.org/linkage/FinalMaps/%REMOTE_CHR%.htm'
+
+	# Resource Map
+	@resMap = 	{
+								'SNPRC' =>	[
+															[ 'chr1', 1, 246127941, 'hsachr01' ],
+															[ 'chr10', 1, 135037215, 'hsachr10' ],
+															[ 'chr11', 1, 134482954, 'hsachr11' ],
+															[ 'chr12', 1, 132078379, 'hsachr12' ],
+															[ 'chr13', 1, 113042980, 'hsachr13' ],
+															[ 'chr14', 1, 105311216, 'hsachr14_15' ],
+															[ 'chr15', 1, 100256656, 'hsachr14_15' ],
+															[ 'chr16', 1, 90041932, 'hsachr16' ],
+															[ 'chr17', 1, 81860266, 'hsachr17' ],
+															[ 'chr18', 1, 76115139, 'hsachr18' ],
+															[ 'chr19', 1, 63811651, 'hsachr19' ],
+															[ 'chr2', 1, 93500000, 'hsachr02p' ],
+															[ 'chr2', 93500001, 243615958, 'hsachr02q' ],
+															[ 'chr20', 1, 63741868, 'hsachr20_22' ],
+															[ 'chr21', 1, 46976097, 'hsachr07_21' ],
+															[ 'chr22', 1, 49396972, 'hsachr20_22' ],
+															[ 'chr3', 1, 199344050, 'hsachr03' ],
+															[ 'chr4', 1, 191731959, 'hsachr04' ],
+															[ 'chr5', 1, 181034922, 'hsachr05' ],
+															[ 'chr6', 1, 170914576, 'hsachr06' ],
+															[ 'chr7', 1, 158545518, 'hsachr07_21' ],
+															[ 'chr8', 1, 146308819, 'hsachr08' ],
+															[ 'chr9', 1, 136372045, 'hsachr09' ],
+															[ 'chrM', 1, 16569, nil ],
+															[ 'chrX', 1, 153692391, nil ],
+															[ 'chrY', 1, 50286555, nil ]
+														]
+						}
+	# globals
+	exceptionStatus = EXCEPT_OK
+	httpStatus = HTTP_OK
+	err = nil
+
+	# ---------------------------------------------------------------------------
+	# DEFINITIONS
+	# ---------------------------------------------------------------------------
+	def prepForHtml()	# Tell apache we're going to make some html
+		@req.content_type = "text/html"
+		@req.status = 200
+		@req.send_http_header
+	end
+
+	def doRelocate(url)	# Tell apache we want to redirect to a different url
+		@req.content_type = 'text/html'
+		@req.headers_out['Location'] = url
+		@req.status = 302
+		@req.send_http_header
+		exit(Apache::HTTP_MOVED_TEMPORARILY)
+	end
+
+	def paramCheck()
+		@rawRemoteURL = nil
+  	# Check that correct params were provided
+  	if(	@cgi.params['resName'][0].to_s.empty? or
+  			@cgi.params['chr'][0].to_s.empty? or
+  			@cgi.params['start'][0].to_s.empty? or
+  			@cgi.params['stop'][0].to_s.empty?
+  		)
+  		return PARAM_MISSING
+  	else
+  		@chrom = @cgi.params['chr'][0].to_s.strip
+  		@chromStart = @cgi.params['start'][0].to_i
+  		@chromStop = @cgi.params['stop'][0].to_i
+ 			@resName = @cgi.params['resName'][0].to_s.strip
+ 			# Check that resName is one of the official values
+  		unless(@resMap.key?(@resName))
+  			return BAD_NAME_PARAM
+  		else
+  			@resName.untaint	# It's ok
+  		end
+  		# Ok so far
+  		return PARAM_OK
+  	end
+  end
+
+	def lookupChr()
+		@remoteChr = nil
+		lookupStatus = NO_REMOTE_CHR
+		@resMap[@resName].each { |rec|
+			next unless(rec[CHR] == @chrom)
+			if(@chromStart >= rec[START] and @chromStop <= rec[STOP]) # then contained
+				unless(rec[REMOTE_CHR].nil?)
+					@remoteChr = rec[REMOTE_CHR]
+					lookupStatus = LOOKUP_OK
+					break
+				end
+			elsif(@chromStart >= rec[START] and @chromStart <= rec[STOP]) # then start is in this range, at least
+				unless(rec[REMOTE_CHR].nil?)
+					@remoteChr = rec[REMOTE_CHR]
+					lookupStatus = LOOKUP_OK
+					break
+				end
+			else # not here
+				next
+			end
+		}
+		return lookupStatus
+	end
+begin
+
+	# ---------------------------------------------------------------------------
+	# INITIALIZATION
+	# ---------------------------------------------------------------------------
+
+	# ---------------------------------------------------------------------------
+	# DO CHECK/LOAD/CHECK (hierarchical checking)
+	# ---------------------------------------------------------------------------
+	# 1) Grab Params
+	paramStatus = paramCheck()						# Check. Security hole 1 plugged.
+	if(paramStatus == PARAM_OK)
+		# 2) Lookup Remote Chr Name
+		lookupStatus = lookupChr()
+		if(lookupStatus == LOOKUP_OK)
+			# 3) Make remote URL
+			@remoteURL = REMOTE_URL.gsub('%REMOTE_CHR%', @remoteChr)
+			# 4) Relocate to remote URL
+			doRelocate(@remoteURL)
+		end
+	end
+rescue => @err
+	exceptionStatus = EXCEPT_BAD
+end
+
+# ERROR OR "SORRY" IF HERE...NO RELOCATION
+prepForHtml()
+
+%>
+
+<!-- BEGIN: COMMON HTML -->
+<HTML><HEAD>
+<TITLE>Bioinformatics Research Laboratory - Remote URL Relocator</TITLE>
+<LINK REL="stylesheet" HREF="http://style_brl.css" TYPE="text/css">
+</HEAD>
+<BODY BGCOLOR="white">
+<TABLE WIDTH="650" CELLPADDING="0" CELLSPACING="0" BORDER="0">
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0">
+		<TR>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="http://<%= @serverName %>/graphics/brl_logo60.gif" WIDTH="60" HEIGHT="60" ALT="BRL" BORDER="0"></A>
+			</TD>
+			<TD VALIGN="top" ALIGN="left">
+				<A HREF="http://<%= @serverName %>">
+				<IMG SRC="http://<%= @serverName %>/graphics/brl_type60.gif" WIDTH="120" HEIGHT="60" ALT="" BORDER="0"></A>
+				</TD>
+			<TD><IMG SRC="http://<%= @serverName %>/graphics/spacer.gif" WIDTH="20" HEIGHT="1" ALT="" BORDER="0"></TD>
+			<TD VALIGN="bottom" ALIGN="right">
+				<TABLE CELLSPACING="0" CELLPADDING="0" BORDER="0" WIDTH="450">
+				<TR>
+					<TD COLSPAN="4" BACKGROUND="http://<%= @serverName %>/graphics/bluemed1px.gif">
+						<IMG SRC="http://<%= @serverName %>/graphics/spacer.gif" WIDTH="1" HEIGHT="1" ALT="" BORDER="0">
+					</TD>
+				</TR>
+				</TABLE>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+<TR>
+	<TD>
+		<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" WIDTH="100%">
+		<TR>
+			<TD VALIGN="top" WIDTH="30">
+				<IMG SRC="http://<%= @serverName %>/graphics/bluemed1px.gif" HEIGHT="30" WIDTH="30" ALT="" BORDER="0">
+			</TD>
+			<TD WIDTH="10">
+				<IMG SRC="http://<%= @serverName %>/graphics/spacer.gif" HEIGHT="1" WIDTH="10" ALT="" BORDER="0">
+			</TD>
+			<TD>
+				<BR>
+<!-- END: COMMON HTML -->
+
+				<SPAN CLASS="hdr">
+			<%
+				if(	exceptionStatus != EXCEPT_OK or
+						paramStatus != PARAM_OK or
+						lookupStatus == NO_REMOTE_CHR)
+			%>
+					RESOURCE LOCATION ERROR</SPAN>
+					<P>
+					We encountered a <B>problem</B> trying to relocate to the <B>Remote Web Resource</B> you requested:
+					<P>
+					<%
+						if(	exceptionStatus != EXCEPT_OK or
+								paramStatus != PARAM_OK)
+					%>
+							Please contact <A HREF="mailto:brl_admin@brl.bcm.tmc.edu">our admin (brl_admin@brl.bcm.tmc.edu)</A>
+							with the following information (you can copy and paste):
+					<%
+						end
+					%>
+					<UL>
+						<LI>
+						<% if(exceptionStatus != EXCEPT_OK) %>
+							Exception/error thrown:
+							<P>
+							&quot;<%= @req.escape_html(@err.message) %>&quot;<P><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %><P>
+						<% elsif(lookupStatus == NO_REMOTE_CHR) %>
+							<FONT COLOR='red'>Unfortunately, there is no corresponding web-page for <B><%= @chrom %>:<%= @chromStart %>-<%= @chromStop %></B>.</FONT></LI>
+							<LI>This is probably because the remote site doesn't have information for that chromosome.
+						<% elsif(paramStatus == PARAM_MISSING) %>
+							Insufficient parameters provided. (<%= paramStatus %>)
+						<% elsif(paramStatus == BAD_NAME_PARAM) %>
+							The resource name &quot;<%= @resName %>&quot; isn't one of the configured remote resources.
+						<% else %>
+							Unknown Error (?)
+						<% end %>
+						</LI>
+						<%
+						if(	exceptionStatus != EXCEPT_OK or
+								paramStatus != PARAM_OK)
+						%>
+							<LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+						<%
+							end
+						%>
+					</UL>
+			<% end %>
+<!-- BEGIN: COMMON HTML -->
+				<BR>&nbsp;<BR>
+				<A HREF="http://www.bcm.tmc.edu">
+				<IMG SRC="http://<%= @serverName %>/graphics/bcm_logo_for_brl.gif" WIDTH="54" HEIGHT="60" ALT="" BORDER="0"
+					ALIGN="right" VALIGN="top"></A>
+				<CENTER><IMG SRC="http://<%= @serverName %>/graphics/bluemed1px.gif" WIDTH="350" HEIGHT="1" ALT="" BORDER="0"></CENTER>
+				<BR><BR>
+				<SPAN CLASS="footer">&copy;2003 Bioinformatics Research Laboratory</SPAN>
+			</TD>
+		</TR>
+		</TABLE>
+	</TD>
+</TR>
+</TABLE>
+</BODY></HTML>
+<!-- END: COMMON HTML -->

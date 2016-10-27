@@ -1,0 +1,110 @@
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will import microbiome analysis results data obtained for one or more Samples into your output <u>Database</u>.  To store such analysis results for the Sample, we'll need to know:
+          <ul>
+            <li>To what kind of annotation does the data pertain? Genes, pathways, taxa, etc?</li>
+            <li>What type of measurement is it? Simple presence/absence, relative abundance, etc?</li>
+          </ul>
+          <br>&nbsp;<br>
+          For each Gene, Pathway, Taxon, etc, the Samples will have a score.
+          <br>&nbsp;<br>
+          In order for the file to be imported successfully, the file needs to be in a specific, but simple, <i>tab-delimited</i> format:
+          <ul>
+            <li>The first non-blank line of the file must be a <i>column header line</i> in which:
+              <ul>
+                <li>The first character is '#'</li>
+                <li>The first column header is 'name'</li>
+                <li>The remaining column headers are your <i>Sample Name</i></li>
+              </ul>
+            </li>
+            <li>Thus the file is a simple matrix in which each Sample named in the file will have a score for each Gene, Pathway, Taxon, named in the first column.
+              <ul>
+                <li>If a Sample has NO score, you can leave the column blank or put just a dot ('.').</li>
+              </ul>
+            </li>
+            <li>All rows MUST have the same number of fields/columns.</li>
+          </ul>
+          <br>&nbsp;<br>
+          The names of the Genes, Pathways, Taxa, must match those available to the microbiome analysis tools we host. These generally come from well-known repositories and public database sets.
+          <br>&nbsp;<br>
+          You can either drag a file which has already been uploaded via the <u>Transfer File</u> utility or you can select a file to import from your machine. We encourage you to provide compressed files such as  zip, .gz, or .bz2
+          <br>&nbsp;<br>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Either Drag the <u>File</u> into &quot;Input Data&quot;, or leave it empty to select a file from your machine',
+        ],
+        :types              => [ [ 'Files', 'min: 0 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The score data will be imported into the target database.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Select File', "Select the file to be uploaded. Available when no file has been dragged into &quot;Input Data&quot;."],
+          [ 'Type of Annotation', "Pick whether the scores the Sample(s) are for Genes, Pathways, Taxa."],
+          [ 'Type of Metric', "Pick which kind of metric the scores are."],
+          [ 'Submit', "Once you've reviewed the input file, the output destination, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

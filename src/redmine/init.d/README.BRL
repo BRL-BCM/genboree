@@ -1,0 +1,38 @@
+
+A. Setting Up an rc.d Init Script To Run Redmine
+
+The redmine_genbKB_init script provided here is for REFERENCE ONLY.
+- ADAPT it by modifying paths, etc. Possibly removing information only
+  line (like "module list") if you wish.
+- Presumed to be working with an nginx mount-based proxy server.
+- Put your edited version in /etc/init.d/
+- Make sure to use " chkconfig --add {initScript} " to register the service
+  so it starts on boot up.
+- Start it now as root via "/etc/init.d/{initScript} start"
+  . Verify by checking appropriate thin logs for "Listening" line and any errors!
+- Note the urlMount bash variable. Its value needs to match what you use in 
+  nginx [below] AND when configuring Redmine via the UI.
+
+B. Nginx Proxy Server Config
+
+To proxy to your thin service running Redmine, change your nginx/conf/ file.
+
+B.1. In the http{} section define the upstream server:
+
+    /* IP of machine with Redmine thin process. And the port you chose in section A above. */
+    upstream genboreeKB {
+      server    10.15.53.14:3101 ;
+    }
+
+B.2. In the server{} section, add proxying rule:
+
+    rewrite ^/genboreeKB$  /genboreeKB/ permanent ;
+    location ~ ^/genboreeKB.*$ {
+      proxy_pass    http://genboreeKB ;
+      break ;
+    }
+
+
+B.3 Restart nginx to apply. Check logs for any issues.
+
+

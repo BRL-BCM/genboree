@@ -1,0 +1,76 @@
+<HTML>
+<head>
+<title>Genboree - Genomic DNA Download</title>
+<link rel="stylesheet" href="/styles/jsp.css<%=jsVersion%>" type="text/css">
+<meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+</head>
+<BODY>
+<%@ include file="header.incl" %>
+<table width="100%" border="0" cellpadding="2" cellspacing="2">
+<tbody>
+    <tr>
+        <td>
+            <p>&nbsp; <CENTER>
+            <FONT SIZE="4"><B>Edit Annotation</B></FONT>
+          </CENTER><P>
+             <p>&nbsp;</p>
+
+            <table BGCOLOR="navy" width="100%" border="0" cellpadding="0" cellspacing="1">
+                <TR>
+                    <TD>
+                        <table width="100%" border="0" cellpadding="2" cellspacing="1">
+                            <tr>
+                                <form name="deleteAnnotation" action="genboreeEditor.jsp" method="post">
+                                <input type="hidden" name="actionType" id="actionType" value="deleteAnnotation">
+                                <input type="hidden" name="fid" id="fid" value="<%=fid%>">
+                                <input type="hidden" name="uploadId" id="uploadId" value="<%=uploadId%>">
+                                <TD WIDTH="20%" class="form_body" ALIGN="right"> <FONT SIZE="2"><B>Delete
+                                Annotation :</B></FONT> </TD>
+
+                                <td  BGCOLOR="white" > <br>
+                                <input type="submit" name="SubmitDeleteAnnotation" value="Submit">
+                                <br>
+                                </td>
+                                </form>
+                            </tr>
+                            <tr>
+                                <form name="deleteGroupAnnotation" action="genboreeEditor.jsp" method="post">
+                                <input type="hidden" name="actionType" id="actionType" value="deleteGroupAnnotation">
+                                <input type="hidden" name="uploadId" id="uploadId" value="<%=uploadId%>">
+                                <input type="hidden" name="groupName" id="groupName" value="<%=groupName%>">
+                                <input type="hidden" name="typeId" id="typeId" value="<%=typeId%>">
+                                <input type="hidden" name="rid" id="rid" value="<%=rid%>">
+                                <TD WIDTH="20%" class="form_body" ALIGN="right">
+                                    <FONT SIZE="2"><b>Delete Group of Annotations</b></FONT>
+                                </TD>
+                                <td  BGCOLOR="white" >
+                                    <input type="submit" name="SubmitDeleteGroupAnnotation" value="Submit">
+                                </td>
+                                </form>
+                            </TR>
+                         </TABLE>
+                    </td>
+                    </TR>
+                    </TABLE>
+                         <P>
+                    <TABLE BORDER="0">
+                    <TR>
+                        <td>
+                            <input type="button" name="btnClose" id="btnClose" value="Close Window"
+                            class="btn" onClick="window.close();">
+                        </td>
+                    </tr>
+                   </TABLE>
+</table>
+
+            </td>
+            <td width=10></td>
+  					<td class="shadow"></td>
+        </tr>
+
+
+<%@ include file="footer.incl" %>
+
+
+</BODY>
+</HTML>

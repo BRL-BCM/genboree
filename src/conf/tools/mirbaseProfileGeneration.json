@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "mirbaseProfileGeneration",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "miRBase miRNA - Profile Generation",
+    "shortLabel": "miRBase miRNA - Profile Generation",
+    "groupAccessUri": null
+  }
+}

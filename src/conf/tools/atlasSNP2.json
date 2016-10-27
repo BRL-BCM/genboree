@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "atlasSNP2",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Call SNPs by Atlas-SNP2",
+    "shortLabel": "Atlas-SNP2"
+  },
+  "cluster": {
+    "mem": null,
+    "vmem": null,
+    "walltime": "12:00:00",
+    "pvmem": "5858mb"
+  }
+}

@@ -1,0 +1,44 @@
+<table width="100%">
+  <tr>
+    <th>Instructions:</th>
+    <td>
+      <ul>
+        <%  @instructions.each { |instruction| %>
+              <li><%= instruction %></li>
+        <%  } %>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th><%= (@instructionType == :inputs ? "Input types:" : "Output type(s):") %></th>
+    <td>
+      <dl>
+        <%
+          @types.each { |inputType|
+            #$stderr.puts "inputType: #{inputType.inspect}"
+            inputType[0].gsub!(/Host/, "Host (<img class='entityIcon' src='/images/silk/computer.png'>)")
+            inputType[0].gsub!(/Tracks/, "Tracks (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>)")
+            inputType[0].gsub!(/Class/, "Class (<img class='entityIcon' src='/javaScripts/ext-3.2.1/resources/images/default/tree/leaf.gif'>)")
+            inputType[0].gsub!(/Files(?! (?:Dir|Folder))/, "Files (<img class='entityIcon' src='/images/silk/table.png'>)")
+            inputType[0].gsub!(/File(?!s)/, "File (<img class='entityIcon' src='/images/silk/table.png'>)")
+            inputType[0].gsub!(/Files (?:Dir|Folder)/, "Files Folder (<img class='entityIcon' src='/images/silk/folder_table.png'>)")
+            inputType[0].gsub!(/Database(?!s)/, "Database (<img class='entityIcon' src='/images/silk/database.png'>)")
+            inputType[0].gsub!(/Hub(?!s)/, "Hub (<img class='entityIcon' src='/images/silk/layers.png'>)")
+            inputType[0].gsub!(/Sample(?!s|Sets)/, "Sample (<img class='entityIcon' src='/images/workbench/sampleIcon16.png'>)")
+            inputType[0].gsub!(/Samples/, "Samples (<img class='entityIcon' src='/images/workbench/sampleIcon16.png'>)")
+            inputType[0].gsub!(/BioFolder/, "SampleFolder (<img class='entityIcon' src='/images/workbench/sampleFolder16.png'>)")
+            inputType[0].gsub!(/Project(?!s)/, "Project (<img class='entityIcon' src='/images/silk/application_side_tree.png'>)")
+            inputType[0].gsub!(/SampleSets/, "Sample Sets (<img class='entityIcon' src='/images/workbench/sampleSetIcon16.png'>)")
+            inputType[0].gsub!(/RedminePrj/, "Redmine Project(<img class='entityIcon' src='/images/workbench/ruby.png'>)")
+        %>
+              <dt><%= inputType[0] %></dt>
+                <dd><%= inputType[1]%></dd>
+        <%  } %>
+      </dl>
+    </td>
+  </tr>
+  <tr>
+    <th>Can be empty?</th>
+    <td><%= (@beEmpty ? 'YES' : 'NO') %></td>
+  </tr>
+</table>

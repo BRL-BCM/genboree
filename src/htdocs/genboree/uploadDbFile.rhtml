@@ -1,0 +1,217 @@
+<%
+  # ---------------------------------------------------------------------------
+  #
+  # This scripts hadles database file upload submitted from the workbench.
+  # File uploads are handled by nginx which writes the file to disk in tmp.
+  # Nginx then reformats the request params indicating the location of the tmp file.
+  #
+  # In order to accomodate big uploads or uploads that take a long time, we cannot rely on the session
+  # Any relevant information must be included in the form and important validatation done here.
+  #
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'cgi'
+  require 'open3'
+  require 'net/http'
+  require 'uri'
+  require 'fileutils'
+  require 'brl/genboree/constants'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/util/timingUtil'
+  require 'brl/util/convertText'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/abstract/resources/databaseFiles'
+  require 'brl/genboree/helpers/expander'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  include BRL::Genboree::REST
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  @req = Apache.request
+  hostname = @req.server_name
+  context = timer = refUri = nil
+  respStatus = :OK
+  respMsg = ''
+
+  begin
+    # Set up context, includes config file object
+    context = BRL::Genboree::GenboreeContext.new(CGI.new(), ENV)
+    # Set up database Util object
+    dbu = BRL::Genboree::DBUtil.new(context.genbConf.dbrcKey, nil, context.genbConf.dbrcFile)
+    debug = true
+
+    # ---------------------------------------------------------------------------
+    # Set vars from post
+    # ---------------------------------------------------------------------------
+    tmpFilePath = context.cgi["uploadFile.path"].string
+    origFileName = context.cgi["uploadFile.name"].string
+    escOrigFileName = CGI.escape(origFileName)
+    fileApiHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new()
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    gpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+    if(!tmpFilePath.empty? and !origFileName.empty?)
+      wbContextJson = context.cgi["wbContext"].string
+      subdirsFromInput = context.cgi["subdirs"].string
+      # Strip leading and trailing '/'
+      subdirPath = subdirsFromInput.chomp('/')
+      subdirPath = subdirPath[1..-1] if(subdirPath.index('/') == 0)
+      # Escape subdir names
+      subdirPath = subdirPath.split('/').map { |nn| CGI.escape(nn) }.join('/')
+      # Validate subdir names
+      subdirPath.split('/').each { |nn|
+        if(nn.index('.') == 0)
+          respStatus = :ERROR
+          respMsg = "The subdirectory name '#{nn}' is not allowed."
+        end
+      }
+      # Context is sent in a hidden input, parse to get the output.
+      wbContextObj = JSON.parse(wbContextJson)
+      outputRsrc = wbContextObj['outputs'].first
+      userId = wbContextObj['context']['userId']
+      extractArchive = context.cgi['unpack'].string
+      targetUri = URI.parse(dbApiHelper.extractPureUri(ApiCaller.applyDomainAliases(outputRsrc)))
+      #------------------------------------------------
+      # Need to do some validation here, reject if using reserved filenames like 'databaseFiles.json'
+      #-------------------------------------------------
+
+      # Validate origFileName
+      # We accept a load of characters that you normally wouldn't want to use because all files will be url encoded?
+      # however there are a few reserved filenames mainly the index file databaseFiles.json
+      # and we don't want to allow hidden files or directories, reject anything that starts with a '.'  This will also catch '..'
+
+      if(origFileName == BRL::Genboree::Abstract::Resources::DatabaseFiles::DATA_FILE)
+        respStatus = :ERROR
+        respMsg = "The file name '#{origFileName}' is not allowed because this is a reserved system filename."
+      end
+
+      if(origFileName.index('.') == 0)
+        respStatus = :ERROR
+        respMsg = "The file name '#{origFileName}' is not allowed."
+      end
+
+      # TODO: Check if file already exists.  and warn that the file will be overwritten.
+
+      #--------------------------------------------------
+      #  Create directories necessary to store the files
+      #
+      # outputRsrc could be a database or a files resource indicating a subdir base
+      #
+      # Extract /grp/<grp>/db/<db> => $1 and optional subdirs => $2
+      outputRsrc =~ /(\/grp\/[^\/]+\/db\/[^ \/\n\t?]+)(?:\/files(\/[^ \n\t?]+))?/
+      grpDbPath = $1
+
+      #--------------------------------------------------
+      # Create refUri to send back
+      refUri = "http://#{targetUri.host}/REST/v1#{grpDbPath}/file/"
+      refUri += "#{subdirPath}/" if(!subdirPath.empty?)
+      refUri += CGI.escape(origFileName)
+    else
+      $stderr.puts "context.cgi: #{context.cgi.inspect}"
+      respStatus = :ERROR
+      respMsg = "The form parameter uploadFile is not set."
+    end
+
+    # If everything looks ok, proceed.
+    if(respStatus == :OK)
+      if(!tmpFilePath.empty?)
+        # Don't test return value of mv(). It doesn't have one.
+        # (turns out 0 happens if mv on same partition, and 1 happens is mv across partitions but CAN'T RELY ON THIS B/C mv() HAS NO RETURN VALUE!)
+        begin
+          # The target may not be 'this' machine.
+          # If not, make an API call and 'put' the file to real target
+          if(targetUri.host != context.genbConf.machineName and targetUri.host != context.genbConf.machineNameAlias)
+            rsrcPath = "#{URI.parse(refUri).path}/data?"
+            rsrcPath << "gbKey=#{dbApiHelper.extractGbKey(refUri)}&" if(dbApiHelper.extractGbKey(refUri))
+            rsrcPath << "extract=true" if(extractArchive and extractArchive == 'on')
+            apiCaller = WrapperApiCaller.new(targetUri.host, rsrcPath, userId)
+            apiCaller.put({}, File.open(tmpFilePath))
+          else # We are uploading file to the same machine (maybe - need to check whether we're uploading to REMOTE storage on the same machine (which isn't actually on the machine at all!))
+            # Grab group / database name and ID 
+            grpRecs = gpApiHelper.tableRow(gpApiHelper.extractPureUri(outputRsrc))
+            groupId = grpRecs['groupId']
+            dbRecs = dbApiHelper.tableRow(dbApiHelper.extractPureUri(refUri))
+            dbName = dbRecs['databaseName']
+            refseqId = dbRecs['refSeqId']
+            # Set up dbu object
+            dbu.setNewDataDb(dbName)
+            # Check to see whether file is local or remote (on the basis of its top-level directory's remoteStorageConf_id)
+            isLocalFile = false
+            # We're only going to unescape the top-level directory for checking file record if top-level directory exists (not nil) - otherwise, we'll get an error!
+            if(subdirPath.split("/")[0].nil?)
+              topFolderPath = nil
+            else 
+              topFolderPath = CGI.unescape(subdirPath.split("/")[0])
+            end
+            topFolderRecs = dbu.selectFileByDigest(topFolderPath, true)
+            # If top-level storage record is nil or empty, then we are dealing with a local file 
+            if(topFolderRecs.nil? or topFolderRecs.empty?)
+              isLocalFile = true
+            else
+              topFolderRec = topFolderRecs[0]
+              topStorageID = topFolderRec["remoteStorageConf_id"]
+              # If top-level storage ID is 0 or nil, then we are dealing with a local file 
+              if(topStorageID == nil or topStorageID == 0)
+                isLocalFile = true
+              end
+            end
+            # Unless isLocalFile is true, we are dealing with a remote file and have to do an API PUT call.
+            unless(isLocalFile)
+              rsrcPath = "#{URI.parse(refUri).path}/data?"
+              rsrcPath << "gbKey=#{dbApiHelper.extractGbKey(refUri)}&" if(dbApiHelper.extractGbKey(refUri))
+              rsrcPath << "extract=true" if(extractArchive and extractArchive == 'on')
+              apiCaller = WrapperApiCaller.new(targetUri.host, rsrcPath, userId)
+              apiCaller.put({}, File.open(tmpFilePath))
+            # Otherwise, the file is local, and we can take a shortcut (don't have to go through API).
+            else 
+              newFilePath = "#{context.genbConf.gbDataFileRoot}/grp/#{groupId}/db/#{refseqId}"
+              newFilePath << "/#{subdirPath}" if(!subdirPath.empty?)
+              `mkdir -p #{newFilePath}` # Make the dir before adding the file name
+              newFilePath << "/#{escOrigFileName}"
+              $stderr.puts "DEBUG: tmpFilePath: #{tmpFilePath}; newFilePath: #{newFilePath.inspect}"
+              stdin, stdout, stderr = Open3.popen3("sha1sum #{tmpFilePath}") 
+              sha1sum = stdout.readlines[0].split(' ')[0]
+              FileUtils.mv(tmpFilePath, newFilePath, :force => true)
+              FileUtils.chmod(0664, newFilePath)
+              # Check if the file is there, if it is, we will do an update
+              fileToCheck = subdirsFromInput.empty? ? origFileName : "#{subdirsFromInput.chomp("/")}/#{origFileName}"
+              $stderr.puts("fileToCheck: #{fileToCheck.inspect}; subdirsFromInput: #{subdirsFromInput.inspect}")
+              fileRecs = dbu.selectFileByDigest(fileToCheck)
+              if(!fileRecs.nil? and !fileRecs.empty?)
+                fileRec = fileRecs[0]
+                dbu.updateFileByName(fileToCheck, fileRec['label'], fileRec['description'], fileRec['autoArchive'], fileRec['hide'], Time.now(), userId)
+              else
+                dbu.insertFile(fileToCheck, origFileName, nil, 0, 0, Time.now(), Time.now(), userId)
+                fileRecs = dbu.selectFileByDigest(fileToCheck)
+              end
+              # Insert the sha1 of the content of the file
+              dbu.insertFileAttrName('gbDataSha1')
+              dbu.insertFileAttrValue(sha1sum) ;
+              gbSha1AttrId = dbu.selectFileAttrNameByName('gbDataSha1').first['id'] 
+              gbSha1ValueId = dbu.selectFileAttrValueByValue(sha1sum).first['id'] 
+              dbu.insertFile2Attribute(fileRecs[0]['id'], gbSha1AttrId, gbSha1ValueId)  
+            end
+          end
+        rescue => ioerr
+          respStatus = :ERROR
+          error = ioerr.message
+          $stderr.puts "ERROR: FileUtils.mv() or FileUtils.chmod() failed:\n  Error Type: #{ioerr.class}\n  Error Message: #{ioerr.message}\n  Error Trace:\n#{ioerr.backtrace.join("\n")}"
+        end
+      end
+    end
+
+  rescue Exception => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem with uploadDbFile.rhtml.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+    respStatus = :ERROR
+    respMsg = "There has been an error attempting to upload the file. \n\n#{err.message}"
+  end # begin
+
+# Response will be an API like json response
+%><%= "{\"status\": {\"statusCode\": \"#{respStatus.to_s}\", \"msg\": \"#{respMsg}\"}, \"data\" : {\"refUri\": \"#{refUri}\"}}" %>

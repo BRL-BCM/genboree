@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "renameTracks",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Rename Tracks",
+    "shortLabel": "[NOT SET]"
+  }
+}

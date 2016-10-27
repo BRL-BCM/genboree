@@ -1,0 +1,95 @@
+<%
+  require 'cgi'
+%>
+<HTML>
+<head>
+</head>
+<body>
+<P>
+<hr>
+<table cellspacing="1" cellpadding="5" border="1">
+<tr>
+  <th align="left" colspan="3">ENVIRONMENT</th>
+</tr>
+<%
+  ENV.keys.sort{ |aa,bb| aa.downcase<=>bb.downcase}.each { |eName|
+%>
+  <tr>
+    <td><b><%= eName %></td>
+    <td width="20">&nbsp;</td>
+    <td><%= ENV[eName].inspect%></td>
+  </tr>
+<%
+  }
+%>
+</table>
+<P>
+<hr>
+<table cellspacing="1" cellpadding="5" border="1">
+<tr>
+  <th align="left" colspan="3">CGI ENV VARIABLES</th>
+</tr>
+<%
+  cgi = CGI.new()
+  envVars = %w/ auth_type               http_host          remote_ident
+                content_length          http_negotiate     remote_user
+                content_type            http_pragma        request_method
+                gateway_interface       http_referer       script_name
+                http_accept             http_user_agent    server_name
+                http_accept_charset     path_info          server_port
+                http_accept_encoding    path_translated    server_protocol
+                http_accept_language    query_string       server_software
+                http_cache_control      remote_addr
+                http_from               remote_host
+              /
+  envVars.each { |var|
+    var.gsub!(/^http_/, "")
+    varVal = cgi.instance_eval(var)
+%>
+  <tr>
+    <td><b><%= var.upcase %></td>
+    <td width="20">&nbsp;</td>
+    <td><%= CGI.escapeHTML(varVal.to_s) %></td>
+  </tr>
+<%
+  }
+%>
+</table>
+<P>
+<hr>
+<table cellspacing="1" cellpadding="5" border="1">
+<tr>
+  <th align="left" colspan="3">PASSED PARAMETERS</th>
+</tr>
+<%
+  cgi = CGI.new()
+
+  cgi.params.keys.sort{|aa,bb|aa.downcase<=>bb.downcase}.each { |pName|
+%>
+  <tr>
+    <td><b><%= pName %></td>
+    <td width="20">&nbsp;</td>
+<%
+    pValues = cgi.params[pName]
+    pValues.each { |pValue|
+%>
+    <td><%= pValue.inspect %></td>
+<%
+    }
+%>
+    </tr>
+<%
+  }
+%>
+</table>
+<pre>
+  CGI: <%=cgi.class%>
+  Params: <%=cgi.params.inspect%>
+  file: <%=__FILE__%>
+</pre>
+<P>
+<%= CGI.escapeHTML($stdin.inspect) %>
+<%= CGI.escape($stdin.read) %>
+<hr>
+</body>
+</html>

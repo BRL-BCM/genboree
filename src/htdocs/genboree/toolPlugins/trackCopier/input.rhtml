@@ -1,0 +1,313 @@
+
+<%
+  # ##############################################################################
+  # LIBRARIES
+  # - The first 3 are standard for all apps.
+  # ##############################################################################
+  require 'cgi'
+  require 'json'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  require 'brl/genboree/genboreeUtil'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # ##############################################################################
+  # SETUP / INITIALIZATION
+  # ##############################################################################
+
+  # ---------------------------------------------------------------
+  # STANDARD HELPER METHODS
+  # - these appear in most input.rhtml files
+  # - some customization or additions may be necessary
+  # ---------------------------------------------------------------
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  # ---------------------------------------------------------------
+  # IMPORTANT COMMON VARIABLES
+  # - these and maybe some tool-specific ones are standard
+  # ---------------------------------------------------------------
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  @prepped4output = false
+  genbConf = BRL::Genboree::GenboreeConfig.load()
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  #--------------------------------------------------------------------------
+  # GET NAME OF CURRENT GROUP AND DATABASE
+  #--------------------------------------------------------------------------
+  currUserGroupName = wrapper.getCurrGroupName(cgi['groupId'].to_i)
+  currUserDbName = wrapper.getCurrUserDBName(cgi['refSeqId'].to_i) ;
+
+  # ---------------------------------------------------------------
+  # GET FULL group->database->tracks LIST FOR CURRENT USER
+  # ---------------------------------------------------------------
+  userId = cgi['userId'].to_i.untaint
+  templateVersion = GenboreeUtil.getTemplateVersionByRefSeqId(cgi['refSeqId'])
+  groupsDatabasesTracks = GenboreeUtil.getGroupsDatabasesTracksForUser(userId, templateVersion)
+
+  # ---------------------------------------------------------------
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  # - You need to have the list of existing job names
+  # - This would be specific for each group, DB, and tool combination)
+  # ---------------------------------------------------------------
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+<%# --------------------------------------------------------------- %>
+<%# DYNAMIC PAGE-SPECIFIC JAVASCRIPT (usually data) %>
+<%# --------------------------------------------------------------- %>
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation.
+<%# Also create the JavaScript Hash equivalent of groupsDatabasesTracks data structure, needed for the UI. %>
+<script type="text/javascript">
+  var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %> ) ;
+  var TOOL_PARAM_FORM = 'pdw' ;
+  var jsGroupsDatabasesTracks = $H(<%= groupsDatabasesTracks.to_json() %>) ;
+  var escCurrGroupName = '<%=CGI.escape(currUserGroupName)%>' ;
+  var escCurrUserDbName = '<%=CGI.escape(currUserDbName)%>' ;
+  var templateVersion = '<%=templateVersion.nil? ? "none" : templateVersion%>' ;
+</script>
+
+<%# --------------------------------------------------------------- %>
+<%# STYLESHEETS (tool or GUI specific ones, not general Genboree ones %>
+<%# --------------------------------------------------------------- %>
+
+<%# --------------------------------------------------------------- %>
+<%# NEEDED JS FILES (first bunch are standard %>
+<%# --------------------------------------------------------------- %>
+<script type="text/javascript" SRC="/javaScripts/prototype-1.6.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js?jsVer=<%= genbConf.jsVer %>"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/trackCopier/trackCopier.js?jsVer=<%= genbConf.jsVer %>"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2" width="100%">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <center><font size="4"><strong>Track Copier</strong></font></center>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+      <p>
+      This tool copies tracks from one or more databases into the currently selected database. It
+      copies annotations directly, using the same location (eg. chromosome, start, stop); thus it's
+      meant to copy between <i>compatible</i> databses.
+      </p>
+        <UL class="compact4_bigIndent">
+          <li>&middot; <u>Motivation</u>: to directly copy key annotation tracks from one database to another,
+                                          where the databases have directly compatible coordinate systems.
+          </li>
+          <li>&middot; <u>Note</u>: If the current database is based on a template, only source databases based on the the same template
+                                    will be shown. This ensures that the source and destination databases have compatible coordinate systems
+                                    and that copying data doesn't result in nonsensical tracks.
+          </li>
+          <li>&middot; <u>Note</u>: If the current database is not based on a template, then you can <i>attempt</i> to
+                                    copy tracks any source track, but you do so at your own risk: even if a chromosome of the same name
+                                    exists in both databases, the coordinate system might be completely incompatible.
+          </li>
+        </UL>
+      <p>
+    </div>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <a href="mailto:brl_admin@bcm.tmc.edu?subject=Attribute Lifter">brl_admin@bcm.tmc.edu</a>.
+    </font>
+    <p>
+    <%# NEEDED Genboree data to pass to server code that will execute script: %>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER side %>
+    <input type="hidden" id="function" name="function" value="trackCopier">
+
+    <input id="selectedTrackHashStr" name="selectedTrackHashStr" value="" type="hidden"></input>
+
+    <%# END: TOOL DESCRIPTION %>
+
+    <%# --------------------------------------------------------------- %>
+    <%# TOOL GUI sits in a table %>
+    <%# --------------------------------------------------------------- %>
+    <%# Each <tr> (UI section) has two (2) <td>, don't miss any: %>
+    <%# - section header with class="form_body" %>
+    <%# - UI cell with bgcolor="white" that contains 2 columsn: the UI widgets column plus a help icon %>
+    <table bgcolor="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+      <%# BEGIN: JOB NAME ROW %>
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="expnameLabel"><font size="2"><strong>Job Name:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+            </td>
+            <td width="20" align="right" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('expname');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+      <%# Destination Database Row %>
+      <tr>
+        <td width="25%" class="form_body" align="right" valign="top">
+          <span id="destDb"><font size="2"><strong>Destination Database:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <span id="destDb_lbl" name="destDb_lbl">
+                The tracks selected below will be copied from their databases into the following
+                currently-selected group and database:<p>
+                <div style="float:left; padding:0px; margin:0px; width:30%">Group:</div><div style="float:left; width:69%; padding:0px; margin:0px; font-weight:bold; ">&quot;<%=currUserGroupName%>&quot;</div><br>
+                <div style="float:left; padding:0px; margin:0px; width:30%">Database:</div><div style="float:left; width:69%; padding:0px; margin:0px; font-weight:bold; ">&quot;<%=currUserDbName%>&quot;</div>
+                <div style="float:left; padding:0px; margin:0px; width:30%">Template Version:</div><div style="float:left; width:69%; padding:0px; margin:0px; font-weight:bold; "><%=templateVersion.nil? ? "(none)" : ('&quot;' + CGI.escapeHTML(templateVersion) + '&quot;')%></div>
+              </span>
+            </td>
+            <td bgcolor="white" width="20" align="right" valign="top" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('destDb');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+      <%# Condition Row %>
+      <!--
+      <tr>
+        <td width="25%" class="form_body" align="right">
+          <span id="trackLabel"><font size="2"><strong>Condition:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <span id="copySettings_lbl" name="copySettings_lbl">
+                <div style="width:8%; float:left;">
+                  <input type="checkbox" id="copyDisplaySettings" name="copyDisplaySettings" value="true"></input>
+                </div>
+                <div style="width:85%; float:left;">
+                  Copy display &amp; related track settings (such as: color, drawing style, description, links) in addition to the annotation data.
+                </div>
+              </span>
+            </td>
+            <td bgcolor="white" width="20" align="right" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('copySettings');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+      -->
+      <%# Groups/Databases/Tracks to Copy %>
+      <tr>
+        <td width="25%" class="form_body" align="right" valign="top">
+          <span id="trackLabel"><font size="2"><strong>Pick Tracks<br>to Copy From:</strong></font></span>
+        </td>
+        <td bgcolor="white">
+          <table id="trackSelectionTable" name="trackSelectionTable" width="100%" border="0" cellpadding="2" cellspacing="2">
+          <tr>
+            <td>
+              <%  unless(groupsDatabasesTracks.empty?) %>
+                    <b><nowrap>Select the groups(s) from which to copy tracks:</nowrap></b><br>
+                    <span id="grpDbTrack_lbl" name="grpDbTrack_lbl">
+<%
+                      groupsDatabasesTracks.keys.sort { |aa,bb|
+                        xx,yy = aa.downcase, bb.downcase
+                        retVal = (xx<=>yy)
+                        retVal = (aa<=>bb) if(retVal == 0)
+                        retVal
+                      }.each { |groupName|
+                        escGroupName = CGI.escape(groupName)
+%>
+                        <div id="groupDiv<%=escGroupName%>" name="groupDiv<%=escGroupName%>%>" style="margin:0px; padding:0px; white-space:nowrap;">
+                          <input class="groupChkbox" id="groupChkbox~`~<%=escGroupName%>" name="groupChkbox~`~<%=escGroupName%>" value="<%=escGroupName%>" type="checkbox" onclick="dbsDisplay(this)">
+                            Group: &quot;<%=CGI.escapeHTML(groupName)%>&quot;<br/>
+                          </input>
+                          <%# Hidden table for display of attributes%>
+                          <table style="display: none; width:100%;" id="groupParamsTable<%=escGroupName%>">
+                          <tr>
+                            <td style="width: 5%;">&nbsp;</td>
+                            <td style="width: 94%;" id="groupParamCell<%=escGroupName%>">
+                              <div id="groupParamDiv<%=escGroupName%>"></div>
+                            </td>
+                          </tr>
+                          </table>
+                        </div>
+<%
+                      }
+%>
+                    </span>
+              <%  else  %>
+                <font color="red"><b><span id="noTracks1" name="noTracks1">There are no other non-empty databases from which to select data. Plug-in cannot be run.</span></b></font>
+              <%  end %>
+            </td>
+            <td bgcolor="white" width="20" align="right" valign="top" nowrap>
+              <%# HELP: this calls a specific help-display function in your tool's .js %>
+              <a href="javascript:void(0);" onclick="return overlibHelp('tracksToCopy');" >
+                <img src="/images/gHelp1.png" border="0" width="16" height="16">
+              </a>
+            </td>
+          </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<p>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="trackCopier" id="trackCopier" class="btn" value="Submit" >&nbsp;
+<%# Reset not needed%>
+<%# <input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="toolReset();">&nbsp; %>
+<p>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

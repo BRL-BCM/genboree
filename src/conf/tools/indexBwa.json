@@ -1,0 +1,21 @@
+{
+  "info": {
+    "idStr": "indexBwa",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 2,
+    "pvmem": "12gb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Build BWA Index",
+    "shortLabel": "Index BWA",
+    "groupAccessUri": null
+  }
+}
+

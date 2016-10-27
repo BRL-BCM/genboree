@@ -1,0 +1,156 @@
+<div id="layoutContainerDiv">
+
+</div>
+
+<% content_for :header_tags do %>
+  <!--<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+  <script src="http://code.highcharts.com/highcharts.js"></script>
+  <script src="http://code.highcharts.com/modules/exporting.js"></script>-->
+  <script>
+    /* These variables are passed from index() controller method which handles params provided in the URL */
+    var projectId = <%=@project.id%> ;
+    var projectIdentifier = '<%=@project.identifier.gsub(/'/, "\\\\'").html_safe %>' ;
+    var httpResponse = '<%=@httpResponse.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ') %>' ;
+    var collectionList = '<%=@collectionList.to_json.gsub(/'/, "\\\\'").html_safe %>' ;
+    var collection = '<%=@collection.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var docIdentifier = '<%=@docIdentifier.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var displayPropPath = '<%=@prop.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var docVersion = '<%=@docVersion.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var templateId = '<%=@templateId.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var questionnaireId = '<%=@questionnaireId.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var modelVersion = '<%=@modelVersion.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var matchQuery = '<%=@matchQuery.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var matchView = '<%=@matchView.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var matchMode = '<%=@matchMode.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var matchValue = '<%=@matchValue.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
+    var kbName = '<%=@genboreeKb.name.gsub(/'/, "\\\\'").gsub(/\n/, ' ') if(@genboreeKb) %>' ;
+    var gbGroup = '<%=@gbGroup.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ') %>' ;
+    var kbDescription = '<%=@kbDescription.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ') %>' ;
+    var gbHost = '<%=@gbHost.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ') %>' ;
+    var showModelTree = <%=@showModelTree%> ;
+    var showViewGrid = <%=@showViewGrid%> ;
+    var showDocsVersionsGrid = <%=@showDocsVersionsGrid%> ;
+    var showModelVersionsGrid = <%=@showModelVersionsGrid%> ;
+    var createNewDoc = <%=@createNewDoc%> ;
+    var createNewDocWithTemplate = <%=@createNewDocWithTemplate%> ;
+    var createNewDocWithQuestionnaire = <%=@createNewDocWithQuestionnaire%> ;
+    var kbMount = '<%=@kbMount%>' ;
+    var kbDb = '' ;
+<%
+    # Determine value for statsOK global JS variable.
+    noStatsHosts = Setting.plugin_genboree_customizations['no_stats_hosts']
+    if(noStatsHosts and noStatsHosts =~ /\S/)
+      gbHostIdx = (noStatsHosts.index(@gbHost.to_s))
+      statsOK = (gbHostIdx.nil? or gbHostIdx < 0)
+    else # Nothing in the list, any API host can do KB stats.
+      statsOK = true ;
+    end
+%>
+    var statsOK = <%= statsOK %> ;
+  </script>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'ext-theme-classic-all', :plugin => 'genboree_kbs', :id => 'theme' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'funcGrids', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'diffy', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'ext-redmine-adaptor', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'menuBar', :plugin => 'genboree_kbs' %>
+<% end %>
+
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'highcharts', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'exporting', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'ext-all', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'ajax', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'models', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'globals', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'stores', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'misc', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'docHelper', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'questionnaires', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'misc2', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'toolbars', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'funcGrids', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'rowEditing', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'kbStats', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'main', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'editorTreeGrid', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'modelMgr', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'views', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'docVersions', :plugin => 'genboree_kbs' %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= javascript_include_tag 'modelVersions', :plugin => 'genboree_kbs' %>
+<% end %>

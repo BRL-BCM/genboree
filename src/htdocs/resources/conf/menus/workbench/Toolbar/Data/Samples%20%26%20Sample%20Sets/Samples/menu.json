@@ -1,0 +1,22 @@
+[
+  {
+    "text": "Import Samples",
+    "idStr": "samplesImporter",
+    "tooltip": "Import samples in Genboree via tab-delemited files."
+  },
+  {
+    "text": "Edit Samples",
+    "idStr": "editSamples",
+    "tooltip": "Edit samples already imported to Genboree."
+  },
+  {
+    "text": "Delete Samples",
+    "idStr": "deleteSamples",
+    "tooltip": "Delete samples from a database."
+  },
+  {
+    "text": "Sample - File Linker",
+    "idStr": "sampleFileLinker",
+    "tooltip": "Link samples to data files."
+  }
+]

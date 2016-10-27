@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "runExceRpt",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 8,
+    "mem": "45gb",
+    "vmem": "45gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Run exceRpt on Single Sample",
+    "shortLabel": "Run exceRpt on Single Sample",
+    "groupAccessUri": null
+  }
+}

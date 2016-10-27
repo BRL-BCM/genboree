@@ -1,0 +1,75 @@
+div.scrollableText {
+  width:90%;
+  height: 200px;
+  margin: 0, 0,0, 0 px;
+  padding: 0, 0, 0, 0 px ;
+  overflow:scroll;
+}
+
+
+
+div.rowLevelDiv{
+   width:100%;
+   margin-left:1pt;
+   margin-right:2pt;
+   margin-bottom:1pt;
+   margin-top: 1px;
+
+}
+
+input.longInput1 {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+     width: 100%;
+}
+
+input.longInput1 {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+     width: 100%;
+}
+
+
+input.attributeNameRO {
+    font-family: verdana,arial,sans-serif ;
+    font-size: 90%;
+    font-weight: bold;
+    width: 100%;    
+    background-color: #E6e6e6;
+}
+
+div.attributeName{
+    float:left;
+    width:76%;
+    margin-bottom:3pt;
+   margin-top: 5px;
+}
+
+div.attributeValue{
+    float:left;
+    width:98%;
+    margin-bottom:1pt;
+    margin-top: 1px;   
+}
+
+div.attributeNameLong{
+    float:left;
+    width:150px;  
+    margin-bottom:1pt;
+    margin-top: 1px;
+    margin-left: 5px;
+}
+
+div.minusButton{
+    float:left;
+    width:15%;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    margin-bottom:3pt;
+    margin-top: 5px;
+}
+
+.btn1 {
+FONT-SIZE: 90%;
+background-color: #D4D0C8;
+}

@@ -1,0 +1,65 @@
+<%@ page import="
+  org.genboree.util.Util,
+  org.genboree.util.SessionManager"
+%>
+<%
+/**
+ * File:
+ *   include/ajax/databaseBar.incl
+ * Description:
+ *   This AJAX Widget provides a drop down menu that will select the session
+ *   database and display the accurate access level for that database.  This
+ *   widget communicates with ajax/database.jsp to retrieve the access level
+ *   (public / private) for the selected database and set the selected database
+ *   in the current HTTPSession.
+ *   This widget is intended for use with the groupBar AJAX widget because the
+ *   functionality of the two widgets is complimentary.
+ * Dependancies:
+ *   ajax.js
+ *   prototype.js
+ *   include/group.incl
+ * Incompatibilities
+ *   json.js
+ *     Including the "json.js" javascript will break some of the Prototype AJAX
+ *     functionality.
+ */
+%>
+<tr>
+  <td class="form_header">
+    Database
+  </td>
+  <td class="form_header">
+    <select name="rseq_id" id="rseq_id" class="txt" style="width: 30em;"
+    onChange="updateDatabase(this.value, 'databaseAccessLabel');">
+<%
+        String accessLevel = "" ;
+        if(rseqs != null && rseqs.length > 0) 
+        {
+          out.write("<option value=''>--- Please select ---</option>");
+          for(int num = 0; num < rseqs.length; num++)
+          {
+            String sel = "" ;
+            if(rseqs[num].getRefSeqId().equals(SessionManager.getSessionDatabaseId(mys)))
+            {
+              accessLevel = pubGrp.belongsTo(rseqs[num].getRefSeqId()) ? "PUBLIC" : "PRIVATE" ;
+              sel = " selected='selected'";
+            }
+%>
+            <option value="<%= rseqs[num].getRefSeqId() %>"<%= sel %>>
+              <%= Util.htmlQuote(rseqs[num].getRefseqName()) %>
+            </option>
+<%
+          }
+        }
+        else
+        {
+%>
+          <option value="##" selected="selected">--- No Databases ---</option>
+<%
+        }
+%>
+      </select>
+    <span style="color: #ccccff">Access:</span>
+    <span id="databaseAccessLabel"><%= accessLevel %></span>
+  </td>
+</tr>

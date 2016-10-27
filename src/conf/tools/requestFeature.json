@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "requestFeature",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Request Feature",
+    "shortLabel": "[NOT SET]"
+  }
+}

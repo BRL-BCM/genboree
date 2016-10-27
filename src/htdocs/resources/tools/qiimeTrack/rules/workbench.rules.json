@@ -1,0 +1,55 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "jobId": [
+        "^(?:^.+$)$",
+        "Job Id cannot be left blank"
+      ],
+      "minValueCount": [
+        "^(?:^.+$)$",
+        "Min Value Count cannot be left blank"
+      ],
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 2,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ],
+      [
+        "/prj/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 2
+  }
+}

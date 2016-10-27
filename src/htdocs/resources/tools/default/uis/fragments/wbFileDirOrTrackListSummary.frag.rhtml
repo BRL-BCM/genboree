@@ -1,0 +1,72 @@
+<%
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  
+  @fileOrTrackList = [ @fileOrTrackList ] unless(@fileOrTrackList.is_a?(Array) or @fileOrTrackList.nil?)
+  unless(@fileOrTrackList.nil?)
+    # Create URI helpers we'll need
+    dbApiUriHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new(false, false) # assert we won't need a dbu or genbConf (faster if not needed)
+    fileApiUriHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new(false, false) # assert we won't need a dbu or genbConf (faster if not needed)
+    trackApiUriHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(false, false) # assert we won't need a dbu or genbConf (faster if not needed)
+    # Collect subdirs by database
+    subdirsByDb = Hash.new { |hh,kk| hh[kk] = [] }
+    # Collect tracks by database
+    tracksByDb = Hash.new { |hh,kk| hh[kk] = [] }
+    @fileOrTrackList.each { |fileOrTrackUri|
+      dbName = dbApiUriHelper.extractName(fileOrTrackUri)
+      if(fileOrTrackUri =~ BRL::Genboree::REST::Helpers::TrackApiUriHelper::NAME_EXTRACTOR_REGEXP)
+        tracksByDb[dbName] = trackApiUriHelper.extractName(fileOrTrackUri)
+      else
+        subdir = fileApiUriHelper.subdir(fileOrTrackUri)
+        subdirsByDb[dbName] << subdir
+      end
+    }
+  end
+%>
+<table width="100%">
+<tr>
+  <th width="25%">Database</th>
+  <th width="74%">Files Sub-directory/Tracks:</th>
+</tr>
+<%  if(@fileOrTrackList.nil? or @fileOrTrackList.empty?) %>
+    <tr>
+      <td><i>n/a</i></td>
+      <td class="explain"><i>[ None selected ]</i></td>
+    </tr>
+<%
+    else
+      subdirsByDb.keys.sort { |aa,bb| aa.downcase <=> bb.downcase }.each { |dbName|
+        subsubdirsForDb = subdirsByDb[dbName].sort { |aa,bb| aa.downcase <=> bb.downcase }
+%>
+        
+        
+<%
+          subsubdirsForDb.each_index { |ii|
+            subdir = subsubdirsForDb[ii].chomp('?')
+%>
+            <tr>
+<%
+            if(ii == 0)
+%>
+                 <td width="25%" rowspan="<%= (subsubdirsForDb.empty? ? 1 : subsubdirsForDb.size) %>" ><i><%== CGI.unescape(dbName) %></i></td>
+<%
+            end
+%> 
+              <td width="74%" >&raquo; <i><%== CGI.unescape(subdir) %>/</i></td>
+            </tr>
+<%
+          }
+      }
+      tracksByDb.keys.sort { |aa,bb| aa.downcase <=> bb.downcase }.each { |dbName|
+        track = tracksByDb[dbName]
+%>
+            <tr>
+              <td width="25%" rowspan="1"><i><%== CGI.unescape(dbName) %></i></td>
+              <td width="74%" >&raquo; <i><%== CGI.unescape(track) %></i></td>
+            </tr>
+<%
+      }
+    end
+%>
+</table>

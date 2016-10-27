@@ -1,0 +1,58 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH LAYOUT RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+/** Styling for page layout divs. Divs which are columns containing
+ * divs which are wrappers and divs which are wrappers whihc contain
+ * columns which are wrappers of content. */
+
+div.wbWrapper
+{
+  margin: 0 ;
+  position: relative ;
+}
+
+div.wbColumn .wbWrapper {
+  margin-top: 0px ;
+  padding-top: 0px ;
+}
+
+div.wbWrapper .wbColumn {
+  margin-top: 0px ;
+  padding-top: 0px ;
+}
+
+
+div.wbWrapper.left
+{
+  padding: 10px 5px 10px 10px ;
+  margin: 10px 5px 10px 10px ;
+}
+
+div.wbWrapper.right
+{
+  padding: 10px 10px 10px 5px ;
+  margin: 10px 10px 10px 5px ;
+
+}
+
+div.wbColumn.left
+{
+  float: left ;
+  margin: 0 ;
+}
+
+div.wbColumn.right
+{
+  float: right ;
+  margin: 0 ;
+}
+
+div.wbColumn
+{
+  width: 49.9% ;
+  position: relative ;
+  margin: 0 ;
+  padding: 0 ;
+}

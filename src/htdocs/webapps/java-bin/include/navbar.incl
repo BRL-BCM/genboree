@@ -1,0 +1,173 @@
+<%@ page import="java.util.Enumeration" %>
+<%
+    HttpSession tempSession = null ;
+    tempSession = request.getSession() ;
+    String lastBrowser = null ;
+    if(tempSession != null)
+    {
+      lastBrowser = (String) tempSession.getAttribute( "lastBrowserView" ) ;
+    }
+    if( lastBrowser == null )
+    {
+      lastBrowser = "defaultGbrowser.jsp" ;
+    }
+    String __localuserName = (String) tempSession.getAttribute( "username" ) ;
+    boolean __is_public = false ;
+    boolean __is_admin = false ;
+
+    if(__localuserName.equals("Public"))
+    {
+      __is_public = true ;
+    }
+    else if(__localuserName.equals("admin"))
+    {
+      __is_admin = true ;
+    }
+
+    String __myFileName = null ;
+    __myFileName = request.getServletPath() ;
+    __myFileName = __myFileName.replaceAll("^.+/", "/") ;
+    String __changeLogout = null ;
+    int __code = -1 ;
+    String __norm = "nav" ;
+    String __hilit = "nav_selected" ;
+    String[] __pageListUser = {
+                                "/index.jsp","/workbench.jsp","/gbrowser.jsp","/defaultGbrowser.jsp", "/mygenboree.jsp",
+                                "/mygroup.jsp", "/projectManagement.jsp", "/myrefseq.jsp", "/tools.jsp", "/login.jsp",
+                                "/trackOps.jsp", "/trackmgr.jsp", "/linkmgr.jsp", "/trackOpsComplete.jsp", "/trackClassify.jsp"
+                              } ;
+    int[] __idsUser = {0, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 6, 6, 6, 6, 6} ;
+
+    String[] __pageListPublic = {
+                                  "/index.jsp","/gbrowser.jsp","/defaultGbrowser.jsp", "/tools.jsp", "/login.jsp"
+                                } ;
+
+    int[] __idsPublic = {0, 1, 1, 2, 3} ;
+
+    String[] __navLabs = {
+                            "Home", "Workbench", "Browser", "Profile", "Groups", "Projects",
+                            "Databases",  "Tools", "Log&nbsp;Out"
+    } ;
+    String[] __navLabsPublic = {
+                                  "Home", "Browser", "Tools", "Log&nbsp;Out"
+                               } ;
+
+    String[] __normalLinks = {
+                              "index.jsp", "workbench.jsp", lastBrowser, "mygenboree.jsp", "mygroup.jsp", "projectManagement.jsp",
+                              "myrefseq.jsp", "tools.jsp", "login.jsp?rm=logout"
+                             } ;
+
+    String[] __publicLinks = {
+                              "index.jsp", lastBrowser,  "tools.jsp", "login.jsp?rm=logout"
+                             } ;
+
+    String[] __links = null ;
+    String[] __menus = null ;
+
+    if(__is_public)
+    {
+      for(int ii = 0 ; ii < __pageListPublic.length ; ii++)
+      {
+        if( __pageListPublic[ii].indexOf(__myFileName) >= 0 )
+        {
+          __code = __idsPublic[ii] ;
+        }
+      }
+
+      __menus = __navLabsPublic ;
+      __links = __publicLinks ;
+      if(__code == 3)
+      {
+        __changeLogout = request.getParameter("rm") ;
+        if(__changeLogout == null || __changeLogout.indexOf("userloggedin") >= 0 )
+        {
+          __code = 100 ;
+        }
+      }
+    }
+    else
+    {
+      for(int ii = 0 ; ii < __pageListUser.length ; ii++)
+      {
+        if( __pageListUser[ii].indexOf(__myFileName) >= 0 )
+        {
+          __code = __idsUser[ii] ;
+        }
+      }
+      __menus = __navLabs ;
+      __links = __normalLinks ;
+      if(__code == 6)
+      {
+        __changeLogout = request.getParameter("rm") ;
+        if(__changeLogout == null || __changeLogout.indexOf("userloggedin") >= 0 )
+        {
+          __code = 100 ;
+        }
+      }
+    }
+
+    boolean __admin_hilited = false ;
+
+    if( __is_admin )
+    {
+      String[] __admHrefs = {
+                              "userList.jsp", "groupProfile.jsp", "templatemanager.jsp"
+                            } ;
+      String[] __admLabs = {
+                              "Users", "Groups", "Templates"
+                           } ;
+%>
+<table border="0" cellpadding="2" cellspacing="4" width="100%">
+<tr>
+  <td>Administrator&nbsp;only:&nbsp;</td>
+<%
+      for( int ii=0 ; ii < __admHrefs.length ; ii++ )
+      {
+        boolean __is_hilit =  (  __myFileName.indexOf(__admHrefs[ii]) >= 0) ||
+                              (ii==0 &&     __myFileName.indexOf("userProfile.jsp")>=0) ;
+        if( __is_hilit )
+        {
+          __admin_hilited = true ;
+        }
+        String __style = __is_hilit ? "anav_selected" : "anav" ;
+        String __a1 = "<a href=\"" + __admHrefs[ii] + "\" target=\"_top\">" ;
+        String __a2 = "</a>" ;
+        String __f1 = __is_hilit ? "<font color=\"white\">" : "" ;
+        String __f2 = __is_hilit ? "</font>" : "" ;
+
+%>
+  <td class="<%=__style%>"><%=__a1%><%=__f1%><%=__admLabs[ii]%><%=__f2%><%=__a2%></td>
+<%
+      }
+%>
+</tr>
+</table>
+<%
+    }
+
+%>
+<table border="0" cellpadding="2" style="border-spacing: 6px 4px;">
+<tr>
+<%
+    for( int ii=0 ; ii< __menus.length ; ii++ )
+    {
+      String __style = (ii == __code) ? __hilit : __norm  ;
+      String __f1 = (ii == __code) ? "<font color=\"white\">" : "" ;
+      String __f2 = (ii == __code) ? "</font>" : "" ;
+      String __a1 = false ? "" : "<a href=\"" + __links[ii] + "\" target=\"_top\">" ;
+      String __a2 = false ? "" : "</a>" ;
+%>
+  <td class="<%=__style%>"><%=__a1%><%=__f1%><%=__menus[ii]%><%=__f2%><%=__a2%></td>
+<%
+    }
+%>
+  <td class="helpNav">
+    <a class="helpNav" href="showHelp.jsp?topic=top" target="_helpWin">
+    Help<IMG class="helpNavImg" SRC="/images/gHelp3.png" BORDER="0" WIDTH="16" HEIGHT="16">
+    </a>
+  </td>
+  <td style="font-weight: bold; white-space: nowrap; width: 100%; text-align: right;">
+    <a class="btn-landing" href="/site/" target="_blank">Genboree Home</a>
+  </td>
+</tr>
+</table>

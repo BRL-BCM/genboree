@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Download Track",
+    "tooltip": "Download a track from a database.",
+    "idStr": "downloadTracks"
+  },
+  
+  {
+    "text": "Copy/Move Tracks",
+    "tooltip": "Copy/Move tracks to a destination database.",
+    "idStr": "trackCopier"
+  },
+  {
+    "text": "Rename Tracks",
+    "tooltip": "Rename one or more tracks in a database.",
+    "idStr": "renameTracks"
+  },
+  {
+    "text": "Delete Tracks",
+    "tooltip": "Delete one or more tracks from a database.",
+    "idStr": "deleteTracks"
+  },
+  {
+    "text": "Set Style and Color",
+    "tooltip": "Set styles and colors for one or more tracks.",
+    "idStr": "setStyleAndColor"
+  },
+  {
+    "text": "Order Tracks",
+    "tooltip": "Set the sort order of one or more tracks in a database.",
+    "idStr": "orderTracks"
+  },
+  {
+    "text": "Set URL, URL Label and Description",
+    "tooltip": "Set the URL, URL Label and URL Description for one or more tracks in a database.",
+    "idStr": "setUrlDesc",
+    "hidden": false
+  },
+  {
+    "text": "Generate BigWig Files",
+    "tooltip": "Create Bigwig files for existing tracks in Genboree.<br>&nbsp;<br>Creating these is required for viewing your score tracks in the UCSC browser.",
+    "idStr": "bigFiles"
+  },
+  {
+    "text": "Generate BigBed Files",
+    "tooltip": "Create Bigbed files for existing tracks in Genboree.<br>&nbsp;<br>Creating these is required for viewing your annotation tracks in the UCSC browser.",
+    "idStr": "bigBedFiles"
+  },
+  {
+    "text": "Coverage Computation",
+    "tooltip": "Find the base level coverage of a track/file of Interest.",
+    "idStr": "coverage"
+  },
+  {
+    "text": "Edit Attributes",
+    "tooltip": "Edit attributes of a track.",
+    "idStr": "editTrkAttributes",
+    "disabled": true,
+    "hidden": true
+  }
+]
+

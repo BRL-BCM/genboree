@@ -1,0 +1,2630 @@
+<link type="text/css" rel="Stylesheet" media="screen" href="/styles/rubyCode.css">
+<!--
+  Ruby syntax highlighing in HTML done via "syntax" gem and code like this:
+  require 'syntax/convertors/html'
+  conv = Syntax::Convertors::HTML.for_syntax("ruby")
+  jsc = conv.convert(js).gsub(/<pre>/, "<pre class='rubyCode'>").gsub(/%r\{([^\}]+)\}/) { |mm| "&quot;&lt;#{$~[1]}&gt;&quot" }.gsub(/=&gt;/, ":")
+-->
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="99%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;8.C REST API &ndash; Representations&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#intro">8.C.1 Introduction</A>
+  <LI class="compact1_10"><A HREF="#rsrcRepsTable">8.C.2 Resource Representation Table</A>
+  <LI class="compact1_10"><A HREF="#rsrcReps">8.C.3 Resource Representations</A>
+    <UL class="compact1">
+      <LI><A HREF="#commonEnvelope"><FONT CLASS="tocSmall">8.C.3.1 Common Envelope</FONT></A></LI>
+      <LI><A HREF="#dataReps"><FONT CLASS="tocSmall">8.C.3.2 Data Representations</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAPIOverview">8. REST API &ndash; Overview</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restResourceIDs">8.A REST API &ndash; Resource IDs</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restUniformMethods">8.B REST API &ndash; Methods</A></LI>
+	<LI class="compact1_10"><A HREF="showHelp.jsp?topic=restAuthorization">8.D REST API &ndash; Authorization</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="intro">&nbsp;</A><BR>
+    <DIV class="topLabel">
+      <SPAN class="subtopicHeader">8.C.1. Introduction:</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      Genboree resource state is communicated via <i>representations</i> which are text-based formats describing the data.
+    <p class="body">
+      By default, representations are expressed as <a href="http://en.wikipedia.org/wiki/JSON">JSON</a> data structures.
+      JSON is a straight-forward, cheap to generate and parse, non-verbose syntax that is excellent
+      for communicating simple data structures. Furthermore, its syntax is similar to that of many modern programming languages
+      and should look familiar to most developers. Also, as valid Javascript code, it is suitable for Ajax use.
+    <p class="body">
+      <u>Individual resources</u> are typically expressed as JSON <i>hashes</i> (a.k.a. JSON <i>objects</i>), whose keys/properties
+      are named fields appropriate for the specific resource.
+    <p class="body">
+      <u>Collections of resources</u> are expressed as JSON <i>arrays (lists)</i> of individual resources.
+    <p class="body">
+      Support for other syntaxes is also present, to some degree. <a href="http://en.wikipedia.org/wiki/YAML">YAML</a>, for example, which has
+      many of the aforementioned advantages, is fully supported by the API and can be used instead of JSON.
+      XML equivalent syntax is less robust and more verbose, but is supported for resource retrieval. Finally, some
+      resources can be or must be expressed as enhanced <a href="http://www.genboree.org/java-bin/showHelp.jsp?topic=lffFileFormat">LFF</a>,
+      the native Genboree format for genome annotations and entrypoints. Requesting a non-default syntax is done via the
+      optional <span class="genbParam">format</span> parameter.
+    <p class="body">
+      Currently, this help document will focus on the more important issue of the resource data structures, using the
+      default syntax (JSON).
+    </p>
+<HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="rsrcRepsTable">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.C.2 Resource Representation Table</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      The table below indicates the representations for currently exposed resources.
+      New resources will be added over time; if you wish to request a particular syntax or data structure
+      representation for resources of interest, please <a href="mailto:andrewj@bcm.edu?subject=REST API Request">
+      contact us</a>.
+    <p class="body">
+      The <i>representation types</i> in the table encode both a <u>data structure</u> and the supported syntaxes. These types will
+      be encountered in the reference links (in the <span class="genbLabel">refs</span> key) to indicate the type of link,
+      and in node names for XML.
+      <br>
+        <center>
+          <span class="genbFixed">
+            <span class="genbField">{StructureType}</span>_<span class="genbField">{format1}</span>.<span class="genbField">{format2}</span>.<span class="genbField">{format3}</span>
+            <br>
+            e.g. 'TxtList_JSON.YAML.XML'
+          </span>
+        </center>
+    <p class="body">
+      The representation types are <u>clickable links</u> to a detailed description in the next section.
+    <p class="body">
+        <table class="resources" width="100%">
+          <!-- RESOURCE: USERS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_usrs'>&nbsp;</a>Resource: Users</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#UsrPartial">out &raquo; <font color="maroon">UsrPartial_JSON.YAML.XML</font></a> <i>or</i><br>
+              <a href="#UsrDetailed">out &raquo; <font color="maroon">UsrDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grps
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; [ params: <span class="genbParam">detailed</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> <i>or</i><br>
+              <a href="#GrpDetailedList">out &raquo; <font color="maroon">GrpDetailedList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/usr/<span class="genbField">{usr}</span>/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#GrpDetailed">out &raquo; <font color="maroon">GrpDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <!-- RESOURCE: GROUPS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_grps'>&nbsp;</a>Resource: User Groups</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <!-- This should be access to ALL GROUPS and need special server-admin role
+            <tr>
+              <td class="genbFixed" align="center" width="22%">
+                /REST/v1/grps
+              </td>
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  GET
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          -->
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#GrpDetailed">out &raquo; <font color="maroon">GrpDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                PUT &raquo; new name<br>(create or rename)
+              </div>
+            </td>
+            <td class="topAligned">
+              <a href="#GrpDetailed">&nbsp;in &raquo; <font color="maroon">GrpDetailed_JSON.YAML.XML</font></a><br>
+              <a href="#GrpDetailed">out &raquo; <font color="maroon">GrpDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/dbs
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prjs
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new project<br>(name in body)
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a><br>
+                <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usrs
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; [ params: <span class="genbParam">detailed</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> <i>or</i>
+              <br>
+              <a href="#UsrPartialList">out &raquo; <font color="maroon">UsrPartialList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; existing user(s) in group as subscriber<br>
+                  (name in body)
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#TxtList">&nbsp;in &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a><br>
+                <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#UsrPartial">out &raquo; <font color="maroon">UsrPartial_JSON.YAML.XML</font></a> <i>or</i><br>
+              <a href="#UsrDetailed">out &raquo; <font color="maroon">UsrDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; existing user in group as subscriber
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#UsrPartial">out &raquo; <font color="maroon">UsrPartial_JSON.YAML.XML</font></a> <i>or</i><br>
+                <a href="#UsrDetailed">out &raquo; <font color="maroon">UsrDetailed_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+              </td>
+            </tr>
+            <tr class="halfRowTop">
+              <td rowspan="3" class="genbFixed" align="center" width="22%">
+                /REST/v1/grp/<span class="genbField">{grp}</span>/usr/<span class="genbField">{usr}</span>/role
+              </td>
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">GET</div>
+              </td>
+              <td class="topAligned">
+                <a href="#Role">out &raquo; <font color="maroon">Role_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; existing user in group (role in body)
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Role">&nbsp;in &raquo; <font color="maroon">Role_JSON.YAML.XML</font></a><br />
+                <a href="#Role">out &raquo; <font color="maroon">Role_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+              </td>
+            </tr>
+						
+          <tr>
+            <td rowspan=3 class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /unlockedResources
+            </td>
+            <td class="genbFixed topAligned"">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#UnlockedRefList">out &raquo; <font color="maroon">unlockedRefEntityList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  PUT &raquo; set of resources
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#UnlockedRefList">&nbsp;in &raquo; <font color="maroon">unlockedRefEntityList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  DELETE &raquo; set of resources
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#UnlockedRefList">&nbsp;in &raquo; <font color="maroon">unlockedRefEntityList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>						
+						
+          <!-- RESOURCE: DATABASES -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: User Databases</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+				
+					<tr class="halfRowTop">
+						<td rowspan="2" class="genbFixed" align="center" width="22%">
+						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>
+						</td>
+						<td class="genbFixed topAligned">
+							<div class="genbMethodDesc">GET</div>
+						</td>
+						<td class="topAligned">
+							<a href="#Role">out &raquo; <font color="maroon">DbDetailed_JSON.YAML.XML</font></a>
+						</td>
+					</tr>
+					<tr class="halfRowMiddle">
+						<td class="genbFixed topAligned">
+							<div class="genbMethodDesc">
+								PUT &raquo; new database [ params: <span class="genbParam">templateName</span> ] 
+							</div>
+						</td>
+						<td class="topAligned">
+							<a href="#Role">&nbsp;in &raquo; <font color="maroon">DbDetailed_JSON.YAML.XML</font></a><br />
+							<a href="#Role">out &raquo; <font color="maroon">DbDetailed_JSON.YAML.XML</font></a>
+						</td>
+					</tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/eps
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#EpDetailedList">out &raquo; <font color="maroon">EpDetailedList_JSON.YAML.XML</font></a> <i>or</i>
+              <br>
+              <a href="#EpList">out &raquo; <font color="maroon">EpList_LFF</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new entrypoints
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#EpDetailedList">&nbsp;in &raquo; <font color="maroon">EpDetailedList_JSON.YAML.XML</font></a> <i>or</i>
+              <br>
+              <a href="#EpList">&nbsp;in  &raquo; <font color="maroon">EpList_LFF</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/trks
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; [ params: <span class="genbParam">detailed</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> <i>or</i>
+              <br>
+              <a href="#TrkDetailedList">out &raquo; <font color="maroon">TrkDetailedList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/seq
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#fasta">out &raquo; <font color="maroon">FASTA</font></a>
+            </td>
+          </tr>
+          <!-- RESOURCE: DATABASE FILES -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_dbs'>&nbsp;</a>Resource: Database Files</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/files
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#DbFileList">out &raquo; <font color="maroon">dbFileEntityList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+				
+          <tr>
+            <td rowspan=3 class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>
+            </td>
+            <td class="genbFixed topAligned"">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#DbFile">out &raquo; <font color="maroon">dbFileEntity_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new file details
+                </div>
+              </td>
+              <td class="topAligned">
+              <a href="#DbFile">&nbsp;in &raquo; <font color="maroon">dbFileEntity_JSON.YAML.XML</font></a><br />
+              <a href="#DbFile">out &raquo; <font color="maroon">dbFileEntity_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  DELETE &raquo; delete the file
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>		
+
+					<tr class="halfRowTop">
+						<td rowspan="2" class="genbFixed" align="center" width="22%">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/data
+						</td>
+						<td class="genbFixed topAligned">
+							<div class="genbMethodDesc">GET &raquo; the file contents</div>
+						</td>
+						<td class="topAligned">
+							<a href="#Role">out &raquo; <font color="maroon">FILE DATA</font></a>
+						</td>
+					</tr>
+					<tr class="halfRowMiddle">
+						<td class="genbFixed topAligned">
+							<div class="genbMethodDesc">
+								PUT &raquo; the file contents
+							</div>
+						</td>
+						<td class="topAligned">
+							<a href="#Role">&nbsp;in &raquo; <font color="maroon">FILE DATA</font></a>
+						</td>
+					</tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/label
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="3">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/description
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned"">
+              <div class="genbMethodDesc">
+                DELETE &raquo; delete the description
+              </div>
+            </td>
+            <td class="topAligned">
+              &nbsp;
+            </td>
+          </tr>		          
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/date
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/archived
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/autoArchive
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+					
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="2">
+  						/REST/v1/grp/<span class="genbField">{grp}</span>/db/<span class="genbField">{db}</span>/file/<span class="genbField">{fileName}</span>/hide
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+          <tr>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; new value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              <br>
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          
+          <!-- RESOURCE: PROJECTS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_prjs'>&nbsp;</a>Resource: User Projects</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span>/prj/<span class="genbField">{prj}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new name;<br>i.e. create, rename <i>or</i> copy
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a> or<br>
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Ref_JSON.YAML.XML</font></a> (ref to another project for copy)<br>
+                <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+					
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/title
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new title
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/description
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new description
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/customContent
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new content
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/news
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#PrjNewsList">out &raquo; <font color="maroon">PrjNewsList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new news list
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#PrjNewsList">&nbsp;in &raquo; <font color="maroon">PrjNewsList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/links
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#PrjLinkList">out &raquo; <font color="maroon">PrjLinkList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new links list
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#PrjLinkList">&nbsp;in &raquo; <font color="maroon">PrjLinkList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /prj/<span class="genbField">{prj}</span>/quickLinks
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#PrjQLinkList">out &raquo; <font color="maroon">PrjQLinkList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new quick links list
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#PrjQLinkList">&nbsp;in &raquo; <font color="maroon">PrjQLinkList_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <!-- RESOURCE: ENTRYPOINTS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_eps'>&nbsp;</a>Resource: Entrypoints (e.g. chromosomes)</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%" rowspan="3">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/ep/<span class="genbField">{ep}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#EpDetailedList">out &raquo; <font color="maroon">EpDetailed_JSON.YAML.XML</font></a> <i>or</i><br>
+              <a href="#EpList">out &raquo; <font color="maroon">EpList_LFF</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; add new entrypoints 
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#EpDetailedList">&nbsp;in &raquo; <font color="maroon">EpDetailed_JSON.YAML.XML</font></a> <i>or</i><br>
+								<a href="#EpList">&nbsp;in &raquo; <font color="maroon">EpList_LFF</font></a>
+              </td>
+            </tr>						
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">&nbsp;
+              </td>
+            </tr>		
+          <!-- RESOURCE: TRACKS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_trks'>&nbsp;</a>Resource: Annotation Tracks</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; [ params: <span class="genbParam">detailed</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a> <i>or</i>
+              <br>
+              <a href="#TrkDetailed">out &raquo; <font color="maroon">TrkDetailed_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new name;<br>i.e. create or rename
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /url
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new URL
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /urlLabel
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new URL Label
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /description
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new description
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /templateUrl
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+							
+          <tr class="halfRowTop">
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /templateUrlLabel
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+						
+          <tr class="halfRowTop">
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /templateDescription
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /style
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new user defined style
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /defaultStyle
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new group default style
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /color
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new user defined color
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /defaultColor
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new group default color
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /display
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new user defined display
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /defaultDisplay
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new group default display
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /rank
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new user defined sort order
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /defaultRank
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new group default sort order
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /classes
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /annoAttributes
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+
+          <tr>
+            <td rowspan=3 class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /links
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TrkLinkList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; set of links
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#Txt">&nbsp;in &raquo; <font color="maroon">TrkLinkList_JSON.YAML.XML</font></a> or<br>
+                <a href="#Ref">&nbsp;in &raquo; <font color="maroon">Ref_JSON.YAML.XML (containing ref to templateLinks)</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+						
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /templateLinks
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TrkLinkList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+
+          <tr>
+            <td rowspan=3 class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /bigBed
+            </td>
+            <td class="genbFixed topAligned"">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              out &raquo; bigbed file (binary)
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  PUT 
+                </div>
+              </td>
+              <td class="topAligned">
+                initiates process to create bigbed file
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+          <tr>
+            <td rowspan=3 class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /bigWig
+            </td>
+            <td class="genbFixed topAligned"">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              out &raquo; bigwig file (binary)
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  PUT 
+                </div>
+              </td>
+              <td class="topAligned">
+                initiates process to create bigwig file
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned"">
+                <div class="genbMethodDesc">
+                  DELETE
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+
+
+						
+          <!-- RESOURCE: TRACK ATTRIBUTES -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Track Attributes</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /attributes
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> or<br />
+              <a href="#TrkAttrDetailedList">out &raquo; <font color="maroon">TrkAttrDetailedList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>					
+					
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/value
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowMiddle">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                PUT &raquo; new value
+              </div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">&nbsp;in &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                DELETE
+              </div>
+            </td>
+            <td class="topAligned">
+              &nbsp;
+            </td>
+          </tr>
+											
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/display
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#AttrDisplay">out &raquo; <font color="maroon">AttrDisplay_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new user defined display settings
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#AttrDisplay">&nbsp;in &raquo; <font color="maroon">AttrDisplay_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+            <tr class="halfRowBottom">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  DELETE 
+                </div>
+              </td>
+              <td class="topAligned">
+                &nbsp;
+              </td>
+            </tr>
+											
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span>/attribute/<span class="genbField">{attribute}</span>/defaultDisplay
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#AttrDisplay">out &raquo; <font color="maroon">AttrDisplay_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+            <tr class="halfRowMiddle">
+              <td class="genbFixed topAligned">
+                <div class="genbMethodDesc">
+                  PUT &raquo; new group default display settings
+                </div>
+              </td>
+              <td class="topAligned">
+                <a href="#AttrDisplay">&nbsp;in &raquo; <font color="maroon">AttrDisplay_JSON.YAML.XML</font></a>
+              </td>
+            </tr>
+
+
+
+          <!-- RESOURCE: ANNOTATIONS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Annotations</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /annos
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; [ params: <span class="genbParam">landmark</span>, <span class="genbParam">layoutName</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">&nbsp;in &raquo; <font color="maroon">Layout_JSON.YAML.XML</font></a><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(only when format=layout)<br>
+              <a href="#AnnoList">out &raquo; <font color="maroon">AnnoList_LFF.LAYOUT</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trks<br>
+              /annos
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; annos in tracks
+                <br>
+                [ params: <span class="genbParam">landmark</span>, <span class="genbParam">layoutName</span> ]
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">&nbsp;in &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List of Track names<br>
+              <a href="#AnnoList">out &raquo; <font color="maroon">AnnoList_LFF.LAYOUT</font></a>
+            </td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/trk/<span class="genbField">{trk}</span><br>
+              /annos/count
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET 
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Count">out &raquo; <font color="maroon">Count_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <!-- RESOURCE: TABULAR LAYOUTS -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Tabular Layouts</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos<br>
+              /layout/<span class="genbField">{layout}</span><br>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Layout">out &raquo; <font color="maroon">Layout_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowMiddle">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                PUT &raquo; insert / update layout
+              </div>
+            </td>
+            <td class="topAligned">
+              <a href="#Layout">&nbsp;in &raquo; <font color="maroon">Layout_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                DELETE
+              </div>
+            </td>
+            <td class="topAligned">
+              &nbsp;
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos<br>
+              /layout/<span class="genbField">{layout}</span><br>
+              /attribute/<span class="genbField">{attribute}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; change layout attribute
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">in &raquo; <font color="maroon">Txt.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/annos<br>
+              /layouts
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> or<br>
+              <a href="#LayoutList">out &raquo; <font color="maroon">LayoutList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; insert layout
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Layout">in &raquo; <font color="maroon">Layout_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+
+          <!-- RESOURCE: STUDIES -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Studies</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="2" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/studies
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; list all studies
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#TxtList">out &raquo; <font color="maroon">TxtList_JSON.YAML.XML</font></a> or<br>
+              <a href="#StudyList">out &raquo; <font color="maroon">StudyList_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                PUT &raquo; insert / update study
+              </div>
+            </td>
+            <td class="topAligned">
+              <a href="#Study">&nbsp;in &raquo; <font color="maroon">Study_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span><br>
+              /study/<span class="genbField">{study}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Study">out &raquo; <font color="maroon">Study_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowMiddle">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                PUT
+              </div>
+            </td>
+            <td class="topAligned">
+              <a href="#Study">&nbsp;in &raquo; <font color="maroon">Study_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowMiddle">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+                DELETE
+              </div>
+            </td>
+            <td class="topAligned">
+              &nbsp;
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td rowspan="3" class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span><br>
+              /study/<span class="genbField">{study}</span><br>
+              /attribute/<span class="genbField">{attribute}</span>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">out &raquo; <font color="maroon">Txt_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowMiddle">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								PUT &raquo; change a study attribute value
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#Txt">in &raquo; <font color="maroon">Txt.YAML.XML</font></a>
+            </td>
+          </tr>
+          <tr class="halfRowBottom">
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								DELETE &raquo; remove a User-Defined attribute
+							</div>
+            </td>
+            <td class="topAligned">
+              &nbsp;
+            </td>
+          </tr>
+
+          <!-- RESOURCE: Queryable -->
+          <tr>
+            <td class="category" colspan="3"><a name='rsrcTable_annos'>&nbsp;</a>Resource: Queryable</td>
+          </tr>
+          <tr>
+            <td class="colHeader" align="center" width="22%">Resource Path<br>(<span class="genbField">rsrcPath</span>)</td>
+            <td class="colHeader" align="center" width="28%">Method<br>Type</td>
+            <td class="colHeader" align="left">Representation Type<br>(<span class="genbField">repType</span>)</td>
+          </tr>
+          <tr>
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /queryable<br><br>
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span>/queryable<br><br>
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET &raquo; list all queryable resources
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#QueryableInfoList">out &raquo; <font color="maroon">QueryableInfoList_JSON.YAML.XML</font></a><br>
+            </td>
+          </tr>
+          <tr class="halfRowTop">
+            <td class="genbFixed" align="center" width="22%">
+              /REST/v1/grp/<span class="genbField">{grp}</span><br>
+              /db/<span class="genbField">{db}</span><br>
+              /<span class="genbField">{*}</span>/queryable
+            </td>
+            <td class="genbFixed topAligned">
+              <div class="genbMethodDesc">
+								GET
+							</div>
+            </td>
+            <td class="topAligned">
+              <a href="#QueryableInfo">out &raquo; <font color="maroon">QueryableInfo_JSON.YAML.XML</font></a>
+            </td>
+          </tr>
+        </table>
+      </p>
+<HR class="sep">
+<!-- TOPIC -->
+  <!--   Topic Header -->
+    <A NAME="rsrcReps">&nbsp;</A>
+    <DIV class="topLabel">
+    	<SPAN class="subtopicHeader">8.C.3. Resource Representations</SPAN>
+    </DIV>
+    <DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+  <!--   Topic Content -->
+    <p class="body">
+      Most Genboree resources have data structure-based representations that can be
+      formated using JSON syntax, YAML syntax, and in some cases XML syntax. A minority
+      have specific formats that are more appropriate, such as LFF for annotations
+      and FASTA for DNA sequence.
+    <p class="body">
+      The current representations listed below are expressed in the default <i>JSON</i> syntax.
+    </p>
+    <!--      SUB-TOPIC -->
+    <!--      Sub-topic header -->
+      <A NAME="commonEnvelope">&nbsp;</A>
+      <DIV class="subsubtopicHeader">
+        8.C.3.1 Common Envelope:
+      </DIV>
+    <!--   Sub-topic content -->
+      <p class="body">
+        All <i>data structure</i> representations are wrapped in a simple <i>envelope</i> that
+        provides status information under the <span class="genbLabel">status</span> key and
+        the data structure itself under the <span class="genbLabel">data</span> key.
+        <p class="body">
+        <a name='commonEnvelope'>&nbsp;</a><i><u>Common Envelope:</u></i><br>
+
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">data</span><span class="punct">&quot;</span> <span class="punct">=&gt;</span> <span class="punct">&lt;</span><span class="regex">jsonRepresentation</span><span class="punct">&gt;,</span>     <span class="comment"># One of the data strcutures below</span>
+  <span class="punct">&quot;</span><span class="string">status</span><span class="punct">&quot;</span> <span class="punct">=&gt;</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">statusCode</span><span class="punct">&quot;</span> <span class="punct">=&gt;</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>        <span class="comment"># Status code as -text-.</span>
+    <span class="punct">&quot;</span><span class="string">msg</span><span class="punct">&quot;</span> <span class="punct">=&gt;</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;</span>                <span class="comment"># Status msg. Useful if something went wrong.</span>
+  <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+    <p class="body">
+      <ul class="compact2">
+        <li>- <i>The non-data structure representations (LFF, FASTA, etc) are NOT wrapped in the common envelope.</i></li>
+        <li>- <i>The value for the <span class="genbLabel">data</span> key can <span class="genbLabel">null</span> if there is an error.</i></li>
+        <li>- <i>When sending data to the server, the <span class="genbLabel">status</span> key will be ignored (it can be omitted).</i></li>
+      </ul>
+    </p>
+    <!--      SUB-TOPIC -->
+    <!--      Sub-topic header -->
+      <A NAME="dataReps">&nbsp;</A>
+      <DIV class="subsubtopicHeader">
+        8.C.3.2 Data Representations:
+      </DIV>
+    <!--   Sub-topic content -->
+      <p class="body">
+        These data structures correspond to specific representations referred to in the
+        <a href="#rsrcRepsTable">table above</a>. The data structure goes in place of the <span class="genbLabel">jsonRepresentation</span>
+        place-holder in the <a href="#commonEnvelope">Common Envelope</a> above.
+        <p class="body">
+        <a name='Count'>&nbsp;</a><i><u>Count</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">Count_JSON.YAML.XML</span> )</span><br>
+<!-- Count -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">count</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&lt;</span><span class="regex">value</span><span class="punct">&gt;</span>                <span class="comment"># The count (an integer)</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='Txt'>&nbsp;</a><i><u>Text</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">Txt_JSON.YAML.XML</span> )</span><br>
+<!-- Text -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">text</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>              <span class="comment"># The text value.</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>                         <span class="comment"># Link(s) to more info, if available, keyed by repType.</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;&lt;</span><span class="regex">repType</span><span class="punct">&gt;&quot</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot</span>
+  <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='TxtList'>&nbsp;</a><i><u>Text List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TxtList_JSON.YAML.XML</span> )</span><br>
+<!-- Text List -->
+<pre class='rubyCode'><span class="punct">[</span>                                  <span class="comment"># List of <a href="#Txt">Txt</a> objects.</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">text</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>            <span class="comment"># The text value</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>                       <span class="comment"># Link(s) to more info, if available, keyed by repType.</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;&lt;</span><span class="regex">repType</span><span class="punct">&gt;&quot</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot</span>
+    <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='Ref'>&nbsp;</a><i><u>Ref</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">Ref_JSON.YAML.XML</span> )</span><br>
+<!-- Ref -->
+<pre class='rubyCode'>
+<span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&lt;</span><span class="regex">value</span><span class="punct">&gt;</span>                <span class="comment"># The reference URL to an API resource</span>
+<span class="punct">}</span>
+</pre>
+
+
+        <br>
+        <p class="body">
+        <a name='UnlockedRefList'>&nbsp;</a><i><u>Unlocked Ref List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UnlockedRefList_JSON.YAML.XML</span> )</span><br>
+<!-- Unlocked Ref List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>                                  <span class="comment"># List of <a href="#Txt">Txt</a> objects.</span>	
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&lt;</span><span class="regex">value</span><span class="punct">&gt;</span>                <span class="comment"># The reference URL to an API resource</span>
+    <span class="punct">&quot;</span><span class="string">key</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&lt;</span><span class="regex">value</span><span class="punct">&gt;</span>                <span class="comment"># The unlock key for the API resource</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='UsrDetailed'>&nbsp;</a><i><u>User [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UsrDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- User [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">login</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">login</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">firstName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">firstName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">lastName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">lastName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">institution</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">institution</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">telephone</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">telephone</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">email</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">email</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='UsrDetailedList'>&nbsp;</a><i><u>User [Detailed] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UsrDetailedList_JSON.YAML.XML</span> )</span><br>
+<!-- User [Detailed] List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">login</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">login</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">firstName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">firstName</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">lastName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">lastName</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">institution</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">institution</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">telephone</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">telephone</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">email</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">email</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='UsrPartial'>&nbsp;</a><i><u>User [Partial]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UsrPartial_JSON.YAML.XML</span> )</span><br>
+<!-- User [Partial] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">login</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">login</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">firstName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">firstName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">lastName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">lastName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">institution</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">institution</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">email</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">email</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='UsrPartialList'>&nbsp;</a><i><u>User [Partial] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UsrPartialList_JSON.YAML.XML</span> )</span><br>
+<!-- User [Parial] List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">login</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">login</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">firstName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">firstName</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">lastName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">lastName</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">institution</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">institution</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">email</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">email</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='GrpDetailed'>&nbsp;</a><i><u>Group [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">GrpDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- Group [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">groupName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">description</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='GrpDetailedList'>&nbsp;</a><i><u>Group [Detailed] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">GrpDetailedList_JSON.YAML.XML</span> )</span><br>
+<!-- Group [Detailed] List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">groupName</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">description</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='Role'>&nbsp;</a><i><u>Role</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">Role_JSON.YAML.XML</span> )</span><br>
+<!-- Role -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">role</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">roleName</span><span class="punct">&gt;&quot;,</span>               <span class="comment"># Must be: subscriber, author or administrator</span>
+  <span class="punct">&quot;</span><span class="string">permissionBits</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>        <span class="comment"># currently unimplemented</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+
+        <br>
+        <p class="body">
+        <a name='DbDetailed'>&nbsp;</a><i><u>Database [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">DbDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- Database [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">databaseName</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refSeqId</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">refSeqId</span><span class="punct">&gt;&quot;,</span>           <span class="comment"># refSeqId is a unique id. For use in composing browser URLs, etc.
+  <span class="punct">&quot;</span><span class="string">species</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">species</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">version</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">version</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">description</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">entrypoints</span><span class="punct">&quot;</span> <span class="punct">:</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">count</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>               <span class="comment"># Count of ALL the entrypoints</span>
+    <span class="punct">&quot;</span><span class="string">entrypoints</span><span class="punct">&quot;</span> <span class="punct">:</span>                    <span class="comment"># List of <a href="#EpDetailed">EpDetailed</a> objects.</span>
+    <span class="punct">[</span>                                  <span class="comment"># - can be a -partial- list if there are lots (&gt;100)</span>
+      <span class="punct">{</span>
+        <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+        <span class="punct">&quot;</span><span class="string">length</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot</span> <span class="punct">,</span>
+        <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>                       <span class="comment"># Link(s) to more info, if available, keyed by repType.</span>
+        <span class="punct">{</span>
+          <span class="punct">&quot;</span><span class="string">EpDetailed_JSON.YAML.XML</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot</span>   <span class="comment"># Link to the entrypoint resource itself.</span>
+        <span class="punct">}</span>
+      <span class="punct">},</span>
+      <span class="punct">...</span>
+    <span class="punct">]</span>
+  <span class="punct">},</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='EpDetailed'>&nbsp;</a><i><u>Entrypoint/Chromosome [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">EpDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- Entrypoint/Chromosome [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">length</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot</span> <span class="punct">,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='EpDetailedList'>&nbsp;</a><i><u>Entrypoint/Chromosome [Detailed] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">DbDetailedList_JSON.YAML.XML</span> )</span><br>
+<!-- Entrypoint/Chromosome [Detailed] List -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">count</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>                 <span class="comment"># Count of ALL the entrypoints</span>
+  <span class="punct">&quot;</span><span class="string">entrypoints</span><span class="punct">&quot;</span> <span class="punct">:</span>                      <span class="comment"># List of <a href="#EpDetailed">EpDetailed</a> objects.</span>
+  <span class="punct">[</span>                                    <span class="comment"># - can be a -partial- list if there are lots (&gt;100)</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">length</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot</span> <span class="punct">,</span>
+      <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>                         <span class="comment"># Link(s) to more info, if available, keyed by repType.</span>
+      <span class="punct">{</span>
+        <span class="punct">&quot;</span><span class="string">EpDetailed_JSON.YAML.XML</span><span class="punct">&quot</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot</span>      <span class="comment"># Link to the entrypoint resource itself.</span>
+    <span class="punct">}</span>
+   <span class="punct">...</span>
+  <span class="punct">]</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='TrkDetailed'>&nbsp;</a><i><u>Track [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- Track [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">typeA</span><span class="punct">&gt;:&lt;</span><span class="regex">subtypeB</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">urlLabel</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">annoAttributes</span><span class="punct">&quot;</span> <span class="punct">:</span>                      <span class="comment"># List of attribute names associated with track (if any)</span>
+  <span class="punct">[</span>                                   <span class="comment"># . list of <a href="#Txt">Txt</a> objects</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">text</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+    <span class="punct">},</span>
+  <span class="punct">...</span>
+  <span class="punct">],</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='TrkDetailedList'>&nbsp;</a><i><u>Track [Detailed] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkDetailedList_JSON.YAML.XML</span> )</span><br>
+<!-- Track [Detailed] List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">typeA</span><span class="punct">&gt;&quot:&quot;&lt;</span><span class="regex">subtypeB</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">urlLabel</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">classes</span><span class="punct">&quot;</span> <span class="punct">:</span>                      <span class="comment"># List of classes (categories) associated with track (if any)</span>
+    <span class="punct">[</span>                                <span class="comment"># . list of <a href="Txt">Txt</a> objects</span>
+      <span class="punct">{</span>
+        <span class="punct">&quot;</span><span class="string">text</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+        <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+      <span class="punct">},</span>
+      <span class="punct">...</span>
+    <span class="punct">],</span>
+    <span class="punct">&quot;</span><span class="string">annoAttributes</span><span class="punct">&quot;</span> <span class="punct">:</span>                   <span class="comment"># List of attribute names associated with track (if any)</span>
+    <span class="punct">[</span>                                <span class="comment"># . list of <a href="Txt">Txt</a> objects</span>
+      <span class="punct">{</span>
+        <span class="punct">&quot;</span><span class="string">text</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;</span>
+        <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+      <span class="punct">},</span>
+      <span class="punct">...</span>
+    <span class="punct">],</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">TrkDetailed_JSON.YAML.XML</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot</span>      <span class="comment"># Link to the track resource itself.</span>
+    <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+ 
+        <br>
+        <p class="body">
+        <a name='TrkLinkDetailed'>&nbsp;</a><i><u>Track Link</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkLink_JSON.YAML.XML</span> )</span><br>
+<!-- Track Link  -->
+<pre class='rubyCode'>
+<span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">linkText</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+ 
+        <br>
+        <p class="body">
+        <a name='TrkLinkDetailedList'>&nbsp;</a><i><u>Track Link List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkLinkList_JSON.YAML.XML</span> )</span><br>
+<!-- Track Link List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">linkText</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+ 
+        <br>
+        <p class="body">
+        <a name='AttrDisplay'>&nbsp;</a><i><u>Attribute Display</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">AttrDisplay_JSON.YAML.XML</span> )</span><br>
+<!-- Attribute Display -->
+<pre class='rubyCode'>
+<span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">color</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">rank</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">flags</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+ 
+        <br>
+        <p class="body">
+        <a name='TrkAttrDetailed'>&nbsp;</a><i><u>Track Attribute [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkAttrDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- Track Attribute -->
+<pre class='rubyCode'>
+<span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">value</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">display</span><span class="punct">&quot;</span> <span class="punct">:</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">color</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">rank</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">flags</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">}</span>
+  <span class="punct">&quot;</span><span class="string">defaultDisplay</span><span class="punct">&quot;</span> <span class="punct">:</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">color</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">rank</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">flags</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">}</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+ 
+        <br>
+        <p class="body">
+        <a name='TrkAttrDetailedList'>&nbsp;</a><i><u>Track Attribute [Detailed] List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">TrkAttrDetailedList_JSON.YAML.XML</span> )</span><br>
+<!-- Track Attribute List -->
+<pre class='rubyCode'>
+<span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">value</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">display</span><span class="punct">&quot;</span> <span class="punct">:</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">color</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">rank</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">flags</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+    <span class="punct">}</span>
+    <span class="punct">&quot;</span><span class="string">defaultDisplay</span><span class="punct">&quot;</span> <span class="punct">:</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">color</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">rank</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">flags</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+      <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+    <span class="punct">}</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+
+        <br>
+        <p class="body">
+        <a name='PrjNewsList'>&nbsp;</a><i><u>Project News List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">PrjNewsList_JSON.YAML.XML</span> )</span><br>
+<!-- Project News List -->
+<pre class='rubyCode'><span class="punct">[</span>                                   <span class="comment"># List of ALL PrjNews items</span>
+  <span class="punct">{</span>                                 <span class="comment"># . items not individually exposed (yet)</span>
+    <span class="punct">&quot;</span><span class="string">date</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">date</span><span class="punct">&gt;&quot;,</span>              <span class="comment"># -> format: YYYY/MM/DD only (same day items sorted by texts)</span>
+    <span class="punct">&quot;</span><span class="string">updateText</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># -> could prefix with A,B,C or 1,2,3 to order same day items</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='PrjLinkList'>&nbsp;</a><i><u>Project Link List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">PrjLinkList_JSON.YAML.XML</span> )</span><br>
+<!-- Project Link List -->
+<pre class='rubyCode'><span class="punct">[</span>                                       <span class="comment"># List of ALL PrjLink items</span>
+  <span class="punct">{</span>                                     <span class="comment"># . items not individually exposed (yet)</span>
+    <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">url</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">linkDesc</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">linkText</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='PrjQLinkList'>&nbsp;</a><i><u>Project Quick Links List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">PrjQLinkList_JSON.YAML.XML</span> )</span><br>
+<!-- Project Quick Links List -->
+<pre class='rubyCode'><span class="punct">[</span>                                      <span class="comment"># List of ALL PrjQLink items</span>
+  <span class="punct">{</span>                                    <span class="comment"># . items not individually exposed (yet)</span>
+    <span class="punct">&quot;</span><span class="string">url</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">url</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">linkText</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='UsrDetailed'>&nbsp;</a><i><u>User [Detailed]</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">UsrDetailed_JSON.YAML.XML</span> )</span><br>
+<!-- User [Detailed] -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">login</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">firstName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">lastName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">institution</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">telephone</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">email</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">{</span> <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='DbFile'>&nbsp;</a><i><u>Database File</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">DbFile_JSON.YAML.XML</span> )</span><br>
+<!-- Database File -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">label</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">date</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">archived</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">autoArchive</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">&quot;</span><span class="string">hide</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='DbFileList'>&nbsp;</a><i><u>Database File List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">DbFileList_JSON.YAML.XML</span> )</span><br>
+<!-- Database File List -->
+<pre class='rubyCode'><span class="punct">[</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;</span><span class="string">label</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">date</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">archived</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">autoArchive</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+    <span class="punct">&quot;</span><span class="string">hide</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>
+  <span class="punct">},</span>
+  <span class="punct">...</span>
+<span class="punct">]</span>  
+</pre>
+
+        <p class="body">
+        <a name='Layout'>&nbsp;</a><i><u>Tabular Layout</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">Layout.YAML.XML</span> )</span><br>
+<!-- Layout -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">name</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>              <span class="comment"># The name of this layout.</span>
+  <span class="punct">&quot;</span><span class="string">description</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># The description of this layout.</span>
+  <span class="punct">&quot;</span><span class="string">userId</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>            <span class="comment"># The ID of the user who created this layout.</span>
+  <span class="punct">&quot;</span><span class="string">created</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">date</span><span class="punct">&gt;&quot;,</span>            <span class="comment"># The date on which this layout was created.</span>
+  <span class="punct">&quot;</span><span class="string">modified</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">datetime</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># The date / time this layout was last modified.</span>
+  <span class="punct">&quot;</span><span class="string">columns</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>           <span class="comment"># A CSV list of the attributes in the order they are displayed.</span>
+                                   <span class="comment"># The attribute names are prepended with either an 'l' or an 'a'</span>
+                                   <span class="comment"># depending on their type.  'l' = LFF standard attribute,</span>
+                                   <span class="comment"># 'a' = user-defined attribute.</span>
+  <span class="punct">&quot;</span><span class="string">sort</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>              <span class="comment"># A CSV list of the attributes used in the sort order, encoded</span>
+                                   <span class="comment"># the same as the <span class="punct">&quot;</span><span class="string">columns</span><span class="punct">&quot;</span> field</span>
+  <span class="punct">&quot;</span><span class="string">groupMode</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>         <span class="comment"># Either &quot;terse&quot;, &quot;verbose&quot;, or an empty string for ungrouped mode.</span>
+  <span class="punct">&quot;</span><span class="string">refs</span><span class="punct">&quot;</span> <span class="punct">:</span>                         <span class="comment"># Link(s) to more info, if available, keyed by repType.</span>
+  <span class="punct">{</span>
+    <span class="punct">&quot;&lt;</span><span class="regex">repType</span><span class="punct">&gt;&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">coreURI</span><span class="punct">&gt;&quot;</span>
+  <span class="punct">}</span>
+<span class="punct">}</span>
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='LayoutList'>&nbsp;</a><i><u>Tabular Layout List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">LayoutList_JSON.YAML.XML</span> )</span><br>
+<!-- Layout List -->
+<pre class='rubyCode'><span class="punct">[</span>                                  <span class="comment"># List of <a href="#Layout">Layout</a> objects.</span>
+  <span class="string"><a href="#Layout">Layout</a>,
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+        <br>
+        <p class="body">
+        <a name='AnnoList'>&nbsp;</a><i><u>LFF Annotations List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">AnnoList_LFF.LAYOUT</span> )</span><br>
+        <p class="body">
+        This corresponds to the <span class="genbLabel">[ annotations ]</span> section
+        in the DAS LFF format specification. See the detailed description of Genboree's <a href="http://genboree.org/java-bin/showHelp.jsp?topic=lffFileFormat">enhanced LFF</a> format for annotations, or
+        the a user defined <a href="#Layout">Tabular Layout</a> (format=layout).  <A href="#Layout">Tabular Layouts</a> are stored in the
+        user databases or can be specified using HTTP request payloads.
+
+        <br>
+        <p class="body">
+        <a name='EpList'>&nbsp;</a><i><u>LFF Entrypoint/Chromosome List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">LffEpList</span> )</span><br>
+        This corresponds to the so-called <span class="genbLabel">[ entrypoints ]</span> (a.k.a. <span class="genbLabel">[ references ]</span>) section
+        in the DAS LFF format specification. It is 3 tab-delimited fields: the chromosome/scaffold <i>name</i>, the <i>type</i> of entrypoing
+        (recommendation: always use &quot;Chromsome&quot;), and the length in base pairs.
+
+<pre class='rubyCode'><span class="comment"># EntrypointName  EntrypointType  EntrypointLength</span>
+chr1        Chromosome      247249719
+chr2        Chromosome      242951149
+chr20       Chromosome      62435964
+</pre>
+
+        <br>
+        <p class="body">
+        <a name='fasta'>&nbsp;</a><i><u>FASTA</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">FASTA</span> )</span><br>
+        DNA sequence, in <a href="http://en.wikipedia.org/wiki/FASTA_format">FASTA format</a>.
+        </p>
+
+        <p class="body">
+        <a name='QueryableInfo'>&nbsp;</a><i><u>Queryable Info</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">QueryableInfo.YAML.XML</span> )</span><br>
+<!-- QueryableInfo -->
+<pre class='rubyCode'><span class="punct">{</span>
+  <span class="punct">&quot;</span><span class="string">resource</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>          <span class="comment"># The name of the resource described by this QueryableInfo object.</span>
+  <span class="punct">&quot;</span><span class="string">queryable</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">boolean</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># True if this resource can be queried against.</span>
+  <span class="punct">&quot;</span><span class="string">displayName</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># The human readable (pretty) name for the resource -- optional.</span>
+  <span class="punct">&quot;</span><span class="string">templateURI</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># The template URI for the resource described by this object.</span>
+  <span class="punct">&quot;</span><span class="string">attrs</span><span class="punct">&quot;</span><a href="#QInote">*</a> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>            <span class="comment"># The queryable attributes (core fields and AVPs<a href="#QInote">*</a>) -- optional.</span>
+  <span class="punct">[</span>
+    <span class="punct">{</span>
+      <span class="punct">&quot;</span><span class="string">{field}</span><span class="punct">&quot;</span> <span class="punct">:</span> <span class="punct">&quot;&lt;</span><span class="regex">value</span><span class="punct">&gt;&quot;,</span>       <span class="comment"># A hash in which the <strong>key</strong> represents the internal database name
+                                   # for the fields that can be queried against, and the <strong>value</strong>
+                                   # represents the human readable (pretty) names for those fields
+                                   # Ex] { &quot;fstop&quot; : &quot;Stop&quot; }.</span>
+    <span class="punct">},</span>
+    <span class="punct">...</span>
+  <span class="punct">]</span>
+<span class="punct">}</span>
+</pre>
+<em><A name="QInote">* Note:</a></em>The AVPs will only be included in the &quot;attrs&quot; field when you directly query a resource.  Any of the URIs that return a <a href="#QueryableInfoList">QueryableInfo List</a> will only return the list of core fields in the &quot;attrs&quot; field.
+
+        <br>
+        <p class="body">
+        <a name='QueryableInfoList'>&nbsp;</a><i><u>Queryable Info List</u></i>: <span style="font-size: 0.8em;">( <span class="genbField">repType</span> &raquo; <span class="genbRepLabel">QueryableInfoList_JSON.YAML.XML</span> )</span><br>
+<!-- QueryableInfo List -->
+<pre class='rubyCode'><span class="punct">[</span>                                  <span class="comment"># List of <a href="#QueryableInfo">QueryableInfo</a> objects.</span>
+  <span class="string"><a href="#QueryableInfo">QueryableInfo</a>,
+  <span class="punct">...</span>
+<span class="punct">]</span>
+</pre>
+
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

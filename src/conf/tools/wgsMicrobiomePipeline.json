@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "wgsMicrobiomePipeline",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": "1+12",
+    "pvmem": "12gb",
+    "mem" : null,
+    "vmem" : null,
+    "nodes": 1,
+    "queue": "gbMultiCore",
+    "walltime": "240:00:00"
+  },
+  "ui": {
+    "label": "WGS Microbiome Pipeline",
+    "shortLabel": "WGS Microbiome Pipeline"
+  }
+}

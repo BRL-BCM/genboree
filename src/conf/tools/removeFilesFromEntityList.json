@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "removeFilesFromEntityList",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Remove Files from Entity List",
+    "shortLabel": "[NOT SET]"
+  }
+}

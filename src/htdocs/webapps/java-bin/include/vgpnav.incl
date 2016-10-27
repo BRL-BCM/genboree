@@ -1,0 +1,32 @@
+<%
+	String[] __vgpHrefs = {
+		"vgp_step1.jsp", "vgp_step2.jsp", "vgp_step3.jsp", "vgp_step4.jsp"
+		};
+	String[] __vgpLabs = {
+		"1.&nbsp;Database",
+		"2.&nbsp;Entry&nbsp;Points",
+		"3.&nbsp;Tracks",
+		"4.&nbsp;Graphics&nbsp;Format"
+		};
+	boolean __can_finish = (mys.getAttribute("vgp_file_uploaded") != null)
+		|| (mys.getAttribute("vgp_file_default") != null);
+	boolean __after_hilit = false;
+	out.println( "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr>" );
+	for( i=0; i<__vgpHrefs.length; i++ )
+	{
+		if( i > 0 ) out.println( "<td>&nbsp;&nbsp;&gt;&gt;&gt;&nbsp;&nbsp;</td>" );
+		
+		boolean __is_hilit = (__myFileName.indexOf(__vgpHrefs[i]) >= 0);
+		String __style = __is_hilit ? "" : "";
+		String __a1 = __is_hilit ? "<font color=\"blue\"><strong>" : "<a href=\"" + __vgpHrefs[i] + "\">";
+		String __a2 = __is_hilit ? "</strong></font>" : "</a>";
+		if( __after_hilit && !__can_finish )
+		{
+			__a1 = __a2 = "";
+		}
+		if( __is_hilit ) __after_hilit = true;
+%><td class="<%=__style%>"><%=__a1%><%=__vgpLabs[i]%><%=__a2%></td>
+<%
+	}
+	out.println( "</tr></table>" );
+%>

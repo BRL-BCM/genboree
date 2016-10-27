@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "addFilesToEntityList",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Add Files to Entity List",
+    "shortLabel": "Add Files to Entity List"
+  }
+}

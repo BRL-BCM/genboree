@@ -1,0 +1,11 @@
+#name	Metadata_ex1	Metadata_ex2	INSERT_SIZE	INSERT_SIZE_STD	KMER_SIZE	#FP-1_1	#FP-1_2	#FP-2_1	#FP-2_2	#SRA-1	#SRA-2	#SE-1	#SE-2	#SE-3	#SE-4	#HOST	#GROUP	#DB	#FOLDER
+85k_test_A	x	a	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_B	x	a	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_C	x	a	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_D	x	b	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_E	x	b	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_F	y	b	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_G	y	c	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_H	y	c	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_I	y	c	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	
+85k_test_J	y	d	200	35	45	mp1_1.fastq.gz	mp1_2.fastq.gz	mp2_1.fastq	mp2_2.fastq	SRR638760.sra	SRR638795.sra	se1.fastq	se2.fastq	se3.fastq.gz	se4.fastq	10.15.5.109	Kevin	WGS	

@@ -1,0 +1,37 @@
+[
+  {
+    "text": "exRNA Data Analysis"
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "Filter Reads",
+    "tooltip": "Tool for filtering reads",
+    "idStr": "filterReads"
+  },
+  {
+    "text": "Map Reads by Pash",
+    "tooltip": "Map FASTQ sequence files(s) with Pash 3.0.",
+    "idStr": "smallRNAPashMapper"
+  },
+  {
+    "text": "Profile Combined Coverage",
+    "tooltip": "Generate combined miRNA profile from Pash 3.0 generated LFF files.",
+    "idStr": "combinedCoverage"
+  },
+  {
+    "text": "miRBase miRNA - Profile Generation",
+    "tooltip": "Tool for extractinf usable reads from sequence data (FASTQ) and finding exact and loose matches to known miRNA precursors.",
+    "idStr": "mirbaseProfileGeneration",
+    "disabled" : true,
+    "hidden" : false
+  },
+  {
+    "text": "Novel miRNA Detection",
+    "tooltip": "Tool for finding possible novel miRNAs present in 454 sequence data.",
+    "idStr": "novelMiRNADetection",
+    "disabled" : true,
+    "hidden" : false
+  }
+]

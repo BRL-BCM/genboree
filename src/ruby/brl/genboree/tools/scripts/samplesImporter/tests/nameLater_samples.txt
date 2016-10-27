@@ -1,0 +1,4 @@
+#biomaterialState	name	age	sex	isSick
+frozen	cAB1	36	M	TRUE
+frozen	cAB2	46	M	FALSE
+solution	cAB3	56	F	TRUE

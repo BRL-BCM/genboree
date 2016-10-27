@@ -1,0 +1,153 @@
+.x-accordion-body .x-grid-cell-inner a {
+    font-weight: normal;
+}
+
+.x-accordion-hd .x-panel-header-text {
+    font-weight: bold;
+}
+
+.modelGridHeader {
+   font-weight: bold;
+}
+
+.genbKb-accordion-item  {
+    display: inline ;
+    padding: 0px 0px 2px 20px ;
+}
+
+.genbKb-edit-mode {
+    font-weight: bold;
+    color: #04408C;
+}
+
+.genbKb-tooltip-wordwrap {
+    word-wrap: break-word;    
+}
+
+.genbKb-prop-menu-default{
+    visibility: hidden;
+    margin-top:-1px;
+    width:12px;
+    height:12px;
+    margin-right: 2px;
+    margin-left: 3px;
+}
+
+.genbKb-toolbarcombobox{
+    
+}
+
+.genbKb-toolbarcombobox .x-field-toolbar .x-form-trigger {
+    height: 22px;
+}
+
+.x-grid-row-over .genbKb-prop-menu-default{
+    visibility: visible;
+    margin-top:-1px;
+    width:12px;
+    height:12px;
+    margin-right: 2px;
+    margin-left: 3px;
+}
+
+.genbKb-gray-background .x-grid-td {
+    background: none repeat scroll 0 0 #CCCCCC;
+    opacity: 0.5
+}
+
+#layoutContainerDiv .x-btn-default-toolbar-small-disabled{
+    opacity: 0.25;
+    filter: alpha(opacity=25);
+}
+
+.genbKb-gray-font-create .x-grid-cell-inner {
+  color: #CCCCCC
+}
+
+.genbKb-gray-font-doc-history .x-grid-cell-inner {
+  color: #CCCCCC
+}
+
+.genbKb-gray-font-model-history .x-grid-cell-inner {
+  color: #CCCCCC
+}
+
+.genbKb-gray-font-view-model .x-grid-cell-inner {
+  color: #CCCCCC
+}
+
+.genbKb-gray-font-edit-delete .x-grid-cell-inner {
+  color: #CCCCCC
+}
+
+.genbKb-dynamicTree {
+/*  background: url(../images/silk/chart_organisation.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ; */
+  background: url(../images/silk/chart_organisation.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+
+.genbKb-plainHTML {
+  background: url(../images/silk/page_white_code.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+
+.genbKb-usingView {
+  background: url(../images/silk/layout.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+
+.genbKb-editRequired {
+  background: url(../images/silk/error_add.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+
+.genbKb-createRecord {
+  background: url(../images/silk/table_add.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-editRecord {
+  background: url(../images/silk/table_edit.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-deleteRecord {
+  background: url(../images/silk/table_delete.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-bulkUpload {
+  background: url(../images/silk/table_go.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-recordHistory {
+  background: url(../images/silk/calendar.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-runQuery {
+  background: url(../images/silk/page_find.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-createQuery {
+  background: url(../images/silk/find.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-editQuery {
+  background: url(../images/silk/find.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-deleteQuery {
+  background: url(../images/silk/find.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-createView {
+  background: url(../images/silk/layout_add.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-editView {
+  background: url(../images/silk/layout_edit.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-deleteView {
+  background: url(../images/silk/layout_delete.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-browseCollections {
+  background: url(../images/silk/database.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-downloadCollection {
+  background: url(../images/silk/database_save.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-viewModelHistory {
+  background: url(../images/silk/calendar.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-createCollection {
+  background: url(../images/silk/database_add.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-editCollectionModel {
+  background: url(../images/silk/database_edit.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+.genbKb-archiveCollection {
+  background: url(../images/silk/database_lightning.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}

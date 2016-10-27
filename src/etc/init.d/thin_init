@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# #########################
+# ENVIRONMENT
+# #########################
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+export DB_ACCESS_FILE=$DBRC_FILE
+export TMPDIR=/usr/local/brl/local/tmp/thin_api
+export TMP_DIR=$TMPDIR
+export GS_FONTPATH=/usr/local/brl/local/share/ghostscript/fonts
+
+umask 002
+
+# #########################
+# MAIN
+# #########################
+
+RETVAL=0
+
+start() {
+    echo -n $"Starting THIN_API:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_api.conf start
+    RETVAL=$?
+}
+
+stop() {
+    echo -n $"Shutting down THIN_API:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_api.conf stop
+    RETVAL=$?
+}
+
+restart() {
+    echo -n $"Restarting THIN_API:" $'\n'
+    thin -C ${DIR_TARGET}/etc/thin_api.conf restart
+    RETVAL=$?
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac
+
+
+if [ $RETVAL = 0 ] ; then
+    echo "**SUCCESS**"
+else
+    echo "FAILURE: '$0 $1' command failed, check logs ( exit code $RETVAL )"
+fi
+
+exit $RETVAL 
+

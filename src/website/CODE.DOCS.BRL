@@ -1,0 +1,245 @@
+Code Orientation / Tips
+=======================
+
+This is not a full explanation of the code structure. It's simple enough to read, it's
+organized enough not to get completely lost, and it basically leverages Rack and
+Erubis' mechanism of passing in a context, the keys of which become @instance-style
+variables within the .rthml. That's excellent, it's exactly an Erubis feature we leverage in
+Genboree, albeit with a bit different architecture.
+
+To wit: we have been able to easily add a new utility method that resolves an issue that
+arose when the WikiExtensions Redmine plugin is present, which it wasn't for Bio:Neos
+development. BRL adds this to get the "wiki pages as project tabs" functionality. This BROKE
+the existing code becasue behind the scenes WikiExtension shims in a line with {{fnlist}} at
+the bottom of every wiki page (and you don't see this in the Redmine UI, only when using
+Redmine API to get raw wiki page contents). Applying our utility method in several key areas
+--only one of which was odd--addresses the problem.
+
+Point is: easy enough to figure out best place to add method, where to apply, and employ
+$stderr.puts to aid understanding of program flow.
+
+
+This being said, some tips/notes can be useful to get oriented and see how to explore/debug
+the code.
+
+Additionally, there are some [commented] $stderr.puts "BRL DEBUG:" lines in a few key
+locations. For dumping key info, or for tracing/verifying program flow while debugging
+or developing. Uncommenting some of those or pasting thing to other methods may 
+be useful. Ruby's __method__ variable is helpful for copy/paste for such purposes.
+
+
+A. config.ru
+
+This is the "Rackup" file for the whole service. The Rackup file is what every
+Rack-based server will read and execute first. It will generally contain a class
+which is instantiated for each incoming request. 
+- You can see this instantiation, and how that CONFIG constant up top is
+  put to use, at the VERY BOTTOM of config.ru
+
+So we instantiate the service class (variable "website" holds the object) and
+feed that object to Rack's run() method.
+
+The web server / Rack will call website.call() and provide an "environment" Hash
+will all sorts of useful keys as defined by the Rack protocol. The content
+for many keys in this Hash will be *different* for each request.
+- Note: NOT same as Ruby's ENV hash from the shell environment.
+- Although some entries may be present in both.
+
+The implementation of call() MUST return an 3-element Array with the:
+  1. HTTP response code as Fixnum
+  2. HTTP headers hash, if any extra/special are needed.
+     . Key: HTTP Header as String
+     . Val: header content as String
+  3. A String with the HTTP payload / body.
+
+Note in the implementation that:
+  - initialize() has dug out some key info from the opts argument
+    and made it available as @instance variables
+  - call() digs out & processes some key info it needs from the env argument
+    . These are obviously important, so good candiates for dumping to
+      logs when debugging/developing.
+    . In fact there's already a [commented] $stderr.puts for that!
+  - "asset" == .js, .css, .png, etc. Static thing.
+  - While assets are simple and handled with just File.read(), as you see
+    in the if-else at the bottom of call(), the real work is done by a call to:
+
+      rhtmlObj = Erubis::FastEruby.new(File.read( {someRhtmlFile} ))
+    AND THEN
+      rhtmlObj.evaluate( {evalContext} )
+
+    . That argument to FastEruby#evaluate() is a Hash which is the "evaluation
+      context information". As mentioned above, each key (a Symbol!) in that
+      Hash becomes an @instance variable within the rhtml code. Anything not
+      passed in via this context Hash is not available.
+      - So if you see @action or @server in the rhtml code, they are coming
+        from this Hash built in GenboreeWebSite#call() (probably).
+
+
+B. views/*.rthml
+
+Clearly these .rhtml files are important. It's where the code goes next after entering
+GenboreeWebSite#call()
+
+They have two kinds of .rhtml file here:
+
+1. Outer-most .rhtml files
+- Used in instantiating Erubis::FastEruby in GenboreeWebSite#call()
+- Landing page "end points" if you will. Will use various library methods,
+  context variable, other .rhtml files to compose the actual HTML response.  
+- Files like this:
+    1. index.rhtml
+- Yes, just one. They have no other endpoint. Everything is rendered with a
+  common base-layout in their approach. All pages have header, left menu, middle
+  content area, footer. Even arbitrary wiki pages with heretofore never seen
+  content will be rendered via index.rhtml. Makes sense with their approach.
+  . I mention this because it's possible the long scrolling design may be best
+    served by >1 endpoint. For example, one [index.rhtml] for the long
+    scrolling landing page itself, and then a second endpoint for rendering
+    arbitrary new wiki pages with tutorials, detailed service info or whatever.
+  . Traffic direction to the correct endpoint could happen in GenboreeWebSite#call()
+    by some extra target tests & conditions. If needed/warranted.
+
+2. Internal .rhtml files for HTML partials
+- Used by outer-most .rhtml code (or methods called by it) to help
+  render little HTML partials or snippets using a few key variables/arrays.
+  . Yes, the key vars etc are passed in via one of those context Hashes.
+  . Smart approach. One used by Rails, Redmine, Genboree. Good reusability
+    of generating same HTML in various places/contexts.
+  . Code that builds HTML manually with string concatenation is generally kind
+    of hacky and unclean.
+- What does the rendering of these partials?
+  . See the GenboreeWebSite#rendr() method
+  . See calls to it in index.rhtml such as:
+      <%= @server.rendr("lost-password") %>
+  . Obviously these snippets are re-usable like this in other end-points,
+    although such reuse is not needed here it seems. Mainly for cleanliness
+    I guess. That's good, index.rhtml is big enough.
+
+At this point, reading through the flow of index.rhml makes sense.
+- The names of helper classes like News, Events etc should indicate what
+   each section of code is doing.
+- If read through without diversion to helper class methods, you get a
+  good idea of the flow of creating the page and what the key decisions are
+  that influence program flow.
+  . i.e. in <section id="content"> are the huge decisions.
+    - Do we layout the splash page and all its little image slider, news,
+      and event areas?
+    - Or do we just dump a arbitrary (non-pre-defined) wiki page contents
+      from Redmine?
+    - Or are we rendering a very specific content page like the 
+      lost-password form or the registration form?
+
+
+C. includes/*rb - The Helper Classes
+
+It's probably pretty clear what the methods in news.rb, events.rb, slider.rb
+are going to do. And we see the calls to their methods in index.rhtml.
+
+These methods have the code for retrieving the appropriate CMS content from
+the wiki page(s) and arranging its transformation a useful data structure
+(generally not HTML of course) that can be used by a view .rhtml file to
+present the info in that data structure as HTML.
+
+Yes, reminscent of a Model-View-Controller approach. These class methods
+are basically implementing the Model of the system. They get the data and
+present it as a useful Model for the View to render. They do this when
+demanded by the Controller (yes, which in convoluted the in the index.rhml View,
+sigh).
+
+C.1 A key/core Model class is redmine.rb
+
+Odd name.
+
+C.1.1 getMenu() -  this file has the getMenu() method. Which is somewhat
+key since that data structure defines what is reachable from any page. In
+their layout, the menu is the key navigation element. Other, internal pages,
+can be reached via proper Textile wiki page link markup [[My exRNA Toolset]]
+of coruse, and themselves have links to yet more internal pages.
+. This may be important for reorg of landing page.
+
+Anyway this big method sets up a nested menu with some key metadata about
+each menu item to make it have the right behavior, link to the right
+content, appear correctly, etc.
+
+C.1.2 transform() - another vital function used in many places to 
+convert their regular/standard AVP "structured data" syntax into
+a Hash Model.
+
+There are some commented debug lines here due to the importance of
+tracing crashes or why pages don't have the right info.
+
+C1.1.3 cleanRedmineWikiText()
+
+Added by me to do any pre-transform of the text from Redmine. Like
+removing the {{fnlist}} line shimmed in by WikiExtensions.
+
+UNFORTUNATELY, they do not have a SINGLE method that talks to Redmine
+to get the contents [indicated by some arguments]. No no, that would make
+maintenance [and bug fixing] too easy. Instead, there are many methods
+scattered around, each which talks to Redmine on its own. Redundant code
+(copy/paste reuse == bad). One such place is not even in a method, it's in
+an .rhtml View file; ugh, this is the one I missed.
+- Thus, we'll see cleanRedmineWikiText() calls appearing here and there
+  rather than in one method/class that does the Redmine CMS talking.
+
+C1.1.4 Error page methods
+
+These are nice. They render in the content section of the standard base-layout,
+rather than be replacements for the entire page like on many sites.
+
+
+C.2 More obvious/less key Model classes
+
+Take a look at news.rb, event.rb, slider.rb. Simple and boring at this point.
+
+With some good lessons (small, targeted methods here).
+
+With some bad: building HTML in by hand, what happened to View paradigm? Whatever.
+
+
+D. What about rest of View .rhtml files?
+
+Mostly trivial except maybe for redmine.rhtml
+
+D.1. redmine.rhtml
+
+Odd name.
+
+This View is responsible for two things:
+  1. Publications page
+  2. Regular, non-pre-defined wiki pages
+
+This happens in the "<% else # All subpage content" condition of index.rhtml.
+
+D.1.1 Handles Publications
+
+I'm not clear why Publications is mixed up in here and doesn't have its own
+Model class. Certainly the code for publications doesn't belong here and it 
+fits the model for News, Events, etc.
+
+But this poor organization for Publications is where I missed a needed call to
+cleanRedmineWikiText(). Wasn't expecting to need it in *View* code! So this
+is the only .rthml file that has a call to this. Very badly designed. 
+
+D.1.2 Handles arbitrary / non-pre-defined content & pages
+
+Of other interest is in this redemine.rhtml file is the elsif that handles
+"# OK, regular Wiki page". In particular, note this:
+   
+   <%= RedCloth.new(text).to_html %>
+
+That's a call to convert the raw wiki page Textile content to HTML.
+
+Perfect. Use wiki syntax to create content, use library to convert to HTML, rely
+on stylesheets (and maybe javascript) to present nicely.
+
+
+E. Odds and ends
+
+Rest of their code tree is boring for the most part. 
+
+Of probable interest:
+
+E.1. public/ == the assets directory
+
+Subdirs for css, js, images etc are here.

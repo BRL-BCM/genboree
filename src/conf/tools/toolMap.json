@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "toolMap",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "cluster": {
+    "queue": "none"
+  },
+  "ui": {
+    "label": "Tool Map",
+    "shortLabel": "List of all tools available in Genboree Workbench."
+  }
+}

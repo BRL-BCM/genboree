@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "runKnife",
+    "releaseStatus": "beta",
+    "version": "1.2"
+  },
+  "cluster": {
+    "ppn": 8,
+    "mem": "34gb",
+    "vmem": "34gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Run KNIFE on Single Sample",
+    "shortLabel": "Run KNIFE on Single Sample",
+    "groupAccessUri": null
+  }
+}

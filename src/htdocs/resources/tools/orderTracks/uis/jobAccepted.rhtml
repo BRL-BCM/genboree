@@ -1,0 +1,23 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <br/>
+    <%
+      btnType = @settings['btnType']
+      buff = ''
+      if(btnType == 'Save')
+        buff = "Your personal track order has been set/updated."
+      elsif(btnType == 'Set As Default')
+        buff = "The default track order has been set/updated."
+      else
+        buff = "Your personal track order has been removed and default track order has been applied."
+      end
+    %>
+    <%= buff %>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>

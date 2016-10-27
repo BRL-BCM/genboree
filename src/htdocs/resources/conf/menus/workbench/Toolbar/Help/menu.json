@@ -1,0 +1,45 @@
+[
+  {
+    "text": "Getting Started",
+    "idStr": "gettingStarted",
+    "tooltip": "Learn how to use the Genboree Workbench."
+  },
+  {
+    "text": "What\\'s New",
+    "idStr": "whatsNew",
+    "tooltip": "Check out whats new in the Genboree Workbench."
+  },
+  {
+    "text": "Tool Map",
+    "idStr": "toolMap",
+    "tooltip": "List of all tools available in Genboree Workbench."
+  },
+  {
+    "text": "Legend",
+    "idStr": "legend",
+    "tooltip": "List of all icons in the Genboree Workbench."
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text" : "Citing Genboree",
+    "idStr" : "citing",
+    "tooltip" : "References that can be used to cite Genboree."
+  },
+  {
+    "hSpacer": "-"
+  },
+  {
+    "text": "Tool Help Resources",
+    "idStr": "toolUsecases",
+    "tooltip": "Tutorials, use cases and videos for various tools."
+  },
+  {
+    "text": "API Help (old)",
+    "href": "/java-bin/showHelp.jsp?topic=top",
+    "hrefTarget": "_blank",
+    "cls": "wbBtnReady",
+    "iconCls": "wbDeprecated"
+  }
+]

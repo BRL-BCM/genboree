@@ -1,0 +1,62 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        null
+      ],
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "normType": [
+        "^(?:exp)$",
+        "The Normalization Type must be 'exp'."
+      ],
+      "numClusters": [
+        "^\\d+$",
+        "The # of Clusters must be a postitive integer."
+      ],
+      "regionsLabel": [
+        "^[A-Za-z0-9_\\.\\-%@]+$",
+        "The Region Label cannot be blank or only whitespace, and can only use letters, numbers, and the letters '_.-%@'. Used for file names that should be valid in fussy operating systems such as MS Windows."
+      ],
+      "statsType": [
+        "^(?:global)|(?:regional)$",
+        "The Statistics Type to compute must be either 'regional' or 'global'."
+      ],
+      "numBins": [
+        "^\\d+$",
+        "The # of bins to use for clustering must be a postitive integer."
+      ],
+      "analysisName": [
+        "^[A-Za-z0-9:_\\.\\-%@ ]+$",
+        "The Analysis Name can not be empty or only whitespace, and can only use letters, numbers, and the letters '_.-%@'. Used for folder names that should be valid in fussy operating systems such as MS Windows."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

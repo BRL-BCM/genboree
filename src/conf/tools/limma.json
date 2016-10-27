@@ -1,0 +1,21 @@
+{
+  "info": {
+    "idStr": "limma",
+    "releaseStatus": "beta",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "11716mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "48:00:00"
+  },
+  "ui": {
+    "label": "Compare by LIMMA -> User Supplied Data Matrix",
+    "shortLabel": "LIMMA - User Supplied Data Matrix",
+    "advisoryHtml":
+    {
+      "beta": "<div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>This tool is a recent addition and a successful run will depend highly on the appropriateness &amp; correctness of the 2 input files you provide. Please contact <a href='mailto:genboree_admin@genboree.org'>genboree_admin@genboree.org</a> with questions or comments, or for help using it on your own data.</div>"
+    }
+  }
+}

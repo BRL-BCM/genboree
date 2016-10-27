@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Edit Entrypoints",
+    "idStr": "editEp",
+    "tooltip": "Edit entrypoints/chromosomes in a target database."
+  },
+  {
+    "text": "Delete Entrypoints",
+    "idStr": "deleteEp",
+    "tooltip": "Delete entrypoints/chromosomes from a target database."
+  },
+  {
+    "text": "Upload Entrypoints",
+    "idStr": "uploadEp",
+    "tooltip": "Upload entrypoints/chromosomes to a target database."
+  }
+]

@@ -1,0 +1,123 @@
+Start MySQL if not by typing-
+./bin/mysqld_safe --user=root &
+
+Function:
+#####################
+The file "BRL_UCSC_importer_API_complete.rb" takes the user input of a genome assembly version and/or remote UCSC track information, and download the correct file(s) for the track(s) and after downloading them, converts them automatically to LFF, finally load the converted file into Genboree through REST_based API.
+
+To run correctly,
+All sources files including downloader and converter files, "BRL_UCSC_importer_API_complete.rb", and "data_acquisition_complete_data.txt", "BRL_UCSC_universial_downloader.rb", "BRL_UCSC_fosmidlff.rb", "BRL_UCSC_chimpchainlff.rb", ..., should be put in the same direcory in a machine with MySQL server installed in order to run them successfully.
+
+Note: Intended loading database and the project on the server side need to be created first before running the program.
+
+#####################
+
+The features of this software package will be implemented:
+######################
+Given a environmental variable ("GENB_RC") that points to personal Genboree configuration file (~/.genbrc), the program will verify that the file is -owned- by the user running the process and that it has exactly the UNIX permission 600 (read and write by user only, nobody else) before reading the contents.
+---FUNCTION 0---
+Put project description through resource path:  
+/REST/v1/grp/{grp}/prj/{prj}/description? 
+	prj = 'UCSC Importer Tool'
+	description = "Download UCSC tracks and convert them into Genboree LFF format and upload the LFF file(s) into Genboree through REST API"
+---FUNCTION 1---
+Given an user and an input group name, it will check whether this user is within {grp} through resource path:
+/REST/v1/grp/{grp}/usr/{usr}
+---FUNCTION 2---
+Given group name and database name/version, it will find out whether it is available in database reservoir on server side through resource path:
+/REST/v1/grp/{grp}/db/{db}
+---FUNCTION 3---
+Given input track name, it will verify whether it is already in that database by getting the information through resource path:
+/REST/v1/grp/{grp}/db/{db}/trk/{trk}
+If yes, delete (update) it and put this track through resource path if its track name has been given appropriately (with verification functionality):
+/REST/v1/grp/{grp}
+/db/{db}/annos
+
+Other features are:
+/REST/v1/grp/{grp}/db/{db}/trk/{trk}/description 	
+GET È track description. If not,
+PUT È new description
+DELETE È track description
+
+/REST/v1/grp/{grp}/db/{db}/trk/{trk}/url  	
+GET È track URL. If not,
+PUT È a new track URL (in request body).
+Or if inappropriate, 
+DELETE È track URL
+
+/REST/v1/grp/{grp}
+/db/{db}/trk/{trk}/urlLabel 	
+GET È track URL label text. If not,
+PUT È a new track URL label text(in request body).
+Or if inappropriate,
+DELETE È track URL label text
+
+Databases can be created on the Genboree server side (See the inside of file "data_acquisition_complete_data.txt" to find out associated with tracks):
+#####################
+Human:
+----------
+hg18_ExpressionAndRegulation
+hg18_GenesAndGenePrediction
+hg18_MappingAndSequencing
+hg18_mRNAAndEST
+hg18_PhenotypeAndDiseaseAssociations
+hg18_VariationAndRepeats
+hg18_ComparativeGenomics
+
+hg17_ExpressionAndRegulation
+hg17_GenesAndGenePrediction
+hg17_MappingAndSequencing
+hg17_mRNAAndEST
+hg17_PhenotypeAndDiseaseAssociations
+hg17_VariationAndRepeats
+
+hg16_ExpressionAndRegulation
+hg16_GenesAndGenePrediction
+hg16_MappingAndSequencing
+hg16_mRNAAndEST
+hg16_VariationAndRepeats
+
+hg15_ExpressionAndRegulation
+hg15_GenesAndGenePrediction
+hg15_MappingAndSequencing
+hg15_mRNAAndEST
+hg15_VariationAndRepeats
+
+Mouse:
+----------
+mm9_ExpressionAndRegulation
+mm9_GenesAndGenePrediction
+mm9_MappingAndSequencing
+mm9_mRNAAndEST
+mm9_VariationAndRepeats
+
+mm8_ExpressionAndRegulation
+mm8_GenesAndGenePrediction
+mm8_MappingAndSequencing
+mm8_mRNAAndEST
+mm8_VariationAndRepeats
+
+mm7_ExpressionAndRegulation
+mm7_GenesAndGenePrediction
+mm7_MappingAndSequencing
+mm7_mRNAAndEST
+mm7_VariationAndRepeats
+
+mm6_ExpressionAndRegulation
+mm6_GenesAndGenePrediction
+mm6_MappingAndSequencing
+mm6_mRNAAndEST
+mm6_VariationAndRepeats
+
+mm5_ExpressionAndRegulation
+mm5_GenesAndGenePrediction
+mm5_MappingAndSequencing
+mm5_mRNAAndEST
+mm5_VariationAndRepeats
+
+The example input usage info is:
+^^^^^^^^^^^^^^^^^^^^^^^^^
+ruby BRL_UCSC_importer_API_complete.rb -s bcmHost -g grp -d inputDb -a assembly -t trackName -e emailAddress -c deleteTrackBeforeUploading
+ruby BRL_UCSC_importer_API_complete.rb -s proline.brl.bcm.tmc.edu -g yxb4544_group -d hg18_MappingAndSequencing -a hg18 -t Fosmid:EndPairs -e ybai@bcm.tmc.edu -c deleteOldTrack
+ruby BRL_UCSC_importer_API_complete.rb -s www.genboree.org -g yxb4544_group -d hg18_MappingAndSequencing -a hg18 -t Fosmid:EndPairs -e ybai@bcm.tmc.edu -c deleteOldTrack
+

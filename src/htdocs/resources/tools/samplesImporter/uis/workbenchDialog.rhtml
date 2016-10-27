@@ -1,0 +1,127 @@
+<%# RENDER HTML %>
+  <%
+    require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+    require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+    if(@inputs.size == 0)
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 425px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+    else
+      formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 400px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+    end
+  %>
+
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool will import sample metadata into a target <u>Database</u>. Note that in order for the file(s) to be imported
+          successfully, the file(s) need to be in a specific <i>tab-delimited</i> format:
+          <ul>
+            <li>The first line of the file contains the column headers, as a comment-line. It must start with a '<b>#</b>'.</li>
+            <li>One of the fields MUST be 'name' which should be unique for all Sample records.</li>
+            <li>All records MUST have the same number of fields/columns.</li>
+          </ul>
+          <br>
+          Review that the correct sample file(s) are going to be imported.
+          <br>&nbsp;<br>
+          This tool also gives you an opportunity to create a <i>Sample Set</i>. If you provide a sample set name, all the samples that you import will become part of that sample set.
+          <br>&nbsp;<br>
+          This will make using subsequent tools like the <i>Sample - File Linker</i> and the <i>Microbiome Sequence Import</i> a lot more manageable.
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+        "
+      })
+  %>
+   <%# Input data help %>
+  <%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Inputs:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbMixedListSummary, { :list => @inputs, :label => "Import samples from" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+    dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Database:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dbApiHelper.extractPureUri(@outputs[0]) } )
+    })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      # for width, should only style input tags with attribute type=text, not checkboxes, radio buttons, etc.
+      # setting labelWidth and setting width should leave about 50px spare room for formatting according to fiddling
+      # labelWidth defaults to 150px and most forms are set to 520px
+      widgets = []
+      if(@inputs.size == 0)
+        widgets =
+                  [
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'uploadFile', :label => 'Select File', :title => 'Select a file to import samples from', :type => :file },
+                    { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                  ]
+      end
+      if(@outputs.size == 1 and @outputs[0] !~ BRL::Genboree::REST::Helpers::SampleSetApiUriHelper::NAME_EXTRACTOR_REGEXP)
+        widgets << { :id => 'sampleSetName', :label => 'Assign Samples to new Sample Set', :title => 'Provide a Sample Set name to assign your imported samples to', 
+                     :type => :text, :style => "width: 320px" }
+      end
+      widgets << { :id => 'importBehavior', :label => 'Import Behavior', :type => :select,
+                   :onchange => "toggleHidden();",
+                   :title => 'How should we handle samples from your import that have the same name as existing samples?', :options =>
+                   {
+                     :merge => { :label => 'Merge and Update', :selected => true },
+                     :keep => {:label => 'Keep Existing'},
+                     :replace => {:label => 'Replace Existing'},
+                     :create => {:label => 'Create New Record'}
+                   }
+                 }
+      widgets << { :id => 'renameChar', :label => 'Rename Pattern', :title => 'Based on the old record name, how would you like new records to be named?',
+                   :type => :select, :hidden => true, :options =>
+                   {
+                     :"_" => { :label => 'Append _N', :selected => true},
+                     :"-" => { :label => 'Append -N'},
+                     :"." => { :label => 'Append .N'}
+                   }
+                 }
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+        {
+          :sectionTitle => "Settings:",
+          :widgets => widgets
+        })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+<script type="text/javascript">
+  function toggleHidden()
+  {
+    var importBehavior = document.getElementById('importBehavior');  
+    // get the elementId + Label because element is nested within a label element
+    var renameCharLabel = document.getElementById('renameCharLabel');
+    var renameChar = document.getElementById('renameChar');
+    
+    // only display renameChar option if Create New Record is selected
+    var optionList = importBehavior.options;
+    var selectedIndex = importBehavior.selectedIndex;
+    var selectedOption = optionList[selectedIndex];
+    if(selectedOption.getAttribute('value') == 'create')
+    {
+      renameCharLabel.removeAttribute('style');
+      renameChar.setAttribute('style', 'visibility: visible; ');
+    }
+    else
+    {
+      renameCharLabel.setAttribute('style', 'display:none;');
+      renameChar.setAttribute('style', 'visibility: visible; display:none; ;');
+    }
+  }
+</script>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>

@@ -1,0 +1,14 @@
+[
+  {
+    "text": "Add Project",
+    "idStr": "addRedmineProject",
+    "iconCls": "wbRedminePrjTreeNode",
+    "tooltip": "Link a Redmine Project with a Genboree Group"
+  },
+  {
+    "text": "Delete Project",
+    "idStr": "deleteRedmineProject",
+    "iconCls": "wbRedminePrjTreeNode",
+    "tooltip": "Remove the between a Redmine Project to and a Genboree Group"
+  }
+]

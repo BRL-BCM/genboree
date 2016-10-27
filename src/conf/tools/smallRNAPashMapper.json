@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "smallRNAPashMapper",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Map Reads by Pash",
+    "shortLabel": "Map Reads by Pash",
+    "groupAccessUri": null
+  }
+}

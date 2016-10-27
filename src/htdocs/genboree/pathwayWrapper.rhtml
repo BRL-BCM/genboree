@@ -1,0 +1,53 @@
+<%
+  require 'open-uri'
+  require 'cgi'
+  require 'mechanize'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/pathwayUtil'
+
+  # ARGUMENTS TO PAGE:
+  # - geneName -- see if there are any pathways for a gene with this [exact] ename
+  # - refSeqId -- we'll need to make browser links BACK to Genboree if we find a pathway, so we need this
+  # - keggUrl -- the url for the pathway page at Kegg; will make augmented version of their page
+  # - ip or isPublic -- should all the links be tagged as isPublic to avoid Genboree logins? (only works for published databases)
+  cgi = CGI.new()
+  context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+  geneName = cgi['geneName'].to_s.strip
+  pathwayName = cgi['pathwayName'].to_s.strip
+  keggUrl = cgi['keggUrl'].to_s.strip
+  success = false
+  geneNames = []
+
+  keggGenes = BRL::Genboree::PathwayUtil.findGenesInPathway(keggUrl)
+  success = true unless keggGenes.empty?
+  if(success)
+    geneNames = keggGenes.map{|xx| xx.name}
+  end
+%>
+<html>
+  <head>
+    <title>
+      Kegg Pathway (Genome Space wrapped)
+    </title>
+  </head>
+  <body>
+    <div class="success">
+    <div class="title"> Genes in the &quot;<%= pathwayName %>&quot;: </div>
+    <div class="selectAll" style="vertical-align:middle;"><ul style="font:11px verdana;"><li><span><input type="checkbox" onClick="toggleSelect(this,'chkBoxDiv')"> Select/Clear All </span></li></ul></div>
+    <div class="results" id="chkBoxDiv" style="height:400px;overflow:auto;">
+      <ul style="font:11px verdana;">
+      <% geneNames.uniq.sort.each{|gene| %>
+        <% if(gene == geneName) then %>
+      <li><span><input type="checkbox" disabled="true" value="<%= gene %> "> <%= gene %> (Already Selected)</span></li>
+      <% else%>
+      <li><span><input type="checkbox" value="<%= gene %> "> <%= gene %> </span></li>
+        <% end } %>
+      </ul>
+    </div>
+    <div style="text-align:center;padding-top:10px;">
+    <input type="button" id="addGenes" value="Update Gene Selection" onClick="updateGeneSelection('<%= CGI.escape(pathwayName) %>');gnDialogWindow.close();">
+    <input type="button" id="cancel" value="Cancel" onClick="gnDialogWindow.close();">
+    </div>
+    </div>
+  </body>
+</html>

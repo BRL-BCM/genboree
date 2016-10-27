@@ -1,0 +1,119 @@
+
+*********************************************************************
+* ~Original README from Bio:Neos
+* - But with notes/corrections for BRL deployments
+*********************************************************************
+
+Genboree Website
+----
+stand alone thin application
+======
+
+A. Installation
+======
+
+Simply unpack into the appropriate directory (<dir>) and create a startup script
+in /etc/init.d/ if desired.  No startup script is included in this package.
+- BRL: An example /etc/init.d/ script is provided from BRL's SVN
+     : Adapt the variables within as needed
+     : Follows pattern/approach of existing BRL service init.d scripts
+
+Make sure the appropriate user owns all files in this directory and has write
+permission on the "<dir>/tmp" and "<dir>/log" directories.
+- BRL: On production servers or shared dev servers this will be genbadmin:nobody
+     : Certainly tmp/ and log/ need group write access
+     : May be simplest to do this though:
+         chmod -R g+w <dir>
+     : And for proper group ownership for any new files:
+         find <dir> -type d -exec chmod g+s {} \;
+
+A.1 Modify the configuration files:
+
+  A.1.1. <dir>/config.yml
+  * Adjust the user / group to account running daemon service
+  * Add the chdir option if needed (useful if an init.d script is created)
+  * Adjust the number of servers, turn on local socket communication if desired.
+  * Adjust other options as needed
+  BRL: Comment out "wait" line, it doesn't seem to be supported by our thin version
+  BRL: Make sure "environment" says "production" and not "development" or nothing will work when deployed
+  BRL: Change the port if the popular 3000 (and 3001, 3002...one for each thin server worker you run) is in use.
+
+  A.1.2. <dir>/config.ru
+  * This is the "rackup" file which defines the main Rack-based web server.
+  * Adjust the values in the CONFIG Hash
+  ** :root
+     Should be automatically detected, only change if needed
+  ** :templateDir / :assetsPath
+     Only modify if needed
+  ** :context
+     This is the URL that specifies the home [mount] of the website when proxied. The path
+     must contain the leading slash, and cannot have a trailing slash. All links
+     generated will then start with this prefix. It can be disabled when set to
+     the empty String ("").
+     BRL: this is VITAL. This is the mount point in the URL which is used by our proxy server
+          [nginx] to direct HTTP traffic to the correct machine/port/service. It is the FIRST
+          directory in any incoming URL request. It seems to need the leading "/" from comments
+          and experience.
+  ** :registerUrl, :loginUrl, :lostPasswordUrl
+     The locations for the POST form data for registering a new user account with
+     Genboree, logging into an account, and retrieving a lost password.
+     BRL: make sure to update these to point to pages in your genboree instance!
+
+  For the following, be sure to adjust the defaults used in README.redmine to
+  match the values used in this config file.  You may want to follow the Redmine
+  installation instructions first before updating these values.
+
+  ** :redmineUrl
+     The location of the Redmine CMS from which to retreive the redmine content.
+     Make sure to include the mount point you configured in your Redmine installation and its
+     init.d script. Thus:
+        :redmineUrl => "http://10.15.55.122:3030/siteCMS"
+     Also, try to get it working to AVOID going through the proxy. Direct access should be faster,
+     especially if you're using virtual machines (or just 1 machine!)
+  ** :redmineProject
+     The internal identifier in Redmine associated with the project containing the
+     content for the website in its Wiki / Files. The CMS project.
+  ** :apiKey
+     The access key used (for a non-admin user) to access Redmine without
+     authentication. This key can be found by logging into the CMS Redmine as
+     a role-based account or user account with access to the CMS project, and clicking on
+     "My Account" and pressing "Show" underneath "API access key". Note that all programmatic
+     communication of the server code to the CMS will be via this account.
+     - If you cannot  see the "API access key" header in your account, you haven't correctly
+       enabled API access as described in README.redmine.
+     - NOTE: the best way to get this is to do it AFTER setting up the Redmine CMS instance fully,
+       starting it up, and using an already configured nginx proxy to access it so you can log
+       in and then get this apiKey as described. THEN put that key here in this server config file.
+     - Important to check this in your Redmine CMS and update the value here.
+            API keys are generally Redmine-instance and account specific (unless you've cloned
+            and existing instance, in which case existing accounts will have all the same apiKeys.)
+
+
+B. Installing / Configuring Redmine
+======
+Follow the instructions in the "README.redmine" file before attempting to start
+the server or accessing the website will simply result in a non-descript
+"Internal Server Error" result in the browser, with more details in the log.
+
+BRL: The Redmine CMS should be roughly similar to BRL standard Redmine installations used
+  for the GenboreeKB, albeit without some unneeded 3rd party tools. The Redmine instance
+  is:
+  (a) separate from other instances providing service to outside users
+  (b) dedicated to CMS
+  (c) only accessible from within BCM network/VPN; not publicly accessible.
+
+
+C. Running
+======
+Starting the server from the command line is as simple as starting a thin
+cluster:
+    $ thin -C config.yml start
+
+You can check the logs in "<dir>/log" if any issues arise during startup.
+
+BRL: This should work, true. However, really should not do much or spend much time
+     in this manual-start mode. And should STOP using it at all after the very initial
+     smoke test.
+   : Instead, ALWAYS use the init.d script to start/stop the service. This way you are
+     starting it with the actual env variables, modules, params that it's known to work
+     with and which other services / code-changes may simply assume.

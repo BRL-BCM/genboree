@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "processPipelineRuns",
+    "releaseStatus": "beta",
+    "version": "4.6.3"
+  },
+  "cluster": {
+    "ppn": 1,
+    "mem": "60gb",
+    "vmem": "60gb",
+    "queue": "gbRamHeavy"
+  },
+  "ui": {
+    "label": "Post-processing exceRpt small RNA-seq Pipeline Results",
+    "shortLabel": "processPipelineRuns",
+    "groupAccessUri": null
+  }
+} 

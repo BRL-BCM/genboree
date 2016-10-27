@@ -1,0 +1,11 @@
+--- init.rb.ORIG	2014-07-01 13:59:51.376591185 -0500
++++ init.rb	2014-07-01 14:10:15.366572684 -0500
+@@ -20,7 +20,7 @@
+ 
+ require 'redmine'
+ 
+-RAILS_DEFAULT_LOGGER.info 'Starting Google Calendar plugin 0.1.2'
++Rails.logger.info 'Starting Google Calendar plugin 0.1.2'
+ 
+ # Redmine Google Calendar plugin
+ Redmine::Plugin.register :redmine_google_calendar do

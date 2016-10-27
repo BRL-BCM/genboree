@@ -1,0 +1,95 @@
+<%# Uses erubis %>
+<%# - assumes the binding it is evaluated in includes a 'context' variable that is an ErubisContext %>
+<%# - the ErubisContext.includeFile(<path>) function does this automatically %>
+
+  <!-- BEGIN: COMMON HTML FOOTER -->
+  <%# THIS COMES RIGHT AFTER PAGE content. It will close the page content <tc> and
+      the open <tables>, <body>, <head>, <html> that you and the header.rhtml opened %>
+<%
+  require 'brl/genboree/genboreeUtil'
+
+  currTime = Time.now
+  gbConfig = BRL::Genboree::GenboreeConfig.load()
+%>
+    </td>
+    <td width=10></td>
+    <td width=10 class="shadow"></td>
+  </TR>
+  <tr>
+    <td width="10"></td>
+    <td>
+      <p>
+      &nbsp;
+      <p>
+      &nbsp;
+      <br>
+      <hr width="90%">
+      <table width="100%" border="0" cellpadding="0">
+  		<tr>
+        <!-- Lower Left Logo -->
+  		  <td width="113" align="right">
+          <a href="http://hgsc.bcm.tmc.edu">
+            <img src="/images/hgsc50.gif" width="93" height="50" alt="HGSC" border="0">
+          </a>
+        </td>
+        <!-- Middle Footer Text -->
+        <td>
+          <!-- Genboree Acknowledgement Text -->
+          <div id="ackText" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+            Genboree is built &amp; maintained by the <a href="http://brl.bcm.tmc.edu">Bioinformatics&nbsp;Research&nbsp;Laboratory</a><br>
+            at <a href="http://www.bcm.edu">Baylor&nbsp;College&nbsp;of&nbsp;Medicine</a>.
+          </div>
+          <div id="ackText" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+            Genboree is a hosted service. Free open source code is available <a href="http://genboree.org/site/genboree_server">here</a>.
+          </div>
+          <!-- VERSION -->
+          <div id="ackText" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+            Genboree version: __GENBOREE_VERSION__
+          </div>
+        </td>
+        <!-- Lower Right Logo -->
+        <td align="lett" width="90"><a href="http://brl.bcm.tmc.edu">
+          <img src="/images/brl50.gif" width="70" height="50" alt="Bioinformatics Research Laboratory" border="0"></a>
+        </td>
+      </tr>
+      </table>
+    </td>
+    <td width="10"></td>
+    <td class="shadow" width="10"></td>
+  </tr>
+  <tr>
+    <td width="10"></td>
+    <td>
+	  	<table width="100%" border="0" cellpadding="8">
+  		<tr>
+        <!-- Lower Left Address -->
+  		  <td class="note" style="font-size: 7pt;">
+  			  &copy; 2001-<%=Time.now.year%> <a href="http://www.bcm.edu">Baylor&nbsp;College&nbsp;of&nbsp;Medicine</a>
+              <br>
+              <A HREF="http://brl.bcm.tmc.edu">Bioinformatics Research Laboratory</A>
+  			  <br>
+  			  <span style="font-size: 7pt;">(N1619.04 Alkek, HGSC, 1 Baylor Plaza, Houston, TX 77030, 713-798-5433)</span>
+  		  </td>
+        <!-- Lower Right Contact Link -->
+  		  <td class="highlight" align="center" valign="middle" width="136" style="font-size: 7pt;">
+  			  <a href='mailto:<%=gbConfig.gbAdminEmail%>'><nobr>Questions or comments?</nobr></a>
+  		  </td>
+  		</tr>
+  		</table>
+    </td>
+  	<td width=10></td>
+    <td width=10 class="shadow"></td>
+  </tr>
+  <tr>
+    <td colspan="3" height="10"></td>
+    <td class="shadow" width="10"></td>
+  </tr>
+  <tr>
+    <td width=10 class="bkgd"></td>
+    <td height=10 class="shadow"></td>
+    <td width=10 class="shadow"></td>
+    <td width=10 class="shadow"></td>
+  </tr>
+  </table>
+</BODY></HTML>
+<!-- END: COMMON HTML FOOTER -->

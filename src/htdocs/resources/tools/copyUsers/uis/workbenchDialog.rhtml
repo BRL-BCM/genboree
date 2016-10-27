@@ -1,0 +1,170 @@
+<%
+  width = (@hasAccess ? 650 : 320)
+  height = (@hasAccess ? 525 : 320)
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will allow you to copy users from one group to another. You can choose the role each copied user will have in the target group:
+        <ul>
+          <li>Administrator: Has ownership access to all contents in the group. Can delete, edit and add users to group and upload annotations to any of the databases in the group.</li>
+          <li>Author: Has read/write access to all contents in the group. Cannot delete, edit and add users to group but can upload annotations to any of the databases in the group.</li>
+          <li>Subscriber: Has only read access to contents in the group. Cannot create groups or databases or upload annotations to a database.</li>
+        </ul>
+        <br>&nbsp;<br>
+        Only the selected users will be copied over to the target group. Users that are already members of the target group will be skipped unless their roles differ in which case their roles will be updated.
+        <br>&nbsp;<br>
+        Note that this tool is not multi-host compliant and cannot be used to copy users to and from a group on a different host other than the one pointed to by the URL in your browser.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Input summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Copy users from:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @inputs} )
+  })
+%>
+<%# Output summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Copy users to:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs} )
+  })
+%>
+<%
+    grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+    targetGrp = grpApiHelper.extractName(@inputs[0])
+    grpRecs = @dbu.selectGroupByName(targetGrp)
+    groupId = grpRecs.first['groupId']
+    usersInGroup = @dbu.getUsersWithRolesByGroupId(groupId, orderBy='')
+    userRecs = []
+    rowKeys = []
+    usersInGroup.each { |userRec|
+      if(userRec['userId'].to_i != @context['userId'].to_i)
+        userGroupAccess = userRec['userGroupAccess']
+        subsSelected = userGroupAccess == 'r' ? true : false
+        authorSelected = userGroupAccess == 'w' ? true : false
+        adminSelected = userGroupAccess == 'o' ? true : false
+        role = ''
+        if(userGroupAccess == 'r')
+          role = 'Subscriber'
+        elsif(userGroupAccess == 'w')
+          role = 'Author'
+        else
+          role = 'Administrator'
+        end
+        userRecs << [
+                      { :checkToCopy => { :value => "", :checkbox => true } },
+                      { :login => { :value => userRec['name'], :checkbox => false } },
+                      { :name => { :value => "#{userRec['firstName']} #{userRec['lastName']}</br>#{userRec['email']}", :checkbox => false } },
+                      { :currRole => { :value => "#{role}", :checkbox => false } },
+                      { :targetRole => { :value => { :o => {:label => "Administrator", :selected => adminSelected}, :w => {:label => "Author", :selected => authorSelected}, :r => {:label => "Subscriber", :selected => subsSelected } }, :checkbox => false } }
+
+                    ]
+        rowKeys << userRec['userId']
+      end
+    }
+%>
+<%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Copy Users",
+      :widgets =>
+      [
+        { :id => "userRecsList", :label => '', :labelWidth => "10px", :colspanForToggleBtn => "5", :fontSize => "11px", :cellspacing => "0", :colSpan => "2", :spanFullRow => true, :leftPadding => "10px", :bottomPadding => "10px",
+        :type => :tabularCheckboxSection, :rows => userRecs, :headerRow => ['Copy', 'Login Name', 'Full Name</br>Email Address', 'Current Role', 'Target Group Role'], :rowKeys => rowKeys, :valign => "middle", :cellBottomPadding => "5px" },
+        { :id => "baseWidget", :value => "userRecsList", :hidden => true },
+        { :id => "selectRoleForAllUsers", :label => "Set Permission for Users To", :labelWidth => "280px", :type => :select, :onchange => "changeUserPermissions(this.value)",  :options =>
+          {
+            :o => {:label => "Administrator"},
+            :w => {:label => "Author"},
+            :r => {:label => "Subscriber"},
+            :x => {:label => "Same as this group", :selected => true }
+          }
+        }
+
+      ]
+    })
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+function changeUserPermissions(value)
+{
+  var targetRoles = document.getElementsByClassName('userRecsList_targetRole') ;
+  var userTable = document.getElementById('userRecsList') ;
+  var ii ;
+  var roleValue ;
+  if(value == 'x') // Set permissions to be the same as source group
+  {
+    for(ii = 0; ii < targetRoles.length; ii++)
+    {
+      var roleValueText = userTable.rows[ii+1].cells[3].innerHTML ; // First row is header. Add 1 to iterator
+      if(roleValueText == 'Subscriber')
+      {
+        roleValue = 'r' ;
+      }
+      else if(roleValueText == 'Author')
+      {
+        roleValue = 'w' ;
+      }
+      else
+      {
+        roleValue = 'o' ;
+      }
+      targetRoles[ii].value = roleValue ;
+    }
+  }
+  else
+  {
+    for(ii = 0; ii < targetRoles.length; ii++)
+    {
+      targetRoles[ii].value = value ;
+    }
+  }
+
+}
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

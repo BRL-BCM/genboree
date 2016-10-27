@@ -1,0 +1,8 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolWarningTitle, { :title => 'Rename File Entity List' } ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbWarningMsg, { :context => @context } ) %>
+  <br>
+  <div style='width: 50% ; margin-left: auto; margin-right: auto; text-align: center; font-weight: bold; color: #C64848'></div>
+</div>

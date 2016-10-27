@@ -1,0 +1,11 @@
+<%@ page import="org.genboree.editor.AnnotationEditorHelper"%> <% long totalNumAnno =0;
+    boolean proceedLargeGroup = false;
+     String redir2 = "annotationEditorMenu.jsp?upfid=" + textid;
+    String largeGrp = request.getParameter("largeGrp");
+    if (largeGrp!= null && largeGrp.compareTo("y")==0)
+    proceedLargeGroup = true;
+
+    if (request.getParameter("upfid") != null ){
+    totalNumAnno = AnnotationEditorHelper.findClassAnnoNum(con, ifid);
+     }
+%>

@@ -1,0 +1,47 @@
+<%
+    require 'cgi'
+    require 'brl/genboree/genboreeUtil'
+    require 'brl/genboree/toolPlugins/util/util'
+    require 'brl/util/textFileUtil'
+    include BRL::Genboree
+    include BRL::Genboree::ToolPlugins::Util
+    include BRL::Genboree::ToolPlugins
+    
+    def prepForText() # Tell apache we're going to send some text
+        return if(@prepped4output)
+        @req.headers_out['Content-Type'] = @req.content_type = 'text/plain'
+        @req.headers_out['Accept-Ranges'] = 'bytes'
+        @req.status = 200
+        @req.send_http_header
+        @prepped4output = true
+        # Remove Apache buffering on the response object...else apache buffers until
+        # the request is done. Generally we avoid this, but for D/L it can be good.
+        @resp.sync_output = true
+    end 
+
+    # A regular expression describing all characters that need to be escaped 
+    # when constructing command line options, thus preventing command injection 
+    # such as cgi['foo'] = ">2 err; do_something_bad"
+    BAD_CHARS_RE = /\!|\@|\#|\$|\%|\^|\&|\*|\(|\)|\_|\+|\=|\-|\||\;|\'|\>|\<|\/|\?/ 
+    BAD_CHARS_REPLACEMENT = "_" # The character to use to replace bad chars
+
+    @req = Apache.request
+    @resp = $stdout
+    # CGI variables
+    cgi = CGI.new
+    @prepped4output = false
+    userId = cgi['userId'].to_i.untaint
+    groupId = cgi['groupId'].to_i.untaint
+    refSeqId = cgi['refSeqId'].to_i.untaint
+    tool = cgi['tool'].dup.untaint
+    filename = cgi['f']
+    filename = filename.dup.untaint
+    filePath = "#{TOOL_USER_LINKS}/#{groupId}/#{refSeqId}/#{tool}"
+    
+    prepForText()
+    
+    cleanFileName = filename.gsub(/ /, '\ ')
+    reader = IO.popen( "gunzip -c #{filePath}/#{cleanFileName}" )
+    reader.each { |line| puts line }
+    reader.close()
+%>

@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "samplesImporter",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "cluster" : {
+    "queue" : "gb"
+  },
+  "ui": {
+    "label": "Samples Importer",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,347 @@
+<%
+  # ##############################################################################
+  # LIBRARIES
+  # - The first 3 are standard for all apps.
+  # ##############################################################################
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree::ToolPlugins
+
+  $VERBOSE = nil
+
+  # ##############################################################################
+  # SETUP / INITIALIZATION
+  # ##############################################################################
+
+  # ---------------------------------------------------------------
+  # STANDARD HELPER METHODS
+  # - these appear in most input.rhtml files
+  # - some customization or additions may be necessary
+  # ---------------------------------------------------------------
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+    # Remove Apache buffering on the response object...else apache buffers until
+    # the request is done. Generally we avoid this, but for D/L it can be good.
+    @resp.sync_output = true
+  end
+
+  # ---------------------------------------------------------------
+  # IMPORTANT COMMON VARIABLES
+  # - these and maybe some tool-specific ones are standard
+  # ---------------------------------------------------------------
+  @req = Apache.request
+  @resp = $stdout
+  cgi = CGI.new
+  @prepped4output = false
+  genbConf = BRL::Genboree::GenboreeConfig.load()
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  inner = BRL::Genboree::ToolPlugins::InnerWrapper
+
+  # ---------------------------------------------------------------
+  # GET TRACK LIST FOR SELECTED DATABASE
+  # - The refSeqId is provided via from the droplist for you
+  # - Feed it to inner.getTracks() to get a list of tracks for this database
+  #   . tracks is a hash of "type:subtype" => <ftype record as Array>
+  #   . so you have all the info for tracks and displayable names too
+  # ---------------------------------------------------------------
+  userId = cgi['userId'].to_i.untaint
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  tracks = inner.getTracks(refSeqId, userId)
+  sortedTrackNames = tracks.keys.sort {|aa,bb| aa.downcase <=> bb.downcase }
+
+  # ---------------------------------------------------------------
+  # GET EXP NAMES FOR THIS GROUP, DB, AND TOOL
+  # - You need to have the list of existing job names
+  # - This would be specific for each group, DB, and tool combination)
+  # ---------------------------------------------------------------
+  expnames = wrapper.getExperimentNames( cgi['groupId'].to_i, cgi['refSeqId'].to_i, cgi['tool'] )
+
+  # READY.
+  prepForHtml()
+%>
+
+<%# --------------------------------------------------------------- %>
+<%# DYNAMIC PAGE-SPECIFIC JAVASCRIPT (usually data) %>
+<%# --------------------------------------------------------------- %>
+<%# NEEDED: Creates JavaScript Array global with existing experiment names. %>
+<%# This is needed for validation. %>
+<script type="text/javascript">
+var USED_EXP_NAMES = new Array( <%= expnames.map{ |ii| "\"#{ii}\"" }.join(",") %>) ;
+var TOOL_PARAM_FORM = 'pdw' ;
+</script>
+
+
+<%# --------------------------------------------------------------- %>
+<%# STYLESHEETS (tool or GUI specific ones, not general Genboree ones %>
+<%# --------------------------------------------------------------- %>
+
+<%# --------------------------------------------------------------- %>
+<%# NEEDED JS FILES (first bunch are standard %>
+<%# --------------------------------------------------------------- %>
+<script type="text/javascript" SRC="/javaScripts/prototype-1.6.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_hideform.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_draggable.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/overlib_cssstyle.js?jsVer=<%= genbConf.jsVer %>"></script>
+<script type="text/javascript" SRC="/javaScripts/util.js?jsVer=<%= genbConf.jsVer %>"></script>
+<DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%# TOOL-SPECIFIC JS FILE FOR INPUT FORM VALIDATION AND HELP DISPLAY, ETC %>
+<script type="text/javascript" src="/genboree/toolPlugins/tiler/tiler.js?jsVer=<%= genbConf.jsVer %>"></script>
+
+<%# START OF TOOL-SPECIFIC FORM %>
+<%# Note: toolPluginsWrapper.jsp must be the action %>
+<%# Note: implement a validate() function in tool-specific .js file %>
+<form name="pdw" id="pdw" action="/java-bin/toolPluginsWrapper.jsp" method="post" onSubmit="return validate();">
+<table border="0" cellpadding="2" cellspacing="2">
+<tr>
+  <td>
+    <%# TOOL TITLE %>
+    <CENTER><FONT SIZE="4"><B>Tile Across Long Annotations</B></FONT></CENTER>
+
+    <%# BEGIN: TOOL DESCRIPTION %>
+    <div style="width:500px;">
+    This tool tiles across any 'long' annotations found in the selected track, thereby generating
+    a new track of tile annotations.
+    <P>
+    <UL class="compact4_bigIndent">
+      <LI>&middot; <u>Motivation</u>: tile across long primer templates, producing shorter templates for primer design. The tool, however, operates on any annotation track.</LI>
+      <LI>&middot; <u>Output</u>: new tiling annotations are uploaded to a new track.</LI>
+      <LI>&middot; <u>Output</u>: by default, the 'short' (untiled) annotations are included, making the new track a complete set of acceptably-sized annotations.</LI>
+    </UL>
+    </div>
+    <P>
+    <font color='red'>
+    <%# UPDATE THE 'subject' HERE: %>
+    NOTE: This is a new service. If you encounter any problems, please contact <A HREF="mailto:brl_admin@bcm.tmc.edu?subject=Split and Tile Tool">brl_admin@bcm.tmc.edu</A>.
+    </font>
+    <P>
+    <%# NEEDED Genboree data to pass to server code that will execute script: %>
+    <input type="hidden" id="refSeqId" name="refSeqId" value="<%= cgi['refSeqId'] %>">
+    <input type="hidden" id="groupId" name="groupId" value="<%= cgi['groupId'] %>">
+    <input type="hidden" id="type" name="type" value="thanks">
+    <input type="hidden" id="tool" name="tool" value="<%= cgi['tool'] %>">
+
+    <%# UPDATE THE 'value' HERE TO MATCH TOOL NAME PARAM ON SERVER SIZE %>
+    <input type="hidden" id="function" name="function" value="tileLongAnnos">
+    <%# END: TOOL DESCRIPTION %>
+
+    <%# --------------------------------------------------------------- %>
+    <%# TOOL GUI sits in a table %>
+    <%# --------------------------------------------------------------- %>
+    <table BGCOLOR="navy" width="100%" border="0" cellpadding="3" cellspacing="1">
+    <%# BEGIN: JOB NAME ROW %>
+    <TR>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="expnameLabel"><FONT SIZE="2"><B>Job Name:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="text" id="expname" name="expname" class="txt" size="55" maxlength="55">
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('expname');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </TR>
+    <%# END: EXPERIMENT NAME ROW %>
+
+    <%# BEGIN: TRACK SELECTION ROW %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="trackLabel"><FONT SIZE="2"><B>Template Track:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <%  unless(tracks.empty?) %>
+               <%# NOTE: Using the suffix _lff for id/name here gets you the file for free on server side %>
+                <select id="template_lff" name='template_lff'>
+                  <option value="selectATrack">Select a Track</option>
+<%
+                      sortedTrackNames.each { |trackName|
+%>
+                        <option value="<%= CGI.escape(trackName) %>" ><%=CGI.escapeHTML(trackName)%><br /></option>
+<%
+                      }
+%>
+                </select>
+            <%  else  %>
+                  <font color="red"><b>The database is empty. No tracks present. Plug-in cannot be run.</b></font>
+            <%  end %>
+          </td>
+          <td align="right" nowrap>
+            <%# HELP: this calls a specific help-display function in your tool's .js %>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('template_track');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: TRACK SELECTION ROW %>
+
+    <%# BEGIN: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="splitWhatHow" name="splitWhatHow"><FONT SIZE="2"><B>Tiling Parameters</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <span id='maxAnnoSize_lbl' name='maxAnnoSize_lbl'>Tile across annotations over:</span>&nbsp;
+            <input type="text" id="maxAnnoSize" name="maxAnnoSize" value="0" onchange="return setTileSize();" class="txt" style="width:50px;">
+            bp
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('maxAnnoSize');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span id="tileSize_lbl" name="tileSize_lbl">General tile size:</span>&nbsp;
+            <input type="text" id="tileSize" name="tileSize" value="" class="txt" style="width:50px;"> bp</input>
+            &nbsp;
+            <span id="minTileSize_lbl" name="minTileSize_lbl">Minimum tile size:</span>&nbsp;
+            <input type="text" id="minTileSize" name="minTileSize" value="1" class="txt" style="width:50px;"> bp</input>
+            &nbsp;
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tileSize');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span id="tileOverlap_lbl" name="tileOverlap_lbl">Tile overlap:</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="text" id="tileOverlap" name="tileOverlap" class="txt" value="50.0" style="width:50px;">
+            <input type="radio" id="bpOrPerc" name="bpOrPerc" value="perc" class="txt" checked >%</input>
+            <input type="radio" id="bpOrPerc" name="bpOrPerc" value="bp" class="txt">bp</input>
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tileOverlap');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span id="tilePadding_lbl" name="tilePadding_lbl">Pre-pad all annotations by:</span>
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="leftAnnoPad" name="leftAnnoPad" class="txt" value="0" style="width:50px;"> bp on the left (5' end on reference strand)</input>
+            <br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<input type="text" id="rightAnnoPad" name="rightAnnoPad" class="txt" value="0" style="width:50px;"> bp on the right (3' end on reference strand)</input>
+          </td>
+          <td width="36" align="right" valign="top" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tilePadding');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: VARIOUS TOOL-SPECIFIC PARAMETER ROWS, ETC %>
+    <%# BEGIN: EXTRA TOOL-SPECIFIC OPTIONS, ETC %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="nameFormat" name="nameFormat"><FONT SIZE="2"><B>Treatment of<BR>Annotation Names</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td>
+            <input type="checkbox" id="uniqAnnoNames" name="uniqAnnoNames" value="true" checked>
+            <span id="uniqAnnoNames_lbl" name="uniqAnnoNames_lbl">Enforce sensible &amp; unique annotation names for tiles?</span>
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('uniqAnnoNames');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="checkbox" id="stripVerNums" name="stripVerNums" value="true" checked>
+            <span id="stripVerNums_lbl" name="stripVerNums_lbl">Strip annotation version number when naming tiles?</span>
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('stripVerNums');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: EXTRA TOOL-SPECIFIC OPTIONS, ETC %>
+
+    <%# BEGIN: GENBOREE TRACK-RELATED ROW(S) %>
+    <tr>
+      <TD WIDTH="25%" class="form_body" ALIGN="right">
+        <SPAN id="tileTrack"><FONT SIZE="2"><B>Output Track for<BR>Tiling Annotations:</B></FONT></SPAN>
+      </TD>
+      <TD BGCOLOR="white">
+        <table width="100%" border="0" cellpadding="2" cellspacing="2">
+        <tr>
+          <td nowrap>
+            <span id="trackClass_lbl" name="trackClass_lbl">&quot;Class&quot;</span>&nbsp;
+            <input type="text" id="trackClass" name="trackClass" value="Tiles" class="txt" size="12">
+            &nbsp;&nbsp;&nbsp;
+            <span id="trackType_lbl" name="trackType_lbl">&quot;Type&quot;:</span>&nbsp;
+            <input type="text" id="trackType" name="trackType" class="txt" size="7">
+            &nbsp;&nbsp;&nbsp;
+            <span id="trackSubtype_lbl" name="trackSubtype_lbl">&quot;Subtype&quot;:</span>&nbsp;
+            <input type="text" id="trackSubtype" name="trackSubtype" class="txt" size="7">
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('tileTrack');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="checkbox" id="excludeUntiledAnnos" name="excludeUntiledAnnos" value="true">
+            <span id="trackSubtype_lbl" name="trackSubtype_lbl">Exclude untiled ('short') annotations from output track?</span>
+          </td>
+          <td width="36" align="right" nowrap>
+            <A HREF="javascript:void(0);" onclick="return overlibHelp('excludeUntiledAnnos');" >
+              <IMG SRC="/images/gHelp1.png" BORDER="0" WIDTH="16" HEIGHT="16"></A>
+          </td>
+        </tr>
+        </table>
+      </TD>
+    </tr>
+    <%# END: GENBOREE TRACK-RELATED ROW(S) %>
+
+    </table>
+  </td>
+</tr>
+</table>
+<P>
+
+<%# CUSTOM SUBMIT BUTTONS [ call custom _reset() function in tool-specific .js file ] %>
+<input type="submit" name="tileAnnos" id="tileAnnos" class="btn" value="Submit">&nbsp;
+<input type="button" name="cancel" id="cancel" class="btn" value="Reset" onClick="toolReset();">&nbsp;
+<P>
+
+<%# CUSTOM NOTIFICATION MESSAGE %>
+You will receive email notification when the split &amp; tile job is completed.
+</form>
+
+<%
+  # CLEAN UP
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

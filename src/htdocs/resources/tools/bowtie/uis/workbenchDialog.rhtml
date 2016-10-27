@@ -1,0 +1,305 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/db/dbrc'
+  require 'brl/genboree/abstract/resources/user'
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/genboreeUtil'
+  require 'uri'
+  width = (@hasAccess ? 600 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        Bowtie 2 is an ultrafast and memory-efficient tool for aligning sequencing reads to long reference sequences. It is particularly good at aligning reads of about 50 up to 100s or 1000s of characters to relatively long (e.g. mammalian) genomes.
+        <br>&nbsp;<br>
+        Bowtie 2 was developed by Ben Langmead at the <a href='http://cs.jhu.edu/~langmea/index.shtml' target='_blank'>Department of Computer Science</a> at Johns Hopkins University.
+        <center><span class='footnote'>[ Bowtie 2 is described in <a href='http://www.nature.com/nmeth/journal/v9/n4/full/nmeth.1923.html' target='_blank'>this journal article</a>. ]</span></center>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Files Of Interest" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    userId = @context['userId']
+    dbu = BRL::Genboree::DBUtil.new("#{@genbConf.dbrcKey}", nil, nil)
+    hostAuthMap = Abstraction::User.getHostAuthMapForUserId(dbu, userId) 
+
+    uri = URI.parse(@outputs[0])
+    rcscUri = uri.path
+    listOfIndexes = {}
+    useIndexOptions = {}
+
+    # Get list of entrypoints from user db
+    epArray = []
+    apiCaller = ApiCaller.new(uri.host, "#{uri.path}/eps?", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+   
+    if(apiCaller.succeeded?)
+      resp = JSON.parse(apiCaller.respBody)['data']['entrypoints']
+      resp.each { |ep|
+        epArray << ep['name']
+      } 
+    end # if(apiCaller.succeeded?) for getting entrypoints
+    #$stderr.puts "**#{epArray.inspect} \n\n"
+    
+    # Get list of indexes (if any) from user db 
+    apiCaller = ApiCaller.new(uri.host, "#{rcscUri}/files/indexFiles/bowtie", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    
+    if(apiCaller.succeeded?)
+      userData = JSON.parse(apiCaller.respBody)['data']
+      userData.each { |subdir|
+        userIndexName = subdir['name'] 
+        indexDir = userIndexName.split("/")[2]
+        indexFile = userIndexName.split("/")[3]
+         
+        indexUri = @outputs[0].dup
+        indexUri = indexUri.chomp("?")
+        indexUri << "/file/indexFiles/bowtie/#{CGI.escape(indexDir)}/#{CGI.escape(indexFile)}"
+        listOfIndexes[:"#{indexUri}"] = { :label => "#{indexDir}" }
+      }
+    else
+      #$stderr.puts "Bowtie indexes do not exist in user db"  
+    end # if(apiCaller.succeeded?) for getting index list from user db
+
+    #$stderr.puts "second apicall #{listOfIndexes.inspect} \n\n"
+
+    # Get Genome Version of output database
+    genomeVersion = @settings['genomeVersion'].decapitalize
+    
+    # Get list of indexes (if any) from repository db 
+    @roiRepositoryGroup = @genbConf.roiRepositoryGrp
+    @roiRepoDb = "#{@roiRepositoryGroup}#{genomeVersion}"
+    indexUri = URI.parse(@roiRepoDb)
+    rsrcPath = indexUri.path
+    @roiDirs = ['wholeGenome', 'eachChr']
+    @roiDirs.each { |dirName|
+      apiCaller = ApiCaller.new(indexUri.host, "#{rsrcPath}/files/indexFiles/bowtie/#{CGI.escape(dirName)}", hostAuthMap)
+      apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+      apiCaller.get()
+      if(apiCaller.succeeded?)
+        ## There are indexes available in common database 
+        repoData = JSON.parse(apiCaller.respBody)['data']
+        repoData.each { |subdir|
+          indexName = subdir['name'] 
+          indexDir = indexName.split("/")[2]
+          indexFile = indexName.split("/")[3]
+        
+          indexROIUri = @roiRepoDb.dup
+          indexROIUri = indexROIUri.chomp("?")
+          indexROIUri << "/file/indexFiles/bowtie/#{CGI.escape(dirName)}/#{CGI.escape(indexFile)}"          
+          if(dirName =~ /wholeGenome/) 
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}", :selected => true } 
+          else
+            listOfIndexes[:"#{indexROIUri}"] = { :label => "#{indexDir}" } 
+          end
+        }
+      else
+        #$stderr.puts "#{@roiRepoDb} does not seem to exist"  
+      end # if(apiCaller.succeeded?)
+    } 
+    #$stderr.puts "last apicall #{listOfIndexes.inspect} \n\n"
+    if(listOfIndexes.empty?)
+      useIndexOptions[:makeNewIndex] = { :label => 'Build a new index', :selected => true }
+      hiddenIndexList = true
+      hiddenNewIndex = false
+    else
+      useIndexOptions[:makeNewIndex] = { :label => 'Build a new index' }
+      useIndexOptions[:useExistingIndex] = { :label => 'Use existing index', :selected => true }  
+      hiddenIndexList = false
+      hiddenNewIndex = true
+    end   
+       
+    widgets =
+              [
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "30", :value => "Bowtie-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'Bowtie\') used to organize Bowtie results.' },
+                #{ :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the inputs/outputs"},
+                { :id => 'indexOptions', :toggleText => "Index Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'useIndex', :label => 'Select Index', :title => 'Do you want to build a new Bowtie 2 index using reference sequences or use an existing index? Default: Uses whole genome index if available', :onChange => "showIndexOption(this.value)", :type => :select, :options => useIndexOptions },
+                    { :id => 'indexList', :label => 'Bowtie2 index', :title => 'Select the appropriate Bowtie 2 index to be used for mapping', :type => :select, :options => listOfIndexes, :hidden => hiddenIndexList },
+                    { :id => 'indexBaseName', :label => 'Bowtie2 Index Name', :type => :text, :value => genomeVersion, :size => '15', :maxlength => '30', :hidden => hiddenNewIndex, :title => "Provide a name for your custom Bowtie2 index. This name should be less than 30 characters in length. Default: GenomeVersion" },
+                    { :id => 'selectEps', :toggleText => "Select Entrypoints/Chromosomes", :type => :advancedSection, :startWithExpanded => false, :hidden => hiddenNewIndex, :title => "Select list of entrypoints/chromosomes for building Bowtie2 index. Default: all entrypoints" , :widgets =>
+                      [
+                        { :id => "epArray", :label => "", :labelWidth => '100px', :type => :tableWithCheckboxSection, :rows => epArray, :headerRow => ['Entrypoint', 'Select'] },
+                        { :id => "baseWidget", :label => "", :hidden => true, :type => :text, :value => 'epArray'}
+                      ]
+                    },
+                  ]
+                },
+                { :id => 'trackOptions', :toggleText => "Track Options", :type => :advancedSection, :startWithExpanded => true, :widgets =>
+                  [
+                    { :id => 'doUploadResults', :label => 'Upload Coverage Results as Tracks ?', :type => :checkbox, :title => 'Sequencing Coverage is calculated from the mapped reads. Check this to upload coverage results as a Genboree track in the output database for subsequent processing, or viewing in Genboree or UCSC Genome Browser. ', :onClick => "displayTrackName(this.checked)" },
+                    { :id => 'trackClassName', :label => 'Track Class Name', :size => "30", :type => :text, :value => 'User Data', :disabled => true, :title => 'Provide a track class name for uploading coverage track under this Class. [Default: User Data]'},
+                    { :id => 'trackName', :label => 'Track Name', :type => :gbTrackName, :defaultType => 'Read', :hideTrackName => true, :defaultSubtype => 'Density', :hidden => true, :title => 'For uploading Coverage track, provide an LFF-style track name. Preferably not an existing track in the output database.'},
+                    { :id => 'deleteDupTracks', :label => 'Delete Pre-existing Tracks', :type => :checkbox, :checked => false, :title => "Check this to delete existing tracks in the target database and replace them with newly created ones if the names match. Non matching tracks will not be changed in any way. This will avoid duplication of imported data. By default, data gets appended to the existing track. [Default: Unchecked]." },
+                  ]
+                },
+                { :id => 'alignmentOptions', :toggleText => "Alignment Options", :type => :advancedSection, :startWithExpanded => false, :widgets =>
+                  [
+                    { :id => 'alignmentType', :label => 'Alignment Type', :title => 'Select the type of alignment, End-to-end or Local. End-to-end mode searches for alignments involving all of the read characters. This is also called an untrimmed or unclipped alignment. In local alignment mode, Bowtie 2 might trim or clip some read characters from one or both ends of the alignment if doing so maximizes the alignment score.  [Default: end-to-end].', :type => :select, :options => 
+                      {
+                        :endToEnd   => { :label => 'End-to-end', :selected => true },
+                        :local    => { :label => 'Local'}                  
+                      }
+                    },
+                    { :id => 'presetOption', :label => 'Preset Option', :title => 'Preset options in End-to-end or local alignment modes: very fast, fast, sensitive, very sensitive [Default: sensitive].', :type => :select, :options =>
+                      {
+                        :veryFast   => { :label => 'Very Fast'},
+                        :fast   => { :label => 'Fast'},
+                        :sensitive   => { :label => 'Sensitive', :selected => true },
+                        :verySensitive  => { :label => 'Very Sensitive' }
+                      }
+                    },
+                    { :id => 'disallowGapsWithin', :label => 'Disallow Gaps within N positions', :type => :text, :size => "10", :value => "4", :title => 'Disallow gaps within N positions of the beginning or end of the read (Default: 4)'},
+                    { :id => 'strandDirection', :label => 'Strand direction', :title => 'If Disable Forward is selected, bowtie2 will not attempt to align unpaired reads to the forward (Watson) reference strand. If Disable Reverse is specified, bowtie2 will not attempt to align unpaired reads against the reverse-complement (Crick) reference strand. In paired-end mode, Disable Forward and Disable Reverse pertain to the fragments; i.e. specifying Disable Forward causes bowtie2 to explore only those paired-end configurations corresponding to fragments from the reverse-complement (Crick) strand. [Default: both strands enabled].', :type => :select, :options =>
+                      {
+                        :both   => { :label => 'Both', :selected => true },
+                        :nofw   => { :label => 'Disable forward'}, 
+                        :norc   => { :label => 'Disable reverse'}
+                      }
+                    }
+                  ]
+                },
+                { :id => 'inputOptions', :toggleText => "Input Reads Options", :type => :advancedSection, :startWithExpanded => false, :widgets =>
+                  [
+                    { :id => 'skipNReads', :label => 'Skip N Reads', :type => :text, :size => "10", :value => "0", :title => 'Skip (i.e. do not align) the first N reads or pairs in the input.' },
+                    { :id => 'alignFirstNReads', :label => 'Align first N reads', :type => :text, :size => "10", :value => "", :title => 'Align the first N reads or read pairs from the input (if skip N reads option is specified, after skipping N reads or pairs), then stop. Default: no limit' },
+                    { :id => 'trimNBasesAt5prime', :label => 'Trim N bases at 5\' end', :type => :text, :size => "10", :value => "0", :title => 'Trim N Bases at 5\' (left) end of each read before alignment (Default: 0)'},
+                    { :id => 'trimNBasesAt3prime', :label => 'Trim N bases at 3\' end', :type => :text, :size => "10", :value => "0", :title => 'Trim N Bases at 3\' (right) end of each read before alignment (Default: 0)'}
+                  ]
+                },
+                { :id => 'reportingOptions', :toggleText => "Reporting Options", :type => :advancedSection, :startWithExpanded => false, :widgets =>
+                  [
+                    { :id => 'reportAlnsPerRead', :label => 'Report up to N alignments per read', :type => :text, :size => "10", :value => "", :title => 'Report up to N alignments per read. Default: Looks for multiple alignments, reports best'},
+                    { :id => 'noUnalignedSamRecord', :label => 'Suppress SAM records for unaligned reads', :type => :checkbox, :checked => true, :title => 'Check this to suppress SAM records for reads that failed to align'},
+                    { :id => 'unalignedReadsFile', :label => 'Write unaligned reads to a file', :type => :checkbox, :checked => false, :title => 'Check this to write all reads that failed to align by Bowtie 2 to a file. Written reads will appear as they did in the input, without any of the trimming or translation of quality values that may have taken place within Bowtie.'}
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Bowtie Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+function showIndexOption(value)
+{
+  var indexList = document.getElementById('indexList');
+  var indexListLabel = Ext.get('indexListLabel')
+
+  var indexBaseName = Ext.get('indexBaseName');
+  var indexBaseNameLabel = Ext.get('indexBaseNameLabel');
+
+  var selectEps = Ext.get('selectEps');
+  var selectEpsLabel = Ext.get('selectEpsLabel');
+  
+  if(value == "useExistingIndex")
+  {
+    indexList.style.visibility = 'visible' ;
+    indexListLabel.setStyle('display', '') ;
+
+    indexBaseName.setStyle('display', 'none') ;
+    indexBaseNameLabel.setStyle('display', 'none') ;
+    selectEpsLabel.setStyle('display', 'none') ;
+  }
+  else if(value == "makeNewIndex")
+  {
+    indexList.style.visibility = 'hidden' ;
+    indexListLabel.setStyle('display', 'none') ;
+
+    indexBaseName.setStyle('display', '') ;
+    indexBaseNameLabel.setStyle('display', '') ;
+    selectEpsLabel.setStyle('display', '') ;
+  }
+}
+
+function displayTrackName(checked)
+{
+  var lffType = Ext.get('lffType').dom ;
+  var lffSubType = Ext.get('lffSubType').dom ;
+  var wigTracklabel = Ext.get("trackNameLabel") ;
+
+  var lffTrackClassName = document.getElementById('trackClassName') ;
+  var lffTrackClassNameLabel = Ext.get("trackClassNameLabel") ;
+  if(checked)
+  {
+    lffType.disabled = false ;
+    lffSubType.disabled = false ;
+    lffType.style.visibility = '' ;
+    lffSubType.style.visibility = '' ;
+    lffTrackClassName.disabled = false ;
+    wigTracklabel.setStyle('display', '') ;
+  }
+  else
+  {
+    lffType.style.visibility = 'hidden' ;
+    lffType.disabled = true ;
+    lffSubType.style.visibility = 'hidden' ;
+    lffSubType.disabled = true ;
+    lffTrackClassName.disabled = true ;
+    wigTracklabel.setStyle('display', 'none') ;
+  }
+}
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

@@ -1,0 +1,278 @@
+<!--svg animation element -->
+<animate id="anim" attributeName="viewBox" begin="undefined" dur="0.75s" values=""
+            keyTimes="0; 1" fill="freeze" onend="endAnimation()"/>
+
+<!--svg symbols -->
+<defs>
+	<symbol id="leftCurlyBracket" class="curelyBracket" viewBox="0 0 12 160">
+		<desc>A vertical open curely bracket, open to the right</desc>
+		<g>
+			<path d="M12 0 C-8 30 22 70 0 80"/>
+		</g>
+		<g>
+			<path d="M0 80 C22 90 -8 130 12 160"/>
+		</g>
+	</symbol>
+
+	<symbol id="rightCurlyBracket" class="curelyBracket" viewBox="0 0 12 160">
+		<desc>A vertical close curely bracket, open to the left</desc>
+		<g>
+			<path d="M0 0 C20 30 -10 70 12 80"/>
+		</g>
+		<g>
+			<path d="M12 80 C-10 90 20 130 0 160"/>
+		</g>
+	</symbol>
+    <radialGradient id="button" cx="0" cy="0" r="100%">
+        <stop offset="0%" style="stop-color: #9ab7fa;"/>
+        <stop offset="100%" style="stop-color: #2266f5;"/>
+    </radialGradient>
+    <radialGradient id="buttonHighlight" cx="0" cy="0" r="100%">
+        <stop offset="0%" style="stop-color: #f0f0f0;"/>
+        <stop offset="100%" style="stop-color: #0055e5;"/>
+    </radialGradient>
+</defs>
+
+<defs>
+<symbol id="defaultChromosome" viewBox="0 0 35 600">
+  <g>
+	<path fill="none" stroke="#000000" d="M17.5,590.988c6.904,0,12.5-0.885,12.5-1.98V293.21c0-1.095-5.596-1.98-12.5-1.98 c-6.904,0-12.5,0.885-12.5,1.98v295.798C5,590.102,10.596,590.988,17.5,590.988z"/>
+	<path fill="none" d="M35,600.08H0V0h35V600.08z"/>
+  </g>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="leftSmallBracket" class="curelyBracket" viewBox="0 0 2.309 25.809">
+	<g>
+		<path stroke-width="0.5" d="M2.081,0.104c-3.2,4.8,1.601,11.2-1.92,12.8"/>
+	</g>
+	<g>
+		<path stroke-width="0.5" d="M0.161,12.904c3.521,1.601-1.28,8,1.92,12.8"/>
+	</g>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="rightSmallBracket" class="curelyBracket" viewBox="0 0 2.308 25.809">
+		<g>
+			<path stroke-width="0.5" d="M2.147,12.904c-3.521-1.6,1.279-8-1.92-12.8"/>
+		</g>
+		<g>
+			<path stroke-width="0.5" d="M0.227,25.704c3.199-4.8-1.601-11.199,1.92-12.8"/>
+		</g>
+
+</symbol>
+</defs>
+
+
+<defs>
+<symbol id="ruler" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">50 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">150 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">100 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">200 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">300 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">250 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="ruler150MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">75 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">150 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">225 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+
+<defs>
+<symbol id="ruler9MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">2 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">6 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">4 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">8 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">12 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">10 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+ <defs>
+<symbol id="ruler7MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">3 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">6 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">9 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="ruler12MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">3 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">9 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">6 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">12 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">18 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">15 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="ruler05MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.1 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.3 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.2 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.4 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.6 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.5 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="ruler3MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0.5 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">1.5 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">1.0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">2.0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">3.0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">2.5 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>
+
+<defs>
+<symbol id="ruler5MB" viewBox="0 0 60 600" >
+<text transform="matrix(0.9573 0 0 1 10.9136 497.5557)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">1 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 586.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">0 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 316.8154)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">3 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 407.668)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">2 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 227.9648)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">4 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 46.7451)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">6 Mb</tspan></text>
+<text transform="matrix(0.9573 0 0 1 10.9136 137.0415)"><tspan x="0" y="0" font-family="'ArialMT'" font-size="9.4015">5 Mb</tspan></text>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,43.447H56"/>
+<path fill="none" stroke="#000000" d="M47.5,89.056H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,134.472H56"/>
+<path fill="none" stroke="#000000" d="M47.5,179.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,269.056H56"/>
+<path fill="none" stroke="#000000" d="M47.5,359.04H56"/>
+<path fill="none" stroke="#000000" d="M47.5,449.04H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,224.497H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,314.507H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M47.5,404.399H56"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,494.532h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,585.54V42.923"/>
+<path fill="none" stroke="#000000" stroke-width="2" d="M48,584.54h8.5"/>
+<path fill="none" stroke="#000000" d="M47.5,539.54H56"/>
+<path fill="none" d="M60,600.054H0V0h60V600.054z"/>
+</symbol>
+</defs>

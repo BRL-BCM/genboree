@@ -1,0 +1,162 @@
+<%@ page import="org.genboree.tabular.LffConstants,
+                 org.genboree.tabular.AttributeRetriever,
+                 org.genboree.util.GenboreeUtils,
+                 java.util.HashMap,
+                 org.genboree.editor.AnnotationDetail,
+                 org.genboree.message.GenboreeMessage,
+                 org.genboree.tabular.AnnotationSorter,
+                 java.util.ArrayList,
+                 java.util.Iterator"%>
+<%  if (numShareAnnos >0) {
+        shareFids = AttributeRetriever.retrieveFidByFtypeids(sharedConnection, shareftypeids,  numShareAnnos );       
+        if (shareFids != null &&shareFids.length > 0) {
+            sharedAnnotations = new AnnotationDetail [shareFids.length];             
+            for (i=0; i<shareFids.length; i++) {
+                sharedAnnotations[i] =  new AnnotationDetail (shareFids[i]);  
+                sharedAnnotations[i].setShare(true);
+            }
+        }
+    }
+    
+    if (numLocalAnnos >0   &&   (orderedSortNames == null  ||  orderedSortNames.length ==0)        ) {
+        int []fidlocal = AttributeRetriever.retrieveFidByFtypeids(con, localftypeids, numLocalAnnos);       
+        localAnnotations = new AnnotationDetail [fidlocal.length]; 
+        for (i=0; i<fidlocal.length; i++)
+        localAnnotations[i] =  new AnnotationDetail (fidlocal[i]);              
+    }  
+    ArrayList fidList = new ArrayList (); 
+    // case 1.1. has  sorting 
+    if (orderedSortNames != null){                        
+        if (localftypeids != null && localftypeids.length > 0 ) {
+            localAnnotations = AttributeRetriever.retrieveSortAnnotations(con, localftypeids, sortList, fdataSortNames, localftypeid2ftype,localftypeid2Gclass, localid2Chromosome );                                                       
+        //  localAnnotations = retrieveSortAnnotations(con, localftypeids, sortList, fdataSortNames, localftypeid2ftype,localftypeid2Gclass, localid2Chromosome );                                                       
+         
+       
+         
+            if ( localAnnotations != null && localAnnotations.length >0) {  
+                 
+               int localfidsInt[]  = new int [localAnnotations.length] ; 
+                  localfids  = new String [localAnnotations.length] ; 
+                for ( i=0; i<localAnnotations.length; i++){        
+                localfid2anno.put("" + localAnnotations[i].getFid() , localAnnotations[i]);
+                localfids[i] = "" +localAnnotations[i].getFid();
+                    localfidsInt[i] = localAnnotations[i].getFid();
+                fidList.add(localfids[i]); 
+                }
+            // if sorting by text
+                if (sortList.contains(LffConstants.LFF_COLUMNS[12]) || sortList.contains(LffConstants.LFF_COLUMNS[13])) {           
+                AttributeRetriever.populateAnnotationText (localAnnotations,localfid2anno, con);           
+                needSort = true; 
+                } 
+            // retrieves  avp data
+                avpNames =(String []) avpSortNameList.toArray(new String [avpSortNameList.size()]);                                                                   
+                if (avpNames != null && avpNames.length > 0 ) {  
+                needSort = true;    
+                    
+                localfid2hash = AttributeRetriever.retrieveSmallNumAnnotationAVPs(con, localfidsInt);
+                if (localfid2hash != null  && localAnnotations != null) {
+                    for (int m=0; m<localAnnotations.length; m++){
+                        if (localAnnotations[m] != null  && localfid2hash.get("" + localAnnotations[m].getFid() ) != null) {
+                            avp = (HashMap )localfid2hash.get("" + localAnnotations[m].getFid());
+                          
+                            localAnnotations[m].setAvp(avp);
+                        }
+                    }
+                
+                }
+                    
+  
+                 } 
+            }
+        }
+        
+        
+            if (shareftypeids != null && shareftypeids.length > 0 ) {
+                sharedAnnotations = AttributeRetriever.retrieveSortAnnotations(sharedConnection, shareftypeids, sortList, fdataSortNames, shareftypeid2ftype,shareftypeid2Gclass, shareid2Chromosome);               
+                if (sharedAnnotations != null) {
+               sharefids = new String[sharedAnnotations.length] ; 
+                    
+                     int []   sharefidsInt = new int [sharedAnnotations.length] ; 
+                for ( i=0; i<sharedAnnotations.length; i++){        
+                        sharefid2anno.put("" + sharedAnnotations[i].getFid() , sharedAnnotations[i]);
+                        sharefidsInt[i] = sharedAnnotations[i].getFid();
+                      sharefids[i] = ""+sharedAnnotations[i].getFid();
+                        fidList.add(sharefids[i]); 
+                        sharedAnnotations[i].setShare(true);
+                }
+                // if sorting by text
+                if (sortList.contains(LffConstants.LFF_COLUMNS[12]) || sortList.contains(LffConstants.LFF_COLUMNS[13])) {           
+                    AttributeRetriever.populateAnnotationText (sharedAnnotations,sharefid2anno, con);           
+                    needSort = true; 
+                } 
+                // retrieves  avp data
+                if (avpNames != null && avpNames.length > 0 ) {
+                        needSort = true;                        
+                        sharefid2hash = AttributeRetriever.retrieveSmallNumAnnotationAVPs(sharedConnection, sharefidsInt);
+                        if (sharefid2hash != null  &&  sharedAnnotations!= null) {
+                        for (int m=0; m<sharedAnnotations.length; m++){
+                            if (sharefid2hash.get("" + sharedAnnotations[m].getFid() ) != null&&  sharedAnnotations[m] != null  ) {
+                                avp = (HashMap )sharefid2hash.get("" + sharedAnnotations[m].getFid());
+                                sharedAnnotations[m].setAvp(avp);
+                            }
+                        
+                        }
+                        }   
+                    }
+                }
+            }
+    }    
+    
+    
+    
+    totalAnnotations = new AnnotationDetail [totalNumAnnotations]; 
+    if (numLocalAnnos>0){
+        for (i=0; i<numLocalAnnos; i++)
+        totalAnnotations [i] = localAnnotations[i]; 
+    }
+    if (numShareAnnos>0){
+        for (i=0; i<numShareAnnos; i++) 
+        totalAnnotations [i+numLocalAnnos] = sharedAnnotations[i];  
+    }   
+    
+    
+    
+    if (totalAnnotations == null) {
+        GenboreeMessage.setErrMsg(mys, " No annotations are found with the track information provided.");
+        hasData = false;
+    }
+    else {  // has data
+         
+         
+       if (needSort)  { 
+           HashMap myavp = null; 
+           String mykey = null; 
+           String myvalue = null; 
+          for (int j=0; j<totalAnnotations.length; j++) {
+               myavp = totalAnnotations[j].getAvp(); 
+              if (myavp == null ) {
+                   continue; 
+                  
+              }
+              
+             Iterator it = myavp.keySet().iterator(); 
+              ArrayList list = null;   
+              while (it.hasNext()) {
+                 mykey = (String)it.next();  
+                 myvalue = (String)myavp.get(mykey);  
+                  list = new ArrayList (); 
+                  list.add(myvalue); 
+                  myavp.put(mykey, list); 
+              }
+              
+          }
+           
+           totalAnnotations = AnnotationSorter.sortAllAnnotations(orderedSortNames, totalAnnotations);
+       }
+  
+  
+          mys.setAttribute("totalAnnotations_AV", totalAnnotations);  
+      
+     
+    }
+%>

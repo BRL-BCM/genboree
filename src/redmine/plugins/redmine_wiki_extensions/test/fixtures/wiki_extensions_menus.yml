@@ -1,0 +1,23 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+
+  project_id: 1
+
+  page_name: MyString
+
+  enabled: true
+  menu_no: 1
+  title: hoge
+
+two:
+  id: 2
+
+  project_id: 1
+
+  page_name: MyString1
+
+  enabled: false 
+  menu_no: 2
+  title: bar
+

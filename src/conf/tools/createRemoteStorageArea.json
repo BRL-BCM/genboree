@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "createRemoteStorageArea",
+    "releaseStatus": "beta",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Create Remote Storage Area",
+    "shortLabel": "[NOT SET]"
+  }
+}

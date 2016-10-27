@@ -1,0 +1,7 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolWarningTitle, { :title => 'Track Copy/Move' } ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbWarningMsg, { :context => @context } ) %>
+  
+</div>

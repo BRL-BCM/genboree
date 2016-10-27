@@ -1,0 +1,109 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will links Samples to data Files. It is primarily intended to associate a Sample to an .SFF or .SRA that has been uploaded. It will set the <span style='font-family:monspaced;'>fileLocation</span> attribute to point to the data File.
+        <br>&nbsp;<br>
+        <i>This is a neccessary step for some tool suites, such as the Microbiome Workbench.</i>
+        <br>&nbsp;<br>
+        Review that the correct file(s) and sample(s)/sampleSet(s) have been selected.
+        <br>&nbsp;<br>
+        If you haven't uploaded your file(s) to Genboree, use the <span class='wbHelpMonoEntity'>Data &raquo; Files &raquo; Transfer File</span>. If you haven't uploaded your Sample records yet, use <span class='wbHelpMonoEntity'>Data &raquo; Samples &raquo; Import Samples</span>.
+        <br>&nbsp;<br>
+        Note that the <u>order of inputs</u> is very important to determine which Sample will be linked to which File. If you are selecting sampleSet(s),
+        then all the samples within that sample set will be linked to the selected file. 
+        If you wish to associate multiple samples/sampleSets with multiple files, the order should be :
+
+          <ul style=\"margin-left: 20px;\">
+            <li><span class='wbHelpMono'>File1</span></li>
+            <li><span class='wbHelpMono'>Sample1/SampleSet1</span></li>
+            <li><span class='wbHelpMono'>Sample2/SampleSet2</span></li>
+            <li><span class='wbHelpMono'>File2</span></li>
+            <li><span class='wbHelpMono'>Sample3/SampleSet3</span></li>
+            <li><span class='wbHelpMono'>Sample4/SampleSet4</span></li>
+          </ul>
+        This will link Sample1/SampleSet1 & Sample2/SampleSet2 to File1 and Sample3/SampleSet3 & Sample4/SampleSet4 to File2.
+        <br>&nbsp;<br>
+        Note that you can select both samples and/or sampleSets. So your input can also look like :
+        
+          <ul style=\"margin-left: 20px;\">
+            <li><span class='wbHelpMono'>File1</span></li>
+            <li><span class='wbHelpMono'>SampleSet1</span></li>
+            <li><span class='wbHelpMono'>Sample1</span></li>
+            <li><span class='wbHelpMono'>File2</span></li>
+            <li><span class='wbHelpMono'>SampleSet2</span></li>
+            <li><span class='wbHelpMono'>Sample2</span></li>
+          </ul>
+        This will link Sample1 and all samples in SampleSet1 to File1 and Sample2 and all samples in SampleSet2 to File2.
+        <br>&nbsp;<br>
+        Sample sets can be created when using the <i>Import Samples</i> tool. If a sample set is specified when importing samples, all samples become part of that sample set.
+        <br>&nbsp;<br>
+        Empty sample sets can also be created using the <i>Add Sample Set</i> utility and then you can manually add samples to the empty sample set by using the
+        <i>Add Samples to Sample Sets<i> utility.
+        <br>&nbsp;<br>
+        <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the role of this tool in the <u>Microbiome Workbench</u> are provided in the </i><a href='#addendum'>Addendum</a><i> at the bottom of this Help dialog.</i></div>
+        "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>File(s)</u> and <u>Sample(s)</u> into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Files', 'min: 1 ; max: any' ], [ 'Samples', 'min: 0 ; max: any' ], [ 'SampleSets', 'min: 0 ; max: any' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Submit', "Once you've reviewed the input file(s) and sample(s), click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+  <%# Tool-specific Addendum %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpAddendum,
+      {
+        :html =>
+        "
+          <a name='addendum'>
+            <div style='display:block; margin: 15px; auto; 8px; auto; text-align:center; color:#0052DC; font-size:12pt; font-weight:bold;'>
+              Addendum
+            </div>
+          </a>
+          <b>A. Context Within the Microbiome Workbench</b><br>
+          Within the context of preparing data for use within the Microbiome Workbench suite of tools, this step <u>associates (links) a Sample record to a specific .SFF or .SRA sequence File</u>. The Files typically contain sequence records for multiple samples, so several Samples may be linked to the same sequence File. After linking via this tool, the <span class='wbHelpMonoEntity'>Analysis &raquo; Microbiome Workbench &raquo; Microbiome Sequence Importer</span> can be used to extract sample-specific sequence data and prep the data for use in the analysis tools:
+          <div style='width:100%; text-align: center; font-size: 12pt; font-weight: bold; margin: 10px 2px 0px 2px;'>
+            Microbiome Workbench Flow
+          </div>
+          <img src='/images/workbench/help/microbiomeWorkbench/flow_MBWImportSamples.png' style='margin:2px 2px 10px 2px; display:block; margin-left:auto; margin-right:auto; width:497; height:198;'>
+          <b>B. Output Produced</b><br>
+          To record the which File is associated with which Sample, this tool merely sets the Sample's <span class='wbHelpMono'>fileLocation</span> to a Genboree REST API URL which points to the file. For example:
+          <br>&nbsp;<br>
+<pre style='font-size:8pt;'>
+#name	barcode	AgeGroup	fileLocation
+samp_x1	GCCAATA	B	http://genboree.org/REST/v1/grp/Microbiome%20Group/db/microbiomeDb/file/SRR/SRR045291.sra
+samp_x2	GCAAATC	B	http://genboree.org/REST/v1/grp/Microbiome%20Group/db/microbiomeDb/file/SRR/SRR045291.sra
+</pre>
+        "
+      })
+  %>
+</div>

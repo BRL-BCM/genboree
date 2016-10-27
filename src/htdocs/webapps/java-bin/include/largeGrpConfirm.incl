@@ -1,0 +1,34 @@
+ <input type="hidden" name="largeGrp" id="largeGrp" value="n">
+  
+
+   <%
+
+
+    if (totalNumAnno >= org.genboree.util.Constants.GB_MIN_ANNO_FOR_DISPLAY_WARN &&  request.getParameter("largeGrp")== null    && !proceedLargeGroup) {
+    %>
+        <SCRIPT type="text/javascript">
+       ///  alert("" +$('editorForm') );
+        if ( $('editorForm')  ){
+
+            if (!confirm("There are " + <%=totalNumAnno%> + " annotations in the group. \nIt may take  a long time to process and display. \n\nProceed anyway?" )){
+
+                     $('largeGrp').value="n";
+                   $('editorForm').submit();
+             }
+
+            else {
+
+              $('largeGrp').value="y";
+            
+              $('editorForm').submit();
+           }
+       }
+       else {
+
+           if ($('backForm'))
+           $('backForm').submit();
+
+       }
+
+        </script>
+        <%} %>

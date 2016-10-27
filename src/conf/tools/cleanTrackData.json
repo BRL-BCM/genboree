@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "cleanTrackData",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "pvmem": "750mb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "04:00:00"
+  },
+  "ui": {
+    "label": "[NOT SET]",
+    "shortLabel": "[NOT SET]"
+  }
+}

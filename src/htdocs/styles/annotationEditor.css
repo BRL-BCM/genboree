@@ -1,0 +1,362 @@
+td.annotation1 {
+    background-color: #d3cfe6;
+    color:red;
+}
+
+td.annotation2 {
+    background-color: #d3cfe6;
+    padding-right: 0.5em;
+    padding-left: 0.5em;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+
+div.annotation3 {
+  float:left;
+    background-color: #d3cfe6;
+    padding-right: 0.5em;
+    padding-left: 1em;
+    padding-top: 5px;
+    padding-bottom: 3px;
+    font-size:10pt;
+    font-weight:bold;
+}
+
+div.annotation4 {
+  float:right;
+    background-color: #d3cfe6;
+    padding-right: 1em;
+    padding-left: 0.5em;
+    padding-top: 5px;
+    padding-bottom: 3px;
+    font-size:10pt;
+    font-weight:bold;
+}
+
+
+div.form_header2 {
+float:left;
+background-color: #4c3d99;
+color: white;
+font-weight: bold;
+}
+
+
+div.form_header3 {
+float:right;
+background-color: #4c3d99;
+color: white;
+font-weight: bold;
+}
+
+
+td.profile{
+    font-size:8pt;
+    font-weight:bold;
+    background-color:#DADADA;
+    height:8pt;
+
+
+}
+
+input.coord {
+    width: 90%;
+}
+
+select {
+    font-family: verdana,arial,sans-serif;
+    font-size: 100%;
+    font-weight: bold;
+}
+option {
+    font-family: verdana,arial,sans-serif;
+    font-size: 100%;
+    font-weight: bold;
+}
+input {
+    font-family: verdana,arial,sans-serif;
+    font-size: 100%;
+    font-weight: bold;
+}
+textarea {
+    font-family: verdana,arial,sans-serif;
+    font-size: 100%;
+    font-weight: bold;
+}
+
+select.shortDroplist {
+    width: 100%;
+    
+}
+
+ select.longDroplist {
+     width: 150px;
+
+ }
+
+
+ select.longDroplist1 {
+     width: 200px;
+
+ }
+
+select.longDroplist2 {
+    width: 150px;
+    font-size: 90%;
+}
+
+input.coord {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    font-weight: bold;
+    width: 100%;
+}
+
+input.longInput {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    font-weight: bold;
+    width: 100%;
+}
+
+
+input.longInputRO {
+    font-family: verdana,arial,sans-serif ;
+    font-size: 90%;
+    font-weight: bold;
+    width: 100%;
+    background-color: #E6E6E6;
+}
+
+
+
+ input.longInput3 {
+    width:150px;
+      font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    background-color:white;
+
+}
+
+input.largeInput {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    font-weight: bold;
+     width: 100%;
+}
+
+
+
+ input.largeInputRO {
+     font-family: verdana,arial,sans-serif;
+     font-size: 90%;
+     font-weight: bold;
+     width: 100%;
+     background-color:#E6E6E6;
+
+ }
+
+  input.largeInputRO2 {
+     font-family: verdana,arial,sans-serif;
+      font-size:8pt;
+      font-weight: bold;
+      background-color:#DADADA;
+  }
+
+
+input.centerInput {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    font-weight: bold;
+    width: 140;
+}
+
+
+
+ textarea.smallTextarea {
+     font-family: verdana,arial,sans-serif;
+     font-size: 90%;
+      width: 420px;
+ }
+
+
+
+textarea.largeTextarea {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+    width: 520px;
+}
+
+
+
+textarea.oneRowTextarea {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+     width: 150px;
+}
+
+
+
+
+div.oneRowDivarea {
+    font-family: verdana,arial,sans-serif;
+    font-size: 90%;
+
+}
+
+div.annotation1 {
+    color:red;
+}
+
+div.title4 {
+      font-size: 14pt;
+      font-weight: bold;
+}
+
+div.successMsg {
+      font-size: 12pt;
+      font-weight: bold;
+      color:green;
+}
+
+ div.warnMsg {
+       font-size: 12pt;
+       font-weight: bold;
+       color:blue;
+ }
+
+
+ div.warnMsgSmall {
+        font-size: 8pt;
+        font-weight: bold;
+        color:blue;
+  }
+
+
+ div.errorMsg {
+       font-size: 12pt;
+       font-weight: bold;
+       color:red;
+ }
+
+
+textarea.largeTextareaRO {
+    font-family: verdana,arial,sans-serif ;
+    font-size: 90% ;
+    width: 100% ;
+    width: 520px ;
+    background-color: #E6E6E6;
+}
+
+.atxt {FONT-FAMILY: verdana,arial,sans-serif; FONT-SIZE: 100%; }
+
+span.genbLabel2 {
+  font-size: 8pt;
+  font-weight: bold;
+  background-color: #f0eafB ;
+}
+
+span.genbLabel3 {
+  font-size: 12pt ;
+  font-weight: bold;
+  font-family: "courier new", monospace;
+}
+
+span.eMessage {
+   color:red;
+ }
+
+div.toolName {
+  float: left;
+  width: 27%;
+  font-size: 9pt;
+  font-weight: bold;
+  margin-top: 5px;
+  vertical-align: bottom;
+}
+
+div.toolDesc {
+  float: left;
+  width: 73%;
+  clear: right;
+  margin-top: 5px;
+  margin-bottom: 2px;
+}
+
+
+
+div.toolGroupTitle {
+  font-size: 10pt ;
+  font-weight: bold ;
+  margin-bottom: 3px ;
+  padding-bottom: 2px ;
+  border-bottom-style: solid ;
+  border-bottom-width: 1px ;
+  border-bottom-color: black ;
+}
+
+
+
+div.warningMsg {
+  font-size: 9pt ;
+  color:red;
+  font-weight: bold ;
+  margin-bottom: 3px ;
+  padding-bottom: 2px ;
+  border-bottom-width: 1px ;
+}
+
+
+
+ div.rightClose {
+    float: right;
+   margin-left:1pt;
+   margin-right:2pt;
+   margin-bottom:1pt;
+   margin-top: 1px;
+     padding-right: 0.5em;
+    padding-left: 0.5em;
+    padding-top: 3px;
+    padding-bottom: 3px;
+     background: #f0eafB ;
+    border: 1px solid #000000 ;
+ }
+
+
+
+.btn10 {
+FONT-FAMILY: verdana,arial,sans-serif;
+FONT-SIZE: 90%;
+FONT-WEIGHT: bold;
+background-color: #D4D0C8;
+width: 10em;
+}
+
+
+input.userRadio {
+
+ margin-left:50px;
+
+
+}
+
+
+.btn15 {
+FONT-FAMILY: verdana,arial,sans-serif;
+FONT-SIZE: 90%;
+FONT-WEIGHT: bold;
+background-color: #D4D0C8;
+width: 15em;
+margin-left:1pt;
+margin-right:2pt;
+margin-bottom:1pt;
+margin-top:1pt;
+}
+
+
+.btnSmall {
+FONT-FAMILY: verdana,arial,sans-serif; FONT-SIZE: 80%;
+FONT-WEIGHT: bold;
+background-color: #D4D0C8;
+}

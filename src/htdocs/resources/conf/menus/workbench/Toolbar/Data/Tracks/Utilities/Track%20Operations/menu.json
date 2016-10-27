@@ -1,0 +1,41 @@
+[
+  {
+    "text": "Track Intersection",
+    "tooltip": "Find all the annotations in a query track that have an intersection with all/any annotations of one or more other tracks.",
+    "idStr": "trkIntersect",
+    "disabled": true,
+    "hidden": true
+  },
+  {
+    "text": "Track Non-Intersection",
+    "tooltip": "Find all the annotations in a query track that <i>do not</i> have an intersection with all/any annotations of one or more other tracks.",
+    "idStr": "trkNonIntersect",
+    "disabled": true,
+    "hidden": true
+  },
+  {
+    "text": "Combine Tracks",
+    "tooltip": "Combine the annotations from two or more tracks into a new track.",
+    "idStr": "trkCombine",
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "text": "Merge Track Annotations",
+    "tooltip": "Merge overlapping annotations of a single track into a final result track.",
+    "idStr": "trkMerge",
+    "disabled": false,
+    "hidden": false
+  },
+  //{ 
+  //  "hSpacer": "-" 
+  //},
+  {
+    "text": "Track Segmentation",
+    "tooltip": "Perform a track segmentation analysis on selected track.",
+    "idStr": "trkSegment",
+    "disabled": true,
+    "hidden": true
+  }
+]
+

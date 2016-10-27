@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "updateRoles",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Update Roles",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,22 @@
+INSTALL INSTRUCTIONS
+^^^^^^^^^^^^^^^^^^^^
+
+1) Deploy executables:
+
+signalSimilaritySearchJobHelper.rb
+signalSimilaritySearchRulesHelper.rb
+
+- make sure these are executable files
+- make sure to deploy them on the standard path
+  . e.g. /usr/local/brl/local/bin/ on Genboree-compatible machines
+
+2) Install 'spreadsheet' gem
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+gem install spreadsheet
+
+- good chance server machine does not have this Ruby gem, make
+  sure to install/update it otherwise you will get an error
+  when the tool itself runs (after data downloads)
+
+

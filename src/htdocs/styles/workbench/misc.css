@@ -1,0 +1,305 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH OVERALL STYLES
+ * ------------------------------------------------------------------
+ */
+
+/* Global init settings */
+/* Hides from IE5-mac \*/
+* html .container, .footer, .wrapper
+{ height: 1% ; }
+/* End hide from IE5-mac */
+/* General Genboree styling */
+body
+{
+  background-color: #EAE6FF ;
+}
+
+p, td, th, h1, h2, h3, h4
+{
+  color: #403C59 ;
+  font-family: verdana,arial,sans-serif ;
+}
+
+a
+{
+  color: #403C80 ;
+  font-weight: bold ;
+  text-decoration: none ;
+}
+/* Workbench specific styling */
+div.tracks
+{
+  margin: 10px ;
+}
+
+div#header
+{
+  border-bottom: 1px solid #999999 ;
+  background-color: #FFF ;
+  margin-left: 25px ;
+  margin-right: 25px ;
+}
+
+div.container
+{
+  margin: 0 25px ;
+  position: relative ;
+  padding: 0 ;
+  background-color: #FFF ;
+  border-width: 0 1px 1px 1px ;
+  border-style: solid ;
+  border-color: #999999 ;
+}
+
+div.wrapper
+{
+  margin: 0 ;
+  position: relative ;
+}
+
+img.header
+{
+  border: 0 ;
+}
+
+div#header h1
+{
+  font-size: 20pt ;
+  font-style: bold ;
+  font-family: "Verdana", sans-serif ;
+  text-align: center ;
+}
+
+h1
+{
+  text-align: center ;
+}
+
+h3
+{
+  font-weight: normal;
+  padding-left: 18px;
+  padding-bottom: 10px;
+}
+
+div.group
+{
+  border: 1px solid ;
+  margin: 10px 0px ;
+  padding-bottom: 10px ;
+}
+
+div.wrapper.left
+{
+  padding: 10px 5px 10px 10px ;
+  margin: 10px 5px 10px 10px ;
+}
+
+div.wrapper.right
+{
+  padding: 10px 10px 10px 5px ;
+  margin: 10px 10px 10px 5px ;
+
+}
+
+div.column.left
+{
+  float: left ;
+  margin: 0 ;
+}
+
+div.column.right
+{
+  float: right ;
+  margin: 0 ;
+}
+
+div.column
+{
+  width: 49.9% ;
+  position: relative ;
+  margin: 0 ;
+  padding: 0 ;
+}
+
+
+div.bottom
+{
+  clear: both ;
+  margin: 5px 0 15px 0;
+}
+
+div.group h2
+{
+  text-align: center ;
+  padding-left: 5px ;
+}
+
+div.group select
+{
+  width: 100% ;
+}
+
+div.group fieldset
+{
+  padding: 1em ;
+  margin: 10px ;
+}
+
+div.footer
+{
+  margin-top: 15px ;
+  border-top: 1px solid #999 ;
+  padding: 10px 5px 5px 5px;
+  position: relative ;
+}
+
+div.credits
+{
+  margin: auto ;
+  text-align: center ;
+  width: 60% ;
+  font-size: .8em ;
+}
+
+div.footer div.address
+{
+  float: left ;
+  font-size: .8em ;
+}
+
+div.footer div.comments
+{
+  border: 1px solid #B095FB ;
+  background-color: #FAF6FF ;
+  color: #604FA9 ;
+  padding: 5px ;
+  position: absolute ;
+  bottom: 1px ;
+  right: 1px ;
+  font-size: .8em ;
+}
+
+div.footer div.comments a
+{
+  color: #604FA9 ;
+}
+
+/* Styling for workbench page title text: */
+h4.wbTitle {
+  font-size: 1.4em ;
+  margin: 15px 5px 5px 5px ;
+}
+
+/* Styling for intro paragraphs on workbench page: */
+ul.wbIntro {
+  margin-left: 5px ;
+  margin-top: 10px ;
+  padding-left: 5px ;
+  width: 96% ;
+  list-style-type: none ;
+  list-style: none
+}
+
+ul.wbIntro li.wbIntro {
+  list-style-type: none ;
+  list-style: none ;
+  font-size: 10pt ;
+  margin-bottom: 10px ;
+}
+
+span.greenToolHighlight {
+  color: black ;
+  font-weight: bold ;
+  background-color: #BCE2D5 ;
+  padding-left: 2px ;
+  padding-right: 2px ;
+  padding-bottom: 1px ;
+}
+
+p.wbIntro .fixedFont {
+  font-family: courier new, sans-serif, monospace ;
+  font-size: 1.1em ;
+}
+
+div.note {
+  font-size: 80% ;
+  background: #EEEEEE ;
+  border: 1px solid black ;
+  padding: 5px ;
+}
+
+div.note li {
+  font-size: 1.2em ;
+}
+
+.wbDialog ol {
+  list-style-type: decimal ;
+}
+
+.wbTitle {
+  font-size: 1.4em;
+  padding: 10px 5px 5px 5px;
+}
+
+.wbSup {
+  font-size: 0.8em;
+}
+
+
+.wbStatusEntered {
+  font-weight: bold ;
+}
+
+.wbStatusCompleted {
+  font-weight: bold ;
+}
+
+.wbStatusRunning {
+  font-weight: bold ;
+}
+
+.wbStatusSubmitted {
+  font-weight: bold ;
+}
+
+.wbStatusFailed {
+  font-weight: bold ;
+}
+
+.wbStatusWait4Deps {
+  font-weight: bold ;
+}
+
+.wbStatusPartialSuccess {
+  font-weight: bold ;
+}
+
+.wbStatusCanceled {
+  font-weight: bold ;
+}
+
+.wbStatusKilled {
+  font-weight: bold ;
+}
+
+
+/* The following classes are required to make the details grid selectable (Works only for chrome/firefox/safari) */
+.x-grid3-row td,
+.x-grid3-summary-row td,
+.x-grid3-cell-text,
+.x-grid3-hd-text,
+.x-grid3-hd,
+.x-grid3-row,
+.x-grid-cell,
+.x-grid-cell-inner *,
+.x-unselectable,
+.x-unselectable *
+{
+  -moz-user-select: inherit;
+  -khtml-user-select: text;
+  -webkit-user-select: text;
+  -o-user-select: inherit ;
+  -ms-user-select: text ;
+}

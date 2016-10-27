@@ -1,0 +1,381 @@
+@CHARSET "ISO-8859-1";
+
+ul, ol, p {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  margin: 0px;
+}
+
+body {
+  background: url("../images/brl/page-bg.png") repeat-x scroll left top #4f89ff;
+  margin-top: 0px;
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial; 
+}
+
+#ecNewsContent {
+  width: 900px;
+}
+
+#newsContent {
+  width: 890px;
+}
+
+#container {
+  margin: 0 auto;
+  position: relative;
+  width: 900px;
+}
+
+#header {
+  background-color: white;
+  background-image: url("../images/brl/header_background.png");
+  background-repeat: no-repeat;
+  width: 900px;
+  height: 140px;
+}
+
+#topRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#topRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial; 
+}
+
+#topNavigation {
+  background-color: blue;
+  width: 900px;
+}
+
+#topNavigation ul {
+  list-style: none outside none;
+  margin: 0px;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("../images/brl/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#topNavigation li {
+  display: inline;
+  list-style-type: none;
+  position: relative;
+  float: left;
+  height: 40px;
+  width: 225px;
+}
+
+#topNavigation li a {
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: white;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  padding: 10px 20px;
+}
+
+#topNavigation li a:hover {
+  background-color: white;
+  background-image: url("../images/brl/topNavigation_background_hover.png");
+  background-repeat: repeat;
+}
+
+#services {
+  height: 220px;
+  width: 900px;
+  background-color: #E1E1E1;
+}
+
+#currentService {
+  height: 200px;
+  width: 560px;
+  margin: 10px 0px 10px 10px;
+  float: left;
+  background-color: #FAFAFA;
+}
+#currentServiceImageDiv {
+  height: 160px;
+  width: 240px;
+  margin: 10px;
+  background-color: white;
+  float: left;
+  padding: 10px;
+  margin-right: 0px;
+}
+
+#currentServiceText {
+  height: 160px;
+  width: 250px;
+  margin: 10px;
+  background-color: white;
+  float: right;
+  padding: 10px;
+  font-size: 12pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  margin-left: 0px;
+}
+
+#currentServiceText a{
+  color: #002266;
+  text-decoration: underline;
+  font-family: sans-serif, verdana, arial; 
+}
+
+#serviceList, #ecServiceList {
+  height: 200px;
+  width: 290px;
+  margin: 10px 10px 10px 0px;
+  float: right;
+  background-color: #FAFAFA;
+}
+
+#serviceList ul, #ecServiceList ul {
+  list-style: none;
+  margin: 0px;
+  padding: 0px;
+  border: none;
+}
+
+#serviceList li {
+  margin: 10px;
+  background-color: white;
+  height: 25px;
+  font-size: 11pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: black;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  padding: 6px 20px;
+}
+
+#ecServiceList li {
+  margin: 10px;
+  background-color: white;
+  height: 25px;
+  font-size: 11pt;
+  font-weight: bold;
+  text-decoration: none;
+  text-align: center;
+  color: black;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  padding: 14px 20px;
+}
+
+#serviceList .selected, #ecServiceList .selected {
+  color: white;
+  background-color: #002266;
+  cursor: pointer;
+  cursor: hand;
+}
+
+#serviceList .notSelected, #ecServiceList .notSelected {
+  color: black;
+  cursor: pointer;
+  cursor: hand;
+}
+
+#mainContent {
+  height: 400px;
+}
+
+#welcome {
+  height: 380px;
+  width: 560px;
+  margin: 10px 0px 10px 10px;
+  float: left;
+  background-color: white;
+}
+
+#welcomeHeader {
+  height: 20px;
+  width: 550px;
+  margin: 0px;
+  margin-bottom: 10px;
+  float: left;
+  padding: 4px 10px;
+  backfround-color: white;
+  font-size: 10pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  border-bottom: 1px black solid;
+  padding-right: 0px;
+}
+
+#welcomeText {
+  padding: 4px 10px;
+  backfround-color: white;
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial; 
+}
+
+#recentNews {
+  height: 380px;
+  width: 290px;
+  margin: 10px 10px 10px 0px;
+  float: right;
+  background-color: white;
+}
+
+#recentNewsHeader {
+  height: 20px;
+  width: 270px;
+  margin: 0px;
+  margin-bottom: 5px;
+  float: left;
+  padding: 4px 10px;
+  backfround-color: white;
+  font-size: 11pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  border-bottom: 1px black solid;
+}
+
+#recentNewsContent {
+  font-size: 8pt;
+  font-weight: none;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial; 
+}
+
+#recentNewsContent ul {
+  float: left;
+  width: 290px;
+  list-style: none;
+  margin: 0px;
+  padding: 0px;
+  border: none;
+}
+
+#recentNewsContent li {
+  margin: 2px 0px;
+  background-color: white;
+  height: 76px;
+  display: block;
+  padding: 5px 2px;
+  border: 1px black solid;
+}
+
+#newsTitle {
+  font-size: 10pt;
+  font-weight: bold;
+}
+
+#recentNewsContent .readMore {
+  color: red;
+  text-decoration: none;
+  margin-left: 3px
+}
+
+#footer {
+  width: 900px;
+  height: 110px;
+  background-color: white;
+  border-top: 1px black solid;
+}
+
+#footerText {
+  width: 880px;
+  margin: 0px;
+  margin-top: 5px;
+  background-color: white;
+  height: 68px;
+  display: block;
+  padding: 6px 5px;
+  font-size: 8pt;
+  font-weight: none;
+  text-decoration: none;
+  text-align: center;
+  float: left;
+}
+
+#brlLogo {
+  margin-left: 5px;
+  height: 100px;
+  width: 279px;
+  float: left;
+  
+}
+
+#epigenomeLogo {
+  margin-left: 5px;
+  margin-top: 5px;
+  height: 130px;
+  width: 279px;
+  float: left;
+}
+
+#headerImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+.content {
+  width: 900px;
+  background-color: white;
+  height: auto;
+}
+
+.textNormal {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  width: 800px;
+  padding-left: 30px;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  padding-bottom: 13px;
+  padding-top: 13px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.textHeader {
+  text-align: center;
+  font-size: 32px;
+  padding-top: 10px;
+  padding-bottom: 15px;
+  font-family: sans-serif, verdana, arial;
+}
+
+.majorTitle {
+  font-size: 24pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+  text-align: center;
+}

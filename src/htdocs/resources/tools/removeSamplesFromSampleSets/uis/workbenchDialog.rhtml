@@ -1,0 +1,70 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  formTag = ""
+  if(@inputs.size == 0)
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return UploadDbFile.submitJob(this) ; \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+  else
+    formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 420px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+  end
+%>
+
+<%= formTag %>
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%# Overview text %>
+<%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will remove samples metadata from a target <u>Sample Set</u>.
+        <br>&nbsp;<br>
+        You have the option of either dragging a samples file or sample(s) or sample set(s). If you do not drag anything in the inputs,
+        you will be prompted to upload a samples file from your machine.
+        <br>&nbsp;<br>
+        The samples file is a simple file with a list of Sample names to be removed from the target sample set, one name per line (with no header line). The samples are assumed to be in same database as the Sample Set.
+        <br>&nbsp;<br>
+        Note that this tool will not remove the selected samples or the sample set from the database but only the links between them.
+      "
+    })
+%>
+<%# Input data help %>
+<%=
+   renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Input Files/Sample(s)/SampleSet(s):",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbSampleOrFileListOrSampleSetSummary, { :sampleOrFileListOrSampleSetList => @inputs, :label => "File/Sample/SampleSet Of Interest" } )
+  })
+%>
+<%# Output SampleSet summary %>
+<%= renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Output Sample Set:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbSampleSetListSummary, { :sampleSetList => @outputs[0] } )
+    })
+%>
+<%# Tool-specific UI widgets user provides/reviews %>
+<%=
+    widgets = []
+    if(@inputs.size == 0)
+      widgets =
+                [
+                  { :id => 'wbContext', :type => :hidden },
+                  { :id => 'uploadFile', :label => 'Select File', :type => :file },
+                  { :id => 'subdirs', :type => :text , :value => "Raw Data Files", :hidden => true }
+                ]
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Choose Samples File",
+        :widgets => widgets
+
+      })
+    end
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) if(@inputs.size == 0) %>

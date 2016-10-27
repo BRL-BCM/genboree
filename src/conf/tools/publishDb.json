@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "publishDb",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Publish Database",
+    "shortLabel": "[NOT SET]"
+  }
+}

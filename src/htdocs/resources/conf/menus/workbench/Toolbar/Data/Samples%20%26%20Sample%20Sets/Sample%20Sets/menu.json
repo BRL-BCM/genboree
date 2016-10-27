@@ -1,0 +1,24 @@
+[
+  {
+    "text": "Add Sample Set",
+    "tooltip": "Add a sample set to a database.",
+    "idStr": "addSampleSet",
+    "icon": "/images/workbench/sampleAddIcon16.png"
+  },
+  {
+    "text": "Delete Sample Set(s)",
+    "tooltip": "Delete sample set(s) from a database.",
+    "idStr": "deleteSampleSets"
+  },
+  {
+    "text": "Add Samples to Sample Set",
+    "tooltip": "Add samples to a sample set.",
+    "idStr": "addSamplesToSampleSets"
+  },
+  {
+    "text": "Remove Samples from Sample Set(s)",
+    "tooltip": "Remove samples from sample set(s).",
+    "idStr": "removeSamplesFromSampleSets"
+  }
+]
+

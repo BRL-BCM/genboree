@@ -1,0 +1,177 @@
+<%# INIT %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/resources/databaseFile'
+
+  @cols = []
+  @fields = []
+  
+  # Every input comes as a full URL, need to try to pull off the URI portion
+  @fileUri = URI.parse(@inputs[0]).path()
+  @grp, @db, @file = @fileUri.match(BRL::REST::Resources::DatabaseFile.pattern()).captures()
+
+  @context['header'].each_with_index { |col, index|
+    # Instead of column names, use indexes so that when sorting it will send the 
+    # column index clicked, not the name. this makes sorting on the server MUCH easier
+    # NOTE: Our fields cannot have a '.' in them, they will be interpreted as objects and accessors
+    #     : and remove spaces for sorting purposes so the sorted file on the filesystem doesn't have spaces
+    field = "#{col.gsub(/\s/, '').gsub('.', '')}:#{index}"
+    @fields << "{ name: #{field.to_json} }"
+    @cols << "{ header: #{col.to_json}, dataIndex: #{field.to_json} }"
+  }
+%>
+
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="height: 655px ;" onsubmit="return submitToolJob(this);" class="wbDialog wbForm" method="POST">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Tabbed File Viewer" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview, { 
+    :toolHelpOverview => 'Review the contents of the supplied tabbed file. The contents of the file can also be uploaded as Annotations into a Genboree Track.'
+  }) %>
+  <%# Input resource summary%>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Tabbed File",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @fileUri } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <div id="grid"></div>
+  <div id="uploadToggle">
+    <input id="uploadEnable" type="checkbox" onclick="tfv.toggleUploadSpec(this.checked) ;" />
+    <label for="uploadEnable">Upload data as Annotations on close</label>
+  </div>
+  <!--a href="#" onclick="toggleUpload('upload') ; return false ;">Upload file data as Annotations</a -->
+  <div id="uploadInfo" style="display: none ;">
+    <div id="instructions">
+      <p>You will receive an email when the upload is finished</p>
+    </div>
+    <ul id="uploadOpts">
+      <li>
+        <label>Group: </label>
+        <span><%= CGI.unescape(@grp) %>
+      </li>
+      <li>
+        <label>Database: </label>
+        <span><%= CGI.unescape(@db) %>
+      </li>
+      <li>
+        <label for="dataSelect">Input format:</label>
+        <select id="dataSelectHolder">
+          <option value="lff" selected="selected">LFF (Genboree format)</option>
+          <option value="blast">Blast (Tab delimited)</option>
+        </select>
+      </li>
+      <li id="trackInfo">
+        <div>
+          <label for="saveLoc">Upload annotation to:</label>
+          <select id="saveLocHolder" class="param" <% (@context['tracks'].size() === 0) ? 'disabled="disabled"' : '' %>>
+            <option value="newTrack" selected="selected">New Track</option>
+            <option value="existingTrack">Existing Track</option>
+          </select>
+        </div>
+        <div id="newTrackOpts">
+          <div>
+            <label for="class">Track Class:</label>
+            <div id="classHolder" class="param"></div>
+          </div>
+          <div>
+            <label for="type">Track Type:</label>
+            <div id="typeHolder" class="param"></div>
+          </div>
+          <div>
+            <label for="subtype">Track Subtype:</label>
+            <div id="subtypeHolder" class="param"></div>
+          </div>
+          <div>
+            <label>Track Name will be:</label>
+            <span id="trackNameSpan" class="param"></span>
+          </div>
+        </div>
+        <div id="existingTrackOpts" style="display: none ;">
+          <div>
+            <label for="tracks">Track:</label>
+            <div id="tracksHolder"></div>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons =>
+        [
+          { 
+            :type   => :button,
+            :id => 'okBtn',
+            :value  => 'OK',
+            :onClick => 'tfv.processOkBtn() ;'
+          }
+        ]
+      })
+  %>
+</form>
+<%# Tool-specific javascript and css %>
+<%= renderStaticFrag(@toolIdStr, :wbCssSrcs,
+    {
+      :srcs =>
+      [
+        '/styles/tabbedFileViewer/ext-ux-livegrid.css',
+        '/styles/uploadAnnotations/uploadAnnotations.css',
+        '/styles/tabbedFileViewer/tabbedFileViewer.css'
+      ],
+      :genbConf => @genbConf
+    })
+%>
+<script>
+<%
+  # To avoid asynchronous loading of external scripts by Ext, we need to provide all our js as inline here
+  [
+    "#{@genbConf.resourcesDir}/tools/#{@toolIdStr}/uis/livegrid-all.js",
+    "#{@genbConf.resourcesDir}/tools/uploadAnnotations/uis/util.js",
+    "#{@genbConf.resourcesDir}/tools/#{@toolIdStr}/uis/tabbedFileViewer.js"
+  ].each { |src|
+    if(File.exists?(src))
+      File.open(src) { |file|
+        file.each_line { |line|
+%>
+<%= "  #{line}" =%>
+<%
+        }
+      }
+%>
+<%= "\n" =%>
+<%
+    end
+  }
+
+  # Construct our Hash structure that will be passed to the client to complete the uploads
+  uploadOpts = Hash.new()
+  uploadOpts['groupId'] = @context['groupId']
+  uploadOpts['refseqId'] = @context['refseqId']
+  uploadOpts['groupName'] = @context['groupName']
+  uploadOpts['refseqName'] = @context['refseqName']
+  uploadOpts['userEmail'] = @context['userEmail']
+%>
+<%=
+  WorkbenchFormHelper.addToFormContext({'gbAdminEmail' => @context['gbAdminEmail']}) +
+  WorkbenchFormHelper.addToFormContext({'userEmail' => @context['userEmail']}) +
+  WorkbenchFormHelper.addToFormContext({'userLogin' => @context['userLogin']}) + 
+  WorkbenchFormHelper.addToFormContext({'specOpts' => uploadOpts}) +
+  WorkbenchFormHelper.addToFormContext({'tracks' => @context['tracks']})
+%>
+  // All our JS is there now, init our UI
+  var fields = [ <%= @fields.join(", ") %> ] ;
+  var cols = [ <%= @cols.join(", ") %> ] ;
+
+  // Our elements are good to go, initialize the Ext components
+  if(typeof(tfv) !== 'undefined')
+  {
+    delete(tfv) ;
+  }
+
+  var tfv = new Genboree.Workbench.TabbedFileViewer('<%= @grp %>', '<%= @db %>', '<%= @file %>', fields, cols, <%= @context['sortMethod'] == 'quick' %>) ;
+  Ext.onReady(tfv.init, tfv) ;
+</script>

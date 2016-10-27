@@ -1,0 +1,144 @@
+<!-- DTD for LexGene project importer / exporter -->
+
+<!-- Last updated: 2001-11-2-->
+
+<!-- root element of the imported data, consists of at least
+     one lg_project
+-->
+<!ELEMENT lg_projects (lg_project+)>
+
+
+<!-- each lg_project element corresponding to one LexGene project.
+     projects are logically grouped by tables based on according to the
+     database
+     schema
+-->
+
+<!ELEMENT lg_project (gene, lg_lv_project_map+)>
+
+<!ELEMENT gene (lg_interpro?, accession_info+)>
+
+<!ELEMENT lg_interpro EMPTY>
+
+<!ELEMENT accession_info (alignment*)>
+
+<!ELEMENT lg_lv_project_map (project_status+)>
+
+<!-- alignment element, each accession might contain zero to multiple alignments -->
+<!ELEMENT alignment (alignment_detail)>
+
+<!ELEMENT project_status EMPTY>
+
+
+<!-- the alignmentDetail element contains the actual alignment info.
+     the CDATA section should be used here to avoid converting each
+     "&", "<", and ">" characters. So the actual alignmentDetail element might
+     be written in a way like this:
+     <alignmentDetail>
+     <![CDATA[...alignment info goes here....]]>
+     </alignmentDetail>
+-->
+<!ELEMENT alignment_detail (#PCDATA)>
+
+
+<!-- attributes list for record element:
+     if an implied attribute is missing, the value of that attribute is null
+     The review_due_date must be in the form YYYY-MM-DD.
+     suggested_by: the user login name
+     suggested_by: the LexGene login of the user who made the suggestion
+     reviewer: the LexGene login of the reviewer
+     curated_priority: if not provided, defaults to null
+     reviewed_priority: if not provided, defaults to null
+     update_mode: "new" only creates project when it does not exist while "update" will update existing project as well
+-->
+<!ATTLIST lg_project
+              project_seed_accession           CDATA #REQUIRED
+              suggested_by                     CDATA #REQUIRED
+              lg_current_status_id             CDATA #REQUIRED
+              is_omnibank                      (Y|N) "N"
+              curated_priority                 (H|M|L|DUP) #IMPLIED
+              reviewed_priority                (H|M|L|DUP) #IMPLIED
+              review_due_date                  CDATA #IMPLIED
+              curator_comments                 CDATA #IMPLIED
+              sugg_source                      CDATA #REQUIRED
+              best_functional_category         CDATA #IMPLIED
+              reviewer_comments                CDATA #IMPLIED
+              reviewer                         CDATA #IMPLIED
+              update_mode                      (new|update) #IMPLIED
+>
+
+<!-- attributes for gene element
+-->
+<!ATTLIST gene
+              gene_family             CDATA #REQUIRED
+              knockout_confirmed      (Y|N) "N"
+              ko_type                 (int|ext|ko_unknown) "ko_unknown"
+              cytogenetics            CDATA #IMPLIED
+              description             CDATA #IMPLIED
+              human_locus_link        CDATA #IMPLIED
+              mouse_locus_link        CDATA #IMPLIED
+              mouse_unigene           CDATA #IMPLIED
+              human_unigene           CDATA #IMPLIED
+              homologene_evidence     CDATA #IMPLIED
+>
+
+<!-- interpro_priority: if not provided, defaults to null
+-->
+<!ATTLIST lg_interpro
+              interpro_acc            CDATA #REQUIRED
+              interpro_priority       (H|M|L) #IMPLIED
+              description             CDATA #IMPLIED
+>
+
+<!--
+-->
+<!ATTLIST lg_lv_project_map
+              company_id              CDATA "1"
+              lg_project_id           CDATA #IMPLIED
+              lv_project_id           CDATA #IMPLIED
+>
+
+
+<!-- attributes for project_status element
+   user_id: the numeric user_id stored in LexUser db, not the user login (as for the
+            "suggested_by" attribute in "lg_project" table)
+-->
+<!ATTLIST project_status
+              status_id               CDATA #REQUIRED
+              user_id                 CDATA #REQUIRED
+>
+
+
+<!-- attributes for accession_info element
+    The accession_type "HTST" is not supported right now.
+    if the accession_type="OST", then the specie must be "mouse"
+    the subset is required only for best-hit accessions
+-->
+<!ATTLIST accession_info
+              accession               CDATA #REQUIRED
+              accession_type          (EST|TRANS|GENOME|PROT|OST|UNK) #REQUIRED
+              is_best_accession       (Y|N) #REQUIRED
+              specie                  (mouse|human|unknown) "mouse"
+              curated_acc             CDATA #IMPLIED
+              subset                  CDATA #IMPLIED
+>
+
+
+<!-- attributes for alignment element
+     specify one and only one best_hit if any alignments are available
+     for a given accession.
+-->
+<!ATTLIST alignment
+              specie                   (mouse|human|unknown) #REQUIRED
+              blast_type               (EST|TRANS|GENOME|PROT|OST|GSN|GSP|HTST|UNK) #REQUIRED
+              e_value                  CDATA #REQUIRED
+              score                    CDATA #REQUIRED
+              identity                 CDATA #REQUIRED
+              alignment_length         CDATA #REQUIRED
+              percent_identity         CDATA #REQUIRED
+              query_length             CDATA #REQUIRED
+              hit_accession            CDATA #REQUIRED
+              hit_length               CDATA #REQUIRED
+              is_best_alignment        (Y|N) #REQUIRED
+              orthology                (identical|similar|unknown) "identical"
+>

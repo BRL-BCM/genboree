@@ -1,0 +1,214 @@
+<%# RENDER HTML%>
+<%
+  require 'uri'
+  require 'json'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  grpApiHelper = BRL::Genboree::REST::Helpers::GroupApiUriHelper.new()
+  dbUri = dbApiHelper.extractPureUri(@inputs[0])
+  escGrpName = CGI.escape(grpApiHelper.extractName(dbUri))
+  escDbName = CGI.escape(dbApiHelper.extractName(dbUri))
+  trkHash = @settings['trkHash']
+  width = 500
+  height = 500
+%>
+<form id="wbDialogForm" name="wbDialogForm"  style="width: <%=width%>px; height: <%=height%>px;"  class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows you to set the URL, URL Label and description of tracks in a database. 
+        "
+      })
+  %>
+
+    <%# Input data help %>
+    <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "All tracks belong to:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => dbUri} )
+      })
+    %>
+    <%# Tool-specific UI widgets user provides/reviews %>
+    <%=
+      trkSelect = {}
+      urlDescHash = {}
+      initTrk = nil
+      idx = 0
+      trkHash.keys.sort.each {|key|
+        if(idx == 0)
+          trkSelect[:"#{key}"] = { :label => key, :selected => true }
+          initTrk = CGI.escape(key)
+        else
+          trkSelect[:"#{key}"] = { :label => key }
+        end
+        tmpHash = {'url' => '', 'label' => '', 'description' => ''}
+        trkHashRec = trkHash[key]
+        if(trkHashRec)
+          tmpHash['url'] = trkHashRec['url'] if(trkHashRec['url'])
+          tmpHash['label'] = trkHashRec['label'] if(trkHashRec['label'])
+          tmpHash['description'] = trkHashRec['description'] if(trkHashRec['description'])
+        end
+        urlDescHash[CGI.escape(key)] = tmpHash
+        idx += 1
+      }
+      #$stderr.puts "desc: #{urlDescHash[lastTrk]['description'].inspect}; lastTrk: #{lastTrk}"
+      urlDescHashJson = urlDescHash.to_json
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Set Track URL, Label and Description",
+        :widgets =>
+        [
+          { :id => "trkSelect", :label => "Track", :type => :select, :options => trkSelect,  :onChange => "changeUrlDesc(this.value)"},
+          { :id => "url", :label => "URL (optional)", :type => :text, :value => urlDescHash[initTrk]['url'], :title => "The source URL for this track. This will be displayed in the Details panel when the track is clicked on the workbench. "},
+          { :id => "label", :label => "URL Label (optional)", :type => :text, :value => urlDescHash[initTrk]['label'], :title => "The label for the URL. This will be displayed in the Details panel when the track is clicked on the workbench."},
+          { :id => 'description', :label => 'Description', :type => :textarea, :wrap => "soft", :style => "height: 150px; width: 230px;", :value => urlDescHash[initTrk]['description'], :title => "Information about the track. Source, genome, etc. This will be displayed in the Details panel when the track is clicked on the workbench." }
+        ]
+      })
+
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :submit, :value => "Save", :onclick => "return saveTrkUrlDesc('save', '#{escGrpName}', '#{escDbName}')" },
+                        { :type => :submit, :value => "Delete", :onclick => "return saveTrkUrlDesc('delete', '#{escGrpName}', '#{escDbName}')", :id => "deleteTrkUrlDescBtn"},
+                        { :type => :cancel}
+                      ]
+        })
+    %>
+    </form>
+<script type="text/javascript">
+function initUrlDescHash(urlDescHashJson)
+{
+  return JSON.parse(urlDescHashJson) ;
+}
+var urlDescHash = initUrlDescHash('<%=urlDescHashJson%>') ;
+var escValue = escape(Ext.get('trkSelect').dom.value) ;
+toggleDelBtn(urlDescHash[escValue]['url'], urlDescHash[escValue]['label'], urlDescHash[escValue]['description']) ;
+function changeUrlDesc(value)
+{
+  var escValue = escape(value) ;
+  var urlVal = urlDescHash[escValue]['url'] ;
+  var label = urlDescHash[escValue]['label'] ;
+  var description = urlDescHash[escValue]['description'] ;
+  Ext.get('url').dom.value = urlVal ;
+  Ext.get('label').dom.value = label ;
+  Ext.get('description').dom.value = description ;
+  toggleDelBtn(urlVal, label, description)
+}
+function toggleDelBtn(urlVal, label, description)
+{
+  /* Disable the delete button if all values are empty */
+  if (urlVal == '' && label == '' && description == '')
+  {
+    Ext.get('deleteTrkUrlDescBtn').dom.disabled = true ;
+  }
+  else
+  {
+    Ext.get('deleteTrkUrlDescBtn').dom.disabled = false ;
+  }
+}
+function saveTrkUrlDesc(operation, grpName, dbName)
+{
+  var urlVal ;
+  var labelVal ;
+  var descriptionVal ;
+  var selectedTrk = Ext.get('trkSelect').dom.value ;
+  if(operation == 'save')
+  {
+    urlVal = Ext.get('url').dom.value ;
+    labelVal = Ext.get('label').dom.value ;
+    descriptionVal = Ext.get('description').dom.value ;
+  }
+  else
+  {
+    urlVal = '' ;
+    labelVal = '' ;
+    descriptionVal = '' ;
+  }
+  if(descriptionVal == '' && operation == 'save')
+  {
+    alert('Description cannot be empty.') ;
+  }
+  else if (operation == 'save' && urlVal == '' && labelVal != '')
+  {
+    alert('Please enter a value for URL.') ;
+  }
+  else
+  {
+    var payload = new Hash( { data: new Hash( {hash: new Hash() } ) } ) ;
+    payload.get('data').get('hash').set(selectedTrk, new Hash( { 'url': urlVal, 'label': labelVal, 'description': descriptionVal } )) ;
+    /* Make AJAX request to put the updated settings */
+    Ext.Ajax.request(
+    {
+      url : '/java-bin/apiCaller.jsp?',
+      timeout : 90000,
+      params:
+      {
+        rsrcPath: "/REST/v1/grp/"+grpName+"/db/"+dbName+"/trks/urlDescLabel?",
+        apiMethod : 'PUT',
+        payload: payload.toJSON()
+      },
+      success: savedTrkUrlDesc(operation),
+      failure: failedTrkUrlDesc
+    }) ;
+    /* Also update the lookup hash */
+    var escTrkName = escape(selectedTrk) ;
+    urlDescHash[escTrkName]['url'] = urlVal ;
+    urlDescHash[escTrkName]['label'] = labelVal ;
+    urlDescHash[escTrkName]['description'] = descriptionVal ;
+    if (operation == 'delete')
+    {
+      Ext.get('url').dom.value = '' ;
+      Ext.get('label').dom.value = '' ;
+      Ext.get('description').dom.value = '' ;
+    }
+  }
+  return false ;
+}
+function savedTrkUrlDesc(operation)
+{
+  if (operation == 'save')
+  {
+    alert('Successfully saved settings.') ;
+  }
+  else
+  {
+    alert('Successfully deleted settings.') ;                 
+  }
+}
+function failedTrkUrlDesc()
+{
+  alert('Failed to save settings. Please try again or contact the Genboree administrator. It is also possible that your session has expired.') ;
+}
+</script>
+<%
+  else
+%>
+  <%= renderFrag(@toolIdStr, :wbToolOverview,
+        { :toolOverview =>
+          "
+            <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+            <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+            <span style='color: red;'>Prototype will be made available for evaluation as soon as possible.</span>
+          "
+        })
+    %>
+    <%# Cancel Button %>
+    <%= renderFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => [ { :type => :cancel} ]
+        })
+    %>
+  </form>
+<%
+  end
+%>

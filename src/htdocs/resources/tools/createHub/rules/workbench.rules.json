@@ -1,0 +1,70 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/class/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+      [
+        "/trks/entityList/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ],
+       [
+        "/files/entityList/",
+        0,
+        null
+      ],
+      [
+        "/file/",
+        0,
+        null
+      ]
+
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+       "hubName": [
+        "^(?:^.+$)$",
+        "Hub Name cannot be left blank"
+      ],
+      "shortLabel": [
+        "^(?:^.{1,17}$)$",
+        "Short Label cannot be left blank or cannot be longer than 17 characters."
+      ],
+      "longLabel": [
+        "^(?:^.{1,80}$)$",
+        "Long Label cannot be left blank or cannot be longer than 80 characters."
+      ], 
+      "Email":[
+        "^[0-9a-zA-Z\\-\\.+_]+@[0-9a-zA-Z\\-\\.+_]+\\.[a-zA-Z]{2,4}$",
+        "Not a valid Email."
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/grp/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

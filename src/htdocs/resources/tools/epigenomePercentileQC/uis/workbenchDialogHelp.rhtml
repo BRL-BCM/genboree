@@ -1,0 +1,58 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 550px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          "
+          This tool performs QC of epigenomic methylation data via a percentile-based method. Mapped reads are provided by specifying a BED file which already has been transferred to Genboree:
+          <br>&nbsp;<br>
+          <ul>
+            <li>First transfer the file to Genboree via <code>Data -> Upload File</code></li>
+            <li>Following the transfer, drag the transferred file into the &quot;Input Data&quot; area.</li>
+            <li>Your file <i>must</i> be in the supported format: <a href='http://genome.ucsc.edu/FAQ/FAQformat#format1'>BED</a>.</li>
+          </ul>
+          "
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>BED file</u> with the mapped read data into &quot;Input Data&quot;.',
+        ],
+        :types              => [ [ 'Tracks', 'min: 2 ; max: 3' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>database</u> into &quot;Output Targets&quot;. The result file(s) will end up in that database within the <i>Epigenomic Quality Reports</i> folder.' ],
+        :types              => [ [ 'Database', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Analysis Name', 'Give this QC job a unique name. This name will be used to store result files within the Output Database.' ],
+          [ 'Genome', 'Select the genome for which the reads were mapped.'],
+          [ 'Assay', 'Select the type of assay for which you are doing QC.' ],
+          [ 'Submit', "Once you've reviewed the input BED file, the output destination database, and your QC settings, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'Developed internally by Arpit Tandon, Cristian Coarfa, and Hee Shin Kim at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ] ]
+      })
+  %>
+</div>

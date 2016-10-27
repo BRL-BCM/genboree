@@ -1,0 +1,32 @@
+<%
+ require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+%>
+
+<%
+  @sampleSetList = [ @sampleSetList ] unless(@sampleSetList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@sampleSetList.empty?) %>
+      <tr>
+        <th><%= (@label || "Sample Set") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      sampleSetHelperObj = BRL::Genboree::REST::Helpers::SampleSetApiUriHelper.new()
+      @sampleSetList.each { |item|
+        grp = WorkbenchFormHelper.getNameFromURI(:grp, item, true)
+        db = WorkbenchFormHelper.getNameFromURI(:db, item, true)
+        sampleSet = sampleSetHelperObj.extractName(item)
+%>
+        <tr>
+          <th><%= (@label || "Sample Set") %>:</th>
+          <td><i><%== sampleSet %></i></td>
+          <td class="explain">Group: <i><%== grp %></i>,<br>Database: <i><%== db %></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+
+DIR_SCRIPTS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR_SCRIPTS}/conf_runtime.sh
+
+
+start() {
+       su genboree -l -c "${DIR_TARGET}/etc/init.d/configurator.py"
+}
+
+stop() {
+       TODO='nothing'
+}
+
+restart() {
+       su genboree -l -c "${DIR_TARGET}/etc/init.d/configurator.py"
+}
+
+echo ""
+case "$1" in
+  start)
+   start
+   ;;
+  stop)
+   stop
+   ;;
+  restart)
+   restart
+   ;;
+  *)
+   echo $"Usage: $0 {start|stop|restart}"
+   RETVAL=1
+esac

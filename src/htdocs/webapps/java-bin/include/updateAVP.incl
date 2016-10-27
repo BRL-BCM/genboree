@@ -1,0 +1,34 @@
+<%@ page import="org.genboree.util.GenboreeUtils,
+                 java.util.ArrayList,
+                 java.util.StringTokenizer,
+                 java.util.HashMap,
+                 java.util.Iterator"%>
+<%  if (avpValues != null) {
+                String testStr = "";            
+                HashMap avp = new HashMap ();
+                StringTokenizer st = new StringTokenizer(avpValues, "]");
+                while (st.hasMoreTokens()) {
+                    String token = st.nextToken();    
+                
+                    int indexOfQuote = token.indexOf("\"");
+                    int indexOfComma = token.indexOf(",", indexOfQuote);            
+                    if (indexOfQuote <0) 
+                      continue; 
+                    
+                    String name = null; 
+                    if (indexOfComma >0) 
+                        name = token.substring(indexOfQuote+1, indexOfComma-1);
+               if (name==null)
+                  continue;
+                    String value = token.substring(indexOfComma +2, token.length()-1);
+                    ArrayList list = new ArrayList();
+                    list.add(value);
+                    avp.put(name,list)  ;
+                    testStr = testStr + name + "=" +value + "; ";
+                }      
+                  GenboreeUtils.addValuePairs(con,  ""+upload.getRefSeqId(), ifid, annotation.getFtypeId(), avp , 0);          
+         success = true; 
+            };
+    
+          
+%>

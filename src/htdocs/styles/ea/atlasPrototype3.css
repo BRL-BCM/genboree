@@ -1,0 +1,314 @@
+#dataFreezeTopNavigation {
+  margin: 0px auto;
+  position: relative;
+  background-color: blue;
+  width: 1150px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeTopNavigation ul {
+  list-style: none outside none;
+  margin: 0px auto;
+  padding: 0px;
+  height: 40px;
+  width: 900px;
+  background-image: url("../images/topNavigation_background.png");
+  background-repeat: repeat;
+}
+
+#dataFreezeHeader {
+  margin: 0 auto;
+  position: relative;
+  background-color: white;
+  background-image: url("../images/dataFreeze3Header_background.png");
+  background-repeat: no-repeat;
+  width: 1150px;
+  height: 140px;
+}
+
+#dataFreezeEaLogo {
+  margin-left: 20px;
+  margin-top: -10px;
+  height: 130px;
+  width: 279px;
+  float: left;
+}
+
+#dataFreezeHeaderImage {
+  margin-right: 45px;
+  margin-top: 5px;
+  height: 90px;
+  width: 150px;
+  float: right;
+}
+
+#dataFreezeTopRightNavigation {
+  float: right;
+  margin-top: 5px;
+  margin-right: 25px;
+}
+
+#dataFreezeTopRightNavigation a{
+  margin: 1px 15px;
+  font-size: 12pt;
+  font-weight: bold;
+  text-decoration: none;
+  color: black;
+  font-family: sans-serif, verdana, arial;
+}
+
+.sample
+{
+background-color: #ffe271;
+padding: 3px;
+font:12px verdana,sans-serif;
+color:#7b3d00;
+width:150px;
+}
+
+.leftRightBottom
+{
+  border-left:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.toolbarCell
+{
+  height:30px;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.imageText
+{
+font:12px verdana,sans-serif;
+text-align:center;
+}
+
+.imageCell
+{
+vertical-align:bottom;
+}
+
+.sampleTextBold
+{
+font:bold 12px verdana,sans-serif;
+color:#7b3d00;
+}
+
+.legend10
+{
+  font:10px verdana,sans-serif;
+}
+
+.legend12
+{
+  font:12px verdana,sans-serif;
+}
+
+
+
+.legendBold10
+{
+font:bold 10px verdana,sans-serif;
+padding: 1px;
+}
+
+.legendBold12
+{
+font:bold 12px verdana,sans-serif;
+padding: 1px;
+}
+.broad
+{
+  background-color: #4f81bd;
+}
+
+.ucsd
+{
+  background-color: #f79646;
+}
+
+.ucsf
+{
+  background-color: #c0504d;
+}
+
+.uw
+{
+  background-color: #9bbb59;
+}
+
+.broad-selected
+{
+  background-color: #aabad7;
+}
+
+.ucsd-selected
+{
+  background-color: #f7d1b1;
+}
+
+.ucsf-selected
+{
+  background-color: #c79190;
+}
+
+.uw-selected
+{
+  background-color: #b2c494;
+}
+
+
+.remc
+{
+font:12px verdana,sans-serif;
+color: White;
+text-align: center;
+height: 20px;
+}
+
+.firstCell
+{
+
+  border-bottom : 1px solid #D0D0D0;
+}
+
+.topBlockRow
+{
+  border-top: 20px solid #D0D0D0;
+}
+
+.header-image
+{
+  height: 140px;
+  width: 1108px;
+}
+
+.expt
+{
+  background-color: #f2f2f2;
+  font:12px verdana,sans-serif;
+  width:150px;
+}
+
+
+.topBottomRight
+{
+  border-top:1px solid #D0D0D0;
+  border-bottom:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+}
+
+
+.bottomRight
+{
+    border-bottom:1px solid #D0D0D0;
+  border-right:1px solid #D0D0D0;
+}
+
+
+.exptClass3
+{
+  width: 30px;
+  height: inherit;
+  user-select:none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  border-right:1px solid #D0D0D0;
+  border-top: 2px solid;
+  border-top-color:#7b3d00;
+  border-bottom:1px solid #D0D0D0;
+}
+
+.bigImageCell
+{
+vertical-align:bottom;
+border-bottom:0px solid #D0D0D0;
+}
+
+.textarea
+{
+  width: 1300px;
+}
+
+.filler
+{
+  width: 100px;
+  border-top:0px solid #D0D0D0;
+}
+
+.selected
+{
+background-color: #214c8b;
+}
+
+.button
+{
+font:bold 12px verdana,sans-serif;
+background-color:#f2f2f2;
+border:3px solid #2c5cbc;
+cursor:pointer;
+}
+
+.hiddenDiv
+{
+  visibility:hidden;
+}
+
+.visibleDiv
+{
+  visibility:visible;
+}
+
+.mdExpt
+{
+  margin-left:30px;
+padding-left: 20px;
+background-image:url('/images/expt.png');
+background-repeat: no-repeat;
+}
+
+
+.mdSample
+{
+margin-left:20px;
+padding-left: 20px;
+background-image:url('/images/sample.png');
+background-repeat: no-repeat;
+}
+
+.mdRemc
+{
+  margin-left:40px;
+padding-left:20px;
+background-image:url('/images/silk/building.png');
+background-repeat: no-repeat;
+}
+
+.mdTrack
+{
+  margin-left:50px;
+  padding-left: 20px;
+}
+
+
+.pageList
+{
+  padding-left:10px !important;
+}
+ul.pageList li
+{
+  list-style-type: disc;
+  font:10px verdana,sans-serif;
+}
+
+.introText
+{
+  height:16px;
+  vertical-align:middle;
+}

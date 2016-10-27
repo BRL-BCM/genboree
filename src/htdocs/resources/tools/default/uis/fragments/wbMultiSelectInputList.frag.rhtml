@@ -1,0 +1,117 @@
+<%# This is a special fragment for being able to select from a 'set' of inputs only those inputs the user wants the tool to run on %>
+<%
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileEntityListApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleEntityListApiUriHelper'
+%>
+<table align="center">
+<tr>
+  <td align="center"><b><%= (@label || "Select items") %>:</b></th>
+</tr>
+<%  if(@multiSelectInputHash.nil? or @multiSelectInputHash.empty? or @type.nil? or @type.empty?) %>
+      <td style="padding-left:20px;"><i>n/a</i></td>
+      <td class="explain"><i>[ No Items/Type ]</i></td>
+<%
+    else
+      trkApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new()
+      sampleApiHelper = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new()
+      fileApiHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new()
+      trkEntityListApiHelper = BRL::Genboree::REST::Helpers::TrackEntityListApiUriHelper.new()
+      fileEntityListApiHelper = BRL::Genboree::REST::Helpers::FileEntityListApiUriHelper.new()
+      sampleEntityListApiHelper = BRL::Genboree::REST::Helpers::SampleEntityListApiUriHelper.new()
+      if(@divWidth.nil? or @divWidth.empty?)
+        @divWidth = "auto"
+      end
+      
+%>
+      <tr>
+        <td align="center">
+          <div style="width: <%= @divWidth %>; overflow: auto; ">
+          <select id="multiSelectInputList" name="multiSelectInputList" multiple="multiple" onClick="toggleMultiSelectListButtonDesc(toggleMultiSelectListButton);" style="visibility: visible;" size="5">
+<%
+            # Build <option> tags
+            buff = ''
+            entityTypeRegExp = %r{^/REST/v1/grp/([^/\?]+)/db/([^/\?]+)/([^/\?]+)/([^/\?]+)}
+            @multiSelectInputHash.keys.sort_by{|xx| File.basename(xx).downcase}.each { |rcsc|
+              selectedStr = ''
+              if(@multiSelectInputHash[rcsc])
+                selectedStr = "selected=\"selected\""
+              end
+              # Build option tag
+              rcscName = ""
+              if(@type == 'tracks')
+                rcscName = "#{trkApiHelper.lffType(rcsc)}:#{trkApiHelper.lffSubtype(rcsc)}"
+              elsif(@type == 'samples')
+                rcscName = sampleApiHelper.extractName(rcsc)
+              elsif(@type == 'files')
+                if(rcsc =~ BRL::Genboree::REST::Helpers::FileApiUriHelper::NAME_EXTRACTOR_REGEXP)
+                  rcscName = fileApiHelper.extractName(rcsc)
+                else
+                  rcscName = "#{CGI.unescape(fileApiHelper.subdir(rcsc).chomp("?"))}/"
+                end
+              elsif(@type == 'trackEntityList')
+                rcscName = trkEntityListApiHelper.extractName(rcsc)
+              elsif(@type == 'fileEntityList')
+                rcscName = fileEntityListApiHelper.extractName(rcsc)
+              elsif(@type == 'sampleEntityList')
+                rcscName = sampleEntityListApiHelper.extractName(rcsc)
+              else
+                # Add more types
+              end
+              uriObj = URI.parse(rcsc)
+              entityName = grp = db = nil
+            if(uriObj.path =~ entityTypeRegExp)
+              grp, db, entityName = $1, $2, $4
+              grp, db, entityName = CGI.unescape(grp), CGI.unescape(db), CGI.unescape(entityName)
+              titleText = %Q^<ul><li>HOST: #{uriObj.host}</li><li>GROUP: #{grp}</li><li>DATABASE: #{db}</li>^
+              buff << %Q^ <option value="#{rcsc}"  #{selectedStr} ext:qtitle="#{rcscName}" ext:qtip="#{titleText}">#{rcscName}</option> ^
+            else
+              buff << %Q^ <option value="#{rcsc}" #{selectedStr}>#{rcscName}</option> ^
+            end
+                
+            }
+
+%>
+          <%= buff %>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <input name="toggleMultiSelectListButton" id="toggleMultiSelectListButton" type="button" value="Clear All" onClick="toggleMultiSelectList(this, 'multiSelectInputList');">
+        </td>
+      </tr>
+<%
+    end
+%>
+</table>
+
+<script type="text/javascript">
+function toggleMultiSelectList(btn, widgetId)
+{
+  var id = Ext.get(widgetId).dom ;
+  if(btn.value == "Select All")
+  {
+    for(var ii=0; ii< id.length; ii++)
+    {
+      id[ii].selected = "selected" ;
+    }
+    btn.value = "Clear All" ;
+  }
+  else
+  {
+    for(var ii=0; ii< id.length; ii++)
+    {
+      id[ii].selected = "" ;
+    }
+    btn.value = "Select All" ;
+  }
+}
+function toggleMultiSelectListButtonDesc(btn)
+{
+  btn.value = "Select All" ;
+}
+</script>

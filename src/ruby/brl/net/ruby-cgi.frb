@@ -1,0 +1,170 @@
+#!/usr/local/brl/local/bin/ruby
+###############
+
+##########################
+# FastCGI Ruby dispatcher
+# (C) Derrick Pallas
+#
+# Authors: Derrick Pallas
+#          Andrew R Jackson
+# Website: http://pallas.telperion.info/ruby-cgi/
+# License: Academic Free License 2.1
+# Version: 2005-12-23a
+
+require 'cgi'
+require 'fcgi'
+require 'brl/net/fastcgiHandler'
+
+#-----------------------------------------------------------------------------
+# HELPER CLASS AND METHODS
+#-----------------------------------------------------------------------------
+class HandlerFileError < IOError ; end
+class HandlerError < ScriptError ; end
+class NestedHandlerError < Exception
+  attr_accessor :nestedError
+  def initialize(nestedError=nil)
+    @nestedError = nestedError
+  end
+end
+# These object represent the scripts in memory
+class CachedHandler
+  attr_accessor :handler    # the handler itself
+  attr_accessor :fileMtime  # mtime of handler's file when loaded
+  attr_accessor :lastUse    # time of last use of this handler
+  
+  # [Re]Load a handler from a file.
+  def loadHandler(handlerFile, handlerFileMtime, cgi, env)
+    @fileMtime = handlerFileMtime    
+    handlerFileContent = File.read(handlerFile)
+    bindingForEval = getBinding(cgi, env)   # export 'cgi' and 'env' to eval
+    begin
+      @handler = eval(handlerFileContent, bindingForEval) # eval shoud return object implementing "handleRequest" and "clear"
+    rescue Exception => err
+      raise(NestedHandlerError.new(err), "ERROR: Bad syntax when compiling *HANDLER*")
+    end
+    return
+  end
+  
+  # Get a Binding that includes 'cgi' and 'env' variables
+  def getBinding(cgi, env)
+    return binding
+  end
+end # END: class CachedHandler
+
+# Unload handler that was used the longest time ago.
+def unloadOldestHandler(cachedHandlers, cgi, env)
+  begin
+    unloadMeKey = cachedHandlers.keys.min { |aa,bb| cachedHandlers[aa].lastUse <=> cachedHandlers[bb].lastUse }
+    cachedHandlers[unloadMeKey].handler.clear(cgi, env)
+    cachedHandlers.delete(unloadMeKey)
+  rescue Exception => err
+    # Ignore any problems in removing (user doesn't need to see this)
+  end
+end
+  
+#-----------------------------------------------------------------------------
+# DISPATCHER CONFIG
+#-----------------------------------------------------------------------------
+# How many unique handler instances to cache in memory?
+maxCachedHandlers = 1
+maxCachedHandlers.freeze
+RHTML_HANDLER = "/usr/local/brl/local/bin/genboree/erubis_processor.frb"
+
+#-----------------------------------------------------------------------------
+# DISPATCHER VARIABLES
+#-----------------------------------------------------------------------------
+cachedHandlers = {}       # cache of filePaths => CachedHandler objects
+
+#-----------------------------------------------------------------------------
+# MAIN
+#-----------------------------------------------------------------------------
+FCGI.each_cgi { |cgi|
+  begin # Try to catch all errors that escape specific handling.
+    
+    # Put the environment into a nice hash called 'env' for convenience
+    env = {}
+    cgi.env_table.each { |kk,vv| env[kk] = vv }
+    
+    # Find the handler file that is being called (in URL)
+    handlerFile = env['SCRIPT_FILENAME'].strip.untaint
+    handlerFile = RHTML_HANDLER if(handlerFile =~ /\.rhtml$/)
+    handlerFileMtime = nil
+    
+    # Is there a handler file and can we read it??
+    if( !handlerFile.nil? and !handlerFile.empty? and File.stat(handlerFile).readable? )
+      # Yes, there is such a handler file. See what needs to be done with it.
+      handlerFileMtime = File.stat(handlerFile).mtime
+      cachedHandler = cachedHandlers[handlerFile]
+      
+      if( !cachedHandler )
+        # Then handler is NOT loaded. Need to prepare for loading new handler.
+        cachedHandler = CachedHandler.new()
+        doLoadHandler = true
+      elsif( cachedHandler.fileMtime < handlerFileMtime)
+        # Then loaded handler is out-of-date.
+        cachedHandler.handler.clear() unless(cachedHandler.handler.nil?)
+        cachedHandler.handler = nil
+        doLoadHandler = true
+      else
+        # Handler is loaded and not out of date.
+        doLoadHandler = false
+      end
+        
+      if(doLoadHandler) # then we need to [re]load the handler
+        cachedHandler.loadHandler(handlerFile, handlerFileMtime, cgi, env)
+      end
+      
+      # Should have a valid cachedHandler at this point:
+      raise(NestedHandlerError.new(cachedHandler.handler), "ERROR: While creating service") if(cachedHandler.handler.kind_of?(Exception))
+      raise(HandlerError, "ERROR: No such service") unless(cachedHandler.handler)
+      raise(HandlerError, "ERROR: Bad service interface") unless(cachedHandler.handler.respond_to?('handleRequest') and cachedHandler.handler.respond_to?('clear'))
+
+      cachedHandlers[handlerFile] = cachedHandler
+      
+      #----------------
+      # Run the handler
+      #----------------      
+      # Record time of latest use of the script:
+      cachedHandler.lastUse = Time.now()
+      Dir.chdir( File.dirname(handlerFile) )  # OK, but *must* be somewhere fastcgi user (nobody?) can get to!!!
+      
+      # handleRequest() can return:
+      # - true      # Handled
+      # - false     # Error, but suitable content sent to browser (error, but handled)
+      # - Exception # Error, content not sent to browser (error, not handled) 
+      requestHandled = cachedHandler.handler.handleRequest(cgi, env)
+      
+      # If handler returns an Exception instance, it failed and didn't send content to the browser.
+      # Raise it again here as a Nested Error:
+      raise(NestedHandlerError.new(requestHandled), "ERROR: the service encountered a problem") if(requestHandled.kind_of?(Exception))
+
+      # Do we have too many handlers loaded?
+      if(cachedHandlers.length > maxCachedHandlers)
+        unloadOldestHandler(cachedHandlers, cgi, env)
+      end
+    else # Problem with handler *file* itself
+      raise(HandlerFileError, "ERROR: handler file is nil (#{handlerFile.nil?}) or not readable.\n")
+    end # if( !handlerFile.nil? and !handlerFile.empty? and File.stat(handlerFile).readable? )
+  
+  ## Deal with any errors that may have occured along the way
+  rescue HandlerFileError, HandlerError => herr 
+    cgi.out("text/plain") { herr.message + "\n" }
+  rescue NestedHandlerError => nherr
+    cgi.out("text/plain") {
+      nherr.message + ":\n\nMessage: " +
+      nherr.nestedError.message + "\n\nDetails:\n" +
+      nherr.nestedError.backtrace.join("\n") +
+      "\n\n"
+    }
+  rescue Exception => err
+    cgi.out("text/plain") {
+      "ERROR: unexpected service dispatch error:\n\n" +
+      "Message: " + err.message + "\n\nDetails:\n" +
+      err.backtrace.join("\n") +
+      "\n\n"
+    }
+  end
+}
+#
+## END
+#######

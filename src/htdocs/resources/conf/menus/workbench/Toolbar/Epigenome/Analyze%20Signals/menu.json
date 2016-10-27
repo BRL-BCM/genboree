@@ -1,0 +1,15 @@
+[
+  {
+    "text": "Find Differences By Regression",
+    "tooltip": "Compare the signals in two tracks via positional linear regression, generating an output track containing the level of agreement at each annotation, as well as goodness-of-fit metrics." ,
+    "idStr": "signalDataComparison"
+  },
+  {
+    "text": "Cluster by Spark",
+    "idStr": "spark",
+    "tooltip": "Perform the preprocessing and clustering steps of Cydney Nielson's Spark tool on signal data found in tracks or files you specify.<br>&nbsp;<br>Once complete, view the results in Spark's stand-alone GUI."
+  },
+  {
+    "text": "Compare by LIMMA"
+  }
+]

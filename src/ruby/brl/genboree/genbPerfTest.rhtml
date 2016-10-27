@@ -1,0 +1,52 @@
+<%
+  require 'cgi'
+  $VERBOSE = true
+  @cgi = CGI.new()
+	@req = Apache.request
+	@req.content_type = "text/html"
+	@req.status = 200	
+	@req.send_http_header
+	
+  def paramCheck()
+  	if(	@cgi.params['pi'].empty?	or
+  			@cgi.params['pt'].empty? or
+  			@cgi.params['pr'].empty? or
+  			@cgi.params['pu'].empty? or
+  			@cgi.params['pe'].empty? )
+  		return false
+  	else
+  			@pi = @cgi.params['pi'][0]; @pi.untaint
+  			@pt = @cgi.params['pt'][0] ; @pt.untaint
+  			@pr = @cgi.params['pr'][0] ; @pr.untaint
+  			@pu = @cgi.params['pu'][0] ; @pu.untaint
+  			@pe = @cgi.params['pe'][0] ; @pe.untaint
+  		return true
+  	end
+  end
+%>
+
+<HTML>
+<HEAD>
+<TITLE>Genboree - PerfTest 1.0</TITLE>
+</HEAD>
+<BODY>
+<BR>
+<% unless(paramCheck()) %>
+	<FONT COLOR="red" SIZE="+2">Called with no arguments.<BR>Can't run anything.<BR>Quitting.</FONT>
+<% else
+
+	
+	rn = rand(10000)
+	errFile = "/usr/local/brl/data/genbPerfTests/perfTest.#{$$}-#{rn}.err"
+	cmdStr =	"/usr/local/brl/home/genbadmin/genboree.exe -i #{@pi} " +
+		"-t #{@pt} -r #{@pr} -u #{@pu} " +
+		"-e #{@pe} -b /usr/local/brl/data/genbPerfTests -n perfTest.#{$$}-#{rn}.txt " +
+		"-d -a 2>> #{errFile} "
+	cmdStr = cmdStr.dup.untaint
+	File.open(errFile, "w+") { |ff| ff.puts "CMDSTR:\n\t#{cmdStr}" }
+	tStart = Time.now().to_f
+	output = `#{cmdStr}`
+	puts "TIME TO RUN: #{Time.now().to_f-tStart}"
+end %>
+</BODY>
+</HTML>

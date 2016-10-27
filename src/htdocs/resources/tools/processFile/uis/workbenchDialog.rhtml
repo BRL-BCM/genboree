@@ -1,0 +1,142 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" onsubmit="return submitToolJob(this) ; " style="width: 472px; height: 420px;" method="POST" class="wbDialog wbForm" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Process File" } ) %>
+  <%# Overview text %>
+  <%
+    fontSize = 'font-size:9pt;'
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool allows you to process files that you have already uploaded into a database. You can perform extraction of compressed files
+          and/or convert uploaded files into unix format in case the file was created on a mac/dos system.
+          <br>&nbsp;<br>
+          If you do not check the 'Convert to Unix' option, the tool will perform a simple extraction of your file and copy all the extracted file(s) to the
+          same directory as your original file.
+          <br>&nbsp;<br>
+          The tables below illustrate how your original file will be processed if you are converting your file to unix format:
+          <br>&nbsp;<br>
+          <h4>With Unpack/Extract checked</h4>
+          <table border=\"1\" cellspacing=\"0\" cellpadding=\"5\">
+            <tr>
+              <td style=\"#{fontSize}\">Original File</td><td style=\"#{fontSize}\">Create New</td><td style=\"#{fontSize}\">Replace Original</td><td style=\"#{fontSize}\">Result File(s)</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt.gz</td><td style=\"#{fontSize}\">&#10003; (default extension)</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">file.txt.unix, file.txt.unix.gz</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt.gz</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">&#10003;</td><td style=\"#{fontSize}\">file.txt, file.txt.gz</td>
+            </tr>
+          </table>
+          <br>&nbsp;<br>
+          <h4>With Unpack/Extract unchecked</h4>
+          <table border=\"1\" cellspacing=\"0\" cellpadding=\"5\">
+            <tr>
+              <td style=\"#{fontSize}\">Original File</td><td style=\"#{fontSize}\">Create New</td><td style=\"#{fontSize}\">Replace Original</td><td style=\"#{fontSize}\">Result File(s)</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt.gz</td><td style=\"#{fontSize}\">&#10003; (default extension)</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">file.txt.unix.gz</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt.gz</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">&#10003;</td><td style=\"#{fontSize}\">file.txt.gz</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt</td><td style=\"#{fontSize}\">&#10003; (default extension)</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">file.txt.unix</td>
+            </tr>
+            <tr>
+              <td style=\"style=\"#{fontSize}\"\">file.txt</td><td style=\"#{fontSize}\">&#x2717;</td><td style=\"#{fontSize}\">&#10003;</td><td style=\"#{fontSize}\">file.txt</td>
+            </tr>
+          </table>
+          <br>&nbsp;<br>
+          <b>SPECIAL NOTES:</b>
+          <ul>
+            <li>If you do not drag a target database/folder, all new files will be created in the same directory as the original file.</li>
+            <li>If you are processing multiple files in a single job, make sure the compressed files do not contain files with the same names. This will cause files processed earlier to be overwritten by the files processed later on.</li>
+          </ul> 
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input File:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "File to process" } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Settings",
+        :widgets =>
+        [
+          { :id => 'unpack', :label => 'Unpack/Extract', :labelWidth => "200px", :type => :checkBox, :checked => true, :title => "Check this to extract/unpack the file. Note that multi-file archives are not allowed if you want to convert to unix format." },
+          { :id => 'convToUnix', :label => 'Convert to Unix', :onclick => "toggleFileNameOpts(this.checked)", :type => :checkBox, :title => "Check this to convert the file to unix format. This should be checked for files created on Windows/Macintosh systems." },
+          { :name => 'fileOpts', :type => :radio, :onclick => "toggleFileRadioOpts(this.value)", :labelStyle => "font-size: 9pt;text-align:right;", :label => "Create New", :id => "createNewFile", :value => "createName", :title => "Create a new file from the original file and add the following as an extension to the name of the original file." },
+          { :id => 'fileName', :label => "File Extension", :labelStyle => "font-size: 8pt;text-align:right;", :type => :text, :value => ".unix", :size => "20", :title => "Add this is as the extension to the original file name for the new file." },
+          { :name => 'fileOpts', :type => :radio, :onclick => "toggleFileRadioOpts(this.value)", :labelStyle => "font-size: 9pt;text-align:right;", :id => "replaceOrigFile", :label => "Replace Original",  :value => "replaceOrig" }
+        ]
+      })
+  %>
+
+  <%# Buttons to submit tool or other tool function %>
+  <%# Submit button first submits a request to touch the file, then starts upload. %>
+
+
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit}, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type='text/javascript'>
+function toggleFileRadioOpts(value)
+{
+  if(value == 'replaceOrig')
+  {
+    Ext.get('fileName').dom.disabled = true ;
+  }
+  else
+  {
+    Ext.get('fileName').dom.disabled = false ;
+  }
+}
+
+function toggleFileNameOpts(checked)
+{
+  if(checked)
+  {
+    var fileOpts = document.getElementsByName('fileOpts') ;
+    document.getElementById('createNewFileLabel').show() ;
+    document.getElementById('createNewFile').checked = true ;
+    document.getElementById('replaceOrigFileLabel').show() ;
+    document.getElementById('fileName').show() ;
+    document.getElementById('fileNameLabel').show() ;
+    fileOpts[0].show() ;
+    fileOpts[1].show() ;
+  }
+  else
+  {
+    hideFileOpts() ;
+  }
+}
+
+Ext.onReady(function () {
+  hideFileOpts() ;
+})
+
+function hideFileOpts()
+{
+  var fileOpts = document.getElementsByName('fileOpts') ;
+  document.getElementById('createNewFileLabel').hide() ;
+  document.getElementById('replaceOrigFileLabel').hide() ;
+  document.getElementById('fileNameLabel').hide() ;
+  document.getElementById('fileName').hide() ;
+  fileOpts[0].hide() ;
+  fileOpts[1].hide() ;
+}
+</script>

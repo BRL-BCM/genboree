@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "novelMiRNADetection",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Novel miRNA Detection",
+    "shortLabel": "Novel miRNA Detection",
+    "groupAccessUri": null
+  }
+}

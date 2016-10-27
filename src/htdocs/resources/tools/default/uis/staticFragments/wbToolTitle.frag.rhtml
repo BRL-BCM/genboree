@@ -1,0 +1,45 @@
+<%
+  # Get needed info from tool config
+  rawTitle = @toolConf.getSetting('ui', 'label')
+  title = rawTitle
+  releaseStatus = @toolConf.getSetting('info', 'releaseStatus')
+  versionNumber = @toolConf.getSetting('info', 'version')
+
+  # replace any html specific characters or sequences
+  title.gsub!(/\-\>/, "<span style=\"font-size:1.4em;\">&rarr;</span><br>")
+
+  # Apply any release-related adornments to title
+  if(releaseStatus == "beta")
+    title = "#{title} <sup style=\"font-size:60%; color:#FF0000;\">BETA</sup>"
+  elsif(releaseStatus =~ /alpha/i)
+    title = "#{title} <sup style=\"font-size:60%; color:#FF0000;\">ALPHA</sup>"
+  end
+%>
+<script type="text/javascript">
+  <%= WorkbenchFormHelper.addToFormContext({'toolTitle' => rawTitle}) %>
+</script>
+<div width="100%" style="text-align: center;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+      <td style="width: 16px;">&nbsp;</td>
+      <td>
+        <div class="wbToolTitleInDialog" >
+          <%= title %>
+  	</div>
+      </td>
+      <% if(!@excludeHelpIcon)%>
+        <td style="width: 16px;">
+          <img width="16" height="16" border="0" src="/images/gHelp1.png" style="width: 16px; float: right; padding: 0px; margin: 0 0 0 auto; cursor: pointer;" onclick="showHelpWindow(wbHash.get('context').get('toolIdStr'))">
+        </td>
+      <% end %>
+    </tr>
+    <% if(@includeToolVersion)%>
+    <tr>
+      <td colspan=3 style="font-weight: bold;">
+	Version: <%= versionNumber %>	
+      </td>      
+    </tr>
+    <% end %>
+  </table>
+</div>
+<br>

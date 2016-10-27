@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "createFileList",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Create File List",
+    "shortLabel": "[NOT SET]",
+  }
+}

@@ -1,0 +1,68 @@
+pre.rubyCode {
+  background-color: #F6FFFF ;
+  color: #000000 ;
+  padding: 5px ;
+  overflow: auto ;
+  margin: 0px ;
+  width: 95% ;
+  font-size: 1em ;
+  border: 1px dashed black ;
+}
+/* Syntax highlighting */
+pre.rubyCode .normal {
+  color: #000000 ;
+}
+pre.rubyCode .comment {
+  color: #008080 ;
+  font-style: italic ;
+}
+pre.rubyCode .keyword {
+  color: #AA0000 ;
+  font-weight: bold ;
+}
+pre.rubyCode .method {
+  color: #007777 ;
+}
+pre.rubyCode .class {
+  color: #007744 ;
+}
+pre.rubyCode .module {
+  color: #005500 ;
+}
+pre.rubyCode .punct {
+  color: #707070 ;
+  font-weight: bold ;
+}
+pre.rubyCode .symbol {
+  color: #009999 ;
+}
+pre.rubyCode .string {
+  color: #A0A000 ;
+}
+pre.rubyCode .char {
+  color: #FF0077 ;
+}
+pre.rubyCode .ident {
+  color: #000044 ;
+}
+pre.rubyCode .constant {
+  color: #0077FF ;
+}
+pre.rubyCode .regex {
+  color: #BB6666 ;
+}
+pre.rubyCode .number {
+  color: #FF9999 ;
+}
+pre.rubyCode .attribute {
+  color: #55bbbb ;
+}
+pre.rubyCode .global {
+  color: #77FFBB ;
+}
+pre.rubyCode .expr {
+  color: #222277 ;
+}
+pre.rubyCode .escape {
+  color: #227777 ;
+}

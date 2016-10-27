@@ -1,0 +1,87 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: 500px; height: 420px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+            <b>Overview</b><br>
+            This tool will run a machine learning pipeline on an OTU table and sample information provided by the user. Currently, two random forest algorithms are run, each provided by an R package:
+            <ul>
+              <li>Random Forest</li>
+              <li>Boruta</li>
+            </ul>
+            <br>
+            The input OTU table will be filtered and normalized. A list of significant OTUs for differentiating sample sets will be generated as output.
+            <br>&nbsp;<br>
+            <b>Providing the OTU Table and Sample Information</b><br>
+            The <i>first</i> file in the &quot;Input Data&quot; panel must be an OTU table file.
+            <br>&nbsp;<br>
+            Sample information can be provided as a tab-delimited file or by dragging already imported samples over to the &quot;Input Data&quot; area. If you are going to provide sample records in a tab-delimited file, be sure to read the <a style='cursor:pointer;' onclick=\"showHelpWindow(wbHash.get('context').get('toolIdStr'))\">Help</a> carefully about the requirements.
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the ouput files are provided in the </i>Addendum<i> at the bottom of the Help dialog.</i></div>
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files/Samples:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbBioSampleOrFileListSummary, { :bioSampleOrFileList => @inputs, :label => "Files/Samples Of Interest" } )
+    })
+  %>
+
+  <%# Output database summary %>
+  <%= if(@outputs.size == 1)
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database:",
+          :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+        })
+      else
+        renderFrag(@toolIdStr, :wbDialogSection,
+        {
+          :sectionTitle => "Output Database/Project:",
+          :sectionHtml =>
+            renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+        })
+      end
+
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    opsList = @settings['opsList']
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'studyName', :label => 'Study Name', :type => :text , :size => "25", :value => "", :title => "The output folder for the Machine Learning results" },
+        { :id => 'jobName', :label => 'Job Name', :type => :text , :size => "25", :value => "ML-Job-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}", :title => "Give this job a unique name" },
+        { :id => "featureList", :label =>'Feature List', :type => :selectWithToggle, :size => '5', :text => 'Select features you wish to include', :selectByDefault => :all, :multiSelect => true, :toggleAllButton => true, :title => "Metadata features provided by user. (Example: age, ethnic, etc)", :options => opsList, :width => 200}
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>

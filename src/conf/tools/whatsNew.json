@@ -1,0 +1,15 @@
+{
+  "info": {
+    "idStr": "whatsNew",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "cluster": {
+    "queue": "none"
+  },
+  "ui": {
+    "label": "What's New",
+    "shortLabel": "[NOT SET]"
+  }
+}

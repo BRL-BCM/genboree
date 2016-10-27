@@ -1,0 +1,128 @@
+<%# INIT %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/resources/query'
+  require 'brl/genboree/rest/resources/database'
+
+  # Process some information from the inputs
+  @query = @rsrc = @rsrcType = nil
+  @database = nil
+
+  # Try to figure out with input is which
+  @inputs.each{ |input|
+    if(BRL::REST::Resources::Query.pattern().match(URI.parse(input).path))
+      @query = input
+    else
+      @rsrc = input
+    end
+  }
+
+  # Assume our only output is a database
+  @database = @outputs[0] unless(@outputs.nil?)
+
+  @error = ""
+  if(@query.nil? or @database.nil? or @rsrc.nil?)
+    %> <script>alert('Sorry, an Internal Error has occurred...');</script> <%
+    # NOTE: We could not properly identify out inputs / outputs...
+    # Therefore, we will hide the Apply Query button, so that the user cannot
+    # attempt to continue.  This is not a very useful notification to the user,
+    # but then again, the "rules" should always keep us from ever entering this
+    # situation.
+    @error = 'style="display: none;"'
+  end
+
+  # First check if we are trying to query against a Track, if so we assume the user meant annotation in a Track
+  if(BRL::REST::Resources::Track.pattern().match(URI.parse(@rsrc).path))
+    @rsrc = @rsrc.chomp('?') + '/annos?'
+  end
+
+  # Now determine the type of resource we are targeting
+  priority = 0 
+  BRL::REST::Resources.constants.each{ |constName|
+    const = BRL::REST::Resources.const_get(constName.to_sym)
+    matchData = const.pattern().match(URI.parse(@rsrc).path)
+    if(matchData)
+      if(const.priority > priority)
+        priority = const.priority
+        matchArray = matchData.to_a().delete_if { |match| match.nil?() }
+        # Hard coding here bad, but there is no other way to translate it unfortunately
+        @rsrcType = case constName
+          when "DbAnnos"
+            "All annotations in database - #{CGI.unescape(matchArray.last)}"
+          when "TrackAnnos"
+            "All annotations in track - #{CGI.unescape(matchArray.last)}"
+          else
+            "#{constName} - #{CGI.unescape(matchArray.last)}"
+        end
+      end
+    end
+  }
+  @rsrcType = '<Unknown>' if(@rsrcType.nil?()) # Fail safe
+%>
+
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="height: 440px ;" onsubmit="return submitToolJob(this);" class="wbDialog wbForm" method="POST">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Apply A Boolean Query" }) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        '
+          Review the query and results location below. Press the <span style="font-weight: bold ;">Apply Query</span>
+          button to apply the specified query to the target resource.
+          The results of the query application will be stored as a tab-delimited file in the designated group and database.
+          <br>&nbsp;<br>
+          <i>Note that this will execute on the server remotely and execution time will vary depending on the size of your dataset
+          and the complexity of the query. You will receive an email notification when the process has finished.</i>
+        '
+      })
+  %>
+  <%# Input resource summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Query",
+        :sectionHtml => renderFrag(@toolIdStr, :wbQueryListSummary, { :queryList => @query } )
+      })
+  %>
+  <%# Query target summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Query Target",
+        :sectionHtml => renderFrag(@toolIdStr, :wbQueryTargetSummary, { :type => @rsrcType, :target => @rsrc } )
+      })
+  %>
+  <%# Output targets summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Save Query Results To Database",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs[0]} )
+      })
+  %>
+  <%# Buttons to submit tool or other tool function %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons =>
+        [
+          {
+            :type => :submit,
+            :value => 'Apply'
+          },
+          { :type => :cancel }
+        ]
+      })
+  %>
+  <img id="loadingImg" src="/images/ajaxLoader.gif" alt="Loading..." style="display: none ;" />
+  <div class="feedback" id="feedback"></div>
+</form>
+<%# Tool-specific javascript and css %>
+<%= renderStaticFrag(@toolIdStr, :wbCssSrcs, { :srcs => [ '/styles/query.css', '/styles/statusInfo.css' ], :genbConf => @genbConf } ) %>
+<script>
+<%=
+  # Putting these declarations in a static fragment would make them cached from load to load, these need to be variable
+  # since fileUri will change as the user selects different nodes from the workbench
+  WorkbenchFormHelper.addToFormSettings({'queryUri' => @query}) +
+  WorkbenchFormHelper.addToFormSettings({'targetUri' => @rsrc}) +
+  WorkbenchFormHelper.addToFormSettings({'targetGroup' => WorkbenchFormHelper.getNameFromURI(:grp, @database, true)}) +
+  WorkbenchFormHelper.addToFormSettings({'targetDb' => WorkbenchFormHelper.getNameFromURI(:db, @database, true)})
+%>
+</script>

@@ -1,0 +1,844 @@
+<% # THIS IS AN ERUBY FILE
+########################################################################################
+# Project: Circos UI Integration
+#   This project creates a User Interface (UI) to assist users in
+#   creating parameter files for Circos (v0.49), a data visualization tool.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a Circos job with the Genboree environment
+#   and then package the Circos output files and notify the user of job completion.
+#
+# circosConfig.rhtml - This file creates all the HTML structure/elements to create a
+#   UI for a user to interact with
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2009 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+# NOTE: Any div that is involved in a scriptaculous effect (should) follows the scricptaculous suggestion
+#     : that it contain an inner div --> <div "idToShow"><div>Content to show</div></div>
+#     : These div's might be able to be removed but might have unexpected consequences in the effect...
+
+require 'cgi'
+require 'json'
+require 'sha1'
+require 'rest-open-uri'
+require 'brl/util/natcmp'
+require 'brl/genboree/genboreeUtil'
+require 'brl/genboree/rest/apiCaller'
+include BRL::Genboree::REST
+
+@cgi = CGI.new()
+epsInit = 0
+defaultFont = ""
+debug = true
+
+# Load our config file to access jsVersion
+@genbConf = BRL::Genboree::GenboreeConfig.load()
+@genbConf.circosApiHost = "localhost" if(@genbConf.circosApiHost.nil? or @genbConf.circosApiHost.empty?)
+@genbConf.maxNumEPsToDisplay = 100 if(@genbConf.maxNumEPsToDisplay.nil?)
+
+########################################################################################
+# Utility method to easily make an inquiry to the REST API
+# This method will either return the apiData structure or exit in failure mode
+# * Arguments : 
+#  - +String+ -> The REST URI to query
+########################################################################################
+def getRestData(uri)
+  apiCaller = ApiCaller.new(@genbConf.circosApiHost, uri, @cgi["userLogin"].strip(), @cgi["passwd"].strip())
+
+  httpResp = apiCaller.get()
+  if(apiCaller.failed?)
+    errorText = ""
+    if(httpResp.nil?)
+      # Exception happened
+      errorText << "<div class=\"feedback\"><div class=\"failure\">ERROR: The REST resource that is required is currently unavailable. "
+      errorText << "Please try again later or contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">"
+      errorText << "#{@genbConf.gbTechEmail}</a> for assistance.<br><br>"
+      errorText << "Detailed Error Information: #{apiCaller.error.inspect}</div></div>"
+    else
+      # An API related error
+      apiCaller.parseRespBody()
+      errorText << "<div class=\"feedback\"><div class=\"failure\">An error has occurred while attempting to process your request.<br>"
+      errorText << "Please contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">#{@genbConf.gbTechEmail}</a> for assistance."
+      errorText << "<br><br>"
+      errorText << "<em>REST API Error</em>: An error occurred while communicating with the REST interface!<br>"
+      errorText << "<em>Status Code</em>: #{apiCaller.apiStatusObj["statusCode"]}<br><em>Message</em>: #{apiCaller.apiStatusObj["msg"]}"
+      errorText << "</div></div>"
+    end
+
+    puts errorText
+    exit
+  end
+
+  apiCaller.parseRespBody()
+  return apiCaller.apiDataObj
+end
+
+########################################################################################
+# END Utility methods
+########################################################################################
+
+unless(@cgi.has_key?("userPwdDigest") && @cgi.has_key?("userLogin"))
+  # Login & password digest are required components, if we don't get these from the JSP, internal error occurred
+  err = "<div class=\"feedback\"><div class=\"failure\">An internal system error has occurred, please contact <a href=\"mailto:#{@genbConf.gbTechEmail}\">"
+  err += "#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\nERROR: A required parameter was missing!</div></div>\n"
+  puts err
+
+  exit
+end
+
+unless(@cgi.has_key?("group_id") && @cgi.has_key?("rseq_id") && @cgi.has_key?("groupName") && @cgi.has_key?("rseqName"))
+  # These params just might not be set yet. Perhaps the first step in VGP might instead be to select these
+  puts "<div>Please select a group and database from above.</div>"
+else
+  # Gather our entry points from the REST API
+  eps = getRestData("/REST/v1/grp/#{CGI.escape(@cgi["groupName"].strip())}/db/#{CGI.escape(@cgi["rseqName"].strip())}/eps?connect=false&detailed=false")
+  # Sort the EPs so the _random* are at the bottom - this is still ASCII sort, not natural order...
+  eps["entrypoints"].sort! { |x, y|
+    if((!x["name"].index("_").nil? and !y["name"].index("_").nil?) or (x["name"].index("_").nil? and y["name"].index("_").nil?))
+      String.natcmp(x["name"], y["name"])
+    elsif(x["name"].index("_").nil?)
+      -1
+    else
+      1
+    end
+  }
+
+  # Get our available tracks
+  tracks = getRestData("/REST/v1/grp/#{CGI.escape(@cgi["groupName"].strip())}/db/#{CGI.escape(@cgi["rseqName"].strip())}/trks?")
+  trackNames = Array.new()
+  tracks.each { |track| trackNames.push(track["text"]) }
+%>
+<div id="main">
+  <ul id="tabs">
+    <li><a id="epTab" href="#" class="active" onclick="setSelectedTab(this.id) ; return false ;">Select Entry Points</a></li>
+    <li><a id="ideoTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Specify Ideogram Details</a></li>
+    <li><a id="annotTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Add Annotation Tracks</a></li>
+    <li><a id="submitTab" href="#" onclick="setSelectedTab(this.id) ; return false ;">Submit</a></li>
+  </ul>
+  <div id="container">
+    <div id="content">
+      <div id="eps">
+        <!-- 1.) Specify the chromosomes to be drawn & the drawing order -->
+        <h2 class="instruction">Select which entry points should be drawn in the image and how they are drawn</h2>
+        <fieldset>
+          <legend>
+            Specifications for All Entry Points
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.allEpSpecs.text, helpMessages.allEpSpecs.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <div id="allEpSpecs" class="optionsGroup" style="margin-top: 10px ;">
+            <div class="option">
+              <label for="drawLabels">
+                Draw entry point labels:
+              </label>
+              <div class="optionInput">
+                <input class="checkbox" type="checkbox" id="drawLabels" style="margin: 0 ;" checked>
+              </div>
+            </div>
+            <div class="option">
+              <label for="epBanding">
+                Draw cytogenetic banding: 
+              </label>
+              <div class="optionInput" style="width: auto ; margin-right: 10px ;">
+                <input type="checkbox" class="checkbox" id="epBanding" onclick="Effect.toggle('epBands', 'appear', {queue: 'end', duration: 0.5}) ;">
+              </div>
+              <div id="epBands" class="optionInput" style="display: none ;">
+                <select id="globalBand">
+<%
+  trackNames.each { |trackName|
+    selected = (trackName =~ /cyto/i) ? " selected=\"selected\"" : ""
+%>
+                  <option value="<%=CGI.escapeHTML(trackName)%>"<%=selected%>><%=trackName%></option>
+<%
+  }
+%>
+                </select>
+              </div>
+            </div>
+            <div class="option">
+              <label for="epColoring">
+                Color entry points: 
+              </label>
+              <div class="optionInput" style="width: auto ; margin-right: 10px ;">
+                <input type="checkbox" class="checkbox" id="epColoring" onclick="Effect.toggle('epColors', 'appear', {queue: 'end', duration: 0.5}) ;">
+              </div>
+              <div id="epColors" class="colorInput optionInput" style="display: none ;">
+                <div id="allEpColorSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                <input type="hidden" id="allEpColor" value="#000000">
+                <div style="float: left ; width: 50% ;">
+                  <a class="colorLink" href="#" onclick="setDivId('allEpColorSwatch', 'allEpColor', '#000000') ; return false ;">Change Color</a>
+                </div>
+              </div>
+            </div>
+            <div class="option">
+              <label for="breakStyle">
+                Axis break style: 
+              </label>
+              <div class="optionInput">
+                <select id="breakStyle">
+                  <option id="bStyle1" value="1">1</option>
+                  <option id="bStyle2" value="2">2</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Available Entry Points
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.availEps.text, helpMessages.availEps.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+<%
+  unless(eps["entrypoints"].nil? || eps["count"] >= @genbConf.maxNumEPsToDisplay.to_i)
+%>
+          <ul id="epsList" class="dataList" style="width: 55% ; height: 400px ;">
+<%
+    # Represents the number of eps being drawn by default (0 for the exists case)
+    epsInit = eps["count"]
+    eps["entrypoints"].each_with_index { |ep, index|
+      # We assume here that an EP name will ONLY have an underscore in the 'chromosomes exist' use case
+      checked = "checked=\"checked\""
+      drawn = (index % 2 == 1) ? "odd" : "even"
+      unless(ep["name"].index("_").nil?)
+        checked = ""
+        drawn += " hidden"
+        epsInit -= 1
+      end
+%>
+            <li onclick="selectAndShowEpDetails('ep_<%=ep["name"].downcase()%>') ;">
+              <div id="ep_<%=ep["name"].downcase()%>" class="entryPoint <%=drawn%>">
+                <div class="entryPointName">
+                  <%=ep["name"]%>
+                </div>
+                <div class="entryPointControl">
+                  Draw?
+                  <span>
+                    <input id="ep_<%=ep["name"].downcase()%>_check" type="checkbox" class="checkbox" style="margin-left: 2px ;" onclick="toggleEpDrawing('ep_<%=ep["name"].downcase()%>');" <%=checked%>>
+                  </span>
+                </div>
+                <div style="clear: both ;"></div>
+              </div>
+            </li>
+<%
+    }
+%>
+          </ul>
+          <div style="margin-bottom: 5px ;">
+            <input type="button" value="Draw All" onclick="toggleDrawAllEps(true) ;">
+            <input type="button" value="Draw None" onclick="toggleDrawAllEps(false) ;">
+          </div>
+          Total entry points to be drawn: <span id="epsDrawn" style="font-weight: bold ;"><%=epsInit%></span>
+<%
+  else
+%>
+          <div id="epsDesc">
+            There are <span style="font-weight: bold ;"><%=eps["count"]%></span> entry points available for drawing.
+            <div style="margin: 5px 0 ;">
+              <input id="epEntry" class="text" type="text" style="margin-right: 2px ;" onkeyup="if(checkSubmitKey(event)) { addEntryPoint($F('epEntry'), '<%=@cgi["groupName"].strip()%>', '<%=@cgi["rseqName"].strip()%>' ) ; }">
+              <input type="button" value="Add" onclick="addEntryPoint($F('epEntry'), '<%=@cgi["groupName"].strip()%>', '<%=@cgi["rseqName"].strip()%>') ;">
+              <input id="removeButton" type="submit" value="Remove" onclick="removeEntryPoints('epsList') ;" disabled>
+            </div>
+            <div style="margin-bottom: 5px ;">
+              <select id="epsList" style="width: 50% ; height: 10em ;" multiple="multiple" onChange="processManualEpSelect(this) ;">
+              </select>
+            </div>
+            Total entry points to be drawn: <span id="epsDrawn" style="font-weight: bold ;"><%=epsInit%></span>
+          </div>
+<%
+  end
+%>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Entry Point Details
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.epSpecs.text, helpMessages.epSpecs.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <div id="epSpecs" class="optionsGroup">
+            <div class="option">
+              <label for="epLabel">
+                Label:
+              </label>
+              <div class="optionInput" class="disabled">
+                <span><input class="text" type="text" id="epLabel" onkeypress="return restrictWhitespace(event) ;" onblur="setEpLabel(selectedEpId) ;" value="No entry point selected" disabled></span>
+              </div>
+            </div>
+            <div class="option">
+              <label>
+                Length: 
+              </label>
+              <div class="optionInput">
+                <span id="epLength" class="disabled">[N/A]</span>
+              </div>
+            </div>
+            <a href="#" onclick="toggleAdvancedOptions('epSpecsAdvanced', this) ; return false ;" class="advancedLink">Advanced Options</a>
+          </div>
+          <div id="epSpecsAdvanced" class="advancedOptions optionsGroup" style="display: none ;">
+            <div class="option">
+              <label for="indEpColor">
+                Individual entry point color: 
+              </label>
+              <div class="optionInput colorInput">
+                <div id="indEpColorSwatch" class="swatch" style="background-color: #000000 ;"></div>
+                <input type="hidden" id="indEpColor" value="#000000">
+                <div style="float: left ; width: 50% ;">
+                  <a class="colorLink" href="#" onclick="setEpColor(selectedEpId) ; return false ;">Change Color</a>
+                </div>
+              </div>
+            </div>
+            <div class="option">
+              <label for="epScaling">
+                Entry point scaling:
+              </label>
+              <div class="optionInput">
+                <select id="epScaling" onchange="toggleEpScaleSpecs(selectedEpId, $F(this)) ;" disabled>
+                  <option value="noScale">No scaling</option>
+                  <option value="globalScale">Scale the whole entry point</option>
+                  <option value="localScale">Scale parts of the entry point</option>
+                </select>
+              </div>
+            </div>
+            <div id="scaleSpecs" style="display: none ; clear: left ;">
+              <div id="global">
+                <div class="option">
+                  <label for="globalScaleFactor">
+                    Scaling factor: 
+                  </label>
+                  <div class="optionInput">
+                    <select id="globalScaleFactor" onchange="processGlobalScaleChange($F(this)) ;">
+                      <option value="0.25">0.25</option>
+                      <option value="0.50">0.50</option>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                      <option value="other">Other:</option>
+                    </select>
+                    <span><input id="globalScaleFactorOther" style="margin-left: 10px ; display: none ;" class="text" type="text" onkeypress="return validateFloat(event, this) ;" onblur="setEpGlobalScaleFactor(selectedEpId, $F(this)) ;"></span>
+                  </div>
+                </div>
+              </div>
+              <div id="local">
+                <div class="option">
+                  <label for="localStart">
+                    Start scaling at genomic position*:
+                  </label>
+                  <div class="optionInput">
+                    <span><input class="text" type="text" id="epScaleStart" onkeypress="return validateInt(event) ;" onkeyup="setScaleButtonsStatus(selectedScaleId) ;"></span>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="localEnd">
+                    End scaling at genomic position*:
+                  </label>
+                  <div class="optionInput">
+                    <span><input class="text" type="text" id="epScaleEnd" onkeypress="return validateInt(event) ;" onkeyup="setScaleButtonsStatus(selectedScaleId) ;"></span>
+                  </div>
+                </div>
+                <div class="option">
+                  <label for="localScaleFactor">
+                    Scaling factor: 
+                  </label>
+                  <div class="optionInput">
+                    <select id="localScaleFactor" onchange="setOtherOptVis('localScaleFactor', 'localScaleFactorOther') ;">
+                      <option value="0.25">0.25</option>
+                      <option value="0.50">0.50</option>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                      <option value="other">Other:</option>
+                    </select>
+                    <span><input id="localScaleFactorOther" style="margin-left: 10px ; display: none ;" class="text" type="text" onkeypress="return validateFloat(event, this) ;"></span>
+                  </div>
+                </div>
+                <div class="buttonPanel">
+                  <input id="addScaleButton" type="button" value="Add Scale" onclick="addLocalScaleToEp(selectedEpId) ;" disabled>
+                  <input id="updateScaleButton" type="button" value="Update Scale" onclick="updateLocalScaleInEp(selectedEpId, selectedScaleId) ;" disabled>
+                  <input id="removeScaleButton" type="button" value="Remove Scale" onclick="removeLocalScaleFromEp(selectedEpId, selectedScaleId) ;" disabled>
+                </div>            
+                <fieldset>
+                  <legend>
+                    Currently Scaled Segments - <span id="epScalesListId">(n/a)</span>
+                  </legend>
+                  <ul id="epScalesList" class="dataList"></ul>
+                </fieldset>
+              </div>
+            </div>
+            <div style="margin-bottom: 5px ; float: left ; clear: left ;"><em>Visibility:</em></div>
+            <div id="fullEpDiv" class="option disabled">
+              <input id="fullEpRadio" type="radio" class="radio" name="epBreaks" onclick="toggleBreakSpecs(false) ;" disabled>
+              Draw the whole entry point
+            </div>
+            <div id="breakEpDiv" class="option disabled">
+              <input id="breakEpRadio" type="radio" class="radio" name="epBreaks" onclick="toggleBreakSpecs(true) ;" disabled>
+              Hide portions of the entry point
+            </div>
+            <div id="epBreakSpecs" style="display: none ; margin: 5px 0 ; border: 1px solid #DCDCDC ; background-color: #EDEDED ; padding: 5px ;">
+              <div class="option">
+                <label for="epBreakStart">
+                  Start hiding at genomic position*:
+                </label>
+                <input class="text" type="text" id="epBreakStart" onkeypress="return validateInt(event) ;" onkeyup="setBreakButtonsStatus() ;">
+              </div>
+              <div class="option">
+                <label for="epBreakEnd">
+                  End hiding at genomic position*:
+                </label>
+                <input class="text" type="text" id="epBreakEnd" onkeypress="return validateInt(event) ;" onkeyup="setBreakButtonsStatus() ;">
+              </div>
+              <div class="buttonPanel" style="margin: 5px 0 10px 0 ;">
+                <input id="addBreakButton" type="button" value="Add Break" onclick="addBreakToEp(selectedEpId) ;" disabled>
+                <input id="updateBreakButton" type="button" value="Update Break" onclick="updateBreakInEp(selectedEpId, selectedBreakId) ;" disabled>
+                <input id="removeBreakButton" type="button" value="Remove Break" onclick="removeBreakFromEp(selectedEpId, selectedBreakId) ;" disabled>
+              </div>
+              <fieldset>
+                <legend>
+                  Currently Hidden Segments - <span id="epBreaksListId">(n/a)</span>
+                </legend>
+                <ul id="epBreaksList" class="dataList"></ul>
+              </fieldset>
+            </div>
+          </div>
+        </fieldSet>
+        <div id="epFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('ideoTab') ;">
+        </div>
+      </div>
+      <div id="ideo" style="display : none ;">
+        <!-- 1.) Specify the basics of the ideogram -->
+        <h2 class="instruction">Set values that affect the whole ideogram</h2>
+        <fieldset>
+          <legend>
+            Ideogram Specification
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.ideoSpecs.text, helpMessages.ideoSpecs.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label for="units">
+                Chromosome units*: 
+              </label>
+              <div class="optionInput">
+                <span><input id="units" class="text" type="text" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" value=10000000></span> (in base pairs)
+              </div>
+            </div>
+            <div class="option">
+              <label for="ideoSpacing">
+                Ideogram spacing*: 
+              </label>
+              <div class="optionInput">
+                <span><input id="ideoSpacing" class="text" type="text" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ;" value=2><span> (in chromosome units)
+              </div>
+            </div>
+            <div class="option">
+              <label for="ideoRadius">
+                Ideogram radius: 
+              </label>
+              <div class="optionInput">
+                <select id="ideoRadius" onchange="changeIdeoRadius() ; ">
+                  <option value="500">500 pixels</option>
+                  <option value="1000" selected>1000 pixels</option>
+                  <option value="1500">1500 pixels</option>
+                  <option value="2000">2000 pixels</option>
+                  <option value="other">Other:</option>
+                </select>
+                <span><input id="ideoRadiusOther" style="margin-left: 10px ; display: none ;" class="text" type="text" onkeypress="return validateInt(event) ;" onblur="checkPosInt(this) ; displayIdeoSize(parseInt($F(this))) ;"></span>
+              </div>
+            </div>
+            <div id="imageSize" class="detail" style="margin-bottom: 5px ; clear: left ;">Resulting image size: 2000x2000 pixels</div>
+            <a href="#" onclick="toggleAdvancedOptions('ideoAdvOpts', this) ; return false ;" class="advancedLink">Advanced Options</a>
+            <div id="ideoAdvOpts" class="advancedOptions" style="display: none ; padding: 5px ;">
+              <div class="option">
+                <label for="closedIdeo">
+                  Create a microbial ideogram:
+                </label>
+                <div class="optionInput">
+                  <input type="checkbox" class="checkbox" id="closedIdeo" style="margin: 0 ;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Tick Mark Settings
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.tickSpecs.text, helpMessages.tickSpecs.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a>
+          </legend>
+          <!-- 3.) Specify tick marks -->
+          <div id="tickOpts" class="optionsGroup">
+            <div class="option">
+              <label for="showTick">
+                Show tick mark:
+              </label>
+              <div class="optionInput">
+                <input class="checkbox" type="checkbox" id="showTick" style="margin: 0 ;" checked>
+              </div>
+            </div>
+            <div class="option">
+              <label for="showLabel">
+                Show tick label:
+              </label>
+              <div class="optionInput">
+                <input class="checkbox" type="checkbox" id="showLabel" style="margin: 0 ;" checked>
+              </div>
+            </div>
+            <div class="option">
+              <label for="suffix">
+                Append units to the tick label:
+              </label>
+              <div class="optionInput">
+                <input type="checkbox" class="checkbox" id="suffix" checked><span id="tickLabelSuffixEx" style="color: #999 ; margin-left: 10px ;">(e.g. 100Mb)</span>
+              </div>
+            </div>
+            <div class="option">
+              <label for="tickUserSpacing">
+                Tick mark spacing*: 
+              </label>
+              <div class="optionInput">
+                <span><input type="text" id="tickUserSpacing" style="width: 3em ;" onkeypress="return validateInt(event) ;" onkeyup="setTickButtonsStatus() ;" onblur="checkPosInt(this) ;"><span>
+                <select id="tickSpacingScale" onchange="updateTickLabelSuffixEx($F(this)) ;">
+                  <option value="bp">Bp</option>
+                  <option value="kb">Kb</option>
+                  <option value="mb" selected>Mb</option>
+                </select>
+              </div>
+            </div>
+            <div class="option">
+              <label for="size">
+                Tick mark size: 
+              </label>
+              <div class="optionInput">
+                <select id="size" onchange="setOtherOptVis('size', 'sizeOther') ;">
+                  <option value="3">2 pixels</option>
+                  <option value="6" selected>6 pixels</option>
+                  <option value="9">9 pixels</option>
+                  <option value="12">12 pixels</option>
+                  <option value="other">Other:</option>
+                </select>
+                <span><input id="sizeOther" style="margin-left: 10px ; display: none ;" class="text" type="text" onkeypress="return validateInt(event) ;"></span>
+              </div>
+            </div>
+            <div class="option">
+              <label for="labelSize">
+                Tick label size: 
+              </label>
+              <div class="optionInput">
+                <select id="labelSize" onchange="setOtherOptVis('labelSize', 'labelSizeOther') ;">
+                  <option value="5">5 pixels</option>
+                  <option value="10" selected>10 pixels</option>
+                  <option value="15">15 pixels</option>
+                  <option value="20">20 pixels</option>
+                  <option value="other">Other:</option>
+                </select>
+                <span><input id="labelSizeOther" style="margin-left: 10px ; display: none ;" class="text" type="text" onkeypress="return validateInt(event) ;"></span>
+              </div>
+            </div>
+            <a href="#" onclick="toggleAdvancedOptions('tickAdvOpts', this) ; return false ;" class="advancedLink">Advanced Options</a>
+            <div id="tickAdvOpts" class="advancedOptions" style="display: none ; padding: 5px ;">
+              <div class="option">
+                <label for="grid">
+                  Create grid line from tick: 
+                </label>
+                <div class="optionInput">
+                  <input class="checkbox" type="checkbox" id="grid" style="margin: 0 ;" onclick="toggleGridInputs(this.checked) ;">
+                </div>
+              </div>
+              <div class="option">
+                <label for="gridStart">
+                  Grid line start: 
+                </label>
+                <div class="optionInput">
+                  <span><input class="text" type="text" id="gridStart" onkeypress="return validateFloat(event, this) ;"></span>
+                </div>
+              </div>
+              <div class="option">
+                <label for="gridEnd">
+                  Grid line end: 
+                </label>
+                <div class="optionInput">
+                  <span><input class="text" type="text" id="gridEnd" onkeypress="return validateFloat(event, this) ;"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="buttonPanel">
+            <input id="addTickButton" type="button" disabled="disabled" value="Add Tick Mark" onclick="addTickMark() ;" >
+            <input id="updateTickButton" type="button" disabled="disabled" value="Update Tick Mark" onclick="updateTickMark(selectedTickId) ;">
+            <input id="removeTickButton" type="button" disabled="disabled" value="Remove Tick Mark" onclick="removeTickMark(selectedTickId) ;">
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            Currently Added Tick Marks
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.ticksDef.text, helpMessages.ticksDef.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <ul id="ticks" class="dataList"></ul>
+        </fieldset>
+        <div id="ideoFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('epTab') ;">
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('annotTab') ;">
+        </div>   
+      </div>
+      <div id="annotation" style="display: none ;">
+        <h2 class="instruction">Add annotation tracks</h2>
+        <div class="optionsGroup">
+          <div class="option">
+            <label for="tracksSelect">
+              Available tracks:
+            </label>
+            <div class="optionInput">
+              <select id="tracksSelect" onchange="processTrackChange() ;">
+                <option value="" selected="selected">--- Select a track to add to the ideogram ---</option>
+<%
+trackNames.each { |trackName|
+%>
+                <option value="<%=CGI.escapeHTML(trackName)%>"><%=trackName%></option>
+<%
+}
+%>
+              </select>
+            </div>
+          </div>
+        </div>
+        <fieldset>
+          <legend>
+            Track Settings
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.trackSpecs.text, helpMessages.trackSpecs.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <div class="optionsGroup">
+            <div class="option">
+              <label for="type">
+                Track type:
+              </label>
+              <div class="optionInput">
+                <select id="type" onChange="showTypeOptions($F(this)) ;">
+                  <option value="highlight">Highlight</option>
+                  <option value="scatter">Scatter Plot</option>
+                  <option value="line">Line Plot</option>
+                  <option value="histogram">Histogram</option>
+                  <option value="tile">Tiles</option>
+                  <option value="heatmap">Heat Map</option>
+                  <option value="link">Link Data</option>
+                </select>
+              </div>
+            </div>
+            <div id="annoStdOpts">
+              <div class="option">
+                <label for="r0">
+                  Inner radius*:
+                </label>
+                <div class="optionInput">
+                  <span><input id="r0" class="text" type="text" onkeypress="return validateFloat(event, this) ;" onkeyup="setTrackButtonsStatus(['r0', 'r1']) ;" onblur="checkPosFloat(this) ;"></span>
+                </div>
+              </div>
+              <div class="option">
+                <label for="r1">
+                  Outer radius*:
+                </label>
+                <div class="optionInput">
+                  <span><input id="r1" class="text" type="text" onkeypress="return validateFloat(event, this) ;" onkeyup="setTrackButtonsStatus(['r0', 'r1']) ;" onblur="checkPosFloat(this) ;"></span>
+                </div>
+              </div>
+              <div class="option">
+                <label for="ideogram">
+                  Draw the highlight on the ideogram:
+                </label>
+                <div class="optionInput">
+                  <input id="ideogram" class="checkbox" type="checkbox" style="margin: 0 ;" onclick="toggleRadiusInputs(this.checked) ;">
+                </div>
+              </div>
+              <div class="option">
+                <label for="fillColor">
+                  Highlight fill color:
+                </label>
+                <div class="optionInput colorInput">
+                  <div id="fillColorSwatch" class="swatch" style="background-color: #000 ;"></div>
+                  <input id="fillColor" type="hidden" value="#000000">
+                  <div style="float: left ; width: 50% ;">
+                    <a class="colorLink" href="#" onclick="setDivId('fillColorSwatch', 'fillColor', '#000000') ; return false ;">Change Color</a>
+                  </div>
+                </div>
+              </div>
+              <!-- TEMP, testing layout
+              <span style="margin-bottom: 5px ;"><em>Heatmap color list:</em></span>
+              <ol>
+                <li>Color</li>
+              </ol> -->
+            </div>
+            <a href="#" onclick="toggleAdvancedOptions('annoAdvOptsDiv', this) ; return false ;" class="advancedLink">Advanced Options</a>
+            <div id="annoAdvOptsDiv" class="advancedOptions" style="display: none ; padding: 5px ;">
+              <div id="annoAdvOpts">
+                <div class="option">
+                  <label for="strokeColor">
+                    Wedge stroke color:
+                  </label>
+                  <div class="optionInput colorInput">
+                    <div id="strokeColorSwatch" class="swatch" style="background-color: #000 ;"></div>
+                    <input id="strokeColor" type="hidden" value="#000000">
+                    <div style="float: left ; width: 50% ;">
+                      <a class="colorLink" href="#" onclick="setDivId('strokeColorSwatch', 'strokeColor', '#000000') ; return false ;">Change Color</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="annoAdvRules" style="display: none ;">
+                <fieldset>
+                  <legend>
+                    Annotation Filtering Rules
+                    <a href="#" onclick="return displayHelpPopup(this, helpMessages.ruleSpecs.text, helpMessages.ruleSpecs.title);">
+                      <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+                    </a> 
+                  </legend>
+                  <div id="addRuleLink">
+                    <a href="#" onclick="addRuleEl(true) ; return false ;" class="smallBttn"><span>+</span></a>
+                    <a href="#" onclick="addRuleEl(true) ; return false ;" style="display: block ; padding-top: 4px ;">Add a rule</a>
+                  </div>
+                  <ul id="rules">
+                  </ul>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+          <div class="buttonPanel">
+            <input id="addTrackButton" type="button" value="Add Track" disabled onclick="addTrack($F('tracksSelect')) ;">
+            <input id="updateTrackButton" type="button" value="Update Track" disabled onclick="updateTrack(selectedTrackId) ;">
+            <input id="removeTrackButton" type="button" value="Remove Track" disabled onclick="removeTrack(selectedTrackId) ;">
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            List of Currently Added Annotation Tracks
+            <a href="#" onclick="return displayHelpPopup(this, helpMessages.tracksDef.text, helpMessages.tracksDef.title);">
+              <img src="/images/gHelp1.png" border="0" width="16" height="16" style="margin-left:5px;">
+            </a> 
+          </legend>
+          <ul id="addedTracks" class="dataList"></ul>
+        </fieldset>
+        <div id="annotFeedback" class="feedback"></div>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('ideoTab') ;">
+          <input type="button" value="Next Step >>" onclick="setSelectedTab('submitTab') ;">
+        </div>   
+      </div>
+      <div id="submit" style="display: none ;">
+        <fieldset>
+          <legend>
+            Submit Circos Job
+          </legend>
+          <p>The following criteria must be satisfied and no errors can be present before a job can be submitted to Circos:</p>
+          <div style="width: 95% ; margin: 0 auto ;">
+            <table class="statusTable">
+              <tr>
+                <th>Option</th>
+                <th>Tab</th>
+                <th>Status</th>
+              </tr>
+              <tr id="epsCheck">
+                <td>At least one entry point must be selected for drawing</td>
+                <td><a href="#" onclick="setSelectedTab('epTab') ; return false ;">Select Entry Points</a></td>
+                <td id="epsStatus" style="text-align: center ;"><img alt="Satisfied" src="/images/vgpCheckmark.png" /></td>
+              </tr>
+              <tr id="unitsCheck">
+                <td>A valid value must be entered for chromosome units</td>
+                <td><a href="#" onclick="setSelectedTab('ideoTab') ; return false ;">Specify Ideogram Details</a></td>
+                <td id="unitsStatus" style="text-align: center ;"><img alt="Satisfied" src="/images/vgpCheckmark.png" /></td>
+              </tr>
+              <tr id="spacingCheck">
+                <td>A valid value must be entered for the ideogram spacing</td>
+                <td><a href="#" onclick="setSelectedTab('ideoTab') ; return false ;">Specify Ideogram Details</a></td>
+                <td id="spacingStatus" style="text-align: center ;"><img alt="Satisfied" src="/images/vgpCheckmark.png" /></td>
+              </tr>
+              <tr id="radiusCheck">
+                <td>A valid value must be entered for the ideogram radius</td>
+                <td><a href="#" onclick="setSelectedTab('ideoTab') ; return false ;">Specify Ideogram Details</a></td>
+                <td id="radiusStatus" style="text-align: center ;"><img alt="Satisfied" src="/images/vgpCheckmark.png" /></td>
+              </tr>
+            </table>
+            <div id="numErrors" style="float: right ; font-weight: bold ; margin-bottom: 10px ;">Total Errors: 0</div>
+            <ul class="statusList" id="warningList" style="clear: right ;">
+              <li class="header">Warning</li>
+            </ul>
+            <div id="numWarnings" style="float: right ; font-weight: bold ;">Total Warnings: 0</div>
+          </div>
+          <div id="submitFeedback" class="feedback" style="margin-top: 35px ; clear: right ;"></div>
+          <input id="submitButton" type="button" onclick="requestJob() ;" value="Submit Circos Job">
+        </fieldset>
+        <div style="margin-top: 10px ;">
+          <input type="button" value="<< Previous Step" onclick="setSelectedTab('annotTab') ;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+  /** Make our sortable **/
+  Position.includeScrollOffsets = true ;
+
+  var CircosUI = {
+    userId : <%=@cgi["userId"].strip()%>, 
+    userLogin : '<%=@cgi["userLogin"].strip()%>',
+    userEmail : '<%=@cgi["userEmail"].strip()%>',
+    groupId : <%=@cgi["group_id"].strip()%>,
+    rseqId : <%=@cgi["rseq_id"].strip()%>,
+    groupName : <%=@cgi["groupName"].strip().to_json()%>,
+    rseqName : <%=@cgi["rseqName"].strip().to_json()%>,
+    numEpsDrawn : <%=epsInit%>,
+<%
+  # Create our javascript EntryPoint objects
+  epString = ""
+  unless(eps["entrypoints"].nil? or eps["count"] == 0 or eps["count"] >= @genbConf.maxNumEPsToDisplay.to_i)
+    epString << "      count : #{eps["count"]},\n"
+    epString << "        eps : {"
+    eps["entrypoints"].each_with_index { |ep, index|
+      epString << "        'ep_#{ep["name"].downcase()}' : new EntryPoint('#{ep["name"]}', #{ep["length"]}, #{index + 1}, #{(ep["name"].index("_").nil?) ? true : false})"
+      epString << ",\n" unless ((index + 1) == eps["count"])
+    }
+    epString << "}"
+  else
+    # The 'count' property reflects how many EP objects exist in the eps variable, in this case,
+    # the user is responsible for creating the EP objects by manually adding them, so we have 0 to start
+    epString << "      count : 0,\n"
+    epString << "        eps : {}"
+  end
+%>
+    entryPoints : { <%=epString%> },
+    maxEpLabelLength : 10,
+    ticks : {'count' : 0, 'tickObjs' : {}},
+    tracks : {'count' : 0, 'trackObjs' : {}},
+    allTracks : [<%= trackNames.map{ |tn| "{'text' : '#{tn.gsub("'", "&#39;")}', 'value' : #{tn.to_json.gsub("'", "&#39;")}}" }.join(',') %>]
+  } ;
+
+  // Register our Ext Spinner Fields - on first load at least r0 and r1 will exist
+  Ext.onReady(function() {
+    Ext.BLANK_IMAGE_URL = '/javaScripts/ext-2.2/resources/images/default/s.gif' ;
+    CircosUI.rZeroSpinner = createTrackSpinner('r0', '0.25') ;
+    CircosUI.rOneSpinner = createTrackSpinner('r1', '0.75') ;
+    CircosUI.gridStartSpinner = createSpinner('gridStart', '0.25').disable() ;
+    CircosUI.gridEndSpinner = createSpinner('gridEnd', '0.75').disable() ;
+  }) ;
+
+  // Register an Event observer to handle changing colors of EPs -- this is defined in trkmgrcolor.js
+  addExternalColorWheelObserver(function(event) {
+    if(hiddenInputId === 'indEpColor' && CircosUI.entryPoints.eps[selectedEpId])
+    {
+      CircosUI.entryPoints.eps[selectedEpId].color = $F('indEpColor') ;
+    }
+  }) ;
+</script>
+<%
+end
+%>

@@ -1,0 +1,218 @@
+<%
+########################################################################################
+# Project: VGP UI Integration
+#   This project creates a new User Interface (UI) to assist users in
+#   creating parameter files for the Virtual Genome Painter (VGP) v 2.0.
+#   The integration also creates a server-side support environment to create
+#   necessary configuration files, queue a VGP job with the Genboree environment
+#   and then package the VGP output files and notify the user of job completion.
+#
+# vgpResultsRequestHander.rhtml - This file processes the AJAX call and returns a listing
+#                                 of files for the requested VGP Job
+#
+# Developed by Bio::Neos, Inc. (BIONEOS)
+# under a software consulting contract for:
+# Baylor College of Medicine (CLIENT)
+# Copyright (c) 2008 CLIENT owns all rights.
+# To contact BIONEOS, visit http://bioneos.com
+########################################################################################
+
+require 'cgi'
+require 'json'
+require 'brl/genboree/genboreeUtil'
+
+cgi = CGI.new()
+@genbConf = BRL::Genboree::GenboreeConfig.load()
+jsonData = cgi["options"]
+output = ""
+
+begin
+  options = JSON.parse(jsonData)
+  
+  # Make sure we got all the required params POST'ed to us
+  raise Exception.new("The base path for the VGP Results (from the Genboree Configuration File) is empty!") if @genbConf.vgpResultsBase.nil? || @genbConf.vgpResultsBase.empty?
+
+  if(cgi["mode"].strip() == "results")
+    if(options["jobId"].nil? || options["rseqId"].nil? || options["groupId"].nil? || options["userLogin"].nil?)
+      raise ArgumentError
+    end
+
+    output << "<div class=\"jobDetails\">"
+    # Locate and glob our requested directory
+    resultsPath = File.join(@genbConf.vgpResultsBase, options["groupId"], options["rseqId"], options["userLogin"], options["jobId"])
+    resultsUri = [@genbConf.vgpResultsBaseUri, options["groupId"], options["rseqId"], options["userLogin"], options["jobId"]].join("/")
+    images = Dir.glob(File.join(resultsPath, "images", "*.png")).sort!
+    inputs = Dir.glob(File.join(resultsPath, "inputs", "*.{json,gz,das}")).sort!
+    
+    # Prepare our return text
+    output << "<div>"
+    output << "  <p>Raw Image Output :</p>"
+    output << "</div>"
+    output << "<ul>"
+    if(images.length == 0)
+      output << "  <li><em>No images were created for this job!</em></li>"
+    else
+      output << "<li>"
+      output << "<table>"
+      images.each_with_index { |image, index|
+        output << "<tr>"
+        output << "<td><a href=\"#{resultsUri + "/images/" + File.basename(image)}\" target=\"_blank\">#{File.basename(image)}</a></td>"
+        
+        # Check to make sure an image map exists for this EP, output appropriately
+        # To visually lay out the image and imagemap in a two column table, we cannot just do a glob of the the html directory for the imagemaps and
+        # then output it as we are outputting the image. Unfortunately the ASCII-sort of the imagemaps will be different than the images, so our best
+        # solution here is to get the image name, see if the image map for that image name exists, and if so add a link
+        if(File.exists?(File.join(resultsPath, "html", File.basename(image, ".png") + "ImageMap.html")))
+          output << "<td class=\"detail\">"
+          output << "<a href=\"#{resultsUri + "/html/" + File.basename(image, ".png") + "ImageMap.html"}\" target=\"_blank\">[Image Map]</a>"
+          output << "</td>"
+        else
+          output << "<td class=\"detail\">[No image map created!]</td>"
+        end
+
+        output << "</tr>"
+      }
+
+      output << "</table>"
+      output << "</li>"
+    end
+    output << "</ul>"
+
+    output << "<div>"
+    output << "  <p>Input Files :</p>"
+    output << "</div>"
+    output << "<ul>"
+    if(inputs.length == 0)
+      output << "  <li><em>No input files available for this job!</em></li>"
+    else
+      inputs.each { |input|
+        output << "<li><a href=\"#{resultsUri + "/inputs/" + File.basename(input)}\" target=\"_blank\">#{File.basename(input)}</a></li>"
+      }
+    end
+    output << "</ul>"
+    output << "</div>" # jobDetails div
+  elsif(cgi["mode"].strip() == "listing")
+    if(options["rseqId"].nil? || options["groupId"].nil? || options["userLogin"].nil?)
+      raise ArgumentError
+    end
+
+    output = ""
+    results = Array.new()    
+    groupDbPath = File.join(@genbConf.vgpResultsBase, options["groupId"].strip, options["rseqId"].strip)
+
+    if(options["userLogin"] == "showAll")
+      # Get the users that have run a VGP job for this group and db
+      if(File.exists?(groupDbPath))
+        Dir.chdir(groupDbPath)
+        availUsers = Dir.glob("*").delete_if { |val| !File.directory?(val) }
+      end
+
+      # By default, we will start by showing results from all users
+      availUsers.each { |user|
+        resultsPath = File.join(groupDbPath, user)
+        if(File.exists?(resultsPath))
+          Dir.chdir(resultsPath)
+          Dir.glob("*").delete_if { |val| val.split("_").length != 3 }.each { |jobId|
+            results.push({:jobId => jobId, :owner => user})
+          }
+        end
+      }
+    else
+      resultsPath = File.join(groupDbPath, options["userLogin"])
+      if(File.exists?(resultsPath))
+        Dir.chdir(resultsPath)
+        Dir.glob("*").delete_if { |val| val.split("_").length != 3 }.each { |jobId|
+          results.push({:jobId => jobId, :owner => options["userLogin"]})
+        }
+      end
+    end
+
+    if(results.length == 0)
+      output << "<li>"
+      output << "  <div class=\"jobMessage warning\">"
+      output << "    No VGP results were found for the selected group and database!<br><br>If you think this is an error,"
+      output << "    please contact the <a href=\"mailto:#{@genbConf.gbTechEmail}\">#{@genbConf.gbTechEmail}</a> with the Group,"
+      output << "    Database and VGP Job ID of the missing run."
+      output << "  </div>"
+      output << "</li>"
+    else
+      # Keep the aesthetics looking good...
+      
+      # Get an array of the jobs and sort them by the date portion of the job ID (reverse chron.) 
+      # Job ID structure : <userId>_<timestamp of run>_<random num for uniqueness>
+      results.sort! { |jobA, jobB| 
+        if(jobA[:jobId].split("_")[1] < jobB[:jobId].split("_")[1])
+          1
+        elsif(jobA[:jobId].split("_")[1] > jobB[:jobId].split("_")[1])
+          -1
+        else
+          0
+        end
+      }.each { |job|
+        output << "<li>"
+        output << "  <div style=\"overflow: auto ;\" class=\"job\">"
+        output << "    <div style=\"float: left ;\">"
+        output << "      <a href=\"#\" onclick=\"getResults('#{job[:jobId]}', '#{job[:owner]}') ; return false ;\">"
+        output << "        <span id=\"vgpDetails_#{job[:jobId]}_status\" class=\"expandable\">Job ID:</span>"
+        
+        # Strip off the userId from the job ID
+        output << "        #{job[:jobId][(job[:jobId].index("_") + 1)..job[:jobId].length]}"
+        output << "      </a>"
+        output << "    </div>"
+        output << "    <div style=\"float: right ;\">"
+        output << "      <span>Date Run: #{Time.at(job[:jobId].split("_")[1].to_i).strftime("%a %b %d, %Y  at %I:%M %p")} by #{job[:owner]}</span>"
+        output << "    </div>"
+        output << "  </div>"
+        output << "  <div id=\"vgpDetails_#{job[:jobId]}\" style=\"display: none ;\"></div>"
+        output << "</li>"
+      }
+    end
+
+    output << "<script type='text/javascript'>"
+    output << "  if($('numJobs'))"
+    output << "  {"
+    output << "    $('numJobs').update('#{results.length} job#{(results.length == 1) ? "" : "s"} found')"
+    output << "  }"
+    output << "</script>"
+  end
+rescue JSON::ParserError => e
+  output =  "<div style=\"padding: 0.25em 1em ; margin: 0.75em 0 ;\""
+  output << "<div class=\"jobMessage failure\">"
+  output << "  An error occurred while trying to get the VGP results! Please contact "
+  output << "  <a href='mailto:#{@genbConf.gbTechEmail}'>#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\n"
+  output << "  ERROR: JSON Parse error!<br>"
+  output << "</div>"
+  output << "</div>"
+rescue ArgumentError => e
+  missingParams = Array.new
+  missingParams << "jobId" if options["jobId"].nil?
+  missingParams << "rseqId" if options["rseqId"].nil?
+  missingParams << "groupId" if options["groupId"].nil?
+  missingParams << "userLogin" if options["userLogin"].nil?
+  output =  "<div style=\"padding: 0.25em 1em ; margin: 0.75em 0 ;\""
+  output << "<div class=\"jobMessage failure\">"
+  output << "An internal system error has occurred, please contact "
+  output << "<a href='mailto:#{@genbConf.gbTechEmail}'>#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\n"
+  output << "ERROR: Required parameters were missing!<br>\n#{missingParams.join("<br>\n")}"
+  output << "</div>"
+  output << "</div>"
+rescue SystemCallError => e
+  output =  "<div style=\"padding: 0.25em 1em ; margin: 0.75em 0 ;\""
+  output << "<div class=\"jobMessage failure\">"
+  output << "An internal system error has occurred, please contact "
+  output << "<a href='mailto:#{@genbConf.gbTechEmail}'>#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\n"
+  output << "ERROR: The request VGP results directory was not found!<br>\n"
+  output << "</div>"
+  output << "</div>"
+rescue Exception => e
+  output =  "<div style=\"padding: 0.25em 1em ; margin: 0.75em 0 ;\""
+  output << "<div class=\"jobMessage failure\">"
+  output << "An internal system error has occurred, please contact "
+  output << "<a href='mailto:#{@genbConf.gbTechEmail}'>#{@genbConf.gbTechEmail}</a> for assistance.<br><br>\n"
+  output << "ERROR: An unknown error has occurred!<br>#{e}<br>\n"
+  output << "</div>"
+  output << "</div>"
+ensure
+  print output
+end
+%>

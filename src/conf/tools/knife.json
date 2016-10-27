@@ -1,0 +1,19 @@
+{
+  "info": {
+    "idStr": "knife",
+    "releaseStatus": "beta",
+    "version": "1.2"
+  },
+  "cluster": {
+    "ppn": 6,
+    "mem": "4gb",
+    "vmem": "4gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "KNIFE (Known and Novel IsoForm Explorer) for CircularRNA",
+    "shortLabel": "KNIFE (Known and Novel IsoForm Explorer) for CircularRNA",
+    "groupAccessUri": null
+  }
+}

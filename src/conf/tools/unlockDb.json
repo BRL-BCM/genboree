@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "unlockDb",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Unlock Database",
+    "shortLabel": "[NOT SET]"
+  }
+}

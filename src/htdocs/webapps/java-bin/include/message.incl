@@ -1,0 +1,13 @@
+<%@ page import="org.genboree.message.GenboreeMessage"%>
+<%
+if (mys.getAttribute("successMsg")!=null)
+out.println (mys.getAttribute("successMsg"));
+else if (mys.getAttribute("errorMsg")!=null)
+out.println (mys.getAttribute("errorMsg"));
+else if (mys.getAttribute("genericMsg")!=null)
+out.println (mys.getAttribute("genericMsg"));
+else {
+    out.println(GenboreeMessage.getDefault(mys));
+}
+
+%>

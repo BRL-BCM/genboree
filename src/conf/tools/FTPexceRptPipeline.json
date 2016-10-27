@@ -1,0 +1,24 @@
+{
+  "info": {
+    "idStr": "FTPexceRptPipeline",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "cluster": {
+    "ppn": 6,
+    "mem": "4gb",
+    "vmem": "4gb",
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "FTP exceRpt Small RNA-seq Pipeline (New, Customized Endogenous Engine) Batch Submission",
+    "shortLabel": "FTP exceRpt Small RNA-seq Pipeline (3rd Gen)",
+    "groupAccessUri": null
+  },
+  "settings": {
+    "exogenousNodes": 3,
+    "maxSamplesPerExoJob": 50
+  }
+}
+

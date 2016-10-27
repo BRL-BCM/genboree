@@ -1,0 +1,37 @@
+<%@ page import="org.genboree.util.DirectoryUtils,
+                 org.genboree.util.GenboreeUtils,
+                 java.sql.Connection,
+                 org.genboree.editor.AnnotationEditorHelper"%>
+
+<%
+int timeout = 3000;
+String errorFidMessage = "The requested information is not available. " ;
+
+boolean validFid = false;    
+
+int uploadId1 =  upload.getUploadId();
+
+
+Connection localCon = db.getConnection(dbName);
+Connection mainCon = db.getConnection();
+
+if (localCon == null || localCon.isClosed() || mainCon== null || mainCon.isClosed()) {
+   GenboreeUtils.sendRedirect(request,response, "/java-bin/error.jsp");
+}
+
+if(upload != null && (request.getParameter("upfid") != null)  )  {
+ validFid =  AnnotationEditorHelper.verifyUploadIdAndFid(iUserId, uploadId1, ifid, upload,   mainCon, localCon);
+
+
+   mys.setAttribute("validFid", new Boolean(validFid));
+}
+
+if (request.getParameter("upfid") == null  )  {
+   Boolean  boo = (Boolean)mys.getAttribute("validFid");
+   validFid = boo.booleanValue();
+}
+    
+
+if (validFid) {
+
+%>

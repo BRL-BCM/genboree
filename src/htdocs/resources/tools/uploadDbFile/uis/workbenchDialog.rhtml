@@ -1,0 +1,69 @@
+<%# RENDER HTML %>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" onsubmit="return UploadDbFile.submitJob(this) ; " style="width: 472px; height: 420px;" method="POST" class="wbDialog wbForm" enctype="multipart/form-data">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Upload Database File" } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          Use this interface to transfer raw files to Genboree for storage. Those files can be used as inputs to certain processing tools; in which case they have to be in the correct format. All such files are stored in the <u>Files</u> section of a given <u>Database</u>.
+          <br>&nbsp;<br>
+          <i>This just transfers the file to Genboree. No validation, conversion or database uploading will occur.</i>
+          <br>&nbsp;<br>
+          Supported formats include:
+          <ul>
+            <li>tar.gz/gzip</li>
+            <li>tar.bz2/bzip2</li>
+            <li>tar.xz/xz</li>
+            <li>zip</li>
+          </ul>
+          <br>
+          Organize your files in any number of nested sub-folders if desired.
+          <br><br>
+          Select if the file you are going to upload/transfer needs to be extracted or converted into a unix-compatible file. This post-processing operation will be launched on our cluster to avoid overwhelming our web-server and you will receive an email once the transferred filehas been processed (extracted/converted to unix). If you choose to skip the post-processing steps, the file will be available for further use immediately after the transfer is complete.
+          <br>&nbsp;<br>
+          <b>NOTE:</b>
+          <ul>
+            <li><span style='font-size: 80%'><i>Converting to unix format is not supported for multi file archives.</i></span></li>
+            <li><span style='font-size: 80%'><i>Depending on your web browser and version, you may not be able to upload files &gt;2GB or &gt;4GB due to bugs in the browser's code.</i> We have found Opera not to have such arbitrary file upload limits. We recommend transferring gzipped-compressed files which will: (a) help avoid browser limitations, (b) decrease file transfer time, (c) not occupy excessive amounts of shared Genboree storage.</i></span></li>
+          </ul>
+        "
+      })
+  %>
+  <%# Output database summary %>
+  <%= renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Folder:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbFilesDirSummary, { :filesList => @outputs[0] } )
+      })
+  %>
+  <%# Tool-specific UI widgets user provides/reviews %>
+
+  <%=
+      renderFrag(@toolIdStr, :wbToolSettingsUI,
+      {
+        :sectionTitle => "Database File Settings",
+        :widgets =>
+        [
+          { :id => 'wbContext', :type => :hidden },
+          { :id => 'uploadFile', :label => 'Select File', :type => :file },
+          { :id => 'unpack', :label => 'Unpack/Extract File', :type => :checkBox, :hidden => true, :title => "Check this to extract/unpack the file you are uploading. The original file will not be deleted. Note that multi-file archives are not allowed if you want to convert to unix format." },
+          { :id => 'convToUnix', :label => 'Convert to Unix?', :type => :checkBox, :title => "Check this to convert the uploaded file to unix format. This should be checked for files created on Windows/Macintosh systems." },
+          { :id => 'subdirs', :label => 'Create in Sub-Folder', :type => :text , :value => WorkbenchFormHelper.getNameFromURI(:files, @outputs[0], true, true) },
+          { :id => 'description', :label => 'File Description', :type => :textarea , :value => '' }
+
+        ]
+      })
+  %>
+
+  <%# Buttons to submit tool or other tool function %>
+  <%# Submit button first submits a request to touch the file, then starts upload. %>
+
+
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/uploadDbFile/uis/UploadDbFile.js"]) %>

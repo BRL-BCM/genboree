@@ -1,0 +1,11 @@
+{
+  "info": {
+    "idStr": "copyTracks",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "ui": {
+    "label": "Track Copier",
+    "shortLabel": "Track Copier"
+  }
+}

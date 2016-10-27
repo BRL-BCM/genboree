@@ -1,0 +1,1320 @@
+<%
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleApiUriHelper'
+  require 'brl/genboree/rest/wrapperApiCaller'
+  trackApiHelper = BRL::Genboree::REST::Helpers::TrackApiUriHelper.new(@dbu, @genbConf)
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new(@dbu, @genbConf)
+  fileApiHelper = BRL::Genboree::REST::Helpers::FileApiUriHelper.new(@dbu, @genbConf)
+  sampleApiHelper = BRL::Genboree::REST::Helpers::SampleApiUriHelper.new(@dbu, @genbConf)
+  # Known widget attributes
+  knownAttrs = [ :type, :label, :hidden, :newline, :options, :labelStyle, :showStyle, :style, :name, :disabled, :checked, :title ]
+%>
+<table class="wbFormWidgets" width="100%">
+<%
+    # Process each widget
+    @widgets.each { |widget|
+      widgetId = widget[:id]
+      widgetName = widget[:name] || widgetId
+      widgetType = widget[:type]
+      widgetLabel = widget[:label]  # gets modified
+      origWidgetLabel = widget[:label]
+      widgetTitle = widget[:title]
+      widgetValue = widget[:value]
+      widgetHeader = widget[:header]
+      widgetDisabled = widget[:disabled]
+      widgetHidden = (widget.key?(:hidden) ? widget[:hidden] : false)
+      hideStyle = (widgetHidden or widgetType == :hidden) ? 'display:none;' : ''
+      widgetNewline = (widget.key?(:newline) ? widget[:newline] : true)
+      newline = (widgetNewline ? '<br>' : '&nbsp;&nbsp;')
+      labelStyle = (widget.key?(:labelStyle) ? widget[:labelStyle] : 'text-align:right;')
+      labelWidth = widget[:labelWidth]
+      if(labelStyle !~ /width:/i)
+        labelStyle += (labelWidth ? "width: #{labelWidth};" : 'width:150px;')
+      end
+      widgetExtraStyle = (widget.key?(:style) ? widget[:style] : '')
+      widgetStyle = "#{hideStyle} #{widgetExtraStyle}"
+
+      ######################
+      # Start the table row
+      widgetIdStr = (widgetId ? "id=\"#{widgetId}Label\"" : '')
+      if(!widget[:height].nil?)
+        # height defined as an integer is used as pixels, otherwise the string is used (for % or some other units)
+        begin
+          widgetRowHeightStr = "#{Integer(widget[:height])}px"
+        rescue
+          widgetRowHeightStr = widget[:height]
+        end
+        widgetRowHeightStyle = "height:#{widgetRowHeightStr};"
+      end
+
+      if(widgetHeader)
+%>
+      <th> </th> <th><%="#{widgetHeader}"%></th>
+<%
+      end
+%>
+      <tr <%= widgetIdStr %> style="<%= widgetRowHeightStyle %> <%= hideStyle %>" >
+<%
+      # ####################
+      # LABEL - Widget label, if any
+      if(widgetLabel and !widget[:spanFullRow])
+        origWidgetLable = widgetLabel
+        widgetLabel = "<span ext:qtitle=\"#{widgetLabel}\" ext:qtip=\"#{widgetTitle}\">#{widgetLabel}</span>" if(widgetTitle)
+        colSpan = 1
+        if(widgetType == :wbLabelOnly)
+          colSpan = (widget[:spanFullRow] ? 2 : 1)
+          if(widget[:textAlign])
+            labelStyle.gsub(/text-align\s*:\s*[^;\n]+/, "text-align:#{widget[:textAlign]}")
+          end
+        end
+%>
+        <th id="<%="#{widgetId}LabelTh"%>" colspan="<%= colSpan %>" style="<%= labelStyle %>"><%= widgetLabel %></th>
+<%
+      end
+
+      widgetIdStr = (widgetId ? "id=\"#{widgetId}\"" : '')
+      # ####################
+      # TRACK NAME WIDGET
+      if(widgetType == :gbTrackName)
+%>
+        <td>
+          <%= renderFrag(@toolIdStr, :wbTrackNameWidget, widget) %>
+        </td>
+      </tr>
+<%
+      # ####################
+      # TEXTAREA WIDGET
+      elsif(widgetType == :textarea)
+
+        buff = %Q^<textarea #{widgetIdStr} name="#{widgetId}" cols="25" style="#{widgetStyle}" ^
+        widget.each_key { |attribute|
+          next if(knownAttrs.include?(attribute))
+          buff << %Q^#{attribute}="#{widget[attribute]}" ^
+        }
+%>
+        <td>
+          <%= buff %> ><%= widgetValue %></textarea>
+        </td>
+      </tr>
+<%
+      # ####################
+      # SPACER WIDGET
+      elsif(widgetType == :spacer)
+%>
+        <td colspan="2">
+          &nbsp;
+        </td>
+      </tr>
+<%
+      # ####################
+      # WIDGET SIMPLE TEXT HEADER WIDGET
+      elsif(widgetType == :wbSimpleWidgetHeader)
+        noUnderline = widget[:noUnderline]
+%>
+        <td colspan="2" style="text-align:left;">
+          <% unless(noUnderline)%>
+            <u><b><%= widgetValue %></b></u>
+          <% else %>
+            <%= widgetValue %>
+          <% end %>
+        </td>
+      </tr>
+<%
+      # ####################
+      # EACH TRACK OR FILE WITH A SELECT
+      elsif(widgetType == :eachTrkOrFileWithSelect)
+        buff = %Q^ <table style="width: 100%;"> ^
+        ii = 0
+        opt = 0
+        # Go through each Track or File in "set"
+        set = widget[:set]
+        modSelect = widget[:modulusSelect]
+        options = widget[:options]
+        sortedSet = Hash.new {|hh,kk| hh[kk] = [] }
+        set.each { |trkOrFileUri|
+          itemName = (trackApiHelper.extractName(trkOrFileUri) || File.basename(trkOrFileUri).split('?').first)
+          sortedSet[itemName] << trkOrFileUri
+        }
+        sortedSet.keys.sort { |aa, bb| aa.downcase <=> bb.downcase }.each { |itemName|
+          sortedSet[itemName].each { |trkOrFileUri|
+            # Print the Track or File name
+            buff << %Q^ <tr><td id="#{widgetId}_#{ii}Label" style="#{hideStyle} #{labelStyle}; padding-right: 10px; padding-top: 0px; text-align: right;">#{CGI.unescape(CGI.escapeHTML(itemName))}</td> ^
+            # Display drop list of choices
+            buff << %Q^ <td style="padding-top: 0px;"><select id="#{widgetId}_#{ii}" name="#{widgetId}_#{ii}" style="visibility: visible; #{widgetStyle}; " trkOrFileUri="#{trkOrFileUri}" > ^
+            if(options)
+              opt = ii % options.size
+              jj = 0
+              options.keys.sort { |aa, bb| aa.to_s.downcase <=> bb.to_s.downcase }.each { |option|
+                optionObj = options[option]
+                selectedStr = (optionObj[:selected] ? 'selected="selected"' : ((opt == jj and modSelect) ? 'selected="selected"' : '') )
+                optionLabel = (optionObj[:label] || option)
+                buff << %Q^ <option value="#{option}" #{selectedStr}">#{optionLabel}</option> ^
+                jj += 1
+              }
+            end
+            # Close off select tag
+            buff << %Q^ </select></td></tr> ^
+            ii += 1
+          }
+        }
+        buff << "</table>"
+        # Do we have a label? Probably not, best used with a wbLabelOnly row about. Use to set colspan for widget.
+        colSpan = (widgetLabel ? 1 : 2)
+%>
+        <td colspan="<%= colSpan %>" >
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      # Widget for displaying single/multi select list  for inputs that require to be in certain positions (like a Regions Of Interest (ROI) track)
+      elsif(widgetType == :selectEntityFromList)
+        buff = ''
+        inputs = widget[:inputs].dup
+        sortInputs = (widget[:sortInputs] || false)
+        userId = widget[:userId]
+        rackEnv = widget[:rackEnv]
+        trkSrcAsTitle = widget[:trkSrcAsTitle]
+        entityType = widget[:entityType].to_s
+        addEntityListContents = widget[:addEntityListContents] ? widget[:addEntityListContents] : false
+        entityListType = "#{entityType}s"
+        selectType = widget[:selectType] ? widget[:selectType] : :single
+        moveSelections = widget[:moveSelections] ? widget[:moveSelections] : :none
+        removeSelections = widget[:removeSelections] ? widget[:removeSelections] : true
+        setAs = widget[:setAs] ? widget[:setAs] : "roiTrack"
+        if(removeSelections and moveSelections != :none)
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Invalid Selection', ":removeSelections cannot be true with :moveSelections anything other than :none. The tool may not be correctly configured; please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>a Genboree Admin</a> to help address this problem.")
+          raise wue
+        end
+        multiSelect = ""
+        if(selectType == :multi)
+          multiSelect = "multiple=\"multiple\""
+        end
+        text = widget[:text]
+        size = widget[:size] || 5
+        # Moving entities can be done right here, before submitting the form
+        # The removeSelectedEntity function is implemented in misc.js since since that should be done only after the form has been submitted
+        jsFunc = ""
+        customOnChange = widget[:customOnChange] ? "#{widget[:customOnChange]}(\"#{widgetId}\", this.value) ;" : ''
+        if(selectType == :single)
+          jsFunc = moveSelections == :none ? "onchange='#{customOnChange}'" : "onchange='#{customOnChange}} moveEntity(\"#{widgetId}\", this.value, #{moveSelections.to_s})'"
+        else
+          jsFunc = moveSelections == :none ? "onchange='#{customOnChange}'" : "onchange='#{customOnChange}} moveEntities(\"#{widgetId}\", #{moveSelections.to_s})'"
+        end
+        buff << %Q^ <select id="#{widgetId}" name="#{widgetName}" #{multiSelect} style="visibility:visible;" size="#{size}" setAs="#{setAs}" #{jsFunc}> ^
+        entityListRegExp = %r{^/REST/v1/grp/([^/\?]+)/db/([^/\?]+)/#{entityListType}/entityList/([^/\?]+)}
+        entityTypeRegExp = %r{^/REST/v1/grp/([^/\?]+)/db/([^/\?]+)/#{entityType}/([^/\?]+)}
+        # Sort inputs?
+        if(sortInputs)
+          schwartzMap = {}
+          inputs.sort! { |aa, bb|
+            aaKey = schwartzMap[aa]
+            bbKey = schwartzMap[bb]
+            unless(aaKey) # then we need to make to sort key for URL aa the first time
+              aaKey = (trackApiHelper.extractName(aa) || File.basename(aa).split('?').first).downcase
+              # save key for 2nd 3rd 4th...Nth comparison
+              schwartzMap[aa] = aaKey
+            end
+            unless(bbKey) # then we need to make to sort key for URL aa the first time
+              bbKey = (trackApiHelper.extractName(bb) || File.basename(bb).split('?').first).downcase
+              # save key for 2nd 3rd 4th...Nth comparison
+              schwartzMap[bb] = bbKey
+            end
+            aaKey <=> bbKey
+          }
+        end
+        # Optional "blank" first line
+        if(widget[:firstOption])
+          buff << %Q^ <option value="#{widget[:firstOption][:value]}">#{widget[:firstOption][:label]}</option> ^
+        end
+        # Loop over the inputs array and make a select list based on the parameters passed
+        inputs.each { |input|
+          uriObj = URI.parse(input)
+          if(uriObj.path =~ entityTypeRegExp) # Matches the entity type we want
+            entityName = grp = db = nil
+            if(uriObj.path =~ entityTypeRegExp)
+              grp, db, entityName = $1, $2, $3
+              grp, db, entityName = CGI.unescape(grp), CGI.unescape(db), CGI.unescape(entityName)
+            end
+            if(trkSrcAsTitle)
+              titleText = %Q^<ul><li>HOST: #{uriObj.host}</li><li>GROUP: #{grp}</li><li>DATABASE: #{db}</li>^
+              buff << %Q^ <option value="#{input}" ext:qtitle="#{entityName}" ext:qtip="#{titleText}">#{entityName}</option> ^
+            else
+              buff << %Q^ <option value="#{input}">#{entityName} -- (#{uriObj.host}:#{grp}:#{db})</option> ^
+            end
+          elsif(addEntityListContents and uriObj.path =~ entityListRegExp) # Matches the entity list type we want and entity list contents are required
+            apiCaller = WrapperApiCaller.new(uriObj.host, uriObj.path, userId)
+            apiCaller.initInternalRequest(rackEnv, @genbConf.machineNameAlias) if(rackEnv)
+            apiCaller.get()
+            if(apiCaller.succeeded?)
+              resp = JSON.parse(apiCaller.respBody)['data']
+              resp.each { |entity|
+                entityName = grp = db = nil
+                entityUrl = entity['url']
+                uriObj = URI.parse(entityUrl)
+                if(uriObj.path =~ entityTypeRegExp)
+                  grp, db, entityName = $1, $2, $3
+                  grp, db, entityName = CGI.unescape(grp), CGI.unescape(db), CGI.unescape(entityName)
+                end
+                if(trkSrcAsTitle)
+                  titleText = %Q^<ul><li>HOST: #{uriObj.host}</li><li>GROUP: #{grp}</li><li>DATABASE: #{db}</li>^
+                  buff << %Q^ <option value="#{entityUrl}" ext:qtitle="#{entityName}" ext:qtip="#{titleText}">#{entityName}</option> ^
+                else
+                  buff << %Q^ <option value="#{entityUrl}">#{entityName} -- (#{uriObj.host}:#{grp}:#{db})</option> ^
+                end
+              }
+            else
+              $stderr.debugPuts(__FILE__, __method__, "ERROR", "API Call to get entity list failed.\n  - Http Resp: #{apiCaller.httpResponse.inspect}\n  - API URI path: #{uriObj.is_a?(URI) ? uriObj.path : "n/a"}")
+            end
+          else
+            # Skip
+          end
+        }
+        buff << %Q^ </select> <br>^
+%>
+        <td>
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      # ####################
+      # FOR MULTI SELECT BASED ON ATTRIBUTE PRESENCE (Pulls track list from database)
+      elsif(widgetType == :selectOnAttribute)
+        buff = ""
+        attributeName = widget[:attributeName]
+        attributeValue = widget[:attributeValue] || 'true'
+        rcscUri = widget[:rcscUri]
+
+        selectByDefault = widget[:selectByDefault] || :none
+        multiSelect = widget[:multiSelect]
+        toggleAllButton = widget[:toggleAllButton]
+        text = widget[:text]
+        size = widget[:size] || 5
+        hidden = widget[:hidden]
+        visibility = widget[:visibility] || 'visible'
+        # Get the track list first
+        trkList = []
+        userId = widget[:userId]
+        rackEnv = widget[:rackEnv]
+        uriObj = URI.parse(rcscUri)
+        apiCaller = WrapperApiCaller.new(uriObj.host, "#{uriObj.path}/trks/attribute/#{CGI.escape(attributeName)}/#{CGI.escape(attributeValue)}?", userId)
+        apiCaller.initInternalRequest(rackEnv, @genbConf.machineNameAlias) if(rackEnv)
+        apiCaller.get()
+        if(apiCaller.succeeded?)
+          resp = apiCaller.parseRespBody['data']
+          resp.each { |trk|
+            trkList << trk['text']
+          }
+        else
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', "MISSING_RESOURCE: It appears an underlying resource is missing (e.g. a shared repository or similar Genboree database). The tool may not be correctly configured; please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>a Genboree Admin</a> to help address this problem.")
+          raise wue
+        end
+        trkList.sort!
+        # What select features do we need?
+        multiSelectRelatedAttributes = buttonRelatedAttributes = ''
+        if(multiSelect)
+          buttonRelatedAttributes = (toggleAllButton ? %Q^ onClick="toggleButtonDesc(toggleListButton);" ^ : '')
+          multiSelectRelatedAttributes = %Q^ multiple="multiple" ^
+        end
+        # Build select tag
+        buff << %Q^ <select id="#{widgetId}" name="#{widgetId}" #{multiSelectRelatedAttributes} #{buttonRelatedAttributes} style="visibility: #{visibility};" size="#{size}"> ^
+        count = 0
+        # Build <option> tags
+        trkList.each { |trk|
+          trkEscHtml = CGI.escapeHTML(trk)
+          trkEsc = CGI.escape(trk)
+          selectedStr = ''
+          if(selectByDefault == :all or (count == 0 and selectByDefault == :first))
+            selectedStr = %Q^ selected="selected" ^
+          end
+          # Build option tag
+          buff << %Q^ <option value="#{trkEsc}" #{selectedStr}>#{trkEscHtml}</option> ^
+          count += 1
+        }
+        buff << %Q^ </select> <br>^
+        # Add toggle select button if needed
+        if(toggleAllButton and multiSelect)
+          btnValue = selectByDefault == :all ? "Clear All" : "Select All"
+          buff << %Q^ <input name="toggleListButton" id="toggleListButton" type="button" value="#{btnValue}" onClick="toggleList(this, '#{widgetId}');"> ^
+          buff << %Q^ <br> ^
+          # Add the toggle javascript function
+          buff << <<-EOC
+            <script type="text/javascript">
+              function toggleList(btn, widgetId)
+              {
+                var id = document.getElementById(widgetId) ;
+                if(btn.value == "Select All")
+                {
+                  for(var ii=0; ii< id.length; ii++)
+                  {
+                    id[ii].selected = "selected" ;
+                  }
+                  btn.value = "Clear All" ;
+                }
+                else
+                {
+                  for(var ii=0; ii< id.length; ii++)
+                  {
+                    id[ii].selected = "" ;
+                  }
+                  btn.value = "Select All" ;
+                }
+              }
+              function toggleButtonDesc(btn)
+              {
+                btn.value = "Select All" ;
+              }
+            </script>
+          EOC
+        end
+%>
+        <td>
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      # ####################
+      elsif(widgetType == :selectWithToggle)
+        buff = ""
+        selectByDefault = widget[:selectByDefault] || :none
+        multiSelect = widget[:multiSelect]
+        toggleAllButton = widget[:toggleAllButton]
+        addOverflowX = widget[:addOverflowX] || false
+        text = widget[:text]
+        size = widget[:size] || 5
+        width = widget[:width] || '100'
+        # What select features do we need?
+        multiSelectRelatedAttributes = buttonRelatedAttributes = ''
+        if(multiSelect)
+          buttonRelatedAttributes = (toggleAllButton ? %Q^ onClick="toggleButtonDesc(toggleListButton);" ^ : '')
+          multiSelectRelatedAttributes = %Q^ multiple="multiple" ^
+        end
+        # Build select tag
+        if(addOverflowX)
+          buff << %Q^<div style="overflow-x:scroll;width:#{width}px;overflow: -moz-scrollbars-horizontal;">^
+        end
+        buff << %Q^ <select id="#{widgetId}" name="#{widgetId}" #{multiSelectRelatedAttributes} #{buttonRelatedAttributes} size="#{size}" style="visibility:visible;#{widgetStyle}"^
+        if(!addOverflowX)
+          buff << %Q^width:#{width}px;^
+        end
+        buff << %Q^">^
+        count = 0
+        options = widget[:options]
+        if(options.nil? or options.empty?) # No List provided
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', "MISSING_RESOURCE: No select options provided to 'selectWithToggle' widget. The tool may not be correctly configured; please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>a Genboree Admin</a> to help address this problem.")
+          raise wue
+        end
+        if(options.is_a?(Array))
+          if(options.first.is_a?(String)) then
+          options.sort!
+          # Build <option> tags
+          options.each { |feature|
+            selectedStr = ''
+            if(selectByDefault == :all or (count == 0 and selectByDefault == :first))
+              selectedStr = %Q^ selected="selected" ^
+            end
+            # Build option tag
+            buff << %Q^ <option value="#{feature}" #{selectedStr}>#{feature}</option> ^
+            count += 1
+          }
+          else
+            options.each { |option|
+            selectedStr = ''
+            if(selectByDefault == :all or (count == 0 and selectByDefault == :first) or option[:select])
+              selectedStr = %Q^ selected="selected" ^
+            end
+            # Build option tag
+            buff << %Q^ <option value="#{option[:value]}" #{selectedStr}>#{option[:label]}</option> ^
+            count += 1
+          }
+          end
+        elsif(options.is_a?(Hash)) # Use the key as label and value as value that will be passed in the form
+          options.keys.sort.each { |feature|
+            selectedStr = ''
+            if(selectByDefault == :all or (count == 0 and selectByDefault == :first))
+              selectedStr = %Q^ selected="selected" ^
+            end
+            # Build option tag
+            buff << %Q^ <option value="#{options[feature]}" #{selectedStr}>#{feature}</option> ^
+            count += 1
+          }
+        else
+          wue = BRL::Genboree::Tools::WorkbenchUIError.new(:'Precondition Failed', "Bad select options provided to 'selectWithToggle' widget (Only accepts array or hash). The tool may not be correctly configured; please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>a Genboree Admin</a> to help address this problem.")
+          raise wue
+        end
+        buff << %Q^ </select>^
+        buff << %Q^<br>^ unless(addOverflowX)
+        buff << %Q^</div>^ if(addOverflowX)
+        # Add toggle select button if needed
+        if(toggleAllButton and multiSelect)
+          btnValue = selectByDefault == :all ? "Clear All" : "Select All"
+          buff << %Q^ <input name="toggleListButton" id="toggleListButton" type="button" value="#{btnValue}" onClick="toggleList(this, '#{widgetId}');"> ^
+          buff << %Q^ <br> ^
+          # Add the toggle javascript function
+          buff << <<-EOC
+            <script type="text/javascript">
+              function toggleList(btn, widgetId)
+              {
+                var id = document.getElementById(widgetId) ;
+                if(btn.value == "Select All")
+                {
+                  for(var ii=0; ii< id.length; ii++)
+                  {
+                    id[ii].selected = "selected" ;
+                  }
+                  btn.value = "Clear All" ;
+                }
+                else
+                {
+                  for(var ii=0; ii< id.length; ii++)
+                  {
+                    id[ii].selected = "" ;
+                  }
+                  btn.value = "Select All" ;
+                }
+              }
+              function toggleButtonDesc(btn)
+              {
+                btn.value = "Select All" ;
+              }
+            </script>
+          EOC
+        end
+%>
+        <td>
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      elsif(widgetType == :indentedSection)
+        buff = ""
+        divId = "#{widgetId}"
+        tableId = "#{widgetId}_indentedTable"
+        startsHidden = widget[:startsHidden]
+        startsHidden = false if(startsHidden.nil?)
+        leftMargin = widget[:leftMargin] || "10px"
+        width = widget[:width] || '100%'
+        colSpan = (widget[:spanFullRow] ? 2 : 1)
+        indentWidth = widget[:indentWidth] || '10px'
+        border = widget[:border] || "1px solid black"
+        visibility = startsHidden ? "collapse" : "expand"
+        # Indent via an internal 2-column table
+        buff << %Q^ <table id="#{divId}" style="width: 100%; visibility: #{visibility}"><tr> ^
+        buff << %Q^ <td style="width: 1px; padding-top: 0px; padding-right: #{indentWidth};">&nbsp;</td> ^
+        buff << %Q^ <td style="padding-left: 5px; padding-top: 1px; border: #{border};"> ^
+        indentedWidgets = widget[:widgets]
+        # Now need to add all the widgets listed in the :widgets field
+        buff << renderFrag(@toolIdStr, :wbWidgets,
+        {
+          :widgets => indentedWidgets
+        })
+        # Close the 2-column table
+        buff << %Q^ </td></tr></table> ^
+%>
+       <td style="padding-top: 0px;" colspan="<%= colSpan %>">
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      # This widget takes a specific type of input (:rows). The stucture of the input is as follows:
+      # An example of :rows:
+      # rows = []
+      # rows << [ { 'name' => {:value => "chr1", :edit => true } }, { 'entrypointClass' => { :value => "Chromosome", :edit => false } }, { 'length' => { :value => "21313313", :edit => true } } ]
+      # There is no limit to the number of hashes the inner array can have. The only fixed things are :value and :edit for each key (field) and each outer hash can only have one key
+      elsif(widgetType == :tabularSection)
+        buff = ''
+        rows = widget[:rows]
+        width = widget[:width] || '100%'
+        height = widget[:height] || '100%'
+        headerRow = widget[:headerRow]
+        fontSize = widget[:fontSize] || '10pt'
+        rowKeys = widget[:rowKeys] || []
+        noWrap = widget[:noWrap] ? "nowrap=\"nowrap\"" : ""
+        paddingTop = widget[:paddingTop] || "0px"
+        valign = widget[:valign] ? "vertical-align:#{widget[:valign]}" : ''
+        boxWidth = widget[:boxWidth] ? "width:#{widget[:boxWidth]}" : ""
+        buff = %Q^<table id="#{widgetId}" style="overflow-y:scroll;width:#{width};height:#{height};" cellspacing="0" > ^
+        if(headerRow)
+          buff << %Q^<tr> ^
+          headerRow.each { |header|
+            buff << %Q^<td #{noWrap} style="font-size: #{fontSize};"><b>#{header}</b></td>^
+          }
+          buff << %Q^</tr>^
+        end
+        rows.size.times { |ii|
+          row = rows[ii]
+          bgColor = ( ii % 2 == 0 ? "#D3CFE0" : "#EAE6FF")
+          buff << %Q^ <tr style=""> ^
+          row.each { |rowElement|
+            rowElement.each_key { |key|
+              value = rowElement[key][:value]
+              edit = rowElement[key][:edit]
+              unless(edit)
+                buff << %Q^<td #{noWrap} style="padding-top:#{paddingTop};font-size:#{fontSize};#{valign};">#{value}</td>^
+              else
+                inputId = rowKeys[ii] ? rowKeys[ii] : ii
+                buff << %Q^<td #{noWrap}><input style="margin-bottom:0px;font-size:#{fontSize};#{valign};#{boxWidth}" type="text" id='#{widgetId}|#{inputId}|#{key}' value='#{value}' title="Change #{key}" name='#{widgetId}|#{inputId}|#{key}' class='tabularSectionClass'></td>^
+              end
+            }
+          }
+          buff << "</tr>"
+        }
+        buff << "</table>"
+
+%>
+      <td>
+        <%= buff %>
+      </td>
+    </tr>
+
+<%
+    # Widget for soliciting a particular date from the user
+    # Uses the ExtJS DateField class
+    elsif(widgetType == :date)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}"> </div> ^
+      emptyText = widget[:emptyText] || "YYYY/MM/DD"
+      buff << "
+        <script type=\"text/javascript\">
+          var todate = new Ext.form.DateField({
+            format: 'Y/m/d',
+            fieldLabel: '',
+            id: 'dateField_#{widgetId}',
+            name: 'dateField_#{widgetId}',
+            width: 200,
+            emptyText: '#{emptyText}',
+            allowBlank: true,
+            value: '',
+            renderTo: '#{widgetId}'
+          });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for Ext JS Text Field
+    elsif(widgetType == :extText)
+      regexp = widget[:regexp]
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}"> </div> ^
+      buff << "
+        <script type=\"text/javascript\">
+          var regexpObj = new RegExp(#{regexp}) ;
+          var extTextField_#{widgetId} = new Ext.form.TextField({
+            id: 'textField_#{widgetId}',
+            name: 'textField_#{widgetId}',
+            width: 200,
+            regex: regexpObj,
+            emptyText: 'chr:start-end',
+            regexText: 'Incorrect Format. Please use: chr:start-end',
+            renderTo: '#{widgetId}',
+            allowBlank: true
+          });
+          //alert(regexpObj) ;
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for Ext JS Number Field
+    elsif(widgetType == :extNumber)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}"> </div> ^
+      allowDecimals = widget[:allowDecimals].nil? ? true : widget[:allowDecimals]
+      allowNegative = widget[:allowNegative].nil? ? true : widget[:allowNegative]
+      allowBlank = widget[:allowBlank].nil? ? true : widget[:allowBlank]
+      value = widget[:value].nil? ? "" : widget[:value]
+      # TODO: Make maxValue and minValue their default for Javascript
+      maxValue = widget[:maxValue] || "Number.MAX_SAFE_INTEGER"
+      minValue = widget[:minValue] || "Number.MIN_SAFE_INTEGER"
+      width = widget[:width] || 200
+      buff << "
+        <script type=\"text/javascript\">
+          var extNumberField_#{widgetId} = new Ext.form.NumberField({
+            id: 'numberField_#{widgetId}',
+            name: 'numberField_#{widgetId}',
+            allowDecimals: #{allowDecimals},
+            allowNegative: #{allowNegative},
+            allowBlank: #{allowBlank},
+            maxValue: #{maxValue},
+            minValue: #{minValue},
+            value: #{value},
+            width: #{width},
+            renderTo: '#{widgetId}',
+          });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for Ext JS Spinner Field
+    elsif(widgetType == :extSpinner)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}" ^
+      allowDecimals = widget[:allowDecimals].nil? ? true : widget[:allowDecimals]
+      allowNegative = widget[:allowNegative].nil? ? true : widget[:allowNegative]
+      allowBlank = widget[:allowBlank].nil? ? true : widget[:allowBlank]
+      width = widget[:width].nil? ? 200 : widget[:width]
+      value = widget[:value].nil? ? "" : widget[:value]
+      # TODO: Make maxValue and minValue their default for Javascript
+      minValue = widget[:minValue] || -100000000
+      maxValue = widget[:maxValue] || 100000000 
+      widget.each_key { |attribute|
+        next if(knownAttrs.include?(attribute))
+        buff << %Q^#{attribute}="#{widget[attribute]}" ^
+      }
+      buff << "> </div>" 
+      buff << "
+        <script type=\"text/javascript\">
+          var extSpinnerField_#{widgetId} = new Ext.ux.form.SpinnerField({
+            id: 'spinnerField_#{widgetId}',
+            name: 'spinnerField_#{widgetId}',
+            value: #{value},
+            minValue: #{minValue},
+            maxValue: #{maxValue},
+            allowDecimals: #{allowDecimals},
+            allowNegative: #{allowNegative},
+            allowBlank: #{allowBlank},
+            width: 50,
+            renderTo: '#{widgetId}'
+          });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for a Ext JS checkbox group
+    elsif(widgetType == :extCheckboxGroup)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}" style="overflow-y:scroll;"> </div> ^
+      list = widget[:list]
+      boxHeight = widget[:boxHeight] || 300
+      boxWidth = widget[:boxWidth] || nil
+      hideBox = widget[:hideBox] || false
+      
+      checkFirstItem = widget[:checkFirstItem] || 'true'
+      autoScroll = widget[:cboxScroll].nil? ? true : widget[:cboxScroll]
+      boxCols = widget[:boxCols] || 1
+      buff << "
+        <script type=\"text/javascript\">
+          var extCheckBoxGroup_#{widgetId} = new Ext.form.CheckboxGroup({
+            id: 'textCheckboxGroup_#{widgetId}',
+            xtype: 'checkboxgroup',
+            name: 'textField_#{widgetId}',
+            renderTo: '#{widgetId}',
+            height: #{boxHeight},
+            boxMaxWidth: 500,"
+      if(autoScroll)
+        buff << "autoScroll: true,"
+      else
+        buff << "autoScroll: false,"
+      end
+      buff << "width: #{boxWidth}," if(boxWidth)
+      buff <<
+              "
+                hidden: #{hideBox},
+                columns: #{boxCols},
+                items: [
+              "
+      itemCount = 0
+      if(list.is_a?(Array))
+        list.each { |item|
+          if(itemCount == 0)
+            buff << "{boxLabel: '#{item}', name: '#{item}', checked: #{checkFirstItem} }"
+          else
+            buff << ",{boxLabel: '#{item}', name: '#{item}' }"
+          end
+          itemCount += 1
+        }
+      elsif(list.is_a?(Hash))
+        list.each_key { |item|
+          listInfo = list[item]
+          title = listInfo['title'] || ""
+          checked = listInfo['checked'] || false
+          buff << "{boxLabel: '<span ext:qtip=\"#{title}\">#{item}</span>', name: '#{item}', checked: #{checked} }"
+          itemCount += 1
+        }  
+      end
+      buff << "
+            ]
+        });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for a Ext JS checkbox group
+    elsif(widgetType == :extRadioGroup)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}" style="overflow-y:scroll;"> </div> ^
+      list = widget[:list]
+      boxHeight = widget[:boxHeight] || 50
+      hideBox = widget[:hideBox] || false
+      boxCols = widget[:boxCols] || 1
+      buff << "
+        <script type=\"text/javascript\">
+          var extRadioGroup_#{widgetId} = new Ext.form.RadioGroup({
+            id: 'radioGroup_#{widgetId}',
+            xtype: 'radiogroup',
+            name: 'radioGroup_#{widgetId}',
+            renderTo: '#{widgetId}',
+            height: #{boxHeight},
+            autoScroll: true,
+            hidden: #{hideBox},
+            columns: #{boxCols},
+            items: [
+      "
+      itemCount = 0
+      if(list.is_a?(Array))
+        list.each { |item|
+          if(itemCount == 0)
+            buff << "{boxLabel: '#{item}', name: 'radioGroup_#{widgetId}_btn', inputValue: '#{item}', checked: true }"
+          else
+            buff << ",{boxLabel: '#{item}', name: 'radioGroup_#{widgetId}_btn', inputValue: '#{item}' }"
+          end
+          itemCount += 1
+        }
+      else # Assume its a hash
+        list.each_key { |item|
+          if(itemCount == 0)
+            buff << "{boxLabel: '#{item}', name: 'radioGroup_#{widgetId}_btn', inputValue: '#{list[item]}', checked: true }"
+          else
+            buff << ",{boxLabel: '#{item}', name: 'radioGroup_#{widgetId}_btn', inputValue: '#{list[item]}' }"
+          end
+          itemCount += 1
+        }
+      end
+      buff << "
+            ]
+        });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+    # Widget for a Ext JS checkbox group
+    elsif(widgetType == :extBtnGroup)
+      buff = %Q^ <div style="vertical-align:middle;" id="#{widgetId}" style="overflow-y:scroll;padding-top:25px;padding-bottom:35px;" ^
+      btnCols = widget[:btnCols]
+      btnList = widget[:btnList]
+      hideBtns = widget[:hideBtns] || false
+      btnGroupWidth = widget[:btnGroupWidth] || 200
+      widget.each_key { |attribute|
+        next if(knownAttrs.include?(attribute))
+        buff << %Q^#{attribute}="#{widget[attribute]}" ^
+      }
+      buff << "> </div>" 
+      buff << "
+        <script type=\"text/javascript\">
+          var extBtnGroup_#{widgetId} = new Ext.ButtonGroup({
+            id: 'btnGroup_#{widgetId}',
+            xtype: 'buttongroup',
+            name: 'btnGroup_#{widgetId}',
+            renderTo: '#{widgetId}',
+            columns: #{btnCols},
+            hidden: #{hideBtns},
+            width: #{btnGroupWidth},
+            frame: false,
+            border: false,
+            renderTo: '#{widgetId}',
+            items: [
+      "
+      itemCount = 0
+      btnList.each { |item|
+        if(itemCount == 0)
+          buff << "{text: '#{item}', xtype: 'button', id: '#{widgetId}_btn_#{itemCount}' }"
+        else
+          buff << ",{text: '#{item}', xtype: 'button', id: '#{widgetId}_btn_#{itemCount}'}"
+        end
+        itemCount += 1
+      }
+      buff << "
+            ]
+        });
+        </script>
+      "
+%>
+    <td>
+        <%= buff %>
+      </td>
+    </tr>
+<%
+      # This widget takes a specific type of input (:rows). The stucture of the input is as follows:
+      # Can be used to render select lists and plain text, not just checkboxes.
+      # An example of :rows:
+      # rows = []
+      # rows << [ { 'name' => {:value => "some:track", :checkbox => false } }, { 'bigwig' => { :value => "none", :checkbox => true } } ]
+      # There is no limit to the number of hashes the inner array can have. The only fixed things are :value and :checkbox for each key (field) and each outer hash can only have one key
+      elsif(widgetType == :tabularCheckboxSection)
+        buff = ''
+        rows = widget[:rows]
+        numCols = rows[0].size
+        width = widget[:width] || '100%'
+        headerRow = widget[:headerRow]
+        rowKeys = widget[:rowKeys] || []
+        urlHash = widget[:urlHash] || {}
+        addRowColor = widget[:addRowColor] || false
+        addRowColor = false if(rows.size == 1)
+        noToggleBtn = widget[:noToggleBtn] || false
+        colIdxReqToggleBtn = widget[:colIdxReqToggleBtn] || [1] # An array with the indices of the columns requiring toggle buttons.
+        leftPadding = widget[:leftPadding] || '0px'
+        colspanForToggleBtn = widget[:colspanForToggleBtn] || '2'
+        cellspacing = widget[:cellspacing] || '0'
+        addBorderAroundCells = widget[:addBorderAroundCells] || false
+        fontSize = "#{widget[:fontSize]}" || '10pt'
+        colSpan = widget[:colSpan] || '1'
+        addKeyWithUrl = widget[:addKeyWithUrl] || false
+        bottomPadding = widget[:bottomPadding] || '1px'
+        cellBottomPadding = widget[:cellBottomPadding] || '0px'
+        addDropList = widget[:addDropList] || false # Note: The js function for supporting drop lists have to be in the tool dialog because this widget cannot know what to do when the user selects an option
+        options = widget[:options] || {}
+        valign = widget[:valign] ? "vertical-align:#{widget[:valign]}" : ''
+        buff = %Q^<table id="#{widgetId}" style="overflow-y:scroll;overflow-x:scroll;width:#{width};padding-left:#{leftPadding};padding-bottom:#{bottomPadding};" cellspacing="#{cellspacing}"> ^
+        if(headerRow)
+          buff << %Q^<tr>^
+          headerRow.size.times { |ii|
+            buff << %Q^<td style="padding-bottom:5px;font-size:#{fontSize}"><b>#{headerRow[ii]}</b></td>^
+          }
+          buff << %Q^</tr>^
+        end
+        rows.size.times { |ii|
+          row = rows[ii]
+          if(addRowColor)
+            bgColor = (ii % 2 == 0 ? '#FFCCFF' : '#CCCCFF')
+            buff << %Q^ <tr style="background-color:#{bgColor}"> ^
+          else
+            buff << %Q^ <tr> ^
+          end
+          nameValue = ""
+          row.each { |rowElement|
+            rowElement.each_key { |key|
+              value = rowElement[key][:value]
+              title = rowElement[key][:title] ? "title=\"#{rowElement[key][:title]}\"" : ""
+              if(key == 'name')
+                nameValue = value.dup()
+              end
+              checkbox = rowElement[key][:checkbox]
+              inputId = rowKeys[ii] ? rowKeys[ii] : ii
+              name = "#{widgetId}|#{inputId}|#{key}"
+              unless(checkbox)
+                addFn = ""
+                if(rowElement[key].key?(:addFn)) # An 'onchange' function can be provided to the drop-list
+                  fnName = rowElement[key][:addFn][:name]
+                  if(value.is_a?(Hash))
+                    addFn = "onchange=\"#{fnName}\""
+                  else
+                    addFn = "#{rowElement[key][:addFn][:type]}=\"#{fnName}\""
+                  end
+                end
+                if(value.is_a?(Hash))
+                  options = value.dup()
+                  buff << %Q^<td style="padding-bottom:#{cellBottomPadding};#{valign}">^
+                  buff << %Q^<select class="#{widgetId}_#{key}" #{addFn} id='#{name}' name='#{name}' style="visibility:visible;font-size:#{fontSize}">^
+                  options.keys.sort { |aa, bb| aa.to_s.downcase <=> bb.to_s.downcase }.each { |option|
+                    selectedStr = (options[option][:selected] ? 'selected="selected"' : '')
+                    optionLabel = (options[option][:label] || option)
+                    buff << %Q^<option value="#{CGI.escape(option)}" #{selectedStr}>#{optionLabel}</option>^
+                  }
+                  buff << %Q^</td>^
+                else
+                  buff << %Q^<td #{addFn} style="padding-top:0px;font-size:#{fontSize};padding-bottom:#{cellBottomPadding};#{valign};" #{title}>#{value}</td>^
+                end
+              else
+                if(!urlHash.empty?) # Add url as names. This will make processing on the job helper side easier.
+                  name = "#{widgetId}|#{urlHash[nameValue]}"
+                  name << "|#{key}" if(addKeyWithUrl)
+                end
+                if(colIdxReqToggleBtn.size == 1)
+                  if(addDropList) # Add the 'value' attribute if drop list present
+                    buff << %Q^<td><input class='#{widgetId}' style="margin-bottom:0px;padding-right:1px;font-size:#{fontSize};padding-bottom:#{cellBottomPadding};#{valign};" type="checkbox" id='#{widgetId}|#{inputId}|#{key}' name='#{name}' value='#{value}' >#{value}</td>^
+                  else
+                    buff << %Q^<td><input class='#{widgetId}' style="margin-bottom:0px;padding-right:1px;font-size:#{fontSize};padding-bottom:#{cellBottomPadding};#{valign};" type="checkbox" id='#{widgetId}|#{inputId}|#{key}' name='#{name}'>#{value}</td>^
+                  end
+                else
+                  buff << %Q^<td><input class='#{widgetId}_#{key.downcase}' style="margin-bottom:0px;padding-right:1px;font-size:#{fontSize};padding-bottom:#{cellBottomPadding};#{valign};" type="checkbox" id='#{widgetId}|#{inputId}|#{key}' name='#{name}'></td>^
+                end
+              end
+            }
+          }
+          buff << "</tr>"
+        }
+        jsIndex = []
+        # Calculate number of 'selectAll' buttons required. If only one required, place it at the center otherwise place it below the columns to be toggled
+        unless(noToggleBtn)
+          if(colIdxReqToggleBtn.size == 1)
+            if(addDropList)
+              # The function changeCheckboxSettingForTabularCheckboxSection() needs to be defined in the tool dialog
+              buff << %Q^<tr><td colspan="#{colspanForToggleBtn}" style="padding-top:10px;" align="center"><select style="visibility:visible;" onchange="changeCheckboxSettingForTabularCheckboxSection(this.value, '#{widgetId}');">^
+              options.keys.sort { |aa, bb| aa.to_s.downcase <=> bb.to_s.downcase }.each { |option|
+                selectedStr = (options[option][:selected] ? 'selected="selected"' : '')
+                optionLabel = (options[option][:label] || option)
+                buff << %Q^<option value="#{option}" #{selectedStr}>#{optionLabel}</option>^
+              }
+              buff << %Q^</select>^
+              buff << %Q^</td></tr>^
+            else
+              buff << %Q^<tr><td colspan="#{colspanForToggleBtn}" style="padding-top:5px;" align="center"><input id="toggleAllCheckboxesBtnForTabularCheckboxSection" type="button" value="Select All" onclick="toggleAllCheckBoxesForTabularCheckboxSection(this.value, '#{widgetId}');"></td></tr>^
+            end
+          else
+            buff << "<tr>"
+            numCols = rows[0].size
+            numCols.size.times { |ii|
+              if(colIdxReqToggleBtn.include?(ii))
+                toggleKey = rows[0][ii].keys[0].downcase
+                buff << %Q^<td><input id="toggleAllCheckboxesBtnForTabularCheckboxSection_#{ii}" type="button" value="Select All" onclick="toggleAllCheckBoxesForTabularCheckboxSection_#{ii}(this.value, '#{widgetId}', this.id, '#{toggleKey}');"></td>^
+                jsIndex << ii
+              else
+                buff << %Q^<td></td>^
+              end
+            }
+            buff << "</tr>"
+          end
+          buff << "</table>"
+          if(colIdxReqToggleBtn.size == 1)
+              buff << <<-EOC
+              <script type="text/javascript">
+                function toggleAllCheckBoxesForTabularCheckboxSection(btnValue, baseWidget)
+                {
+                  var ii ;
+                  var inputList = document.getElementsByClassName(baseWidget) ;
+                  if(btnValue == 'Select All')
+                  {
+                    Ext.get('toggleAllCheckboxesBtnForTabularCheckboxSection').dom.value = 'Clear All' ;
+                    for(ii = 0; ii < inputList.length; ii ++)
+                    {
+                      inputList[ii].checked = 'checked' ;
+                    }
+                  }
+                  else
+                  {
+                    Ext.get('toggleAllCheckboxesBtnForTabularCheckboxSection').dom.value = 'Select All' ;
+                    for(ii = 0; ii < inputList.length; ii ++)
+                    {
+                      inputList[ii].checked = '' ;
+                    }
+                  }
+                }
+              </script>
+            EOC
+          else
+            buff << %Q^<script type="text/javascript">^
+            jsIndex.each  { |idx|
+              buff << "
+                        function toggleAllCheckBoxesForTabularCheckboxSection_#{idx}(btnValue, baseWidget, btnId, toggleKey)
+                        {
+                          var ii ;
+                          var inputList = document.getElementsByClassName(baseWidget + '_' + toggleKey) ;
+                          if(btnValue == 'Select All')
+                          {
+                            Ext.get(btnId).dom.value = 'Clear All' ;
+                            for(ii = 0; ii < inputList.length; ii ++)
+                            {
+                              inputList[ii].checked = 'checked' ;
+                            }
+                          }
+                          else
+                          {
+                            Ext.get(btnId).dom.value = 'Select All' ;
+                            for(ii = 0; ii < inputList.length; ii ++)
+                            {
+                              inputList[ii].checked = '' ;
+                            }
+                          }
+                        }
+
+                      "
+            }
+            buff << "</script>"
+          end
+        end
+%>
+      <td align="center" colspan='<%="#{colSpan}"%>' style="padding-bottom:0px; padding-top:0px;">
+        <%= buff %>
+      </td>
+    </tr>
+<%
+      # This widget takes a specific type of input (:rows). The stucture of the input is as follows:
+      # An example of :rows:
+      # rows = []
+      # rows << [
+      #           { :login => { :value => userRec['name'], :dropList => false } },
+      #           { :name => { :value => "#{userRec['firstName']} #{userRec['lastName']}", :dropList => false } },
+      #           { :role => { :value => { :o => {:label => "Administrator"}, :w => {:label => "Author"}, :r => {:label => "Subscriber", :selected => true } }, :dropList => true } }
+      #         ]
+      elsif(widgetType == :tabularDropListSection)
+        buff = ''
+        rows = widget[:rows]
+        numCols = rows[0].size
+        width = widget[:width] || '100%'
+        headerRow = widget[:headerRow]
+        rowKeys = widget[:rowKeys] || []
+        urlHash = widget[:urlHash] || {}
+        leftPadding = widget[:leftPadding] || '80px'
+        buff = %Q^<table id="#{widgetId}" style="overflow-y:scroll;overflow-x:scroll;width:#{width};" cellspacing="0" cellpadding="0" > ^
+        if(headerRow)
+          buff << %Q^<tr>^
+          headerRow.size.times { |ii|
+            buff << %Q^<td style="padding-bottom:5px;"><b>#{headerRow[ii]}</b></td>^
+          }
+          buff << %Q^</tr>^
+        end
+        rows.size.times { |ii|
+          row = rows[ii]
+          noDropList = true
+          row.each { |rowElement|
+            rowElement.each_key { |key|
+              dropList = rowElement[key][:dropList]
+              if(dropList)
+                noDropList = false
+                break
+              end
+            }
+          }
+          trStyle = noDropList ? "style=\"background-color:#6D7B8D;\"" : ""
+          buff << %Q^ <tr> ^
+          row.each { |rowElement|
+            rowElement.each_key { |key|
+              value = rowElement[key][:value]
+              dropList = rowElement[key][:dropList]
+              unless(dropList)
+                tdStyle = noDropList ? "style=\"padding-bottom:5px;\"" : ""
+                tdValue = noDropList ? "<b>#{value}</b>" : value
+                buff << %Q^<td #{tdStyle}>#{tdValue}</td>^
+              else
+                inputId = rowKeys[ii] ? rowKeys[ii] : ii
+                name = "#{widgetId}|#{inputId}"
+                buff << %Q^<td>^
+                buff << %Q^<select id='#{name}' name='#{name}' style="visibility:visible;">^
+                options = value.dup()
+                options.keys.sort { |aa, bb| aa.to_s.downcase <=> bb.to_s.downcase }.each { |option|
+                  selectedStr = (options[option][:selected] ? 'selected="selected"' : '')
+                  optionLabel = (options[option][:label] || option)
+                  buff << %Q^<option value="#{option}" #{selectedStr}>#{optionLabel}</option>^
+                }
+                buff << %Q^</td>^
+              end
+            }
+          }
+          buff << "</tr>"
+        }
+        buff << "</table>"
+%>
+      <td align="center" style="padding-bottom:0px; padding-top:0px;">
+        <%= buff %>
+      </td>
+    </tr>
+<%
+      # Used for rendering a 2 col table with check boxes
+      # For usage, see 'deleteEp' tool UI
+      elsif(widgetType == :tableWithCheckboxSection)
+        buff = ''
+        rows = widget[:rows]
+        width = widget[:width] || '100%'
+        height = widget[:height] || '100%'
+        headerRow = widget[:headerRow]
+        buff = %Q^<table id="#{widgetId}" style="overflow-y:scroll; width: #{width}; height: #{height};"> ^
+        if(headerRow)
+          buff << %Q^<tr> ^
+          headerRow.each { |header|
+            buff << %Q^<td><b>#{header}</b></td>^
+          }
+          buff << %Q^</tr>^
+        end
+        rows.size.times { |ii|
+          rowElement = rows[ii]
+          buff << %Q^<tr style=""> ^
+          buff << %Q^<td style="padding-top:0px;">#{rowElement}</td>^
+          buff << %Q^<td><input class='#{widgetId}' style="margin-bottom:0px;" type="checkbox" id='#{widgetId}|#{rowElement}' name='#{widgetId}|#{rowElement}'></td>^
+          buff << "</tr>"
+        }
+        buff << "</table>"
+        buff << %Q^ <br>&nbsp;<br> ^
+        buff << %Q^ <div align="center" style="margin-right:75px;"> ^
+        buff << %Q^ <input id="toggleAllCheckboxesBtn" type="button" value="Select All" onclick="toggleAllCheckBoxes(this.value, '#{widgetId}');"> ^
+        buff << "</div>"
+        buff << <<-EOC
+          <script type="text/javascript">
+            function toggleAllCheckBoxes(btnValue, baseWidget)
+            {
+              var ii ;
+              var inputList = document.getElementsByClassName(baseWidget) ;
+              if(btnValue == 'Select All')
+              {
+                Ext.get('toggleAllCheckboxesBtn').dom.value = 'Clear All' ;
+                for(ii = 0; ii < inputList.length; ii ++)
+                {
+                  inputList[ii].checked = 'checked' ;
+                }
+              }
+              else
+              {
+                Ext.get('toggleAllCheckboxesBtn').dom.value = 'Select All' ;
+                for(ii = 0; ii < inputList.length; ii ++)
+                {
+                  inputList[ii].checked = '' ;
+                }
+              }
+            }
+          </script>
+        EOC
+%>
+      <td colspan="2">
+        <%= buff %>
+      </td>
+    </tr>
+<%
+      # ####################
+      # ADVANCED SECTION CONTAINING INPUT WIDGET
+      elsif(widgetType == :advancedSection)
+        buff = ""
+        spanId = "#{widgetId}_advancedSpan"
+        textId = "#{widgetId}_advancedText"
+        tableId = "#{widgetId}_advancedTable"
+        toggleText = widget[:toggleText] || "Advanced Settings:"
+        width = (widget[:width] || '100%')
+        text = widget[:text]
+        placeToggleTextInCenter = widget[:placeToggleTextInCenter] || false
+        collapseState = widget[:startWithExpanded] ? "" : "collapseState=\"collapsed\""
+        tableDisplay = collapseState.empty? ? "block" : "none"
+        spanClass = collapseState.empty? ? "advancedImgToggleWithNegSign" : "advancedImgToggle"
+        # First, the Advanced link
+        if(placeToggleTextInCenter)
+          buff << %Q^ <div align="center"> ^
+        end
+        buff << %Q^ <span id="#{spanId}" name="#{tableId}" class="#{spanClass}" onclick="toggleAdvancedSettings('#{spanId}', '#{tableId}')" #{collapseState}>&nbsp;</span><span id="#{textId}" name="#{textId}" class="advancedTextToggle" onclick="toggleAdvancedSettings('#{spanId}', '#{tableId}');">#{CGI.escapeHTML(toggleText)}</span> ^
+        if(placeToggleTextInCenter)
+          buff << %Q^ </div>^
+        end
+        # Now the table with the advanced widgets. Single cell to hold them, sort of like a div but should be more stringent in the fieldset.
+        buff << %Q^ <table id="#{tableId}" name="#{tableId}" class="advancedTable" style="display:#{tableDisplay}; width: #{width}"> ^
+        if(text) # Display some text before actual settings widgets
+          buff << %Q^ <tr><td class="advancedTableText" style="width: #{width}">#{text}</td></tr> ^
+        end
+        # Now need to add all the widgets listed in the :widgets field
+        buff << "<tr><td style=\"width: #{width}\">"
+        advancedWidgets = widget[:widgets]
+        buff << renderFrag(@toolIdStr, :wbWidgets,
+        {
+          :widgets => advancedWidgets
+        })
+        # Close off our cell, row, and table
+        buff << %Q^ </td></tr></table> ^
+        # Add the toggle function
+        buff << <<-EOC
+          <script type="text/javascript">
+            function toggleAdvancedSettings(spanId, tableId)
+            {
+              var spanElem = Ext.get(spanId) ;
+              var tableElem = Ext.get(tableId) ;
+              var state = spanElem.getAttribute("collapseState") ;
+              if(state == "collapsed")
+              {
+                spanElem.setStyle("background-image", "url('/images/bullet_toggle_minus.png')") ;
+                tableElem.setStyle("display", "block") ;
+                spanElem.set({ collapseState : "expanded" }) ;
+              }
+              else
+              {
+                spanElem.setStyle("background-image", "url('/images/bullet_toggle_plus.png')") ;
+                tableElem.setStyle("display", "none") ;
+                spanElem.set({ collapseState : "collapsed" }) ;
+              }
+              return true ;
+            }
+          </script>
+        EOC
+%>
+        <td colspan="2">
+          <%= buff %>
+        </td>
+      </tr>
+<%
+      # ####################
+      # LABEL-ONLY ROW
+      elsif(widgetType == :wbLabelOnly)
+        unless(widget[:spanFullRow])
+          buff = "<td>&nbsp;</td></tr>"
+        else
+          buff = ''
+        end
+%>
+        <%= buff %>
+<%
+      # ####################
+      # REGULAR INPUT WIDGET
+      else # regular HTML widget
+        # Build up widget itself
+        tagName = (widgetType == :select ? 'select' : 'input')
+        cssClasses = []
+        cssClasses << 'chkbox' if(widgetType == :checkbox or widgetType == :radio)
+        buff = %Q^<#{tagName} #{widgetType != :select ? "type='#{widgetType}'" : ''} #{widgetIdStr} name="#{widgetName}" ^
+        buff << %Q^ value="#{widgetValue}" ^ if(!widgetValue.nil?)
+        buff << %Q^class="#{cssClasses.join(",")}" ^ if(cssClasses and !cssClasses.empty?)
+        buff << %Q^ disabled="disabled" ^ if(widgetDisabled)
+        buff << %Q^ ext:qtitle="#{origWidgetLabel}" ext:qtip="#{widgetTitle}" ^ if(widgetTitle and widgetLabel)
+        if(widgetType == :select)
+          buff << %Q^ style="visibility: visible; #{widgetStyle}; " ^
+        else
+          buff << %Q^ style="#{widgetStyle}; " ^
+        end
+
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "tagName: #{tagName.inspect} ; widgetType: #{widgetType.inspect} ; widgetIdStr: #{widgetIdStr.inspect} ; widgetName=#{widgetName.inspect} ; widgetValue: #{widgetValue.inspect} ; widgetDisabled: #{widgetDisabled.inspect} widgetStyle: #{widgetStyle.inspect} ;\ncssClasses: #{cssClasses.inspect} ; \nbuff:\n\n#{buff.inspect}\n\n")
+
+        buff << %Q^ checked="checked"^ if((widgetType == :checkbox or widgetType == :checkBox or widgetType == :radio) and widget[:checked])
+        widget.each_key { |attribute|
+          next if(knownAttrs.include?(attribute))
+          buff << %Q^#{attribute}="#{widget[attribute]}" ^
+        }
+%>
+        <td>
+          <%= buff %>>
+<%
+        # ###################
+        # SELECT WIDGET <OPTIONS>
+        # Deal with <select>'s <options>, if any
+        options = widget[:options]
+        if(options)
+          sortBy = widget[:sortBy]
+          if(sortBy == :label)
+            options.keys.sort { |aa, bb| options[aa][:label].to_s.downcase <=> options[bb][:label].to_s.downcase }.each { |option|
+              selectedStr = (options[option][:selected] ? 'selected="selected"' : '')
+              optionLabel = (options[option][:label] || option)
+%>
+              <option value="<%= option %>" <%= selectedStr %> ><%= optionLabel %></option>
+<%
+            }
+          else # sort by key (default)
+            options.keys.sort { |aa, bb| aa.to_s.downcase <=> bb.to_s.downcase }.each { |option|
+              selectedStr = (options[option][:selected] ? 'selected="selected"' : '')
+              optionLabel = (options[option][:label] || option)
+%>
+              <option value="<%= option %>" <%= selectedStr %> ><%= optionLabel %></option>
+<%
+            }
+          end
+        end
+        # Close off widget tag
+%>
+          </<%= tagName %>>
+        </td>
+      </tr>
+<%
+      end
+    }
+%>
+</table>

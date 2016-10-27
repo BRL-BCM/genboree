@@ -1,0 +1,41 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "oldPass": [
+        "^(?:^.+$)$",
+        "Old password cannot be left blank"
+      ],
+      "newPass2": [
+        "^(?:^.+$)$",
+        "New password (again) cannot be left blank"
+      ],
+      "newPass": [
+        "^(?:^.+$)$",
+        "New password cannot be left blank"
+      ],
+      "login": [
+        "^(?:^.+$)$",
+        "User Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  }
+}

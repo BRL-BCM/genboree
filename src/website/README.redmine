@@ -1,0 +1,269 @@
+Redmine Installation (from Bio:Neos but with notes from BRL)
+=====
+This document details creating a fresh redmine install as the CMS for this
+website installation.  Please follow these instructions carefully, but use
+appropriate directory, database, and user names specific to your installation.
+-----
+
+* Grab the latest Redmine (2.5 as of this writing)
+** BRL: already done in the snap shot
+** svn co http://svn.redmine.org/redmine/branches/2.5-stable <install_dir>
+** We suggest installing the redmine code in the same location as the website
+   code for consistency.  We used <website_root>/redmine/
+*** BRL: We don't run them in the same location nor on the same server in dev
+         or production at BRL.
+
+* Run Bundler
+** BRL: already done in the snapshot
+** cd <install_dir>
+** Edit Gemfile
+*** Add the following on line 3:
+    gem "thin"
+*** NOTE: The default configuration uses WEBrick as the HTTP server.  If this is
+    acceptable, the Gemfile does not require any modification.
+** bundle install --without rmagick
+*** NOTE: Rmagick support can be included if supported on your system, but it
+    requires a new version of ImageMagick that isn't available on all systems.
+*** BRL: It can be turned off. Not really needed for this Redmine CMS instance.
+
+* Create a local MySQL database
+** BRL: No. Recommend using the mysqldump in mysql_redmine/ instead.
+** echo "CREATE DATABASE genboree_redmine" | mysql -u<user> -p<pass>
+** You must use appropriate credentials for your MySQL installation (user/pass)
+** You likely want to setup another user account for access to this installation
+   as well.  This is done by creating a new MySQL user granted all permissions
+   on the new database you just created, using a "GRANT" statement.
+
+* Configure Redmine
+** BRL: Do review these carefully, but keep in mind snapshot
+        has something for these already.
+** cd <install_dir>/config/; cp database.yml.example database.yml
+** Edit database.yml
+*** Under production, set "database: genboree_redmine"
+*** Modify "username", and "password" to reflect your settings.
+*** All other settings can remain as defaults
+** cp configuration.yml.example configuration.yml
+** Edit configuration.yml
+*** Modify the default "smtp_settings" as appropriate
+
+* Redmine rake tasks
+** rake generate_secret_token
+*** BRL: This has been done. Might make sense to redo it to get a new, instance-specific
+        token?
+** RAILS_ENV=production rake db:migrate
+*** BRL: NO! The mysqldump has tables and content where this has been done. AND
+         includes some example CMS content to get going.
+** RAILS_ENV=production REDMINE_LANG=en rake redmine:load_default_data
+*** BRL: NO! The mysqldump has tables and content where this has been done. AND
+         includes some example CMS content to get going.
+
+* Patch Redmine
+** BRL: NO. NO. NO. NO. We do not want this. And we're pretty sure this
+        is not needed. Instead, can configure access to public project Files
+        via the Roles Administration in Redmine such that "anonymous" users
+        (i.e. public access, not logged in) can get the File. Seems fine if we
+        do that.
+      : The Redmine CMS is "only" accessible from within the BCM network
+        (private address)
+      : May need to arrange proxy access to File content in the public CMS
+        Redmine project in a production deployment.
+** NOTE: This is necessary for public access to uploaded Files, using the Files
+   module, which will be used for uploading Images to the installation for use
+   in Wiki Pages and the Image Rotator on the splash screen.
+     IT WILL INTRODUCE A SECURITY RISK.
+   What the patch does, is it allows anonymous visitors to the website access to
+   any of the uploaded files. ANY files from the Files module. ANY project. If
+   you prefer to allow for exposing uploaded files to the web in any other way
+   (for example, by manually adding to the "public" directory), then you will
+   not need to apply this patch. But if you choose another method, then the
+   instructions for the Wiki content below will NOT WORK as written.
+*** BRL: calls BS.
+** Apply "public_access.patch" to Redmine
+*** cd <install_dir>
+*** patch -p0 -i <website_root>/public_access.patch
+
+* Startup
+** BRL: may need to start it this way for initial bootstrapping. BUT that was
+        already done in the snapshot. Proper server start/stop should be via
+        init.d/ scripts ONLY (and documented) at this point.
+** ruby script/rails server thin -e production -p 3030 -d
+*** NOTE: We use port 3030 (non-standard) as the website itself will run on port
+    3000.  Other port combinations can be used as long as the GenboreeWebsite
+    configuration (config.yml, config.ru) reflects the appropriate ports.
+*** NOTE: WEBrick can be used as the server (substitute "webrick" for "thin"
+    in the startup command).
+
+------
+Testing Installation
+------
+At this point you should be able to navigate to http://<server>:3030 to view the
+default Redmine installation.  If this is not possible, it may be a firewall or
+other IT issue that you should resolve before continuing with the website setup.
+  BRL: Correct, this should bring up the Redmine CMS service. Login with genboree.org
+       account and/or the role-based account if you need to bootstrap your Genboree
+       account into the two key project. There's a CMS and Instruction project already
+       there; the CMS one is public (see BRL notes above for why). 
+
+------
+Website Project Setup
+------
+_Some experience with Redmine administration is useful in this section._
+
+BRL: This has already been done in the snapshot. May be useful to review this process and see
+     what has been entered and any divergences from these instructions (if any). Changes
+     should not be needed and may indicate something else to be suspicious of.
+
+* Login as administrator (admin/admin)
+* Enable REST web service
+** Administration...Authentication...
+** Select checkbox for "Authentication Required"
+** Select checkbox for "Enable REST web service"
+* Create a new project "Projects...New Project"
+** Use the identifier "genboree_website_content".  All other settings can be
+   modified as appropriate for your installation.
+** NOTE: The "Wiki", and "Files" modules are required.
+* Create a "website_content" User account (for API access)
+** Administration...Users...New User
+** Login: "website_content"
+** Assign appropriate values for First name, Last name, and Email.
+** Select "Generate password"
+* Assign content user to project for API access
+** Administration...Users...website_content...Projects tab
+** Select "Genboree Website" from the drop down, and check "Manager". Press Add.
+** NOTE: Assign additional user accounts to the project as needed (for other
+   approved content editors)
+* Determine API access key
+** Logout of admin account
+** Login as website_content
+** Click "My Account"
+** Under "API access key", click "Show"
+** Copy key into GenboreeWebsite/config.ru
+
+* NOTE: All settings in this section are configurable via the config.ru Rackup
+  file in the GenboreeWebsite installation.  These instructions just show the
+  default values as an example.
+
+------
+Website Content Wiki Structure
+------
+
+BRL: This is the *original* text instructions from Bio:Neos for how to
+     manage wiki content and their "structured data" approach etc. The
+     marked-up and fleshed-out and re-ordered instructions available in
+     the Redmine instructions project are adapted from this. Any changes
+     or variations should be noted there, not here.
+
+The GenboreeWebsite uses a partially assumed structure for the Wiki to grab
+content for the site. The Wiki/Menu content can refer to other sections of the
+Wiki, allowing for the flexibility of creating new content and the appropriate
+menu links, but certain things like the News, Events, and Image rotator are
+statically defined in the project.  This expected structure is defined in this
+section for reference
+
+wiki/Menu   : Left menu links (can refer to other wiki pages, [[Example]])
+              One special link is assumed to contain structured data,
+              [[Publications]].  It will be parsed as a Array of Hashes
+              as described in the next section.  All other links will simply
+              be parsed by Textile (RedCloth) and outputted as is.
+wiki/News   : Structured data containing all of the News Items from the 
+              beginning of the archive for this site.
+wiki/Events : Structured data containing all of the Events to be displayed
+              on this site (upcoming and past).
+wiki/Image  : Structured data containing all of the Images to include in the
+              Javascript image rotator on the homepage.
+
+------
+Structure for Menu Wiki Page
+------
+NOTE: This follows a different convention than the Structured Data for the other
+sections described below. This format cannot be used for other Structured Data
+(Events, News, Image)
+
+The Menu Wiki page assumes three lists, defined as Textile markup (* <data>)
+  1) The items to place above the contrast box
+  2) The items to place inside the contrast box
+  3) The items to place below the contrast box
+
+Each list can have sub-bullets.  These sub-bullets will be rendered as
+sub-menus.  
+
+The first item of the first list can skip the top level item (start with a 
+"**"), even though Textile will not render it as a submenu without a top level
+menu item.  (Allowing for an always expanded menu under the Genboree logo)
+
+Any top level menu can be marked as always expanded by adding a suffix of 
+" (expanded)" to the menu item. The suffix must exactly match (case sensitive).
+
+Any menu item can be a Wiki link and will be linked appropriately.  Make sure
+not to use a Wiki link as a top level menu with expandable submenu, however, as
+clicks on that menu will not change the browser address (they will expand the
+menu and cancel default behavior)
+
+Example menu structure:
+
+** [[Overview]]
+** [[Workbench]]
+* Tools
+** [[Tool A]]
+** [[Tool B]]
+
+* Using Genboree (expanded)
+** [[Tutorials]]
+** "FAQs":http://someserver.com/some/path
+
+* [[Funding]]
+* News and Events
+** [[News]]
+** [[Events]]
+
+------
+Images in Wiki Pages (including Image Rotator)
+------
+In order to support adding images to Wiki pages, you need a fully web accessible
+path for the URL to contain in your "!<url>!" markup.  To upload images and
+obtain this URL follow the instructions below:
+
+* Login to the Redmine installation
+* Navigate to the Website Project "genboree_website_content"
+* Click on the "Files" tab in the menu
+* Click "New file", complete form and upload
+* Find the uploaded file in the table
+* The filename of the file should be a publically web accessible link
+** NOTE: Most browsers allow you to right-click this link and "Copy Location" to
+   get a copy of the full URL on the clipboard. You can then post this string
+   directly to a Wiki Page inside of exclamation points, or as a data value in
+   the Image Wiki.
+
+NOTE: When adding images to the Wiki pages, or referencing them in the
+structured data of the wiki/Image page, make sure you have either applied the
+Redmine patch in the previous section or else the images will not be accessible
+for visitors to your website.
+
+------
+Structured Data in Wiki Pages
+------
+Some pages expect to contain structured data for additional parsing and
+formatting. Pages in this format will contain a list of groups.  Each group
+will have a set of attribute-value pairs. The pairs will be on a single line
+with the format:
+
+attribute: value
+
+Groups will be separated by a blank line. Most of the pages expecting this
+structure will accept some list of required attributes and ignore all others.
+The current list of pages in this category include the following:
+
+Publications
+  required: title
+  optional: authors, journal, pmid
+News
+  required: text, date
+Events
+  required: text, date
+Image
+  required: thumbnail, thumbnailCaption, full, title, caption
+
+  NOTE: "thumbnail", and "full" attributes expect a full URL to images as
+        described in the Images in Wiki Pages section.
+  NOTE: "thumbnail" images should all be the same size, recommended: 64x48
+  NOTE: "full" images should all be the same size, recommended: 640x480

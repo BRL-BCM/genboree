@@ -1,0 +1,271 @@
+<!-- PAGE TITLE -->
+
+
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="100%" ALIGN="left" VALIGN="bottom">
+		<IMG SRC="/images/home.png" class="helpHome" WIDTH="24" HEIGHT="24">&nbsp;
+		<FONT class="topicText">HELP HOME:</FONT>
+		<FONT class="topicTitle">&quot;1. Welcome to Genboree Help&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+	<FONT class="tocText">On This Page:</FONT><BR>
+	<UL class="compact1_10">
+	  <LI><A HREF="#genboreeHelpOverview">1.1 Genboree Help Overview</A></LI>
+	  <LI><A HREF="#helpRequests">1.2 Requesting Help Documentation</A></LI>
+	  <LI><A HREF="#helpTOC">1.3 Help Table of Contents</A></LI>
+	</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="genboreeHelpOverview">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">1.1. Genboree Help Overview:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<P class="body">
+<!--   Topic Content -->
+Genboree Help is available for specific topics (<A HREF="#helpTOC">see below</A>).
+The extent of the areas covered is currently limited, but will grow over time.
+<P class="body">
+The Help links within Genboree are currently of two types:
+<OL>
+	<LI class="spacedListItem">Pop-up help.
+		<UL class="compact1_small">
+			<LI>&middot; Short context-specific information, hints, tips, and examples.</LI>
+		</UL>
+	</LI>
+	<LI class="spacedListItem">Links to this detailed documentation.
+		<UL class="compact1_small">
+			<LI>&middot; Links that open in a new window.</LI>
+			<LI>&middot; More in-depth information and explanations.</LI>
+		</UL>
+	</LI>
+</OL>
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="helpRequests">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">1.2. Requesting Help Documentation:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<P class="body">
+<!--   Topic Content -->
+Please feel free to <A HREF="mailto:genboree_admin@genboree.org?subject=Genboree Help Doc Request:">request help documentation</A> for specific Genboree topics.
+Such requests help us identify and prioritize documentation writing.
+<HR class="sep">
+<!-- TOPIC -->
+<!--    Topic Header -->
+<A NAME="helpTOC">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">1.3. Help Table of Contents:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<BR CLEAR="all">
+<!--   Topic Content -->
+<UL class="compact1_toc_level1">
+	<LI>
+		1.&nbsp;<A HREF="showHelp.jsp?topic=top">Welcome to Genboree Help</A>
+		<UL class="compact1_toc_level2">
+  		<LI>1.1&nbsp;<A HREF="showHelp.jsp?topic=top#genboreeHelpOverview">Genboree Help Overview</A></LI>
+  		<LI>1.2&nbsp;<A HREF="showHelp.jsp?topic=top#helpRequests">Requesting Help Documentation</A></LI>
+  		<LI>1.3&nbsp;<A HREF="showHelp.jsp?topic=top#helpTOC">Help Table of Contents</A></LI>
+  	</UL>
+	</LI>
+	<LI>
+		2.&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome">Defining A Genome</A>
+		<UL class="compact1_toc_level2">
+		  <LI>2.1&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#overview">Overview</A>
+		    <UL class="compact1_toc_level2">
+			  	<LI>2.1.1&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#whatAreEPs"><FONT CLASS="tocSmall">What are &quot;entry points&quot;?</FONT></A></LI>
+			    <LI>2.1.2&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#whatIsAGenome"><FONT CLASS="tocSmall">What is a &quot;genome&quot; in Genboree?</FONT></A></LI>
+			  </UL>
+			</LI>
+			<LI>2.2&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#definingGenomes">Methods for Defining a Genome</A>
+			  <UL class="compact1_toc_level2">
+			    <LI>2.2.1&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#templates"><FONT CLASS="tocSmall">Use a template genome</FONT></A></LI>
+			    <LI>2.2.2&nbsp;<A HREF="showHelp.jsp?topic=definingAGenome#upload"><FONT CLASS="tocSmall">Define a custom genome</FONT></A></LI>
+			  </UL>
+			</LI>
+		</UL>
+	</LI>
+	<LI>
+		3.&nbsp;<A HREF="showHelp.jsp?topic=uploadEPhowto">Uploading Entry Points</A>
+		<UL class="compact1_toc_level2">
+		  <LI>3.1&nbsp;<A HREF="showHelp.jsp?topic=uploadEPhowto#uploadEntrypoints">How to Upload Entry Points</A></LI>
+		  <LI>3.2&nbsp;<A HREF="showHelp.jsp?topic=uploadEPhowto#entrypointFormats">Entry Point Formats</A>
+		    <UL class="compact1">
+		      <LI>3.2.1&nbsp;<A HREF="showHelp.jsp?topic=uploadEPhowto#fastaFile"><FONT CLASS="tocSmall">Fasta file</FONT></A></LI>
+		      <LI>3.2.2&nbsp;<A HREF="showHelp.jsp?topic=uploadEPhowto#3ColumnLFF"><FONT CLASS="tocSmall">3-Column LFF entry point file</FONT></A></LI>
+		    </UL>
+		  </LI>
+		</UL>
+	</LI>
+	<LI>
+		4.&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto">Uploading Annotations</A>
+		<UL class="compact1_toc_level2">
+		  <LI>4.1&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto#whatAreAnno">What Are Annotations?</A></LI>
+		  <LI>4.2&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto#uploadingAnno">Uploading Annotations</A></LI>
+		  <LI>4.3&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto#fileFormats">Annotation File Formats</A>
+		    <UL class="compact1_toc_level2">
+		      <LI>4.3.1&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto#LFF"><FONT CLASS="tocSmall">LFF format</FONT></A></LI>
+		      <LI>4.3.2&nbsp;<A HREF="showHelp.jsp?topic=uploadAnnoHowto#otherFormats"><FONT CLASS="tocSmall">Other formats</FONT></A></LI>
+		    </UL>
+		  </LI>
+		</UL>
+	</LI>
+	<LI>
+		5.&nbsp;<A HREF="showHelp.jsp?topic=lffFileFormat">The LFF Annotation Format</A>
+		<UL class="compact1_toc_level2">
+		  <LI>5.1&nbsp;<A HREF="showHelp.jsp?topic=lffFileFormat#overview">Overview</A>  </LI>
+		  <LI>5.2&nbsp;<A HREF="showHelp.jsp?topic=lffFileFormat#colDesc">Column Descriptions</A></LI>
+		  <LI>5.3&nbsp;<A HREF="showHelp.jsp?topic=lffFileFormat#annoExample">LFF Annotation Examples</A></LI>
+                  <li>5.4&nbsp;<a href="showHelp.jsp?topic=lffFileFormat#specialAttributes">Special <i>Attribute=Value;</i> Pairs</a></li>
+		</UL>
+	</LI>
+	<LI>
+	  6.&nbsp;<A HREF="showHelp.jsp?topic=linkSetup">Custom Links</A>
+	  <UL class="compact1_toc_level2">
+      <LI>6.1&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#overview">Overview</A></LI>
+      <LI>6.2&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#create">Creating Custom Links</A>
+        <UL class="compact1_toc_level2">
+          <LI>6.2.1&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#patterns"><FONT CLASS="tocSmall">Constructing URL patterns</FONT></A></LI>
+          <LI>6.2.2&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#examplePatterns"><FONT CLASS="tocSmall">Example URL patterns</FONT></A></LI>
+          <LI>6.2.3&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#simpleTags"><FONT CLASS="tocSmall">Simple tags</FONT></A></LI>
+          <LI>6.2.4&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#regexpTags"><FONT CLASS="tocSmall">Regular expression tags</FONT></A></LI>
+          <LI>6.2.5&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#specialTags"><FONT CLASS="tocSmall">Special tags</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>6.3&nbsp;<A HREF="showHelp.jsp?topic=linkSetup#assign">Assigning Links to Tracks</A></LI>
+		</UL>
+  </LI>
+	<LI>
+    7.&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup">Tabular View and Layout Design</A>
+    <UL class="compact1_toc_level2">
+      <LI>7.1&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#overview">Tabular View</A>
+        <UL class="compact1_toc_level2">
+          <LI>7.1.1&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#whatIs"><FONT CLASS="tocSmall">What is the tabular view?</FONT></A></LI>
+          <LI>7.1.2&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#access"><FONT CLASS="tocSmall">How to Access the Tabular View Tool</FONT></A></LI>
+          <LI>7.1.3&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#limits"><FONT CLASS="tocSmall">Limitations</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>7.2&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#layouts">Tabular Views and Layouts</A>
+        <UL class="compact1_toc_level2">
+          <LI>7.2.1&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#overview"><FONT CLASS="tocSmall">Using the Tabular View Tool</FONT></A></LI>
+          <LI>7.2.2&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#usingLayouts"><FONT CLASS="tocSmall">Using Layouts</FONT></A></LI>
+          <LI>7.2.3&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#groupingData"><FONT CLASS="tocSmall">Annotation Groups</FONT></A></LI>
+          <LI>7.2.4&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#terseVerbose"><FONT CLASS="tocSmall">Terse / Verbose Group Modes</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>7.3&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#special">Special Features</A>
+        <UL class="compact1_toc_level2">
+          <LI>7.3.1&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#allowAnnoEdit"><FONT CLASS="tocSmall">Edit button</FONT></A></LI>
+          <LI>7.3.2&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#graphicView"><FONT CLASS="tocSmall">Graphical view link</FONT></A></LI>
+          <LI>7.3.3&nbsp;<A HREF="showHelp.jsp?topic=layoutSetup#sorting"><FONT CLASS="tocSmall">On-demand Sorting</FONT></A></LI>
+        </UL>
+      </LI>
+    </UL>
+  </LI>
+  <LI>
+    8.&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview">REST API - Overview</A>
+    <UL class="compact1_toc_level2">
+      <LI>8.1&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#intro">Introduction</A></LI>
+      <LI>8.2&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#keyAspects">Key Aspects</A>
+        <UL class="compact1_toc_level2">
+          <LI>8.2.1&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#rsrcURI"><FONT CLASS="tocSmall">Resource IDs (URIs)</FONT></A></LI>
+          <LI>8.2.2&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#methods"><FONT CLASS="tocSmall">Uniform Methods/edit</FONT></A></LI>
+          <LI>8.2.3&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#reps"><FONT CLASS="tocSmall">Resource Representations</FONT></A></LI>
+          <LI>8.2.4&nbsp;<A HREF="showHelp.jsp?topic=restAPIOverview#auth"><FONT CLASS="tocSmall">Authorization</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>8.A&nbsp;<A HREF="showHelp.jsp?topic=restResourceIDs">REST API - Resource IDs</A>
+      <LI>8.B&nbsp;<A HREF="showHelp.jsp?topic=restUniformMethods">REST API - Methods</A>
+      <LI>8.C&nbsp;<A HREF="showHelp.jsp?topic=restRepresentations">REST API - Representations</A>
+      <LI>8.D&nbsp;<A HREF="showHelp.jsp?topic=restAuthorization">REST API - Authorization</A>
+    </UL>
+  </LI>
+  <LI>
+    9.&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig">Virtual Genome Painter (VGP) Interface</A>
+    <UL class="compact1_toc_level2">
+      <LI>9.1&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#vgpuiIntro">The Virtual Genome Painter (VGP)</A></LI>
+      <LI>9.2&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#selectingEPs">Selecting Entry Points</A>
+        <UL class="compact1_toc_level2">
+          <LI>9.2.1&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#epList"><FONT CLASS="tocSmall">Entry Points List</FONT></A></LI>
+          <LI>9.2.2&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#epManual"><FONT CLASS="tocSmall">Manually Specifying Entry Points</FONT></A></LI>
+        </UL>
+      </LI> 
+      <LI>9.3&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#specifyingImages">Specifying Images and Labels</A>
+        <UL class="compact1_toc_level2">
+          <LI>9.3.1&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#genomeView"><FONT CLASS="tocSmall">The Genome View</FONT></A></LI>
+          <LI>9.3.2&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#chromView"><FONT CLASS="tocSmall">The Chromosome View</FONT></A></LI>
+          <LI>9.3.3&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#imgLabels"><FONT CLASS="tocSmall">Image Labels</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>9.4&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#dataColumns">Data Columns</A>
+        <UL class="compact1_toc_level2">
+          <LI>9.4.1&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#addDataCol"><FONT CLASS="tocSmall">Adding Data Columns</FONT></A></LI>
+          <LI>9.4.2&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#updateDataCol"><FONT CLASS="tocSmall">Update Data Columns</FONT></A></LI>
+          <LI>9.4.3&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#removeDataCol"><FONT CLASS="tocSmall">Remove Data Columns</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>9.5&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#annotTracks">Annotation Tracks</A>
+        <UL class="compact1_toc_level2">
+          <LI>9.5.1&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#refTrack"><FONT CLASS="tocSmall">The Reference Track</FONT></A></LI>
+          <LI>9.5.2&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#annotTrackStyles"><FONT CLASS="tocSmall">Drawing Styles and Options</FONT></A></LI>
+          <LI>9.5.3&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#addAnnotTracks"><FONT CLASS="tocSmall">Adding Annotation Tracks</FONT></A></LI>
+          <LI>9.5.4&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#updateAnnotTracks"><FONT CLASS="tocSmall">Updating Annotation Tracks</FONT></A></LI>
+          <LI>9.5.5&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#removeAnnotTracks"><FONT CLASS="tocSmall">Removing Annotation Tracks</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>9.6&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#vgpSubmit">Submitting a VGP Job</A></LI>
+    </UL>
+  </LI>
+  <LI>
+    10.&nbsp;<A HREF="showHelp.jsp?topic=circosConfig">Circos Interface</A>
+    <UL class="compact1_toc_level2">
+      <LI>10.1&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#circosuiIntro">Circos</A></LI>
+      <LI>10.2&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#selectingEPs">10.2 Entry Points</A>
+        <UL class="compact1_toc_level2">
+          <LI>10.2.1&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epGlobal"><FONT CLASS="tocSmall">Global Entry Point Properties</FONT></A></LI>
+          <LI>10.2.2&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epList"><FONT CLASS="tocSmall">Entry Points List</FONT></A></LI>
+          <LI>10.2.3&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epManual"><FONT CLASS="tocSmall">Manually Specifying Entry Points</FONT></A></LI>
+          <LI>10.2.4&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epIndProps"><FONT CLASS="tocSmall">Individual Entry Point Properties</FONT></A></LI>
+          <LI>10.2.5&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epScales"><FONT CLASS="tocSmall">Entry Point Scales</FONT></A></LI>
+          <LI>10.2.6&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#epBreak"><FONT CLASS="tocSmall">Entry Point Breaks</FONT></A></LI>
+        </UL>
+      </LI> 
+      <LI>10.3&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#ideoProps">Specifying Ideogram Properties</A>
+      <LI>10.4&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#tickMarks">Tick Marks</A>
+        <UL class="compact1_toc_level2">
+          <LI>10.4.1&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#addTickMark"><FONT CLASS="tocSmall">Adding Tick Marks</FONT></A></LI>
+          <LI>10.4.2&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#updateTickMark"><FONT CLASS="tocSmall">Updating Tick Marks</FONT></A></LI>
+          <LI>10.4.3&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#removeTickMark"><FONT CLASS="tocSmall">Removing Tick Marks</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>10.5&nbsp;<A HREF="showHelp.jsp?topic=vgpConfig#annotTracks">Annotation Tracks</A>
+        <UL class="compact1_toc_level2">
+          <LI>10.5.1&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#annotTrackTypes"><FONT CLASS="tocSmall">Track Types and Options</FONT></A></LI>
+          <LI>10.5.2&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#addAnnotTracks"><FONT CLASS="tocSmall">Adding Annotation Tracks</FONT></A></LI>
+          <LI>10.5.3&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#updateAnnotTracks"><FONT CLASS="tocSmall">Updating Annotation Tracks</FONT></A></LI>
+          <LI>10.5.4&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#removeAnnotTracks"><FONT CLASS="tocSmall">Removing Annotation Tracks</FONT></A></LI>
+          <LI>10.5.5&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#annotRules"><FONT CLASS="tocSmall">Annotation Filtering Rules</FONT></A></LI>
+        </UL>
+      </LI>
+      <LI>10.6&nbsp;<A HREF="showHelp.jsp?topic=circosConfig#circosSubmit">Submitting a Circos Job</A></LI>
+    </UL>
+  </LI>
+</UL>
+<!-- END -->
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

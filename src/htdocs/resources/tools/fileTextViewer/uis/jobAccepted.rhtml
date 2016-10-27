@@ -1,0 +1,25 @@
+<div class="wbDialog" style="height:auto; width: auto; max-height: 500px;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialog" style="height:auto; width: auto; max-height: 400px; overflow-y:auto; overflow-x:auto; background-color: #FFFFFF; border: 2px solid; padding: 25px;">
+    <br/>
+    <br/>
+    <% if(@settings['textResponse'].nil? or @settings['textResponse'].empty?)
+        msg = @context['wbErrorMsg']
+    else
+        msg = @settings['textResponse']
+        msg.gsub!("\r\n", "</br>")
+        msg.gsub!("\r", "</br>")
+        msg.gsub!("\n", "</br>")
+    end
+    %>
+    <b>Your text is:</b>
+    <br/>
+    <br/>
+    <%= msg %>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= "paithank@bcm.edu" %>"><%= "paithank@bcm.edu" %></a> for assistance.
+  </div>
+</div>

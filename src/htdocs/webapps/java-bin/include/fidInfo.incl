@@ -1,0 +1,102 @@
+<%@ page import="org.genboree.editor.AnnotationDetail,
+                 org.genboree.dbaccess.GenboreeUpload,
+                 org.genboree.util.Util,
+                 java.util.HashMap,
+                 java.sql.Connection,
+                 org.genboree.util.GenboreeUtils"%>
+<%
+    // send destback is in case js not working
+    String errMsg = "The requested information is not available. Window will be closed.";
+    String textid = request.getParameter("upfid");
+    String destback = (String )mys.getAttribute("lastBrowserView");
+    if (destback == null)
+         destback = "/java-bin/defaultGbrowser.jsp";
+
+    if (textid != null)
+    mys.setAttribute("lastTextID", textid);
+
+    if (textid == null)
+        textid= (String )mys.getAttribute("lastTextID");
+
+    String[] textIds = null;
+    if( textid != null ) {
+        textIds = Util.parseString(textid, ',');
+    }
+    else  {
+        textIds = new String[0];
+         out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+    out.println ("<script> window.close(); </script>");
+      // GenboreeUtils.sendRedirect(request,response, destback);
+         return;
+    }
+
+     HashMap htUpl = new HashMap();
+    if (textIds == null || textIds.length==0) {
+        out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+    out.println ("<script> window.close(); </script>");
+        //  GenboreeUtils.sendRedirect(request,response, destback);
+        return;
+    }
+
+    textid = textIds[0];
+    String[] uploadIdFids = Util.parseString( textid, ':' );
+    if( uploadIdFids.length < 2 ) {
+         out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+       out.println ("<script> window.close(); </script>");
+        //  GenboreeUtils.sendRedirect(request,response, destback);
+        return;
+    }
+
+    String uploadId =uploadIdFids[0];
+    String fid = uploadIdFids[1];
+
+    int ifid = -1;
+    if (fid != null) {
+        try {
+        ifid = Integer.parseInt(fid);
+        }
+        catch (Exception e) {
+          out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+         out.println ("<script> window.close(); </script>");
+        // GenboreeUtils.sendRedirect(request,response, destback);
+        return;
+        }
+    }
+    else {    out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+        out.println ("<script> window.close(); </script>");
+      // GenboreeUtils.sendRedirect(request,response, destback);
+         return;
+    }
+
+    if (ifid <=0) {
+
+        out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+        out.println ("<script> window.close(); </script>");
+      // GenboreeUtils.sendRedirect(request,response, destback);
+         return;
+
+
+    }
+
+    GenboreeUpload upload = (GenboreeUpload) htUpl.get( uploadId );
+   
+
+    if( upload == null ){
+        upload = new GenboreeUpload();
+        upload.setUploadId( Util.parseInt(uploadId,-1) );
+        upload.fetch( db );
+        htUpl.put( uploadId, upload);
+    }
+
+    String dbName = upload.getDatabaseName();
+    int rseqid1 = upload.getRefSeqId();
+    if (dbName == null) {     out.println ("<script> alert(\"" + errMsg +  " \"); </script>");
+    out.println ("<script> window.close(); </script>");
+    //  GenboreeUtils.sendRedirect(request,response, destback);
+     return;
+    }
+
+
+
+
+  %>

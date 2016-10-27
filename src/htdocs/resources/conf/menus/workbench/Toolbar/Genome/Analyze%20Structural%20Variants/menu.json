@@ -1,0 +1,44 @@
+[
+  {
+    "text": "Collect Insert Sizes",
+    "tooltip": "Collect insert size distribution information for mate pairs datasets sequenced with Illumina or SOLiD platforms.",
+    "idStr": "insertSizeCollection",
+    "iconCls": "wbFilterReadsMenuItem",
+    "hidden" : true
+  },
+  {
+    "text": "Breakpoint Detection by Breakout",
+    "tooltip": "Detect breakpoints for mate pairs datasets sequenced with Illumina or SOLiD platforms using Breakout.",
+    "idStr": "structuralVariantDetection",
+    "iconCls": "wbFilterReadsMenuItem",                              
+    "hidden" : true
+  },
+  {
+    "text": "Intersect SVs",
+    "tooltip": "Find the intersection(s) or difference(s) between sets of tracks.",
+    "idStr": "basicSetOperationsOnStructuralVariants",
+    "iconCls": "wbFilterReadsMenuItem",                              
+    "hidden" : true
+  },
+  {
+    "text": "Report Multiple SVs",
+    "tooltip": "Generates combined reports for multiple breakpoint analyses.",
+    "idStr": "reportToolForMultipleStructuralVariants",
+    "iconCls": "wbFilterReadsMenuItem",                              
+    "hidden" : true
+  },
+  {
+    "text": "Epigenomic Enrichment",
+    "tooltip": "Computes enrichment of epigenomic feature sets in the vicinity of breakpoints.",
+    "idStr": "epigenomicFeaturesEnrichmentTool",
+    "iconCls": "wbFilterReadsMenuItem",                              
+    "hidden" : true
+  },
+  {
+    "text": "Epigenomic Variation",
+    "tooltip": "Determines genes affected by both epigenomic changes and breakpoints",
+    "idStr": "genomicEpigenomicChanges",
+    "iconCls": "wbFilterReadsMenuItem",                              
+    "hidden" : true
+  }
+]

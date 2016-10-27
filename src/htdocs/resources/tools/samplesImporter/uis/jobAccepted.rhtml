@@ -1,0 +1,27 @@
+<%
+# This file is the default text provided when a job is submitted to the toolJob API resource
+# This can bee overridden for a tool using the file
+# /usr/local/brl/local/apache/htdocs/resources/tools/#{@toolIdStr}/uis/jobAccepted.rhtml
+%><div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <b>Job Id</b>: <i><%= @context['jobId'] %></i>
+    <br/>
+    <%
+      if(@context['queue'] and @context['queue'] == @genbConf.gbDefaultPrequeueQueue)
+    %>
+      </br>Your Samples Import job has been submitted to the cluster. You will be notified by email when your job has completed.</br>
+    <%
+      else
+    %>
+      </br>Your samples have been imported.</br>
+    <%
+      end
+    %>
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>

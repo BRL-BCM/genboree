@@ -1,0 +1,3 @@
+fAB1	frozen	36	M	TRUE
+fAB2	frozen	46	M
+fAB3	solution	56	F	TRUE

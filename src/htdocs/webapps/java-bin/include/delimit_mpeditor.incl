@@ -1,0 +1,35 @@
+<P>
+ <TABLE CELLPADDING="0" width="100%" CELLSPACING="0" BORDER="0">
+           <TR>
+               <TD align="left" width="10%">
+    <INPUT SIZE="14" id="commentFormatBtn" name="commentFormatBtn" TYPE="button" class="btn" onclick="dispatchWrapComments('comments', document.getElementById('commentDelims').value);" VALUE="Wrap Comments">
+               </TD>
+
+               <TD align="left" width="40%">
+                &nbsp;&nbsp;&nbsp;&nbsp; Wrap delimiters:&nbsp;<INPUT SIZE="2" id="commentDelims" name="commentDelims" TYPE="text" VALUE=";">
+               </TD>
+
+  <TD width="30" align="right"><nobr>
+               <B> Annotations/Page: </B>
+              <select  id="app"  name="app" BGCOLOR="white" onChange="this.form.submit();   " >
+              <%
+               int [] dispNum = new int []{5, 10, 15, 20, 25, 30, 50, 100};
+              for (int j=0; j<dispNum.length; j++) {
+                  String sel = "";
+                  if (dispNum[j]==displayNum)
+                      sel = " selected ";
+              %>
+            <option  value="<%=dispNum[j]%>" <%=sel%>> <%=dispNum[j]%>  </option>
+               <%}%>
+              </select> </nobr>
+              </TD>
+              <TD width="20%" align = "right">  <nobr>&nbsp;
+              &nbsp;  &nbsp;  &nbsp;
+                <INPUT SIZE="14"  name="home" id="home" TYPE="button"  VALUE="<<"  onclick="setPage(<%=currentPageIndex%>, 'home');" >
+                <INPUT SIZE="14"  name="previous" id="previous" TYPE="button"  VALUE="<" onclick="setPage(<%=currentPageIndex%>, 'previous');" >
+                <INPUT SIZE="14"  name="next" id="next" TYPE="button"  VALUE=">" onclick="setPage(<%=currentPageIndex %>, 'next');" >
+                <INPUT SIZE="14"  name="last" id="last" TYPE="button"  VALUE=">>"  onclick="setPage(<%=currentPageIndex%>, 'last');" >
+              </nobr>
+        </TD>
+</TR>
+</TABLE>

@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "removeFiles",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Remove Files",
+    "shortLabel": "[NOT SET]"
+  }
+}

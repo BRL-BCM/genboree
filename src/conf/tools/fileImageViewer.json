@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "fileImageViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Image File Viewer",
+    "shortLabel": "[NOT SET]"
+  }
+}

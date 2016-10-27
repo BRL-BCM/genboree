@@ -1,0 +1,13 @@
+--- lib/redmine/plugin.rb.ORIG	2014-04-08 16:54:07.593274960 -0500
++++ lib/redmine/plugin.rb	2014-04-08 16:54:41.127552677 -0500
+@@ -81,7 +81,9 @@
+ 
+       # Adds plugin locales if any
+       # YAML translation files should be found under <plugin>/config/locales/
+-      ::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
++      # BRL ; patched in Redmine Revision 12482:
++      #::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
++      Rails.application.config.i18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
+ 
+       # Prepends the app/views directory of the plugin to the view path
+       view_path = File.join(p.directory, 'app', 'views')

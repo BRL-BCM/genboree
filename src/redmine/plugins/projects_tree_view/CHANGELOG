@@ -1,0 +1,30 @@
+0.0.6 (2012-05-30):
+    * patched to work with redmine 2.0
+    * UI updated to enforce breakline properly utilised
+0.0.5 (2011-01-23):
+    * added js exapnd all button
+    * Fixed missing spent time link
+0.0.4 (2010-06-23):
+    * Sync with Redmine 0.9.4
+    * Added plugin functionality to admin/projects page
+    * Fix problem with projects without active children
+    * Deleted unuseful plugin-skeleton files
+    * added js exapnd all button
+    * Fixed missing spent time link
+0.0.3 (2009-08-02):
+    * Improved documentation and licensing
+    * Updated the core-overriding views (required compatibility-helpers, see below)
+    * Added compatibility-helpers in a new module to support older trunk
+      * 'users_by_role_implemented' for Redmine Core trunk@r2734
+      * 'authorize_global_implemented' for Redmine Core trunk@r2750
+    * Updated the plugin-skeleton including Rails 2.2.x i18n
+
+0.0.2 (2009-03-31):
+    * Switched to using javascript_include_tag and stylesheet_link_tag in
+      the init.rb file so that the base.rhtml file is untouched (makes it
+      so this plugin should work with Collapse and others)
+    * Added alternating Odd Even row highlighting
+    * Tweaked the color scheme a little
+
+0.0.1 (2009-03-11):
+    - Initial public release

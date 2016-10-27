@@ -1,0 +1,308 @@
+<%# RENDER HTML %>
+<%
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/rest/helpers/trackApiUriHelper'
+  require 'brl/genboree/rest/helpers/classApiUriHelper'
+  require 'brl/genboree/rest/helpers/trackEntityListApiUriHelper'
+  width = (@hasAccess ? 625 : 320)
+  height = (@hasAccess ? 425 : 320)
+
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+  <%# Overview text %>
+<%
+  if(@hasAccess)
+%>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview => "<p>This tool runs FindER and ChromHMM LearnModel jobs for the selected tracks.</p>
+       
+       <br>&nbsp;<br>
+        
+        <center><span class='footnote'>[ Detailed description of FindER can be found <a href='http://www.epigenomes.ca/finder.html' target='_blank'>this reference page</a>. ]</span></center>
+        <br>&nbsp;<br>
+       " 
+      })
+  %>
+  <%
+     $stderr.puts "SETTINGS: #{@settings.inspect}" 
+     genomeVersion = @settings['assembly'] 
+
+  %>
+  <%= renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "Edit & Select Track Metadata",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "<div align=\"center\" id=\"sampleDiv\" style=\"height:auto;\" ></div>"
+      })
+    %>
+
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "FindERChromHMM Tool Settings",
+      :widgets => [ 
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "20", :value => "FindERChromHMM-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S')}" },
+        { :id => 'assembly', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10',  :title => "This is automatically chosen based on the genome version of the inputs/outputs"},
+       { :id => 'states', :label => 'Number of States', :size => "10", :type => :text , :class => 'advSet', :size => "10", :title => "Number of states for chromHMM LearnModel. This cannot be greater than 2**{number_of_marks}" } 
+       ]
+     })
+
+  %>
+    <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbProjectOrDatabaseListSummary, { :projectOrDatabaseList => @outputs, :label => "Database/Projects Of Interest" } )
+      })
+  %>
+
+    <%
+      btns = []
+      btns << { :type => :submit, :value => "Save & Submit", :onClick => "setBtnType(this.value)", :title => "Save your edits and selection and submit the job." }
+      btns << { :type => :cancel}
+    %>
+    <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+        {
+          :buttons => btns
+        })
+    %>
+   
+
+</form>
+<script type="text/javascript">
+/* Utility function for accessing button values */
+    function setBtnType(btnValue)
+    {
+      wbFormSettings.set('btnType', btnValue) ;
+      // get the selected rows
+      var ii ; 
+      var rowIndices = [] ;
+      var records = Ext.getCmp('sampleGrid').getSelectionModel().getSelections() ;
+      for(ii=0; ii<records.length; ii++)
+      {
+       rowIndices.push(Ext.getCmp('sampleGrid').store.indexOf(records[ii]));
+      }
+      wbFormSettings.set('selectedtrks', rowIndices) ;
+    }
+
+
+
+createGrid('<%=@settings['gridFields']%>', '<%=@settings['gridRecs']%>', '<%=@settings['gridRowUriMap']%>') ;
+
+  function createGrid(gridFieldsJson, gridRecsJson, gridRowUriMapJson)
+  { 
+   var gridFieldsList = JSON.parse(gridFieldsJson) ;
+      var gridRecsMatrix = JSON.parse(gridRecsJson) ;
+      var gridRowUriMap = JSON.parse(gridRowUriMapJson) ;
+      var ii ;
+      var jj ;
+      var sampleEditObj = {} ;
+   
+   // setup 3 parallel global hashes defined on the sample rows edited in the grid
+      wbFormSettings.set('sampleEditHash', new Hash()) ;
+      wbFormSettings.set('sampleAttributeRemoveHash', new Hash()) ;
+      wbFormSettings.set('sampleRowUriMap', new Hash()) ;
+      // convert gridFields to the form expected by ExtJS objects
+      var extFields = [];
+      for(ii=0; ii<gridFieldsList.length; ii++){
+        extFields.push({name: unescape(gridFieldsList[ii])}) ;
+      }
+      // unescape fields escaped in the RulesHelper
+      var unescapedGridRecs = [] ;
+      for(ii=0; ii<gridRecsMatrix.length; ii++){
+        unescapedGridRec = [] ;
+        for(jj=0; jj<gridRecsMatrix[ii].length; jj++){
+          unescapedGridRec.push(unescape(gridRecsMatrix[ii][jj])) ;
+        }
+        unescapedGridRecs.push(unescapedGridRec) ;
+      }
+      // prepare a data store to help with the grid panel
+      var myStore = new Ext.data.SimpleStore(
+        {
+          id: 'valueStore',
+          fields: extFields,
+          data: unescapedGridRecs
+        });
+      // prepare columns for grid panel
+      var extColumns = [] ;
+      var tooltipString = "" ;
+      // specially make name column (which we forced to be the first field in the RulesHelper) not editable
+      extColumns.push({
+      header: gridFieldsList[0], 
+      dataIndex: gridFieldsList[0], 
+      width: 250, 
+      editable: false, 
+      sortable: true,
+      tooltip: '<b>Track Name</b><br> Select (Ctrl+shift) tracks/rows as input for the jobs. At least one track MUST be selected before submitting the job.'
+      }) ;
+      for(ii=1; ii<gridFieldsList.length; ii++){
+        colWidth = 125; // max
+        if(gridFieldsList[ii] == 'chromHMMCell')
+        {
+          tooltipString = '<b>chromHMMCell</b><br>Changing a chromHMMCell value will automatically replace sample values of all the similar tracks to the new value.' ;
+        }
+        else if(gridFieldsList[ii] == 'chromHMMMark') 
+        {
+          tooltipString = '<b>chromHMMMark</b><br>Respective mark of the track. To change the mark edit the respective cell. This field CANNOT be left empty.' ;
+        }
+        else 
+        {
+          tooltipString = '<b>chromHMMControl</b><br>Replace this cell with \'yes\' if the respective track is a control track. Only one control track is allowed per each chromHMMCell/sample set.' ;
+        }
+ 
+        extColumns.push({header: gridFieldsList[ii], dataIndex: gridFieldsList[ii], tooltip: tooltipString, width: colWidth, sortable: true, editable: true,
+                         editor: new Ext.form.TextField({allowBlank: true})}) ;
+      }
+      // create the actual grid
+      var grid ;
+      grid = new Ext.grid.EditorGridPanel({
+        id: 'sampleGrid',
+        title: 'Ctrl-shift to select and Double-click to edit values',
+        store: myStore,
+        height: 250,
+        width: 520,
+        columns: extColumns,
+        loadMask: true,
+        autoScroll: true,
+        multiSelect: true,
+        stateful: true,
+        ddGroup:'myGridDD',
+        sm: new Ext.grid.RowSelectionModel(),
+        viewConfig: {
+          emptyText: 'No samples found',
+          enableTextSelection: true,
+          forceFit: false
+          
+        },
+        stripeRows: true
+      }) ;
+
+      // update wbFormSettings for use in JobHelper to make API calls to update sample values
+      grid.on('afteredit',
+      function(eObj)
+      {
+        var newValue = eObj.value ;
+        var sampleNum = eObj.row ;
+        var original =  unescapedGridRecs[sampleNum][1] ;
+        var sampleName = unescapedGridRecs[sampleNum][0] ; // [name, attr1, attr2, ...]
+        var attributeNum = eObj.column ;
+        var attributeName = gridFieldsList[attributeNum] ;
+        var avpHash = {} ;
+        var attributeRemoveArray = [] ;
+        var tmpValue = '' ;
+        // handle attributes to be removed
+        if(wbFormSettings.get('sampleAttributeRemoveHash').get(sampleNum) == undefined)
+        {
+          // add the sampleNum as a key in the hash with an empty attributeRemoveArray
+          attributeRemoveArray = [] ;
+          wbFormSettings.get('sampleAttributeRemoveHash').set(sampleNum, attributeRemoveArray) ;
+        }
+        else
+        {
+          // get the existing attributeRemoveArray for the sampleName
+          attributeRemoveArray = wbFormSettings.get('sampleAttributeRemoveHash').get(sampleNum) ;
+        }
+        if(newValue == '<delete>')
+        {
+          // the "<delete>" string is a special value indicating we should remove these attributes
+          attributeRemoveArray.push(attributeName) ;
+          wbFormSettings.get('sampleAttributeRemoveHash').set(sampleNum, attributeRemoveArray) ;
+        }
+        // handle attributes to be edited or added
+        if(sampleName in sampleEditObj)
+        {
+          // add attribute-value pair to existing avpHash
+          avpHash = sampleEditObj[sampleName] ;
+          avpHash[attributeName] = newValue ;
+        }
+        else
+        {
+          // create new avpHash
+          sampleEditObj[sampleName] = {} ;
+          sampleEditObj[sampleName][attributeName] = newValue;
+        }
+        wbFormSettings.get('sampleEditHash').set(sampleNum, sampleEditObj[sampleName]) ;
+        wbFormSettings.get('sampleRowUriMap').set(sampleNum, gridRowUriMap[sampleNum]) ;
+
+        // Change the values of the chromHMMCell column 
+        // Changing x to y, makes all the rows of x to y.
+        if(attributeNum == 1)
+        {
+          myStore.each(function(record,idx){
+            tmpValue = record.get('chromHMMCell');
+            if(tmpValue == original)
+              {
+                record.set('chromHMMCell',newValue);
+              }
+            record.commit();
+          });
+         myStore.sync();
+       }
+       
+      }) ;
+      // for neater display place Grid in Container
+      var gridContainer = new Ext.Container(
+      {
+        id: "gridContainer",
+        layout: 'fit',
+        renderTo: 'sampleDiv',
+        autoScroll: true,
+        monitorResize: true,
+        items: [
+          grid
+        ]
+      }) ;
+  }
+
+   // after submit has been rendered and grid has been created, 
+    // force cells still being edited when the save button is clicked to be committed
+    var wbButtons = document.getElementsByClassName("wbButton") ;
+    var submitButton ; 
+    for(var ii=0; ii<wbButtons.length; ii+=1)
+    {
+      wbButton = wbButtons[ii] ;
+      if(wbButton.getAttribute("type") == "submit")
+      {
+        submitButton = wbButton ;
+      } 
+    }
+
+    if(submitButton != undefined)
+    {
+      var grid = Ext.getCmp("sampleGrid")
+      var origOnClick = submitButton.getAttribute("onclick")
+      var newOnClick = "grid.stopEditing(false); " + origOnClick ;
+      submitButton.removeAttribute("onclick") ;
+      submitButton.setAttribute("onclick", newOnClick) ;
+    }
+    
+
+
+
+</script>
+
+
+
+<%
+  else # user doesn't have access
+%>
+   <%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool is currently under development and only available internally and to some collaborators for testing.
+          <br>&nbsp;<br>
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>
+          <br>
+          <span style='color: red;'>Once development is complete, and testing and review carried out, the tool will be available for all users.</span>
+        "
+      })
+  %>
+<%
+  end # if(@hasAccess)
+%>

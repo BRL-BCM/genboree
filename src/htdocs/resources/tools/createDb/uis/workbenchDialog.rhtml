@@ -1,0 +1,104 @@
+<%# RENDER HTML %>
+<%
+  require 'uri'
+  require 'brl/genboree/rest/helpers/groupApiUriHelper'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: 520px; height: 450px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        This tool will create/add a new database in the target <u>Group</u>. Note that the database to be created should NOT already exist in the group.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Target Group:",
+      :sectionHtml => renderFrag(@toolIdStr, :wbGroupListSummary, { :groupList => @outputs } )
+    })
+%>
+<%=
+    # Get all templates
+    allTemplates = @dbu.getAllTemplates()
+    refSequences = {}
+    species = []
+    version = []
+    refSequences[:"userWillUpload"] = { :label => "** User Will Upload **", :selected => true}
+    allTemplates.each { |template|
+      refseqName = template['refseqName']
+      refSequences[:"#{refseqName}"] = { :label => refseqName}
+      version << refseqName
+      version << template['refseq_version']
+      species << refseqName
+      species << template['refseq_species']
+    }
+    speciesList = species.join(",")
+    versionList = version.join(",")
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        {  :id => 'refPlatform', :label => 'Reference Sequence', :type => :select, :size => "5", :options => refSequences,
+          :onchange => "updateSpeciesAndVersion(this.value, '#{speciesList}', '#{versionList}')", :title => "Select the genome assmebly the database will use."},
+        {  :id => 'dbName', :label => 'Database Name', :type => :text, :size => "25", :title => "Give some name to the database. It should not already exist in the target group."},
+        {  :id => 'description', :label => 'Description', :type => :text, :size => "25", :title => "A line or two describing the database."},
+        {  :id => 'species', :label => 'Species', :type => :text, :size => "25", :title => "Automatically selected based on Reference Sequence."},
+        {  :id => 'version', :label => 'Version', :type => :text, :size => "25", :title => "Automatically selected based on Reference Sequence."},
+      ]
+    })
+
+%>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolButtons,
+    {
+      :buttons => [ { :type => :submit }, { :type => :cancel} ]
+    })
+%>
+</form>
+<script type="text/javascript">
+  Ext.QuickTips.init() ;
+  function updateSpeciesAndVersion(value, species, version)
+  {
+    var ii ;
+    versionList = version.split(",") ;
+    speciesList = species.split(",") ;
+    var versionElement = document.getElementById('version') ;
+    var speciesElement = document.getElementById('species') ;
+    if(value == 'userWillUpload')
+    {
+      versionElement.value = "" ;
+      speciesElement.value = "" ;
+    }
+    else
+    {
+      for(ii = 0; ii < versionList.length; ii ++)
+      {
+        if(value == versionList[ii])
+        {
+          versionElement.value = versionList[ii + 1] ;
+        }
+      }
+      for(ii = 0; ii < speciesList.length; ii ++)
+      {
+        if(value == speciesList[ii])
+        {
+          speciesElement.value = speciesList[ii + 1] ;
+        }
+      }
+    }
+
+  }
+</script>

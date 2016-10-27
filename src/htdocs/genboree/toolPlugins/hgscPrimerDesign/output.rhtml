@@ -1,0 +1,90 @@
+<%
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/util/util'
+  require 'brl/util/textFileUtil'
+  include BRL::Genboree
+  include BRL::Genboree::ToolPlugins::Util
+  include BRL::Genboree::ToolPlugins
+    
+  def prepForText() # We're dump html, true, but to an external ruby rhtml page (so just text)
+      return if(@prepped4output)
+      @req.headers_out['Content-Type'] = @req.content_type = 'text/plain'
+      @req.headers_out['Accept-Ranges'] = 'bytes'
+      @req.status = 200
+      @req.send_http_header
+      @prepped4output = true
+      # Remove Apache buffering on the response object...else apache buffers until
+      # the request is done. Generally we avoid this, but for D/L it can be good.
+      @resp.sync_output = true
+  end 
+  
+  # CGI/Apache variables
+  cgi = CGI.new
+  @req = Apache.request
+  @resp = $stdout  
+  @err = nil
+  
+  # Key global vars
+  groupId = cgi['groupId'].to_i.untaint
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  tool = cgi['tool'].strip.dup.untaint
+  expname = cgi['expname'].strip.dup.untaint
+  directDownload = cgi['download'].empty? ? false : true
+  
+  [ expname, tool ].each { |xx| xx.gsub!(/\.\./, '') ; xx.gsub!(/\\/, '') ; xx.gsub!(/\~/, ''); xx.gsub!(/\//, '_') } # Prevent path injection attacks, sort of.
+
+	prepForText()
+	
+  # Locate the file(s) using the supplied info
+  cleanExpName = expname.gsub( BAD_CHARS_RE, BAD_CHARS_REPLACEMENT )
+  resultsFileBase = "#{RESULTS_PATH}/#{groupId}/#{refSeqId}/#{tool}/#{cleanExpName}"
+  
+  # Make sure we have what we need
+ 	if(groupId != 0 and refSeqId != 0 and !tool.empty? and !expname.empty?)
+	 	
+		# This output.rhtml either tries to display the results in-line
+		# or provides a link (to itself) to provide the file directly, presumably for downloading)
+	
+		if(directDownload) # then user clicked a link to download the results directly
+			resultsFileName = "#{resultsFileBase}.raw.gz"
+			if(File::exists?(resultsFileName))
+	    	reader = IO.popen( "gunzip -c #{resultsFileName.gsub(/ /, '\ ')}" )
+	    	reader.each { |line| puts line }
+	    	reader.close()
+	    end
+	    
+		else # display in-line if we can, else provide a link for direct download
+%>
+			<div id="results" name="results" style="white-space: nowrap ;padding:2px; margin-left:5px;margin-top:10px;width:660px;height:500px;overflow:auto;border:black 1px solid">
+<%
+			resultsFileName = "#{resultsFileBase}.results.gz"
+			# Make sure it exists before trying to display it
+	  	if(File::exists?(resultsFileName))
+	  		# If it is too big, we will display a LINK rather than the contents
+	   		if( File::size(resultsFileName) <= 50_000 )
+	      	reader = IO.popen("gunzip -c #{resultsFileName.gsub(/ /, '\ ')}")
+	      	reader.each { |line| print line }
+	      	reader.close()
+	      else
+%>
+		      <P>
+	  	    The result file is <B>too large</B> to display within a web page.
+	    	  <P>
+	      	Use the link below to do a <I>&quot;Save As&quot;</I> on the file<BR>
+	      	(e.g. via right-click or control click).
+	      	<P>
+	      	<UL>
+	        	<LI><A HREF=<%= "#{cgi.script_name}/?groupId=#{groupId}&refSeqId=#{refSeqId}&tool=#{CGI.escape(tool)}&expname=#{CGI.escape(expname)}&download=#{directDownload.to_s}" %>>Primer3 Raw Output File</A></LI>
+	      	</UL>
+	     		<P>
+<%
+	    	end
+	  	end
+%>
+
+			</div>
+<%
+		end
+	end
+%>

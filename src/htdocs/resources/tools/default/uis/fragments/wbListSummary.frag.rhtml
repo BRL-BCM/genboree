@@ -1,0 +1,35 @@
+<%
+  # Construct an HTML table based on a list of URIs of form
+  # ---------------------
+  # | @label | uriLabel |
+  # | @label | uriLabel |
+  # | ...    | ...      |
+  # ---------------------
+  # @param [Array<String>] @wbList 
+  # @param [String] @label
+  # where uriLabel is the last component of each URI in the wbList
+  @wbList = [ @wbList ] unless(@wbList.is_a?(Array))
+  @label = "Item" if(@label.nil? or @label.empty?)
+%>
+<table width="100%">
+<%  if(@wbList.empty?) %>
+      <tr>
+        <th><%= @label %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @wbList.each { |item|
+        uriObj = URI.parse(item)
+        itemLabel = uriObj.path.split("/").last
+%>
+        <tr>
+          <th><%= @label %>:</th>
+          <td><i><%== itemLabel %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

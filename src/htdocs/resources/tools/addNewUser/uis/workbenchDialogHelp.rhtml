@@ -1,0 +1,84 @@
+<%
+  width = (@hasAccess ? 500 : 320)
+  height = (@hasAccess ? 425 : 320)
+%>
+<div style="height: <%=height%>px; width: <%=width%>px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+        This tool will allow you to add a new user (not currently registered with Genboree) to a group of your choice and register the user with one of the following roles:
+        <ul>
+          <li>Administrator: Has ownership access to all contents in the group. Can delete, edit and add users to group and upload annotations to any of the databases in the group.</li>
+          <li>Author: Has read/write access to all contents in the group. Cannot delete, edit and add users to group but can upload annotations to any of the databases in the group.</li>
+          <li>Subscriber: Has only read access to contents in the group. Cannot create groups or databases or upload annotations to a database</li>
+        </ul>
+        <br>&nbsp;<br>
+        The registration details will be sent to the email provided. All fields except 'Institution' are mandatory.
+        <br>&nbsp;<br>
+        Note that this tool is not multi-host compliant and cannot be used to add users to groups on a different host other than the one pointed to by the URL in your browser.
+        <br>&nbsp;<br>
+        "
+
+      })
+  %>
+   <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 <u>group</u> into &quot;Output Targets&quot;. You will be able to add users to this group. ' ],
+        :types              => [ [ 'Group', 'min: 1 ; max: 1' ]],
+        :beEmpty            => false
+      })
+  %>
+
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'First Name',    'First name of the new user. ' ],
+          [ 'Last Name',    'Last name of the new user. ' ],
+          [ 'Email Address',    'Email Address of the new user. ' ],
+          [ 'Institution',    'Institution the new user is associated with [Optional]. ' ],
+          [ 'Role',    'Select a role for the new user. ' ],
+          [ 'Submit', "Once you've reviewed the user to be added, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool developed internally and integrated into the Workbench by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+<%
+  else # User does not have access
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+<%
+  end
+%>
+</div>

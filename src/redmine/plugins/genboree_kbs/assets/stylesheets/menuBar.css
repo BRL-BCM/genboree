@@ -1,0 +1,9 @@
+.genbKb-menubar-iconText  {
+  display: inline ;
+  padding: 2px 0px 2px 20px ;
+}
+
+.genbKb-menubar-searchText {
+  background: url(../images/silk/find.png) no-repeat scroll 0 0 rgba(0, 0, 0, 0) ;
+}
+

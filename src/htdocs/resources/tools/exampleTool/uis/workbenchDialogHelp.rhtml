@@ -1,0 +1,99 @@
+<%#
+  This page will be rendered into tool Help HTML. The page will have these
+  instance variables available in its lexical scope, which will contain
+  the current contents of the corresponding workbench JSON section [parsed
+  into Ruby data structures]:
+  - @inputs, @outputs, @context, @settings
+
+  DIALOG WIDTH:
+
+  By default the dialogs will have a default width and height and will be
+  automatically sized and centered. You should try to fit within that size or
+  [especially for height] let the dialog auto-scroll.
+
+  However, auto-scrolling horizontally is often annoying. If you must
+  have a wider dialog, you can do this by overriding the width (or even
+  tweaking the height) of the <div> element below using a CSS style:
+      <div style="width: 800px;" >
+
+  HELPERS:
+
+  If you need to extract the name of a resource from a URI found in @inputs
+  or @outputs, use this helper class method:
+  - BRL::Genboree::Tools::WorkbenchFormHelper.getNameFromURI()
+    . it takes the resource type shorthand preceding the name (trk, grp, etc)
+      and the URI to extract the name from.
+    . it does exactly that; if you have more complex scenarios, you'll need
+      to do the extracting/matching yourself (or add a helper method we can
+      all share)
+
+  You can either put a bunch of raw RHTML here, or you can make use of
+  standard template fragments + renderFrag() to make your RHTML for you.
+  Using the standard fragments is recommended to:
+  . acheive a consistent style/look for all tools
+  . make changes to the views easier (just change fragment, not every
+    tool-specific rhtml file with HTML that needs updating)
+  . improve speed: renderFrag() makes use of memory-cached rhtml objects that
+    have already bee converted; very little disk I/O is thus necessary
+  . write shorter code: especially for simple fragments
+  . easy tool-specific customization: renderFrag() will look for a tool-specific
+    fragment FIRST and if not found (as typical), it will use the default
+    fragment; this means that you can easily customize/tweak the fragment
+    simply by overriding it
+%>
+<%# INIT %>
+<%
+%>
+
+<%# RENDER HTML %>
+<div style="height: 440px;" class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :errorMsg => @context['wbErrorMsg'] } ) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+          'Here there should be some orientation info about what this tool does and
+          generally how to do it.'
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag 1+ <u>entityType1</u> into &quot;Input Data&quot;.',
+          'Drag 1 <u>entityType2</u> into &quot;Input Data&quot;.'
+        ],
+        :types              =>
+        [
+          [ 'entityType1',  'min: 1 ; max: (any)' ],
+          [ 'entityType2',  'min: 1 ; max: 1']
+        ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Output resource summary %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOutputInstructions,
+      {
+        :instructions       => [ 'Drag 1 destination <u>entityType3</u> &quot;Output Targets&quot;.' ],
+        :types              => [ [ 'entityType3', 'min: 1 ; max: 1' ] ],
+        :beEmpty            => true
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        [ 'WidgetLabel1', "Describe how to use Widget1."],
+        [ 'WidgetLabel2', "Describe how to use Widget2."],
+        [ 'Submit', "Once you've reviewed the input data, the output destination(s), and your tool-specific settings, click &quot;Submit&quot;."]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         => [ [ 'All tools should have a short sentence about who developed the tool.', '(optionally a URL and or journal reference goes here; or nil if n/a' ] ]
+      })
+  %>
+</div>

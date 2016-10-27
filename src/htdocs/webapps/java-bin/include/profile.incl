@@ -1,0 +1,59 @@
+<%
+    String eP = request.getParameter( "eP" );
+    String cP = request.getParameter( "cP" );
+    boolean changePassword = false;
+    boolean editProfile = false;
+    boolean isProfile = false;
+
+   if( eP != null && cP == null){
+         editProfile = true;
+         changePassword = false;
+   }
+   else if( eP == null && cP != null )
+   {
+         editProfile = false;
+         changePassword = true;
+   }
+   else{
+         editProfile = false;
+         changePassword = false;
+   }
+
+	String[] __navHrefs2 = {
+	          "mygenboree.jsp?cP=yes"
+		};
+	String[] __navLabs2 = {
+		  "Change&nbsp;password"
+		};
+
+	String[][] __ahrefs = null;
+	String[][] __alabs = null;
+	__ahrefs = new String[1][];
+	__ahrefs[0] = __navHrefs2;
+	__alabs = new String[1][];
+	__alabs[0] = __navLabs2;
+
+	for( int iTab=0; iTab<__ahrefs.length; iTab++ )
+	{
+		out.println( "<table border=\"0\" cellpadding=\"2\" cellspacing=\"4\"><tr>" );
+		String[] __hrefs = __ahrefs[iTab];
+		String[] __labs = __alabs[iTab];
+		for(int _z=0; _z<__hrefs.length; _z++ )
+		{
+		    boolean __is_hilit = false;
+            isProfile = __is_hilit;
+            if(iTab == 0 && _z == 0 && editProfile) __is_hilit = true;
+            if(iTab == 0 && _z == 1 && changePassword) __is_hilit = true;
+
+            String __style = __is_hilit ? "nav_selected" : "nav";
+			String __f1 = __is_hilit ? "<font color=\"white\">" : "";
+			String __f2 = __is_hilit ? "</font>" : "";
+            if(isProfile) __is_hilit = false;
+		    String __a1 = __is_hilit ? "" : "<a href=\"" + __hrefs[_z] + "\">";
+		    String __a2 = __is_hilit ? "" : "</a>";
+%><td class="<%=__style%>"><%=__a1%><%=__f1%><%=__labs[_z]%><%=__f2%><%=__a2%></td>
+<%
+		}
+%></tr>
+</table>
+<%	} %>

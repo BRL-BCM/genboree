@@ -1,0 +1,277 @@
+<%
+  $VERBOSE = nil
+  require 'open-uri'
+  require 'cgi'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/toolPlugins/util/util'
+  require 'brl/genboree/toolPlugins/wrappers'
+  include BRL::Genboree
+  include BRL::Genboree::ToolPlugins
+  include BRL::Genboree::ToolPlugins::Util
+
+  # Helper Methods
+  def prepForHtml()  # Tell apache we're going to make some html
+    return if(@prepped4output)
+    @req.headers_out['Content-Type'] = @req.content_type = 'text/html'
+    @req.status = 200
+    @req.send_http_header
+    @prepped4output = true
+  end
+
+  # CGI/Apache variables
+  cgi = CGI.new
+  @prepped4output = false
+  @req = Apache.request
+  @resp = $stdout
+
+  # Get group/database X-Headers *incoming* from Genboree.
+  # Test genboree syncing of group/db (when genboree fixed, this should be
+  # used to set group/db in UI)
+  currGroupId = getGroupIdXHeader(@req).to_i
+  currDatabaseId = getDatabaseIdXHeader(@req).to_i
+  currGroupName = getGroupNameXHeader(@req)
+  currDatabaseName = getDatabaseNameXHeader(@req)
+
+  # Key global vars
+  wrapper = BRL::Genboree::ToolPlugins::OuterWrapper
+  userId = cgi['userId'].to_i.untaint
+  groupId = cgi['groupId'].to_i.untaint
+  refSeqId = cgi['refSeqId'].to_i.untaint
+  groupId = currGroupId if(groupId == 0)
+  refSeqId = currDatabaseId if(refSeqId == 0)
+  tool = cgi['tool'].strip.dup.untaint
+  expname = cgi['expname'].strip.dup.untaint
+  @err = nil
+
+  expnames = wrapper.getExperimentNames( groupId.to_i, refSeqId, tool )
+
+  groups = wrapper.getGroups( userId )
+  groupId = groups.first[0].to_i if(groupId == 0)
+  databases = wrapper.getDatabases( userId, groupId )
+  [ expname, tool ].each { |xx| xx.gsub!(/\.\./, '') ; xx.gsub!(/\\/, '') ; xx.gsub!(/\~/, ''); xx.gsub!(/\//, '_') } # Prevent path injection attacks, sort of.
+
+  # Set group/database X-Headers *outgoing* to Genboree to reflect any changes:
+  setGroupIdXHeader(@req, groupId)
+  setDatabaseIdXHeader(@req, refSeqId)
+
+  escExistingTracks = []
+  jsTrackMap = ''
+  escAttributesMap = Hash.new {|hh,kk| hh[kk] = []}
+  jsAttrMap = ''
+  if(groupId > 0 and refSeqId > 0)
+    # Get existing tracks list.
+    inner = BRL::Genboree::ToolPlugins::InnerWrapper
+    # Get hash of track info (each has dbNames key with array of databases with the track)
+    tracks = inner.getTracks(refSeqId, userId)
+    tracks.each_key {|trackName|
+      track = tracks[trackName]
+      escExistingTracks << "#{CGI.escape(track['fmethod'])}:#{CGI.escape(track['fsource'])}"
+    }
+    jsTrackMap << "var jsTrackMap = $H({" ;
+    if(escExistingTracks.size > 0)
+      jsTrackMap << "'"
+      jsTrackMap << escExistingTracks.join("': true, '")
+      jsTrackMap << "': true }) ; "
+    else
+      jsTrackMap << "}) ; "
+    end
+    # Get attribute map
+    attrMap = inner.getAttributeMap(refSeqId, userId)
+    attrMap.each_key { |trackName|
+      attrs = attrMap[trackName]
+      attrs.each { |attr|
+        escAttributesMap[CGI.escape(trackName)] << CGI.escape(attr)
+      }
+    }
+    if(escAttributesMap.size > 0)
+      jsAttrMap << "var jsAttrMap = $H(" ;
+      jsAttrMap << escAttributesMap.to_json ;
+      jsAttrMap << ") ; "
+    end
+  end
+
+  prepForHtml()
+%>
+<%
+  if( cgi['type'].strip() != "thanks" || expnames.include?( expname ) )
+    @err = "The job name '" + expname + "' is already in use.  Please select another." if(expnames.include?( expname ))
+%>
+    <script type="text/javascript">
+      <%= jsTrackMap %>
+      <%= jsAttrMap %>
+    </script>
+    <font color="#5947B3" size="+0"><strong>Select &amp; Configure a Tool Plug-In for Execution:</strong></font>
+    <BR>
+    <font size="-2">( Plug-in <b>results</b> can be found by clicking <A HREF="/java-bin/toolPluginsResults.jsp">Tools -&gt; Plug-in Results</A>.)
+    <P>
+    <form name="usrfsq" id="usrfsq" action="/java-bin/toolPluginsWrapper.jsp" method="post">
+    <input type="hidden" name="userId" value="<%= userId %>">
+    <table border="0" cellpadding="4" cellspacing="2" width="100%">
+    <tr>
+      <!-- Select Group -->
+      <td class="form_header">
+        <B>Group</B>
+      </td>
+      <td class="form_header">
+        <select name="groupId" id="groupId" onChange='handleSubmit(event)' class="txt" style="width:300">
+          <option <%= " selected" if(groupId == 0) %> value="">Select Group</option>
+          <%   groups.each { |group| %>
+                <% next if(group[1] == "Public") %>
+                <option value="<%= group[0] %>"<%= " selected" if(groupId.to_s == group[0].to_s) %>><%= group[1] %></option>
+          <%  } %>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="height:12"></td>
+    </tr>
+
+    <tr>
+      <!-- Select Database -->
+      <td class="form_header">
+        <B>Database</B>
+       </td>
+      <td class="form_header">
+        <select name="refSeqId"  class="txt" id="refSeqId" style="width:300" onChange='handleSubmit(event)'>
+         <option <%= " selected" if(refSeqId == 0) %> value="" >Select Database</option>
+         <% unless(groupId == 0)
+              databases.each { |db| %>
+                <option value="<%= db[3] %>"<%= " selected" if(refSeqId.to_s == db[3].to_s) %>><%= db[2] %></option>
+         <%   } %>
+         <% end %>
+        </select>
+      </td>
+    </tr>
+
+    <tr>
+      <!-- Select Tool (actually a function) -->
+      <td class="form_body" width="100">
+        <B>Select Tool</B>
+       </td>
+      <td class="form_body" >
+        <select name="tool" id="tool" onChange="handleSubmit(event)">
+          <option value="" <%= "selected" if(tool.empty?) %>>Select a Tool</option>
+          <%
+            toolList = BRL::Genboree::ToolPlugins::Tools.list()
+            toolOrder = BRL::Genboree::ToolPlugins::Tools.order()
+            toolOrder.each{ |toolSym| # each registered tool
+              toolClass = BRL::Genboree::ToolPlugins::Tools.list[toolSym]
+              toolClass.functions.each_key { |functionName|  # each function within tool
+                functionDisplayName = toolClass.functions[functionName][:displayName]
+                functionValueName = toolClass.functions[functionName][:internalName]
+          %>
+              <option value="<%= functionValueName %>" <%= "selected" if(tool == functionValueName) %>><%= functionDisplayName %></option>
+          <%
+              }
+            }
+          %>
+        </select>
+      </td>
+    </tr>
+
+    </table>
+    </form>
+
+    <% # Get the tool's UI, if appropriate
+      input = nil
+      if( groupId != 0 and refSeqId != 0 and !tool.empty? and BRL::Genboree::ToolPlugins::Tools.list().key?(tool.to_sym) )
+        input = "/#{tool}/input.rhtml?userId=#{userId}&refSeqId=#{refSeqId.to_i}&groupId=#{groupId.to_i}&tool=#{tool}".dup.untaint
+      end
+    %>
+    <div style="text-align: center; color: red;"><%= @err.nil? ? "" : @err %></div>
+    <%= input ? open( ("http://#{@req.hostname}/genboree/toolPlugins" + input).dup.untaint ).read : "" %>
+
+<% else # Params are being submitted to a tool %>
+    <%
+      timeStamp = Time.now.to_i
+      cgi.params.delete("type") # Get rid of these because we don't want to pass them to the command line
+      groupId = groupId.to_i
+
+      # Execute command line tool for extraction of LFF data
+      # Loop through all lff requests (all POST params that end in "_lff")
+      trackList = []   # List of genboree tracks
+      commandList = [] # The list of command to execute (in order)
+      cgi.params.each_key { |param|
+        trackList << cgi[param]  if(param =~ /_lff$/) # Is this an AUTO-DETECTED track-name parameter?
+      }
+      # For each AUTO-DETECTED track-name from the form,
+      # AUTO-PREPARE an LFF file for convenience.
+      checkOutputDir( LFF_OUTPUT_PATH )
+      # Let's put the auto-lff in the actual tool execution directory! Much more convenient and localized.
+      actualResultsPath = "#{RESULTS_PATH}/#{groupId}/#{refSeqId}/#{tool}"
+      checkOutputDir( actualResultsPath ) # make sure output dir exists
+      trackList.each { |track|
+        tmpTrack = CGI.escape(CGI.unescape(track) + "")
+        cleanTrack = CGI.escape(track) # Make the track ultra-safe for DIR-naming; double escape
+        commandList << (  "java -classpath #{JCLASS_PATH} -Xmx1800M " +
+                          " org.genboree.downloader.AnnotationDownloader " +
+                          " -u #{userId}" +
+                          " -r '#{refSeqId}' " +
+                          " -m '#{tmpTrack}' " +
+                          " > #{actualResultsPath}/#{userId}_#{refSeqId}_#{cleanTrack}_#{timeStamp}.lff " )
+        $stderr.puts "#{'-'*60}\naccessWrapper.rhtml: AUTO DOWNLOAD TRACK COMMAND =>\n#{commandList[-1]}\n#{'-'*60}"
+      }
+
+      # Construct execution string
+      commandArgs = [] # List of --ARG=VAL pairs to hand to the tool program
+      cgi.params.each_key { |param|
+        paramVal = cgi[param].strip
+        #paramVal = cgi[param].gsub(/\\/, '')
+        commandArgs << [ param, paramVal]
+        commandArgs << [ "#{param}_ORIG", paramVal.strip ] if(param =~ /_lff$/)
+      }
+      # Fix the command args to reflect actual file locations (eg auto-lff downloaded files)
+      commandArgs.each_index { |ii|
+        # Expand paths for LFF data
+        if(commandArgs[ii][0] =~ /_lff$/) # If it's an AUTO-LFF form field, then we need to expand
+          cleanArg = CGI.escape(commandArgs[ii][1]) # Make the arg ultra-safe for DIR-naming
+          commandArgs[ii][1] = "#{actualResultsPath}/#{userId}_#{refSeqId}_#{cleanArg}_#{timeStamp}.lff"
+        end
+      }
+      # Execute tool based on compiled form data
+      toolCommand = "export RUBYLIB=#{RUBY_LIB_DIR} ; #{RUBY_EXEC} -I #{RUBY_LIB_DIR} #{TOOL_LIBRARY_PATH}/executionWrapper.rb "
+      commandArgs.each { |commandArg|
+        toolCommand += " --#{commandArg[0]}='#{CGI.escape(commandArg[1])}' "
+      }
+      cleanExpName = expname.gsub( BAD_CHARS_RE, BAD_CHARS_REPLACEMENT ) # Ultra-safe expname for FILE-naming
+      outputFileBase = "#{actualResultsPath}/#{cleanExpName}"
+      toolCommand += " --output='#{outputFileBase}' > " + outputFileBase.gsub(/ /, '\ ') + ".out 2> " + outputFileBase.gsub(/ /, '\ ') + ".err "
+      commandList << toolCommand
+      commandList << ("gzip " + outputFileBase.gsub(/ /, '\ ') + '.out 2> /dev/null ')
+      commandList << ("gzip " + outputFileBase.gsub(/ /, '\ ') + '.err 2> /dev/null ')
+
+      # Create executable script, so we can nohup it
+      executeFile = BRL::Genboree::ToolPlugins::Util.write_to_scratch( commandList.join("\n\n#\n#\n\n") )
+      File.chmod( 0740, executeFile )
+      system( "nohup /bin/sh #{executeFile} &" )
+      # cleanup_files( executeFile )
+    %>
+    <div id="thanks" style="text-align: left;">
+      <% user = BRL::Genboree::ToolPlugins.getUser( userId ) %>
+      <b><%= user[3,2].join(" ")%></b>,
+      <br><br>
+      Your data has been submitted for analysis.
+      <br><br>
+      Since the job may take a while to complete (depending on the tool and the quantity of data), we will send you a confirmation email when it is complete.
+      <br><br>
+      If you do not receive such an email within 48 hours, please feel free to contact our administrator.
+      <br><br>
+      When contacting us, please be sure to include the following information about your data transaction:
+      <br><br>
+      <B>Login Name:</B> <%= user[1] %>
+      <br>
+      <B>Date:</B> <%= Time.now %>
+      <br>
+      <B>Job Name:</B> <%= cleanExpName %>
+      <br>
+      <B>Tool:</B> <%= tool %>
+      <br>
+      <B>Method:</B> <%= cgi['function'] %>
+    </div>
+<%
+  end
+  # Try to clean up wrapper's resources
+  # Should only have to clear out ones in BRL::Genboree::ToolPlugins module
+  # from wrappers.rb, since the rest should be using it.
+  BRL::Genboree::ToolPlugins.clear()
+%>

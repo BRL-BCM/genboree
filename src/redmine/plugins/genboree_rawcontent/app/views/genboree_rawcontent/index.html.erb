@@ -1,0 +1,14 @@
+<%# Currently future functionality: %>
+<%# = render :partial => "upload" if User.current.allowed_to?(:edit_genboree_rawcontent_doc, @project) -%>
+
+<% content_for :header_tags do %>
+    <%= stylesheet_link_tag 'dir_list', :plugin => 'genboree_rawcontent' %>
+<% end %>
+
+<!-- Build table of contents if can. -->
+<%  if(@tocFiles.is_a?(Array) and !@tocFiles.empty?) %>
+      <%= render :partial => 'dir_list' %>
+<%  else %>
+  <br>
+  <i>(No files or directories present.)</i>
+<% end %>

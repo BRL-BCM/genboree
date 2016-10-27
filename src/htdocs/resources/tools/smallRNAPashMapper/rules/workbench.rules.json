@@ -1,0 +1,83 @@
+{
+  "inputs": {
+    "maxItemCount": null,
+    "ruleSet": [
+      [
+        "/file/(?:[^/ \\t\\n\\?]+/)*[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ],
+      [
+        "/trk/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        null
+      ]
+    ],
+    "minItemCount": 1
+  },
+  "settings": {
+    "patterns": {
+      "gap": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Gap should either be empty or an integer."
+      ],
+      "maxMappings": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Max Mappings should either be empty or an integer."
+      ],
+      "kSpan": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "kSpan should either be empty or an integer."
+      ],
+      "sampleName": [
+        "^(?:^.+$)$",
+        "Sample Name cannot be left blank"
+      ],
+      "kWeight": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "K Weight should either be empty or an integer."
+      ],
+      "lffSubType": [
+        "^(?![:\t \n])[^:]*[^:\t \n]$",
+        "The Output Track Name can not be blank, cannot contain ':', and cannot begin or end with whitespace."
+      ],
+      "topPercent": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Top Percent should either be empty or an integer."
+      ],
+      "lffType": [
+        "^(?![:\t \n])[^:]*[^:\t \n]$",
+        "The Output Track Name can not be blank, cannot contain ':', and cannot begin or end with whitespace."
+      ],
+      "diagonals": [
+        "^(?:^\\s*$)|(?:^\\s*\\d+\\s*$)$",
+        "Diagonals should either be empty or an integer."
+      ],
+      "analysisName": [
+        "^(?:^.+$)$",
+        "Analysis Name cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/files\\?$",
+        0,
+        1
+      ],
+      [
+        "/db/[^/ \\t\\n]+(\\?.*)?$",
+        0,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

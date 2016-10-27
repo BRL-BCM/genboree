@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /genboree/protoSearch.rhtml
+Disallow: /genboree/genboreeSearchWrapper.rhtml

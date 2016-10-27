@@ -1,0 +1,312 @@
+<%# THIS FILE USES eruby %>
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'pp'
+  require 'stringio'
+  require 'timeout'
+  require 'cgi'
+  require 'json'
+  require 'net/http'
+  require 'uri'
+  require 'brl/util/util'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/util/timingUtil'
+  require 'brl/genboree/genboreeContext'
+  require 'brl/genboree/projectManagement/projectManagement'
+
+  $VERBOSE = true
+  cgi = CGI.new()
+  @req = Apache.request
+  serverName = cgi.host
+  serverName += ":#{cgi.server_port}" if(cgi.server_port != 80)
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  OK = 0
+
+  # --------------------------------------------------------------------------
+  # METHODS
+  # --------------------------------------------------------------------------
+  def makeTrackData(users, trackRows, trackAccessRows)
+    trackAccessData = Hash.new { |hh,trackName| hh[trackName] = {} }
+    trackRows.each { |trackRow|
+      trackId = trackRow['ftypeid']
+      trackName = "#{trackRow['fmethod']}:#{trackRow['fsource']}"
+      trackAccessData[trackName] = {}
+      trackAccessRows.each { |trackAccessRow|
+        next unless(trackAccessRow['ftypeid'] == trackId)
+        userId = trackAccessRow['userId']
+        permissionBits = trackAccessRow['permissionBits']
+        hasAccess = BRL::Genboree::DBUtil.testPermissionBits(permissionBits)
+        if(hasAccess)
+          trackAccessData[trackName][users[userId]] = true
+        end
+      }
+    }
+    return trackAccessData
+  end
+
+  # Note: this method will skip the Administrator user
+  def makeTrackDataJSstr(users, trackAccessData)
+    sio = StringIO.new()
+    sio << "trackAccessData = $H({ "
+    trackAccessData.each_key { |trackName|
+      sio << "  '#{CGI.escape(trackName)}' : $H({ "
+      users.each_key { |userId|
+        userName = users[userId]
+        next if(userName == 'admin') # skip the admin special user
+        sio << " '#{CGI.escape(userName)}' : "
+        if(trackAccessData[trackName].key?(userName))
+          sio << " #{CGI.escape(trackAccessData[trackName][userName])},"
+        else
+          sio << " false,"
+        end
+      }
+      sio.truncate(sio.size-1)
+      sio.pos -= 1
+      sio << " }),"
+    }
+    sio.truncate(sio.size-1)
+    sio.pos -= 1
+    sio << " }) ;"
+    return sio.string
+  end
+
+  def updateUserAccessToTrack(users, trackRows, context)
+    retVal = true
+    trackNameSelected = context[:userCheckData]['track']
+    removeAllAccessLimits = context[:userCheckData]['removeAllAccessLimits']
+    # Invert users hash so we can get userIds from long-name(username) strings
+    userName2userId = users.invert
+    # Find the trackId of the selected track to change access for
+    trackId = nil
+    trackRows.each { |trackRow|
+      trackName =  "#{trackRow['fmethod']}:#{trackRow['fsource']}"
+      if(trackName == CGI.unescape(trackNameSelected))
+        trackId = trackRow['ftypeid']
+        break
+      end
+    }
+    if(trackId.nil?)
+      raise "#{'-'*50}\nERROR: couldn't find ftypeid for selected trackName of #{trackNameSelected.inspect}. trackRows to look through was:\n#{trackRows.inspect}\n#{'-'*50}"
+    end
+
+    # Set track access limits for some or all of users
+    if(removeAllAccessLimits) # access for all...remove limits
+      rowCount = context[:dbu].removeAllAccessLimits(trackId)
+    else # access for some, not for others
+      # Collect arrays of who can access and who can't
+      userIdsWithAccess = []
+      userIdsWithoutAccess = []
+      context[:userCheckData]['userAccess'].each { |userAccessObj|
+        currUserName = CGI.unescape(userAccessObj['userName'])
+        currUserId = userName2userId[currUserName]
+        if(userAccessObj['access'])
+          userIdsWithAccess << currUserId
+        else
+          userIdsWithoutAccess << currUserId
+        end
+      }
+      # Give access to users
+      context[:dbu].giveTrackAccess(trackId, userIdsWithAccess)
+      # Revoke access to users
+      context[:dbu].revokeTrackAccess(trackId, userIdsWithoutAccess)
+    end
+    return retVal
+  end
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  context = dbu = nil
+  begin
+    context = BRL::Genboree::GenboreeContext.new(cgi, ENV)
+    # Context In variables
+    self.extend(BRL::Genboree) # For X-Header methods (need to add them to the -object- here)
+    context[:mode] = context.cgi['mode'].strip
+    context[:groupId] = groupId = getGroupIdXHeader(@req)
+    context[:refSeqId] = getDatabaseIdXHeader(@req)
+    context[:userId] = context.cgi['userId']
+    context[:userCheckDataStr] = context.cgi['userCheckData']
+    unless(context[:userCheckDataStr].empty?)
+      context[:userCheckData] = JSON.parse(context[:userCheckDataStr])
+    end
+    context[:submitted] = ((context[:userCheckData].nil? or context[:userCheckData].empty?) ? false : true)
+    # $stderr.puts "DEBUG: trackAccessControl.rhtml was given X-Headers: groupId=>#{context[:groupId]} , refSeqId=>#{context[:refSeqId]}, userId param of: #{context[:userId]}"
+    context[:errCode] = OK
+    context[:err] = nil
+
+    # ---------------------------------------------------------------------------
+    # CONTENT
+    # ---------------------------------------------------------------------------
+    # First, get genboree config and a dbUtil instance
+    context[:genbConfig] = genbConfig = BRL::Genboree::GenboreeConfig.load()
+    context[:dbu] = dbu = BRL::Genboree::DBUtil.new(genbConfig.dbrcKey, nil, nil)
+%>
+    <link type="text/css" href="/styles/trackAccessControl.css?jsVer=<%= genbConfig.jsVer %>" rel="stylesheet"></link>
+    <script type='text/javascript' src='/javaScripts/prototype.js?jsVer=<%= genbConfig.jsVer %>'></script>
+    <script type='text/javascript' src='/javaScripts/json2.js?jsVer=<%= genbConfig.jsVer %>'></script>
+    <%
+      # Is user allowed to manage track access for this group?
+      isManageAllowed = BRL::Genboree::GenboreeDBHelper.checkUserAllowed(context[:userId], context[:groupId], 'o', dbu)
+      showForm = isManageAllowed
+      feedbackMsg = nil
+      if(!isManageAllowed)
+        feedbackMsg = "<div class='error'>ERROR: You do not have permission to manage user's access to this group's tracks.</div>"
+        showForm = false
+      elsif(!context[:refSeqId].nil? and !context[:groupId].nil?)
+        # Get users in group
+        usergroupRows = dbu.getUsersInGroup(groupId)
+        userList = {}
+        usergroupRows.each { |row| userList[row['userId']] = row }
+        usergroupRows.clear
+        userRows = dbu.getUsersByUserIds(userList.keys)
+        users = {}
+        userRows.each { |row|
+          next if(row['name'] == 'admin') # skip special admin user
+          users[row["userId"]] = "#{row['firstName']} #{row['lastName']} (#{row['name']})"
+        }
+        # Connect to user database on correct server host
+        dbu.setNewDataDb(context[:refSeqId].to_i)
+        dbu.connectToDataDb()
+        # Get local track list for group & database
+        trackRows = BRL::Genboree::GenboreeDBHelper.selectAllUserSpecificFtypes(context[:refSeqId], true, dbu)
+        trackIds = []
+        trackRows.each { |row| trackIds << row['ftypeid'] }
+        BRL::Genboree::GenboreeDBHelper.selectAllUserSpecificFtypes(context[:refSeqId], true, dbu)
+        # If we are processing submitted data, update fytpeAccess table appropriately using the data
+        if(context[:submitted])
+          updateOk = updateUserAccessToTrack(users, trackRows, context)
+          if(updateOk)
+            feedbackMsg = "<div class='success'>SUCCESS: Updated access to track #{CGI.escapeHTML(CGI.unescape(context[:userCheckData]['track']))}.</div>"
+          end
+        end
+        # Get access info for tracks in this database
+        trackAccessRows = dbu.getTrackAccessForTracks(trackIds)
+        # Make a Ruby data structure where {type:subtype->{userName -> true}}
+        context[:trackAccessData] = makeTrackData(users, trackRows, trackAccessRows)
+        # Make a Javascript data structure string of {type:subtype->{userName -> true|false}}
+        context[:trackDataJSstr] = makeTrackDataJSstr(users, context[:trackAccessData])
+      else # not enough info yet
+        showForm = false
+      end
+
+      if(!feedbackMsg.nil?)
+%>
+        <%= feedbackMsg %>
+<%
+      end
+
+      if(showForm)
+%>
+        <form id='trackAccessControl' name='trackAccessControl' method='post' action='trackAccessControl.jsp?mode=<%=context[:mode]%>' >
+          <input id="userCheckData" name="userCheckData" type="hidden" value="">
+          <script type="text/javascript">
+            <%= context[:trackDataJSstr] %>
+          </script>
+          <script type='text/javascript' src='/javaScripts/trackAccessControl.js?jsVer=<%= genbConfig.jsVer %>'></script>
+          <table width="100%" cellspacing="2" cellpadding="4" border="0">
+          <tr>
+            <td class="form_body"><b>Track:</b></td>
+            <td class="form_body">
+              <select id="trackName" name="trackName" class="txt trackName" onchange="return trackChanged(this, trackAccessData) ;">
+                <option value='----Select a Track----'>----Select a Track----</option>
+<%
+                optionsStr = ''
+                context[:trackAccessData].keys.sort { |aa, bb| aa.downcase <=> bb.downcase }.each { |trackName|
+                  escTrackName = CGI.escapeHTML(trackName)
+                  optionsStr << %Q{ <option id="#{escTrackName}" name="#{escTrackName}" value="#{escTrackName}" >#{escTrackName}</option> }
+                }
+%>
+                <%= optionsStr %>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td class="form_body" colspan='2'>
+              <div id="usersWithAccess" name="usersWithAccess">Users With Access:</div>
+              <div id="allNone" name="allNone" class="allNone">
+                <input id="all" name="all" class="btn" type="button" value="All" style="width: 26px ;" onclick="return selectAllUsers(this);" >
+                <input id="none" name="none" type="button" class="btn" value="None" style="width: 40px ;" onclick="return selectNoUsers(this);" >
+              </div>
+              <br clear="all">
+              <hr>
+              <div id="userTableDiv" name="userTableDiv" style="display:block">
+                <table class="userTable" width="100%">
+<%
+                  # Put all users here, but have all checkboxes disabled (since "Select a Track" is the default selection)
+                  userNamesList = users.values.sort { |aa,bb| aa.downcase <=> bb.downcase }
+                    0.step(userNamesList.size-1, 2) { |ii|
+                      escUserName1 = CGI.escapeHTML(userNamesList[ii].to_s)
+                      escUserName2 = CGI.escapeHTML(userNamesList[ii+1].to_s)
+                      unless(userNamesList[ii].nil?)
+                        userName1 = userNamesList[ii].gsub(/ (\(.+\))$/) { |xx| " <span class='userName'>#{$1}</span>" }
+                      end
+                      unless(userNamesList[ii+1].nil?)
+                        userName2 = userNamesList[ii+1].gsub(/ (\(.+\))$/) { |xx| " <span class='userName'>#{$1}</span>" }
+                      end
+                      rowStr = %Q{
+                        <tr>
+                          <td width="50%">
+                      }
+                      if(userNamesList[ii].nil?)
+                        rowStr << '&nbsp;'
+                      else
+                        rowStr << %Q{ <input id="#{escUserName1}" name="#{escUserName1}" value="#{escUserName1}" type="checkbox" class="userCheck" disabled="disabled"></input>#{userName1} }
+                      end
+                      rowStr << %Q{
+                          </td>
+                          <td width="50%">
+                      }
+                      if(userNamesList[ii+1].nil?)
+                        rowStr << '&nbsp;'
+                      else
+                        rowStr << %Q{ <input id="#{escUserName2}" name="#{escUserName2}" value="#{escUserName2}" type="checkbox" class="userCheck" disabled="disabled"></input>#{userName2} }
+                      end
+                      rowStr << %Q{
+                          </td>
+                        </tr>
+                      }
+%>
+                    <%= rowStr %>
+<%
+                  }
+%>
+                </table>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <div id="btnset2" style="display: block;">
+                <input id="submitted" class="btn" type="button" value="Submit" name="submitted" onclick="return submitForm();">
+                <input id="cancelled" class="btn" type="button" value=" Cancel " name="cancelled" onclick="window.location='/java-bin/trackmgr.jsp' ; return false;">
+              </div>
+            </td>
+          </tr>
+          </table>
+        </form>
+<%
+      end
+  rescue => err
+    $stderr.puts "-"*50
+    $stderr.puts  "ERROR: problem generating track access management page.\n" +
+                  "- Exception: #{err.message}\n" +
+                  err.backtrace.join("\n")
+    $stderr.puts "-"*50
+%>
+    <font color='red'><b>An error occurred trying to generating track access management page.</b></font>
+<%
+  # --------------------------------------------------------------------------
+  # WRAP UP
+  # --------------------------------------------------------------------------
+  ensure
+    dbu.clear() unless(dbu.nil?)
+    context[:projectRows].clear() unless(context[:projectRows].nil?)
+  end # begin
+%>

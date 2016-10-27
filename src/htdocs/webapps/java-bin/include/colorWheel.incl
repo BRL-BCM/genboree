@@ -1,0 +1,26 @@
+
+<%   String curColor = "";
+
+    int intColor =  annotation.getDisplayColor();
+    // default to white
+    if (intColor ==0 )
+       curColor ="#";
+
+     if (intColor >0)   {
+         curColor = Integer.toHexString(intColor);
+     }
+
+// out.println("current color " + curColor);
+
+String colorImageId ="colorImageId"+i;
+String hiddenInputId ="hiddenInputId"+i;
+%>
+
+<a href="javascript:void null;"  id="wheellink">
+<div name="<%=colorImageId%>" id="<%=colorImageId%>"  class="colorIconLong"  style="background-color:<%=curColor%>"  onClick="setDivId('<%=colorImageId%>', '<%=hiddenInputId%>', '<%=curColor%>');" >
+</div>
+<div class="bottomdivLong" onClick="setDivId('<%=colorImageId%>', '<%=hiddenInputId%>', '<%=curColor%>');">&nbsp;&nbsp;Set Annotation Color</div>
+</a>
+
+<input type="hidden" name="<%=hiddenInputId%>" id="<%=hiddenInputId%>" value="#<%=curColor%>" >
+

@@ -1,0 +1,16 @@
+<span class="rawcontent list_title">Contents of: <span class="rawcontent list_entity"><%= @contentDirRsrcPath %></span></span>
+<div class="autoscroll">
+  <table class="list entries rawcontent" id="browser">
+  <thead>
+    <tr id="root">
+      <th><%= l(:gbrc_label_gb_filedir_name) %></th>
+      <th><%= l(:gbrc_label_gb_filedir_size) %></th>
+      <th><%= l(:gbrc_label_gb_filedir_updated) %></th>
+      <th><%= l(:gbrc_label_gb_filedir_actions) %></th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= render :partial => 'dir_list_content' %>
+  </tbody>
+  </table>
+</div>

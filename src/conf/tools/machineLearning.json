@@ -1,0 +1,14 @@
+{
+  "info": {
+    "idStr": "machineLearning",
+    "version": "0.1",
+    "releaseStatus": "deprecated"
+  },
+  "ui": {
+    "label": "Machine Learning -> QIIME generated OTU table",
+    "shortLabel": "Machine Learning - QIIME"
+  },
+  "cluster": {
+    "walltime": "72:00:00"
+  }
+}

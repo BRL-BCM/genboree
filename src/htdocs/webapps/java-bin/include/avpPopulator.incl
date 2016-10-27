@@ -1,0 +1,36 @@
+<%@ page import="java.util.ArrayList,
+                 java.util.HashMap,
+                 org.genboree.util.GenboreeUtils,
+                 java.util.Collection,
+                 java.util.StringTokenizer,
+                 org.genboree.editor.AnnotationEditorHelper"%>
+<%
+    
+      int myfid = Integer.parseInt(fid); 
+      String nameValues  = GenboreeUtils.findAVPByFid(con, myfid);
+
+
+       if (nameValues != null && nameValues.length() >0) {
+         StringTokenizer st = new StringTokenizer(nameValues, ";");
+          while (st.hasMoreElements()) {
+            String pair = st.nextToken();
+            int index = pair.indexOf("=");
+            if (index>0)
+            {
+                String key= pair.substring(0, index);
+                if (key != null) 
+                 key = key.trim(); 
+                String value = pair.substring(index+1);
+                if (value != null) 
+                  value = value.trim();
+                name2Values.put(key, value);
+            }  
+        }
+      if ( name2Values != null && !name2Values.isEmpty()) {
+          currentIndex = name2Values.size() -1; 
+          mys.setAttribute("name2Values", name2Values);
+      }
+    }
+
+     %>
+

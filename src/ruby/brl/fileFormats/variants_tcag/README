@@ -1,0 +1,17 @@
+USAGE:
+  BRL_UCSC_CNPTCAG.rb -r variation.hg18.v3.txt.gz -t Variants:TCAG.v3 -l 'Structural Variants' -i /users/ybai/work/Variants_TCAG -f variation.hg18.v3_LFF.txt -d /users
+/ybai/work/Variants_TCAG
+  BRL_UCSC_CNPTCAG.rb -r variation.hg17.v3.txt.gz -t Variants:TCAG.v3 -l 'Structural Variants' -i /users/ybai/work/Variants_TCAG -f variation.hg17.v3_LFF.txt -d /users
+/ybai/work/Variants_TCAG
+Notes:
+  The "BRL_UCSC_CNPTCAG.rb" has been tested and the input file (variation.hg17(18).v3.txt.gz) and output file (variation.hg17(18).v3_LFF.txt) have been put under the directory "/users/ybai/work/Variants_TCAG".
+-----------------------------------------------------
+USAGE:
+  BRL_UCSC_INDELTCAG.rb -r indel.hg18.v3.txt.gz -t Indels:TCAG -l 'Structural Variants' -i /users/ybai/work/Variants_TCAG -f indel.hg18.v3_LFF.txt -d /users/ybai/work/
+Variants_TCAG
+  BRL_UCSC_INDELTCAG.rb -r indel.hg17.v3.txt.gz -t Indels:TCAG -l 'Structural Variants' -i /users/ybai/work/Variants_TCAG -f indel.hg17.v3_LFF.txt -d /users/ybai/work/
+Variants_TCAG
+Notes:
+  The "BRL_UCSC_INDELTCAG.rb" has been tested and the input file (indel.hg17(18).v3.txt.gz) and output file (indel.hg17(18).v3_LFF.txt) have been put under the directory "/users/ybai/work/Variants_TCAG".
+
+

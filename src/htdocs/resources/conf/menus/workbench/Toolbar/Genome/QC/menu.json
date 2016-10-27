@@ -1,0 +1,7 @@
+[
+  {
+    "text": "QC Reads by FastQC",
+    "tooltip": "Perform quality control checks on raw sequence data coming from high throughput sequencing pipelines.",
+    "idStr": "fastQC"
+  }
+]

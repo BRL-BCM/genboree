@@ -1,0 +1,116 @@
+<%
+  hasAccess = true
+  width = (hasAccess ? 500 : 320)
+  height = (hasAccess ? 320 : 320)
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  dbApiHelper = BRL::Genboree::REST::Helpers::DatabaseApiUriHelper.new()
+  dbRecs = dbApiHelper.tableRow(@outputs[0])
+  refSeqId = dbRecs['refSeqId']
+  public = false
+  activity = "Publish"
+  if(@dbu.isRefseqPublic(refSeqId))
+    public = true
+    activity = "Retract"
+  end
+%>
+
+<%
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\"return submitToolJob(this);\" method=\"POST\" class=\"wbDialog wbForm\" >"
+%>
+<%= formTag %>
+
+<%# Tool Title %>
+<%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :title => "Publish/Retract Database" } ) %>
+<%
+  if(hasAccess)
+%>
+<%# Overview text %>
+<%=
+    renderStaticFrag(@toolIdStr, :wbToolOverview,
+    { :toolOverview =>
+      "
+        <div style='font-size:80%;color:darkred;width:80%;margin:0px auto 10px auto;'>
+          Please contact <a href='mailto:#{@genbConf.gbAdminEmail}'>#{@genbConf.gbAdminEmail}</a> with questions or comments, or for help using it on your own data.
+        </div>
+        This tool will allow you to publish or retract (already published) an existing <i>Database</i>. Publishing the database allows you to expose database resources to the public.
+        Once published, anyone can view or export the contents of the database without logging into Genboree.
+        <br>&nbsp;<br>
+        For example, publishing the database will allow you to (without logging into Genboree):
+        <ul>
+          <li>Download data from a database.</li>
+          <li>Export data to the UCSC browser.</li>
+        </ul>
+        <br>&nbsp;<br>
+        If the database is already published, the tool will allow you to retract the database (privatize).
+        <br>&nbsp;<br>
+        Note that this tool is not multi-host compliant and you cannot publish a database on a host other than the one pointed to by the URL in your browser.
+        <br>&nbsp;<br>
+      "
+    })
+%>
+<%# Output summary %>
+<%=
+  renderFrag(@toolIdStr, :wbDialogSection,
+  {
+    :sectionTitle => "Database to #{activity}:",
+    :sectionHtml =>
+      renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs} )
+  })
+%>
+<%# Tool-specific UI widgets user provides/reviews %>
+<%
+  if(public)
+%>
+  <%=
+      renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "RETRACT DATABASE:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "This database has been published. You can retract it (make it private) by clicking on 'Retract'."
+      })
+  %>
+<%
+  else
+%>
+  <%=
+      renderFrag(@toolIdStr, :wbSpecialInfoSection,
+      {
+        :sectionTitle => "PUBLISH DATABASE:",
+        :sectionType => :warningInfoSection,
+        :sectionHtml => "This database is private. You can publish it by clicking on 'Publish'."
+      })
+  %>
+<%
+  end
+%>
+<%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit, :value => activity }, { :type => :cancel} ]
+      })
+%>
+</form>
+<script type="text/javascript">
+
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

@@ -1,0 +1,24 @@
+<%
+  @hostList = [ @hostList ] unless(@hostList.is_a?(Array))
+%>
+<table width="100%">
+<%  if(@hostList.empty?) %>
+      <tr>
+        <th><%= (@label || "Host") %>:</th>
+        <td><i>n/a</i></td>
+         <td class="explain"><i>[ None selected ]</i></td>
+      </tr>
+<%
+    else
+      @hostList.each { |item|
+        grp = WorkbenchFormHelper.getHostFromURI(item, true)
+%>
+        <tr>
+          <th><%= (@label || "Host") %>:</th>
+          <td><i><%== grp %></i></td>
+        </tr>
+<%
+      }
+    end
+%>
+</table>

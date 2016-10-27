@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "reasonerV2a1",
+    "releaseStatus": "beta",
+    "version": "2.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Reasoner",
+    "shortLabel": "[NOT SET]"
+  }
+}

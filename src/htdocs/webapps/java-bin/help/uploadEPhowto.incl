@@ -1,0 +1,148 @@
+<!-- PAGE TITLE -->
+<TABLE class="pageTitle" WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+<TR>
+	<TD WIDTH="97%" ALIGN="left" VALIGN="bottom">
+		<FONT class="topicText">HELP TOPIC:</FONT>
+		<FONT class="topicTitle">&quot;3. Uploading Entry Points&quot;</FONT>
+	</TD>
+</TR>
+</TABLE>
+<!-- ON THIS PAGE / SEE ALSO -->
+<HR>
+<DIV class="tocLeft">
+<FONT class="tocText">On This Page:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="#uploadEntrypoints">3.1 How to Upload Entry Points</A></LI>
+  <LI class="compact1_10"><A HREF="#entrypointFormats">3.2 Entry point formats</A>
+    <UL class="compact1">
+      <LI><A HREF="#fastaFile"><FONT CLASS="tocSmall">3.2.1 Fasta file</FONT></A></LI>
+      <LI><A HREF="#3ColumnLFF"><FONT CLASS="tocSmall">3.2.2 3-Column LFF entry point file</FONT></A></LI>
+    </UL>
+  </LI>
+</UL>
+</DIV>
+<DIV class="tocRight">
+<FONT class="tocText">See Also:</FONT><BR>
+<UL class="compact1_10">
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=definingAGenome">2. Defining A Genome</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=uploadAnnoHowto">4. Uploading Annotations</A></LI>
+  <LI class="compact1_10"><A HREF="showHelp.jsp?topic=top"><IMG SRC="/images/home_small.png" class="helpHome" WIDTH="13" HEIGHT="13">&nbsp;Help Home</A></li>
+</UL>
+</DIV>
+<BR CLEAR="ALL">
+<HR>
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="uploadEntrypoints">&nbsp;</A><BR>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">3.1. How to Upload Entry Points:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<P class="body">
+To define custom genomic entry points (e.g. chromosomes):<BR>
+<OL>
+  <LI class>Log into <A HREF="http://www.genboree.org">Genboree</A>.</LI>
+  <LI>Navigate via the menu to <SPAN class="genbLabel">My Databases / Upload Entry Point(s)</SPAN>.</LI>
+  <LI>Select the appropriate <SPAN class="genbLabel">Group</SPAN> and <SPAN class="genbLabel">Database</SPAN> in the droplists.</LI>
+  <LI>Below the database information is an interface for uploading entry points, and a list of any existing entry points.</LI>
+  <LI>Select a file on your computer, select a file format, and click <SPAN class="genbLabel">Upload</SPAN>.</LI>
+  <LI>One of two file types is expected: a <SPAN class="genbLabel"><A class="invisiLink" HREF="#fastaFile">Fasta</A></SPAN> file or a <SPAN class="genbLabel"><A class="invisiLink" HREF="#3ColumnLFF">3-column LFF entry point</A></SPAN> file.</LI>
+  <LI>Wait for the file to be transferred to the Genboree server.</LI>
+  <LI>After the file is transferred, it will be queued for processing and uploading into the
+  database. You will receive an email when the upload has been completed.</LI>
+  <LI>NOTE: to upload, you must have at least the <SPAN class="genbLabel">Author</SPAN> role in the <SPAN class="genbLabel">Group</SPAN>.</LI>
+</OL>
+<P class="body">
+<IMG SRC="/images/epUpload.png" WIDTH="520" HEIGHT="318" BORDER="0">
+<HR class="sep">
+<!-- TOPIC -->
+<!--   Topic Header -->
+<A NAME="entrypointFormats">&nbsp;</A>
+<DIV class="topLabel">
+	<SPAN class="subtopicHeader">3.2. Entry Point File Formats:</SPAN>
+</DIV>
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>
+<!--   Topic Content -->
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="fastaFile">&nbsp;</A>
+<DIV class="subsubtopicHeader">3.2.1. FASTA Sequence File</DIV>
+<!--   Sub-topic content -->
+<UL class="compact2">
+	<LI>- Use this if you have chromosomes or scaffolds in some multi-fasta files.</LI>
+	<LI>- The fasta sequences will determine entry point lengths and will be available to users via the Genboree browser.</LI>
+	<LI>- Genboree follows the Fasta description available at <A HREF="http://en.wikipedia.org/wiki/Fasta_format">Wikipedia</A>.</LI>
+	<LI>- No attempt is made to parse application-specific unique identifiers.</LI>
+	<LI>- Fasta comment lines will be stripped.</LI>
+</UL>
+<CENTER><DIV class="egDiv">
+NOTE: The <i>unique identifier</i> is the first word (series of non-whitespace characters) following the <SPAN class="genbLabel">&quot;&gt;&quot;</SPAN> on the defline.
+It determines the entry point name and is case-sensitive.
+</DIV></CENTER>
+<P class="indentBody">
+A sensible Fasta record for &quot;chr13&quot; might look like:
+<P class="indentBody">
+<DIV class="uploadExample">
+  <PRE>
+>chr13
+GTCTTTGTGTCACTGACCCCTCGATATGTCCTACGATCCCATGATATGAACTCACCAGATTTTCCAATGG
+AAGGGATAGGAATTCCGAGAGACAGAGAGAAAGGGAGAGAGAGAGAGAGAGAGAAAAGAAAGAGAGAGAG
+atcaaagaaacagagagagagagagtatatatacaaaggaaacagagggatacacacaccccccactaaa
+tgtgatccgaggggctattacagatctcactttgttgaagtgttgcagccaattcaaaacaaactaaaca
+GTCATGATTATGATGACAACGATGGCGACAACACCATNNNNNNNNNNNNNNNNNNNCATCATCATCATCA
+. . .</PRE>
+</DIV>
+<BR clear="all">
+<P class="indentBody">
+or for &quot;Scaffold_70613&quot; in an unassembled genome:
+<P class="indentBody">
+<DIV class="uploadExample">
+  <PRE>
+>Scaffold_70613
+tgtgatccgaggggctattacagatctcactttgttgaagtgttgcagc
+TTGACCAGCAGAAATAAAGCTCTGTTCACAACCTATTTTCCACACACAT
+GTCATGATTATGATGACAACGATGGCGACAACACCATNNNNNNNNNNNN
+. . .                                                                 </PRE>
+</DIV>
+<BR CLEAR="all">
+<!--      SUB-TOPIC -->
+<!--      Sub-topic header -->
+<A NAME="3ColumnLFF">&nbsp;</A>
+<DIV class="subsubtopicHeader">3.2.2. 3-Column LFF Entry Point File</DIV>
+<P>
+<UL class="compact2">
+<LI>- Use this if you don't have sequences for your chromosomes or scaffolds.</LI>
+<LI>- The file format is a simple <B>tab</B>-delimited file with 3 columns per line:
+  <UL class="compact1">
+    <LI>&middot; the entry point name</LI>
+    <LI>&middot; the keyword &quot;Chromosome&quot;</LI>
+    <LI>&middot; the length of the entry point</LI>
+  </UL>
+</UL>
+<P class="indentBody">
+A 3-column LFF entry point file might look like:
+<P class="indentBody">
+<DIV class="uploadExample">
+<PRE>
+chr1	Chromosome	246127941
+chr2	Chromosome	243615958
+chr3	Chromosome	199344050
+. . .                                 </PRE>
+</DIV>
+<BR CLEAR="all">
+<P class="indentBody">
+or
+<P class="indentBody">
+<DIV class="uploadExample">
+<PRE>
+Scaffold10	Chromosome	474987
+Scaffold100	Chromosome	300122
+Scaffold1000	Chromosome	165290
+Scaffold100010	Chromosome	1448
+Scaffold100082	Chromosome	12132
+. . .</PRE>
+</DIV>
+<!-- END -->
+<BR CLEAR="all">
+<DIV class="topLink"><A HREF="javascript:scroll(0,0);"></A></DIV>

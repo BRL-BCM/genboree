@@ -1,0 +1,50 @@
+@CHARSET "ISO-8859-1";
+
+#membersContent {
+  height: 600px;
+}
+
+#ecMembersContent {
+  height: 675px;
+}
+
+#membersList {
+  margin-left: 30px;
+}
+
+#membersList ul {
+  list-style-type:none;
+  padding-left: 0px;
+  margin-left: 0px;
+}
+
+#membersList li {
+  float: left;
+  margin: 3px;
+  width: 270px;
+  height: 75px;
+  border: 1px black solid;
+}
+
+.member {
+  font-size: 10pt;
+  font-weight: none;
+  text-decoration: none;
+  text-align: center;
+  color: black;
+  font-family: verdana, arial, sans-serif;
+  display: block;
+  height: 75px;
+}
+
+.memberName {
+  border-bottom: 1px black solid;
+  font-weight: bold;
+  padding: 3px;
+}
+
+.memberTitle {
+}
+
+.memberEmail {
+}

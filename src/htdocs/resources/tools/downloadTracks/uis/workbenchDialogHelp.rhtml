@@ -1,0 +1,52 @@
+<%# RENDER HTML %>
+<div style="height: 520px; width: 570px; " class="wbDialog wbHelp" >
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpTitle) %>
+  <%# Error Message if it exists %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) if(@context['wbErrorMsg']) %>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          This tool will allow you to download a track from a database. If you are downloading data over a specific region/landmark, please enter the
+          landmark as 'chromosome:start-end'. You can also enter a list of comma separated landmarks for downloading multiple landmarks.
+          <br>&nbsp;<br>
+          If you want to download data over entire chromosomes, you can open up the list of available chromosomes by checking the 'Multiple Chromosomes' button
+          which will allow you to select one or more chromosomes.
+          <br>&nbsp;<br>
+          NOTE: Our coordinates are 1-based which means coordinates of chromosomes/entrypoints start from 1 and not 0. However, if you download your track as 'BED' or 'BEDGRAPH',
+          the data will be 0-based according to <a href=\"http://genome.ucsc.edu/FAQ/FAQformat.html#format1\" target=\"_blank\">UCSC</a> specifications.
+          <br>&nbsp;<br>
+        "
+
+      })
+  %>
+  <%# Input data help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolInputInstructions,
+      {
+        :instructions       =>
+        [
+          'Drag the <u>Track</u> into &quot;Input Data&quot;. You will have the option of selecting landmarks and the file format of the track you want to download.',
+        ],
+        :types              => [ [ 'Tracks', 'min: 1 ; max: 1' ]  ],
+        :beEmpty            => false
+      })
+  %>
+  <%# Tool-specific settings help %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolSettingsInstructions,
+      {
+        :instructions     =>
+        [
+          [ 'Submit', "Once you've reviewed the landmark(s) and format, click &quot;Submit&quot;."]
+        ]
+      })
+  %>
+  <%# Tool-specific References & attribution %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolRefs,
+      {
+        :references         =>  [
+                                  [ 'Tool interface developed by Sameer Paithankar at <a href="http://brl.bcm.tmc.edu">BRL</a>.', nil ]
+                                ]
+      })
+  %>
+</div>

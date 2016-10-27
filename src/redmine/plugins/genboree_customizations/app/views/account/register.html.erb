@@ -1,0 +1,22 @@
+<% registerMsg = Setting.plugin_genboree_customizations['register_msg'] %>
+
+<h2><%=l(:label_register)%> <%=link_to l(:label_login_with_open_id_option), signin_url if Setting.openid? %></h2>
+
+<%= labelled_form_for @user, :url => register_path do |f| %>
+  <%= error_messages_for 'user' %>
+
+  <div class="box tabular gb-register-msg">
+    <% if(registerMsg and registerMsg =~ /\S/) %>
+      <i>
+        <%= registerMsg.html_safe %>
+      </i>
+    <% else %>
+      <i>
+        You must be a registered Genboree user to use this service.
+        <br />
+        Your Genboree account must be the <u>only</u> account that uses that email address.
+      </i>
+    <% end %>
+  </div>
+
+<% end %>

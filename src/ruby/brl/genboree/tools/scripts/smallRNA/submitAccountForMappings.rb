@@ -1,0 +1,150 @@
+#!/usr/bin/env ruby
+
+#Program for submitting accountforMappings.rb to the cluster
+
+#Author: Sameer Paithankar
+
+#Loading Libraries
+
+require 'brl/util/textFileUtil'
+require 'brl/util/util'
+
+
+class SubmitAccountMappings
+  
+  attr_accessor :pashFile, :readsFile, :outputDir, :outputFile, :refFile, :lffFile, :nodes
+  
+  def initialize(pashFile, outputDir, readsFile, refFile, lffFile, nodes,usableReads)
+    
+    @pashFile = pashFile
+    @readsFile = readsFile
+    @refFile = refFile
+    @lffFile = lffFile
+    
+    if(nodes)
+      @nodes = nodes.to_i
+    else
+      @nodes = 4
+    end
+    
+    if(outputDir)
+      @outputDir = outputDir
+    else
+      @outputDir = Dir.pwd
+    end
+    @usableReads  = usableReads
+    submit()
+    
+    
+  end
+
+  def submit
+    
+    begin
+    
+    
+      scriptName="submitAccountForMappings_job.pbs"	
+      scriptFile = File.open("#{scriptName}", "w")
+      scriptFile.puts "#!/bin/bash";
+      scriptFile.puts "#PBS -q dque";
+      scriptFile.puts "#PBS -l nodes=1:ppn=#{@nodes}\n";
+      scriptFile.puts "#PBS -l walltime=24:00:00\n";
+      scriptFile.puts "#PBS -l cput=24:00:00\n";
+      #scriptFile.puts "#PBS -l ppn=1\n";
+      scriptFile.puts "#PBS -M #{ENV["USER"]}\@bcm.tmc.edu\n";
+      scriptFile.puts "#PBS -m ea\n";
+      scriptFile.puts "#PBS -N submit_AccountForMappings_rb\n"
+      scriptFile.puts "cd $PBS_O_WORKDIR\n\n"
+      scriptFile.puts "accountForMappings_new.rb -p #{@pashFile} -o #{@outputDir} -r #{@readsFile} -R #{@refFile} -l #{@lffFile} -u #{@usableReads}n\n"
+      scriptFile.puts " mv /scratch #{@outputDir}"
+      scriptFile.puts "sleep 2"
+      scriptFile.close()
+    
+    # Submitting script on cluster
+    
+    command="qsub #{scriptName}"
+    system(command)
+    
+    
+    rescue => err
+        
+      $stderr.puts "Details: #{err.message}"
+      return -1
+      
+    end
+    
+  end
+end
+
+
+class RunScript
+
+  VERSION_NUMBER="1.0"
+  DEFAULTUSAGEINFO="
+    
+  Program description: #Program for submitting accountforMappings.rb to the cluster
+        
+     
+  Mandatory Arguments: 
+    
+    -p  --pashMap  #output from Pash-3.0.exe 
+    -o  --outputDir  #output Dir for storing all output files.
+    -r  --readsFile  #reads file generated from prepareSmallRna.rb
+    -R  --refFile #chromosome offset file
+    -l  --lffFile #lff file to find intersection
+    -n  --nodes # nodes (default 1)
+    -v  --version #Version of the program
+    -u  --usableReads counts
+    -h  --help #Display help 
+    
+    Usage: 
+    
+  "
+  def self.printUsage(additionalInfo=nil)
+      puts DEFAULTUSAGEINFO
+      puts additionalInfo unless(additionalInfo.nil?)
+      if(additionalInfo.nil?)
+        exit(0)
+      else
+        exit(15)
+      end
+    end
+    
+  def self.printVersion()
+    puts VERSION_NUMBER
+    exit(0)
+  end
+    
+  def self.parseArgs()
+    methodName="performAccountMappings"
+    optsArray=[
+      ['--pashFile','-p',GetoptLong::REQUIRED_ARGUMENT],
+      ['--outputDir','-o',GetoptLong::OPTIONAL_ARGUMENT],
+      ['--readsFile','-r',GetoptLong::REQUIRED_ARGUMENT],
+      ['--refFile','-R',GetoptLong::REQUIRED_ARGUMENT],
+      ['--lffFile','-l',GetoptLong::REQUIRED_ARGUMENT],
+      ['--nodes','-n',GetoptLong::OPTIONAL_ARGUMENT],
+      ['--version','-v',GetoptLong::NO_ARGUMENT],
+      ['--usableReads','-u',GetoptLong::NO_ARGUMENT],
+      ['--help','-h',GetoptLong::NO_ARGUMENT],
+    ]
+    progOpts=GetoptLong.new(*optsArray)
+    optsHash=progOpts.to_hash
+    if(optsHash.key?('--help'))
+      printUsage()
+    elsif(optsHash.key?('--version'))
+      printVersion()
+    end
+    printUsage("USAGE ERROR: some required arguments are missing") unless(progOpts.getMissingOptions().empty?)
+    return optsHash
+  end
+    
+  def self.performAccountMappings(optsHash)
+    SubmitAccountMappings.new(optsHash['--pashFile'], optsHash['--outputDir'], optsHash['--readsFile'], optsHash['--refFile'], optsHash['--lffFile'], optsHash['--nodes'],optsHash['--usableReads'])
+  end
+    
+end
+
+
+optsHash = RunScript.parseArgs()
+RunScript.performAccountMappings(optsHash)

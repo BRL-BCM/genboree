@@ -1,0 +1,18 @@
+{
+  "info": {
+    "idStr": "chromHMMLearnModel",
+    "releaseStatus": "beta",
+    "version": "1.1"
+  },
+  "cluster": {
+    "queue": "gbMultiCore",
+    "ppn": 4,
+    "pvmem": "10gb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "ChromHMM - LearnModel",
+    "shortLabel": "ChromHMM - LearnModel"
+  }
+}

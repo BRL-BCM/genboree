@@ -1,0 +1,58 @@
+<h1 class="title"><%= @action.split("_").map(&:capitalize).join(" ") %></h1>
+<%
+# Process a request by querying for a Wiki page
+uri = "#{@server.redmineUrl}/projects/#{@server.redmineProject}"
+uri += "/wiki/#{@action}.json?key=#{@server.apiKey}"
+response = Net::HTTP.get_response(URI.parse(uri))
+if (response.code.to_i == 200 && @action == "Publications")
+  # Ok, Publications page (structured data)
+  text = JSON.parse(response.body)["wiki_page"]["text"]
+  publications = GenboreeRedmine.transform("Publications", text)
+  %>
+  <p>The following publications used Genboree in some capacity:</p>
+
+  <ul class="publications">
+  <% publications.each { |pub| %>
+    <li class="publication">
+      <% if (!pub["authors"].nil?) %>
+        <p class="authors"><%= pub["authors"] %></p>
+      <% end %>
+      <p class="title"><%= pub["title"] %></p>
+      <% if (!pub["journal"].nil?) %>
+        <p class="journal"><i class="fa fa-book"></i><%= pub["journal"] %></p>
+      <% end %>
+      <% if (!pub["pmid"].nil?) %>
+        <p class="pubmed"><i class="fa fa-archive"></i>PMID:
+          <a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=<%= pub["pmid"] %>">
+            <%= pub["pmid"] %>
+          </a>
+        </p>
+      <% end %>
+    </li>
+  <% } %>
+  </ul>
+  <%
+elsif (response.code.to_i == 200)
+  # OK, regular Wiki page
+  text = JSON.parse(response.body)["wiki_page"]["text"]
+  text = GenboreeRedmine.cleanRedmineWikiText(text)
+  #$stderr.puts "REGULAR WIKI PAGE. Raw text:\n\n#{text}\n\n"
+  text.gsub!(/\s(https?:\/\/\S+)/, '<a href="\1">\1</a>')
+  text.gsub!(/\s(ftps?:\/\/\S+)/, '<a href="\1">\1</a>')
+  # Convert textile => HTML and output
+  %>
+  <%= RedCloth.new(text).to_html %>
+  <%
+elsif (response.code.to_i == 404)
+  # Handle missing page (no Wiki Page exists)
+  puts "Attempt to access missing Wiki page: '#{@action}'"
+  %>
+  <%= GenboreeRedmine.missing(@action) %>
+  <%
+else
+  # Handle other error codes
+  %>
+  <%= GenboreeRedmine.error(response.code) %>
+  <%
+end
+%>

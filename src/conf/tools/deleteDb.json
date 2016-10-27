@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "deleteDb",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Delete Database",
+    "shortLabel": "[NOT SET]"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "input" :
+  [
+    "/home/tandon/smallRNA_test/s_7_run71_sequence_test.txt.gz"
+  ],
+  "output" :
+  [
+    "http://genboree.brl.bcmd.bcm.edu/REST/v1/grp/arpit_group/db/test/file"
+  ],
+  "settings" :
+  {
+    "maxReadLength" : 23,
+    "adaptorSequences" : "[TN][CN][GN][TN][AN][TN]",
+    "minReadLength" :15,
+    "trimHomoPolymer" : "true",
+    "minHomoPolymer" : 7,
+    "minReadOccurance" : 4,
+    "scratch" :"."
+    },
+  "context" :
+  {
+      "runName"  : "test13" ,
+      "jobId": "1234",
+      "toolTitle": " Small RNA",
+      "userEmail" :"tandon@bcm.edu",
+      "userFirstName" :"arpit",
+      "userLastName" : "tandon",
+      "gbConfFile": "/usr/local/brl/local/apache/genboree.config.properties",
+      "apiDbrcKey" : "prolineApi",
+      "userLogin" : "arpit"
+    }
+}

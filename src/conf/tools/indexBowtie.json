@@ -1,0 +1,20 @@
+{
+  "info": {
+    "idStr": "indexBowtie",
+    "releaseStatus": "release",
+    "version": "0.1"
+  },
+  "cluster": {
+    "ppn": 1,
+    "pvmem": "6gb",
+    "mem" : null,
+    "vmem" : null,
+    "walltime": "240:00:00",
+    "queue": "gbMultiCore"
+  },
+  "ui": {
+    "label": "Build Bowtie Index",
+    "shortLabel": "Index Bowtie",
+    "groupAccessUri": null
+  }
+}

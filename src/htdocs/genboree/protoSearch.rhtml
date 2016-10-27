@@ -1,0 +1,660 @@
+<%# THIS FILE USES eruby %>
+
+<%
+  # ---------------------------------------------------------------------------
+  # SETUP CONVENIENT ENVIRONMENT
+  # ---------------------------------------------------------------------------
+  require 'timeout'
+  require 'amatch'
+  require 'cgi'
+  require 'net/http'
+  require 'uri'
+  require 'brl/db/dbrc'
+  require 'dbi'
+  require 'brl/util/util'
+  require 'brl/genboree/dbUtil'
+  require 'brl/genboree/fdataSearch'
+  require 'brl/genboree/genboreeUtil'
+  require 'brl/genboree/genboreeDBHelper'
+  require 'brl/util/timingUtil'
+  require 'brl/similarity/amatch' # extra 'amatch' related code
+  $VERBOSE = nil
+  include BRL::Genboree
+
+  @cgi = CGI.new()
+  @req = Apache.request
+  @serverName = @cgi.host
+  genbConfig = BRL::Genboree::GenboreeConfig.new()
+  genbConfig.loadConfigFile()
+
+  # ---------------------------------------------------------------------------
+  # DEFINITIONS
+  # ---------------------------------------------------------------------------
+  # Constants
+  BLANK_RE = /^\s*$/
+  COMMENT_RE = /^\s*#/
+  VALUES_RE = /\/[^\/?]+\?(.+)$/
+  DOT_END_RE = /\.$/
+  HOST_NAME_RE = /^([^\.]+)\./
+  BRL_SEARCH_URI = URI.parse("http://#{@serverName}")
+  # If we're brl.bcm.tmc.edu, then hop over to www.genboree.org (special case)
+  # Otherwise we're a test server or www.genboree.org itself, so strip any port (generic case)
+  if((@req.server_name =~ /^brl\.bcm\.(?:tmc\.)?edu$/) or (@req.server_name =~ /^www\.brl\.bcm\.(?:tmc\.)?edu$/))
+    GENBOREE_DOMAIN = 'www.genboree.org'
+  else
+    GENBOREE_DOMAIN = @req.server_name
+  end
+  UCSC_ERROR_START_RE = /<P>Sorry, couldn\'t locate/i
+  UCSC_DIRECT_IMAGE_RE = /<FONT SIZE=5><B>UCSC Genome Browser on/i
+  UCSC_DIRECT_IMAGE_WITH_ERROR_RE = /\('warnHead'\)\.innerHTML\s*=\s*.Error\(s\):/
+  UCSC_TITLE_EXTRACT_RE = /<TITLE>\s*\S+\s*(\S+)/i
+  UCSC_POSITION_RE = /<INPUT TYPE=TEXT NAME="position" SIZE=30 VALUE="chr([^:]+):([^\-]+)-([^\" ]+)">/i
+  UCSC_MULTI_SCAN_RE = /<H2>([^>]+)<\/H2>[^<]*(?:<BR>)?<PRE>(?:[^<]+--+)?(.+?)<\/PRE>/mi
+  UCSC_LINK_EXTRACT_RE = %r@<A HREF="([^"]*hgTracks\?[^"]*position=([^&"]+)[^"]*)">\s*([^\n<]+?)</A>(?:\s+-\s+([^\n<]+))?@i
+  UCSC_LANDMARK_RE = %r{chr([^:&"]+):(\d+)-(\d+)}
+  UCSC_ALIGN_LINK_RE = %r{(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)}
+  # Old approach missed the alignment links used for mapped cDNA sometimes
+  # UCSC_AT_EXTRACT_RE = %r{<A HREF=\"([^\"]*hgTracks?[^\"]+)\">\s*([^\n<]+?)(?:\s+at\s+chr([^:]+):([^\-]+)-([^< ]+))?</A>\s+-\s+([^\n<]+)}i
+  # UCSC_HREF_LANDMARK_RE = %r{<A HREF=\"([^\"]*hgTracks?[^\"]*position=chr([^:&\"]+):(\d+)-(\d+)}i
+  KILL_CHR_RE = /(_random|Un)/i
+  BRL_ADMIN_EMAIL = genbConfig.gbAdminEmail
+  GENBOREE_BROWSER = '/java-bin/gbrowser.jsp?'
+  UCSC_DOMAIN = 'genome.ucsc.edu'
+  UCSC_SEARCH = '/cgi-bin/hgTracks?'
+  UCSC_WEBBASE = '/cgi-bin'
+  DBRC_FILE = ENV['DB_ACCESS_FILE'].dup.untaint
+  STATIC_VALUES =  {
+                    'hgt.dummyEnterButton'  => CGI.escape(''),
+                    'pix'                    => CGI.escape('320'),
+                    'Submit'                => CGI.escape('Submit')
+                  }
+  LOC_ENTITY, LOC_DESC, LOC_CHR, LOC_FROM, LOC_TO, LOC_SCORE, LOC_URL = 0,1,2,3,4,5,6
+  PARAM_OK, PARAM_MISSING, BAD_SEQID_PARAM, PARSE_OK, HTTP_OK, EXCEPT_OK, SCONF_OK, SCONF_BAD, HTTP_BAD, EXCEPT_BAD, PARSE_SORRY, PARSE_FAIL, HTTP_SKIP  =
+    0,1,2,3,4,5,6,7,8,9,10,11,12
+  DB_SEARCH_OK = PARAM_OK
+  DB_SEARCH_FAIL = PARSE_FAIL
+  NO_UCSC_SCID = 1
+  TOO_MANY_FREFS = 120
+
+  # ---------------------------------------------------------------------------
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------
+  @timer = BRL::Util::TimingUtil.new()
+
+  @exceptionStatus = EXCEPT_OK
+  @err = @resp = nil
+  @mapInfo = []
+  @isPublic = false
+  @searcher = nil
+  @accessibleTracks = {}
+  @validFrefNames = {}
+  @httpHost = ENV['HTTP_HOST']
+  @httpHost = 'www.genboree.org' if((@httpHost =~ /^(www\.)?brl\.bcm\.tmc\.edu$/) or (@httpHost =~ /:9090$/))
+  @referrer = ENV['HTTP_REFERRER']
+  @referrer =~ /^http:\/\/([^\/]+)/
+  @referrerDomain = $1
+  @time1, @timw2 = Time.now.to_i, Time.now.to_i
+  # Get Genboree Config
+  # Load Genboree Config File (has the dbrcKey in it to use for this machine)
+  @genbConfig = GenboreeConfig.new()
+  @genbConfig.loadConfigFile()
+  @dbrc = BRL::DB::DBRC.new( DBRC_FILE, @genbConfig.dbrcKey )
+
+begin
+  # ---------------------------------------------------------------------------
+  # Helper Methods
+  # ---------------------------------------------------------------------------
+  def clear()
+    @dbu.clear() unless(@dbu.nil?)
+    @searcher.clear() unless(@searcher.nil?)
+    @validFrefNames = {} # cache these
+  end
+
+  def getValidFrefNames()
+    @validFrefNames = {}
+    # 1) Get name of anno database
+    @dbu = BRL::Genboree::DBUtil.new(@genbConfig.dbrcKey, nil, DBRC_FILE)
+    annoDbName = @dbu.selectDBNamesByRefSeqID(@refSeqID).first()['databaseName']
+    @dbu.setNewDataDb(annoDbName)
+    # @timer << "   - got db names by refseq ID"
+    # 2) Count number of frefs
+    countFrefResultSet = @dbu.countFrefs()  # <= returns row as Array unfortunately for backward compatability
+    @numFrefs = countFrefResultSet.first[0]
+    @timer << "   - got fref count"
+    # 3) Get all fref records if cheap to do so
+    if(@numFrefs < TOO_MANY_FREFS)
+      frefRecs = @dbu.selectAllRefNames()
+      @timer << "   - got all ref names (#{frefRecs.size} eps)"
+      frefRecs.each { |rec|
+        @validFrefNames[rec['fname']] = rec
+      }
+      # @timer << "   - added eps to hash table"
+    end
+    return @validFrefNames
+  end
+
+  def validFref?(chrName)
+    retVal = false
+    if(@validFrefNames.key?(chrName))
+      retVal = true
+    else
+      # Maybe not cached yet, retrieve from database
+      frefRecs = @dbu.selectFrefByName(chrName)
+      # Add to cache
+      frefRecs.each { |rec|
+        @validFrefNames['refname'] = rec
+      }
+      retVal = (frefRecs.size > 0)
+    end
+    return retVal
+  end
+
+  def prepForHtml()  # Tell apache we're going to make some html
+    @req.content_type = "text/html"
+    @req.status = 200
+    @req.send_http_header
+  end
+
+  def makeFullEPName(coreName)
+    return entryPointID = @mapInfo['epPrefix'] + coreName.strip + @mapInfo['epSuffix']
+  end
+
+  def paramCheck()
+    # Check that correct params were provided
+    if(  @cgi.params['query'].to_s.empty? or @cgi.params['refSeqID'].to_s.empty?  )
+      return PARAM_MISSING
+    else  # Process with broken genboree link URLs in mind
+      @query = @cgi.params['query'][0].strip
+      @qLength = @query.size.to_f
+      @aMatcher = Amatch.new(@query.downcase)
+       @refSeqID = @cgi.params['refSeqID'][0].strip
+       @fromGenboree = (@cgi['fromInternalGbPage'] =~ /true/i ? true : false)
+      @userId = (@cgi.params.key?('userId') ? @cgi['userId'].strip : nil)
+       @isPublic = (@cgi.params.key?('ip')) ? true : false          # Get the isPublic param, if it is there
+       @redirOK = (@cgi.params.key?('redirAvail')) ? true : false  # Can we make use of a redirect() and setRedirect() JavaScript function?
+       @trackName = (@cgi.params.key?('trackName') ? @cgi.params['trackName'][0].strip : nil) # restrict search to specific track
+       @doUCSC = (@cgi.params.key?('doUCSC') ? !(@cgi['doUCSC'] =~ /yes|true/i).nil? : true)
+      @groupAnnos = (@cgi.params.key?('groupAnnos') ? !(@cgi['groupAnnos'] =~ /yes|true/i).nil? : true)
+      return PARAM_OK  # Ok so far
+    end
+  end
+
+  def makeRedirHTML(url)
+    redirHTML = ''
+    if(@redirOK)
+      redirHTML = "<SCRIPT LANGUAGE=\"JavaScript\">\n<!-- Begin redirect call\nsetRedirect(true) ;\nredirect(\"#{url}\")\n-->\n</SCRIPT>"
+    end
+     return redirHTML
+  end
+
+  def makeGenboreeURL(ep, from, to, entity)
+    if(entity[LOC_CHR].nil? or entity[LOC_FROM].nil? or entity[LOC_TO].nil?)
+      # then we have a landmark-less record...
+      # TODO: write a wrapper to get the linked-to-page with image (use parse above for example)
+      #       and then translate to some Genboree coords for the current user database
+      fullUrl = "http://#{UCSC_DOMAIN}#{UCSC_WEBBASE}/#{entity[LOC_URL]}"
+      genboreeURL = "/genboree/ucscRemap.rhtml?refSeqId=#{@refSeqID}&ucscUrl=#{CGI.escape(fullUrl)}"
+    else
+      genboreeURL = "#{GENBOREE_BROWSER}refSeqId=#{@refSeqID}&entryPointId=#{ep}&from=#{from}&to=#{to}"
+    end
+    genboreeURL += "&isPublic=YES" if(@isPublic)
+    return genboreeURL
+  end
+
+  def loadSearchConfig()  # Loads the map data for the provided refSeq
+    # Get the scid for the refSeq, if any.
+    # create fdata search instance if needed
+    @searcher = BRL::Genboree::FdataSearch.new(@refSeqID, DBRC_FILE) if(@searcher.nil?)
+    @searcher.groupMatches = @groupAnnos
+    scidList = @searcher.getScids()
+    configRecs = @searcher.getSearchConfigByScid(scidList.first['scid'])
+    return SCONF_BAD if(configRecs.nil? or configRecs.empty? or configRecs.size > 1) # never configured/there can be only one
+    @mapInfo =  {
+                  'scid'        => configRecs.first['scid'],
+                  'ucscOrg'     =>  configRecs.first['ucscOrg'].to_s,
+                  'ucscDbName'  => configRecs.first['ucscDbName'].to_s,
+                  'ucscHgsid'   => configRecs.first['ucscHgsid'].to_s,
+                  'epPrefix'    => configRecs.first['epPrefix'].to_s,
+                  'epSuffix'    => configRecs.first['epSuffix'].to_s
+    }
+    return SCONF_OK
+  end
+
+  def makeUcscResStr()  # Use all the bits to create the URL to UCSC search tool
+    ucscResStr = UCSC_SEARCH
+    org = CGI.escape(@mapInfo['ucscOrg'])
+    db = CGI.escape(@mapInfo['ucscDbName'])
+    hgsid = CGI.escape(@mapInfo['ucscHgsid'])
+    query = @query.gsub(/\*/, '').gsub(/\?/, '')
+    # ucscResStr += "hgt.dummyEnterButton=#{STATIC_VALUES['hgt.dummyEnterButton']}&" +
+    ucscResStr +=  "org=#{org}&" +
+                  "db=#{db}&" +
+                  "position=#{CGI.escape(query)}&" +
+                  "pix=#{STATIC_VALUES['pix']}&" +
+                  "Submit=#{STATIC_VALUES['Submit']}"
+    return ucscResStr
+  end
+
+  def doQuery()  # run a UCSC query
+    unless( (@mapInfo['scid'] == NO_UCSC_SCID) or !@doUCSC )
+      ucscResStr = makeUcscResStr()
+      begin
+        http = Net::HTTP.new(UCSC_DOMAIN, 80)
+        http.read_timeout = 900
+        http.start
+        @time1 = Time.now.to_i
+        @resp = http.get(ucscResStr)
+        @time2 = Time.now.to_i
+        http.finish
+        raise unless(@resp.kind_of?(Net::HTTPOK)) # Caller must decide to ignore or display or what
+      rescue Timeout::Error => @err
+        @resp = nil
+        return HTTP_OK
+      rescue Exception => @err
+        BRL::Genboree::GenboreeUtil.logError("ERROR: exception when searching at UCSC.", @err, @resp, ucscResStr)
+        return HTTP_BAD
+      end
+    end
+    return HTTP_OK
+  end
+
+  def parseResp(refSeqID)  # parse a ucsc query response, storing nec. data
+    unless(@resp.nil?)
+      unless( (@mapInfo['scid'] == NO_UCSC_SCID) or !@doUCSC )
+        if(@resp.body =~ UCSC_ERROR_START_RE or @resp.body =~ UCSC_DIRECT_IMAGE_WITH_ERROR_RE) # UCSC error: no result found
+          return PARSE_OK
+        elsif(@resp.body =~ UCSC_DIRECT_IMAGE_RE)
+          return PARSE_FAIL if($' !~ UCSC_POSITION_RE) ## No Comment '
+          entryPointID, from, to = $1, $2, $3
+          fullEPName = makeFullEPName(entryPointID)
+          return PARSE_OK unless(validFref?(fullEPName))
+          from.gsub!(',', '_')
+          to.gsub!(',', '_')
+          from, to = from.to_i, to.to_i
+          @entities['Match Found:'] = [ [ @query, '&nbsp;', entryPointID, from, to, 1.00 ] ]
+        else # must be a multiple match page
+          @resp.body.scan(UCSC_MULTI_SCAN_RE) { |ma|
+            cat, rec = ma[0], ma[1]
+            rec.scan(UCSC_LINK_EXTRACT_RE) { |mb|
+              # The regexp extracts UCSC hgTracks?position links and their link text into these capture groups:
+              # 1st => whole UCSC url path
+              # 2nd => position NVP value
+              # 3rd => link text
+              # 4th => link description (may be missing for certain result formats)
+              ucscUrl, positionValue, linkText, eDesc = mb[0], mb[1], mb[2], mb[3]
+              # Process the positionValue to get appropriate location if possible
+              # - this can be either a landmark (chr1:123456-234567) or just a keyword, which is a little tougher to resolve
+              if(positionValue =~ UCSC_LANDMARK_RE) # then we have a location we can use to go direct to Genboree with
+                # 1st => chr ID
+                # 2nd => start
+                # 3rd => stop
+                entryPointID, from, to = $1, $2, $3
+              else # not a landmark, just a keyword...more work involved to eventually resolve this
+                entryPointID, from, to = nil
+              end
+
+              # Process the link text to get entity name
+              # - this can be either an "<entity> at <landmark>" text OR an alignment description
+              if(linkText =~ /(.+)\s+at\s+chr/) # then have name at landmark
+                eName = $1.strip
+              elsif(linkText =~ UCSC_ALIGN_LINK_RE) # then have alignment details
+                # 1st=>SIZE, 2nd=>IDENTITY, 3rd=>CHROMOSOME, 4th=>STRAND, 5th=>START, 6th=>END, 7th=>cDNAname
+                eName = $7.strip
+                eDesc = "UCSC indicates #{$1}bp mapped at #{$2} identity to this location."
+              else
+                eName = positionValue
+              end
+
+              relevancyScore = calcMatchScore(eName)
+              eDesc = eDesc.to_s.strip.gsub(DOT_END_RE, '')
+
+              if(entryPointID.nil?) # then looks like a direct entity -> url record (no landmark)
+                @entities[cat] << [ eName, eDesc, nil, nil, nil, relevancyScore, ucscUrl ]
+              else # looks like a record with chr*:12345-67890 landmark
+                fullEPName = makeFullEPName(entryPointID)
+                next unless(validFref?(fullEPName))
+                next if(entryPointID =~ KILL_CHR_RE)
+                from.gsub!(',', '_')
+                to.gsub!(',', '_')
+                from, to = from.to_i, to.to_i
+                @entities[cat] << [ eName, eDesc, entryPointID, from, to, relevancyScore, ucscUrl ]
+              end
+            }
+          }
+        end
+      end
+    end
+    return PARSE_OK
+  end
+
+  def areAllEntitiesSimilar?()
+    return false if(@entities.nil? or @entities.empty? or !@groupAnnos)
+    firstRec = @entities[@entities.keys.first].first
+    fuzzStart = [ firstRec[LOC_FROM], firstRec[LOC_FROM] ]
+    fuzzEnd = [ firstRec[LOC_TO], firstRec[LOC_TO] ]
+    ep = firstRec[LOC_CHR]
+    @entities.each_key { |cat|
+      records = @entities[cat]
+      records.each { |record|
+        return false unless(record[LOC_CHR] == ep)
+        next if(record[LOC_CHR].nil? or record[LOC_FROM].nil? or record[LOC_TO].nil?)
+        fuzzStart[0] = record[LOC_FROM] if((fuzzStart[0].nil? and !record[LOC_FROM].nil?) or record[LOC_FROM] < fuzzStart[0])
+        fuzzStart[1] = record[LOC_FROM] if((fuzzStart[1].nil? and !record[LOC_FROM].nil?) or record[LOC_FROM] > fuzzStart[1])
+        fuzzEnd[0] = record[LOC_TO] if((fuzzEnd[0].nil? and !record[LOC_FROM].nil?) or record[LOC_TO] < fuzzEnd[0])
+        fuzzEnd[1] = record[LOC_TO] if((fuzzEnd[1].nil? and !record[LOC_FROM].nil?) or record[LOC_TO] > fuzzEnd[1])
+      }
+    }
+    @from = fuzzStart[0]
+    @to = fuzzEnd[1]
+    return (  (!fuzzStart[0].nil? and !fuzzStart[1].nil? and !fuzzEnd[0].nil? and !fuzzEnd[1].nil?) and
+              ((fuzzStart[1]-fuzzStart[0]) < 5000) and
+              ((fuzzEnd[1]-fuzzEnd[0]) < 5000)
+            )
+  end
+
+  # Perform fdata search
+  def searchFdatas()
+    begin
+      # create fdata search instance if needed
+      @searcher = BRL::Genboree::FdataSearch.new(@refSeqID, DBRC_SUFFIX, DBRC_FILE)  if(@searcher.nil?)
+      @searcher.groupMatches = @groupAnnos
+      # do the search
+      @searcher.searchAllDataDBs(@query)
+      # convert matches to entities
+      convertMatch2Entity()
+    rescue Exception => @err
+      BRL::Genboree::GenboreeUtil.logError("ERROR: failed searching the Genboree databases.", @err, @query)
+      return DB_SEARCH_FAIL
+    end
+    return DB_SEARCH_OK
+  end
+
+  def convertMatch2Entity()
+    # Each annotation
+    @searcher.matches.each_key { |gname|
+      matchesForGname = @searcher.matches[gname]
+      # Each ftype
+      matchesForGname.each_key { |ftypeName|
+        matchesForFtype = matchesForGname[ftypeName]
+        unless(@trackName.nil?) # then we have a track name for track-specific search
+          next unless(ftypeName == @trackName) # skip results from other tracks
+        end
+        # Each entrypoint
+        matchesForFtype.each_key { |ep|
+          matches = matchesForFtype[ep]
+          matches.each { |aMatch|
+            next unless(@accessibleTracks.key?(aMatch['ftypeid']))
+            cat = "Within database, in Track &quot;" + aMatch['ftypeid'] + "&quot;."
+            @entities[cat] = [] unless(@entities.key?(cat))
+            unless(@mapInfo['scid'] == NO_UCSC_SCID)
+              nep = ep.gsub(/^#{@mapInfo['epPrefix']}/, '')
+              nep = nep.gsub(/#{@mapInfo['epSuffix']}$/, '')
+            else
+              nep = ep
+            end
+            entity =   [
+                        aMatch['gname'],
+                        "#{aMatch['ftypeid']} annotation with score #{sprintf('%.2f', aMatch['fscore'])}.",
+                        nep,
+                        aMatch['fstart'],
+                        aMatch['fstop'],
+                        calcMatchScore(aMatch['gname'])
+                      ]
+            @entities[cat] << entity
+          }
+        }
+      }
+    }
+    return
+  end
+
+  def calcMatchScore(matchName)
+    maxLen = (matchName.size > @qLength ? matchName.size.to_f : @qLength.to_f)
+    return (1.0 - (@aMatcher.match(matchName.downcase).to_f / maxLen))
+  end
+
+  prepForHtml()
+
+  # ---------------------------------------------------------------------------
+  # DO CHECK/LOAD/CHECK (hierarchical checking)
+  # ---------------------------------------------------------------------------
+  # @timer << "protoSearch.rthml => BEGIN"
+  paramStatus = paramCheck()
+  @timer << "protoSearch.rthml => refSeqID: #{@refSeqID} ; QUERY: '#{@query}'"
+  if(paramStatus == PARAM_OK)
+    loadStatus = loadSearchConfig()            # Load search configuration
+    getValidFrefNames()
+    @accessibleTracks = BRL::Genboree::GenboreeDBHelper.getAllAccessibleFtypes(@refSeqID, @userId, true, @dbu)
+    # @timer << "protoSearch.rhtml => DONE: retrieved search config and fref names"
+    if(loadStatus == SCONF_OK)
+      @entities = Hash.new { |hh,kk| hh[kk] = [] }
+      searchStatus = searchFdatas()
+      @timer << "protoSearch.rhtml => DONE: Genboree database was searched."
+      if(@doUCSC and @trackName.nil?) # don't do UCSC if just looking within a track or if told not to
+        queryStatus = doQuery()
+        @timer << "protoSearch.rhtml => DONE: UCSC query has returned"
+      end
+      if(@doUCSC and @trackName.nil? and queryStatus == HTTP_OK)  # then go ahead an parse UCSC response
+        parseStatus = parseResp(@refSeqID)
+        @timer << "protoSearch.rhtml => DONE: UCSC query response parsed"
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+
+rescue Exception => @err
+  @exceptionStatus = EXCEPT_BAD
+ensure
+  # Free stuff that use the DB (not needed after this, all work is done)
+  clear()
+  # ---- OK? ----
+  if(  @exceptionStatus == EXCEPT_OK and
+      loadStatus == SCONF_OK and
+      paramStatus == PARAM_OK and
+      (
+        (queryStatus == HTTP_OK and parseStatus == PARSE_OK or parseStatus == PARSE_SORRY) or
+        !@trackName.nil? or
+        queryStatus != HTTP_OK
+      ) and
+      searchStatus == DB_SEARCH_OK)
+%>
+  <!-- Stick in the overlib stuff...not the right place but it works? -->
+  <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib.js"></SCRIPT>
+  <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_hideform.js"></SCRIPT>
+  <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_draggable.js"></SCRIPT>
+  <SCRIPT TYPE="text/javascript" SRC="/javaScripts/overlib_cssstyle.js"></SCRIPT>
+  <SCRIPT TYPE="text/javascript" SRC="/javaScripts/sorttable.js"></SCRIPT>
+  <style type="text/css">
+    /* Customize Sortable Tables */
+    table.sortable a.sortheader {
+      font-weight: bold;
+      white-space: nowrap;
+      display: block;
+    }
+    table.sortable span.sortarrow {
+      color: red;
+      font-weight: bold;
+      font-size: 18px;
+      text-decoration: none;
+    }
+    .hdr {
+      font-size: 11pt ;
+      font-weight: bold ;
+    }
+  </style>
+  <DIV id="overDiv" style="position:absolute; visibility:hidden; z-index:1000;"></DIV> <!-- # For overlib support -->
+<%
+      @entities.delete_if { |kk, vv| vv.empty? }
+      if( (parseStatus == PARSE_OK or !@trackName.nil? or queryStatus != HTTP_OK) and !@entities.empty?() )
+        @entities.keys.sort {|aa,bb| # Sort Genboree track results at the top
+        rv = 0
+        if( aa =~ /Within database, in Track &quot;/ and
+            bb =~ /Within database, in Track &quot;/)
+          rv = (aa <=> bb)
+        elsif(aa =~ /Within database, in Track &quot;/)
+          rv = -1
+        elsif(bb =~ /Within database, in Track &quot;/)
+          rv = 1
+        else
+          rv = (aa <=> bb)
+        end
+      }.each { |cat|
+%>
+        <P>
+        <TABLE CELLPADDING="2" CELLSPACING="0" BORDER="0" WIDTH="100%">
+        <TR>
+          <TD ALIGN="left" VALIGN="bottom"><SPAN CLASS="hdr"><%= cat %></SPAN></TD>
+          <TD ALIGN="right" VALIGN="bottom"><FONT SIZE="-2"><A HREF="javascript:void(0);" ONCLICK="overlib('&nbsp;<BR>The search score reflects how well the record matches your query. The higher the score, the closer it matched; exact matches will have scores of 1.0. A more precise definition is as follows:<BR>&nbsp;<BR><NOBR>Let <I>L</I> = max(length(query), length(match)</NOBR>)<BR><BR><NOBR>Let <I>M</I> = Levenshtein_Distance(query, match)</NOBR><BR><BR><NOBR>Then <I>Search_Score</I> = 1 - <I>M</I>/<I>L</I></NOBR><BR>&nbsp;', STICKY, DRAGGABLE, CLOSECLICK, FGCOLOR, '#CCF8FF', BGCOLOR, '#9F833F', CAPTIONFONTCLASS, 'capFontClass', CAPTION, 'Search Score Definition', CLOSEFONTCLASS, 'closeFontClass', CLOSETEXT, '<FONT COLOR=white><B>X&nbsp;</B></FONT>', WIDTH, '300');" >[ What is search score? ]</A></FONT></TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="2">
+          <TABLE CELLPADDING="0" CELLSPACING="0" BORDER="1" BORDERCOLOR="#c8c5f8">
+          <TR>
+            <TD>
+              <TABLE CELLPADDING="2" CELLSPACING="0" BORDER="1" BORDERCOLOR="#c8c5f8" class="sortable" id="<%= cat %>Table">
+                <TR>
+                  <TD ALIGN="center" WIDTH="120"><B>Name</B></TD>
+                  <TD ALIGN="center" WIDTH="50"><B>Search&nbsp;<BR>Score</B></TD>
+                  <TD ALIGN="center" WIDTH="60"><B>Ref Seq</B></TD>
+                  <TD ALIGN="center" WIDTH="100"><B>Start</B></TD>
+                  <TD ALIGN="center" WIDTH="100"><B>End</B></TD>
+                  <TD ALIGN="center" WIDTH="230"><B>Description</B></TD>
+                </TR>
+              <%
+                @entities[cat].sort! { |aa, bb|
+                  rv = bb[LOC_SCORE] <=> aa[LOC_SCORE]
+                  unless( aa[LOC_CHR].nil? or aa[LOC_FROM].nil? or aa[LOC_TO].nil? or
+                      bb[LOC_CHR].nil? or bb[LOC_FROM].nil? or bb[LOC_TO].nil?)
+                    rv = aa[LOC_CHR] <=> bb[LOC_CHR] if(rv == 0)
+                    rv = aa[LOC_FROM] <=> bb[LOC_FROM] if(rv == 0)
+                    rv = aa[LOC_TO] <=> bb[LOC_TO] if(rv == 0)
+                  end
+                  rv = aa[LOC_ENTITY] <=> bb[LOC_ENTITY] if(rv == 0)
+                  rv
+                }
+                @entities[cat].each { |entity|
+                  unless( entity[LOC_CHR].nil? or entity[LOC_FROM].nil? or entity[LOC_TO].nil? )
+                    entitySize = (entity[LOC_FROM]-entity[LOC_TO]).abs
+                    padSize = (entitySize * 0.25).round
+                    from = ((entity[LOC_FROM]-padSize < 1) ? 1 : entity[LOC_FROM]-padSize)
+                    to = entity[LOC_TO]+padSize
+                    entryPointID = @mapInfo['epPrefix'] + entity[LOC_CHR].strip + @mapInfo['epSuffix']
+                  end
+
+                  genboreeUrl = makeGenboreeURL(entryPointID, from, to, entity)
+                  unless(genboreeUrl.nil?)
+                    isDirectLocation = (entity[LOC_CHR].nil? or entity[LOC_FROM].nil? or entity[LOC_TO].nil?)
+%>
+                    <TR>
+                      <TD ALIGN="center" WIDTH="120"><A HREF="<%= genboreeUrl %>"><%= entity[LOC_ENTITY] %></A></TD>
+                      <TD ALIGN="center" WIDTH="50"><%= entity[LOC_SCORE].nil? ? '0.00nil' : sprintf("%.2f", entity[LOC_SCORE]) %></TD>
+<%
+                      if(isDirectLocation)
+%>
+                        <TD ALIGN="center" COLSPAN="3" WIDTH="260"><i><FONT SIZE="-2">[ Not yet determined. The link will try to resolve location, yielding a browser view or a refined result table. ]<FONT SIZE="-2"></i></TD>
+<%
+                      else # have landmark info
+%>
+                        <TD ALIGN="center" WIDTH="60"><B><%= entryPointID %></B></TD>
+                        <TD ALIGN="center" WIDTH="100"><%=  entity[LOC_FROM].commify() %></TD>
+                        <TD ALIGN="center" WIDTH="100"><%=  entity[LOC_TO].commify() %></TD>
+<%
+                      end
+%>
+                      <TD ALIGN="LEFT" WIDTH="230"><FONT SIZE="-2"><%= entity[LOC_DESC] %></FONT></TD>
+                    </TR>
+<%
+                  end
+                }
+%>
+              </TABLE>
+            </TD>
+          </TR>
+          </TABLE>
+          </TD>
+        </TR>
+        </TABLE>
+<%
+  }
+%>
+      <P>
+    <% else # sorry response %>
+      <SPAN CLASS="hdr">SEARCH GAVE NO RESULTS</SPAN>
+      <P>
+      Your query (&quot;<%= @query %>&quot;) could not be used to determine
+      any genome coordinates.
+      <P>
+      <INPUT TYPE="Submit" NAME="Back" VALUE="<- Back" onClick="history.back(1);">
+    <% end %>
+<% else # ---- NOT OK ---- %>
+    <SPAN CLASS="hdr">SEARCH ERROR</SPAN>
+  <P>
+    We encountered a problem attempting your search.
+    <P>
+    <% if(paramStatus == BAD_SEQID_PARAM) %>
+      Your reference sequence and database have <B>not been configured for search</B>.
+      Please contact <A HREF="mailto:<%= BRL_ADMIN_EMAIL %>">our admin (<%= BRL_ADMIN_EMAIL %>)</A>
+      with the following information to have it configured or explain why searches cannot be performed (you can copy and paste):
+      <UL>
+        <LI>Configure refSeq and database for search, if possible.</LI>
+        <LI>refSeqID: <%= @req.escape_html(@refSeqID) %></LI>
+      </UL>
+    <% else %>
+      Please contact <A HREF="mailto:<%= BRL_ADMIN_EMAIL %>">our admin (<%= BRL_ADMIN_EMAIL %>)</A>
+      with the following information (you can copy and paste):
+      <UL>
+        <LI>Error Type:
+        <% if(@exceptionStatus != EXCEPT_OK) %>
+            Exception thrown. (<%= @req.escape_html(@err.message) %>)<P><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %><P>
+        <% elsif(loadStatus != SCONF_OK) %>
+            Could not load resource map for this database (not configured?). (<%= loadStatus %>)
+        <% elsif(paramStatus != PARAM_OK) %>
+            Bad parameter provided. (<%= paramStatus %>)
+        <% elsif(searchStatus != DB_SEARCH_OK) %>
+            Error with db search process. (<%= searchStatus %>)
+            <UL>
+              <LI><%= @req.escape_html(@err.message) %></LI>
+              <LI>Exception details:<BR><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %></LI>
+            </UL>
+        <% elsif(queryStatus != HTTP_OK or queryStatus != HTTP_SKIP) %>
+            <% if(queryStatus == HTTP_BAD) %>
+              An exception occurred <%=queryStatus%>:
+              <UL>
+                <LI><%= @req.escape_html(@err.message) %></LI>
+                <LI><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %></LI>
+              </UL>
+            <% elsif(!@resp.kind_of?(Net::HTTPOK) and !@resp.nil?) %>
+              An http communication protocol failure occured:
+              <UL>
+                <LI>Code: <%= @req.escape_html(@resp.code) %></LI>
+                <LI>Msg: <%= @req.escape_html(@resp.message) %></LI>
+              </UL>
+            <% elsif(@resp.nil?) %>
+              No Response from remote web service.
+               <UL>
+                <LI>resp nil</LI>
+              </UL>
+            <% else %>
+              An unknown http-related error occurred <%=queryStatus.inspect%>
+              <UL>
+                <LI><%= @req.escape_html(@err.message) %></LI>
+                <LI><%= @err.backtrace.map{|xx| @req.escape_html(xx)}.join('<BR>') %></LI>
+              </UL>
+            <% end %>
+        <% elsif(parseStatus != PARSE_OK) %>
+            Error parsing response. (<%= parseStatus %>)
+        <% else %>
+            Unknown Error (?)
+            <UL>
+              <LI>error:<BR><%= @err.inspect %></LI>
+              <LI>exceptionStatus: <%= @exceptionStatus %></LI>
+            </UL>
+        <% end %>
+        </LI>
+        <LI>Request string: <%= @req.escape_html(@req.unparsed_uri) %></LI>
+      </UL>
+    <% end %>
+<% end %><%# if-else %>
+<% end %><%# begin-rescue-ensure %>
+<%# @timer.writeTimingReport($stderr) %>

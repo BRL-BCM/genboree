@@ -1,0 +1,45 @@
+# English strings go here for Rails i18n
+en:
+  # my_label: "My label"
+  
+  # PERMISSIONS - Redmine
+  permission_view_messages: View conversations
+  permission_add_messages: Post replies
+  permission_edit_messages: Edit replies
+  permission_edit_own_messages: Edit own replies
+  permission_delete_messages: Delete replies
+  permission_delete_own_messages: Delete own replies
+
+  # ACCOUNT - Redmine - password, registration, signin
+  label_password_lost: (Forgot password?)
+
+  # PROJECTS - Redmine
+  label_my_projects: = Project Member
+  
+  # FORUMS, MESSAGES - Redmine
+  label_message_plural: Conversations
+  label_message_last: Last conversation
+  label_message_new: New conversation
+  label_message_posted: Conversation added
+  description_message_content: Reply content
+
+  # SETTINGS - Redmine
+  setting_emails_subject_prefix: Email subject prefix
+  setting_emails_reply_to: Email Reply-To address
+
+  # GENBOREE
+  label_gb_home: Genboree Home
+  label_gb_welcome_title: Welcome to the GenboreeKB Redmine!
+  label_gb_my_project_tooltip: You're a member
+  
+  # SETTINGS - Genboree
+  setting_gb_main_gb_url: Main Genboree URL
+  setting_gb_forgot_pw_url: Forgot password URL
+  setting_gb_signin_msg: Sign-In Message
+  setting_gb_signin_msg_tooltip: "This HTML will be displayed above the username & password form on the sign-in page."
+  setting_gb_register_msg: Registration Message
+  setting_gb_register_msg_tooltip: "This HTML will be displayed INSTEAD OF the registration form."
+  setting_gb_no_stats_hosts: No-Stats Hosts
+  setting_gb_no_stats_hosts_tooltip: "Space-separated list of Genboree hosts for which stats-charts SHOULD NOT be displayed (because too slow)."
+  setting_gb_allow_non_uniq_emails: Non-Unique Emails
+  setting_gb_allow_non_uniq_emails_tooltip: "Remove constraint that an email address can only be associated with ONE Redmine user record. Available for greater compatibility with Genboree, which allows multiple user records to have the same email. DANGER: NOT Recommended If Not Needed. DANGER: do NOT use this if Redmine is set up to RECEIVE emails; user-record lookup based on sender of incoming email may select wrong user!"

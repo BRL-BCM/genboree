@@ -1,0 +1,415 @@
+<html>
+
+<head>
+  <link rel="stylesheet" type="text/css" href="https://genboree.org/site/css/gb.css">
+  <link rel="stylesheet" type="text/css" href="https://genboree.org/site/css/vibrant-ink.css">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <script src="https://genboree.org/site/js/jquery-1.11.1.min.js"></script>
+  <script src="https://genboree.org/site/js/prettify.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+
+<body>
+
+<%
+  # key variables
+  snpeffInfo  = @json['snpeff']['ann'] rescue nil
+  dbnsfpInfo  = @json['dbnsfp']  rescue nil
+  dbsnpInfo   = @json['dbsnp'] rescue nil
+  caddInfo    = @json['cadd'] rescue nil
+  uniprot_variation   = @json['mutdb']['uniprot_id'] rescue nil
+  gwassnpsInfo  = @json['gwassnps'] rescue nil
+  _id         = @json['_id']
+  # Get key variables out and pupulate that will be used in view
+  effect, hgvs_c, hgvs_p, transcript, snp_eff_pred = [],[],[],[],[]
+  # myvariat pass use same property as array/not-array
+  # if not array convert to array
+  if ! snpeffInfo.nil?
+    if snpeffInfo.is_a?(Array)
+      snpeffInfo.each do |i|
+        hgvs_c.push(i["hgvs_c"])
+        hgvs_p.push(i["hgvs_p"])
+        effect.push(i["effect"])
+        transcript.push(i["feature_id"])
+        snp_eff_pred.push(i["putative_impact"])
+      end
+    else
+      hgvs_c.push(snpeffInfo["hgvs_c"])
+      hgvs_p.push(snpeffInfo["hgvs_p"])
+      effect.push(snpeffInfo["effect"])
+      transcript.push(snpeffInfo["feature_id"])
+      snp_eff_pred.push(snpeffInfo["putative_impact"])
+      gene = snpeffInfo["gene_id"]
+    end
+  end
+
+  # Get the predictor score and set up class based on the value to highlight as red or green
+  if ! dbnsfpInfo.nil?
+    gerppp_pred_score =  dbnsfpInfo["gerp++"]["rs"] rescue nil
+    gerppp_class  = "greenbg" rescue nil
+    gerppp_class  = "redbg" if gerppp_pred_score >=  2 rescue nil
+
+    polyphen_pred_score = dbnsfpInfo["polyphen2"]["hdiv"]["rankscore"] rescue nil
+    polyphen_class = "greenbg" rescue nil
+    polyphen_class = "redbg" if dbnsfpInfo["polyphen2"]["hdiv"]["pred"] == "D" rescue nil
+    polyphen_class = "orangebg" if dbnsfpInfo["polyphen2"]["hdiv"]["pred"] == "P" rescue nil
+
+    ma_pred_score   = dbnsfpInfo["mutationassessor"]["score"] rescue nil
+    ma_class = "greenbg" rescue nil
+    ma_class = "redbg" if dbnsfpInfo["mutationassessor"]["pred"] == "H" rescue nil
+    ma_class = "orangebg" if dbnsfpInfo["mutationassessor"]["pred"] == "M" rescue nil
+
+    mt_pred_score   =  dbnsfpInfo["mutationtaster"]["score"] rescue nil
+    mt_class = "greenbg" rescue nil
+    mt_class = "redbg" if dbnsfpInfo["mutationtaster"]["pred"] == "D" rescue nil
+
+    if mt_pred_score.is_a?(Array)
+      mt_pred_score   =  dbnsfpInfo["mutationtaster"]["score"][0] rescue nil
+      mt_class = "greenbg" rescue nil
+      mt_class = "redbg" if dbnsfpInfo["mutationtaster"]["pred"][0] == "D" rescue nil
+    end
+
+    metasvm_pred_score = dbnsfpInfo["metasvm"]["score"] rescue nil
+    metasvm_class = "greenbg" rescue nil
+    metasvm_class = "redbg" if dbnsfpInfo["metasvm"]["pred"]  == "D" rescue nil
+    interpro_domain  = dbnsfpInfo["interpro_domain"] rescue nil
+
+    # Other key information to display in the top panel
+    chromosome = dbnsfpInfo["chrom"] rescue nil
+    reference  = dbnsfpInfo["ref"] rescue nil
+    coding_strand = dbnsfpInfo["cds_strand"] rescue nil
+    alternate  = dbnsfpInfo["alt"] rescue nil
+    hg19_start = dbnsfpInfo["hg19"]["start"] rescue nil
+    hg19_end = dbnsfpInfo["hg19"]["end"] rescue nil
+    hg38_start = dbnsfpInfo["hg38"]["start"] rescue nil
+    hg38_end = dbnsfpInfo["hg38"]["end"] rescue nil
+    gene_name = dbnsfpInfo["genename"] rescue nil
+  end
+
+  # Few scores to extract from cadd data
+  if ! caddInfo.nil?
+    if ! caddInfo["phylop"].nil?
+      phylop_pred_score = caddInfo["phylop"]["mammalian"] rescue nil
+      phylop_class   = "greenbg"
+      phylop_class   = "redbg" if phylop_pred_score > 1.5
+    end
+
+    if ! caddInfo["phast_cons"].nil?
+      phastcons_pred_score = caddInfo["phast_cons"]["mammalian"]
+      phastcons_class   = "greenbg"
+      phastcons_class   = "redbg" if phylop_pred_score > 0
+    end
+
+    if ! caddInfo["sift"].nil?
+      sift_pred_score = caddInfo["sift"]["val"]
+      sift_class = "greenbg"
+      sift_class = "redbg" if caddInfo["sift"]["cat"] == "deleterious"
+    end
+  end
+
+  # store allele frequency and source in two arrays
+  af_mapper = ["ExAC, Combined", "ExAC, African", "ExAC, Non-Finnish Europeans", "Finnish Europeans", "ExAC, East Asian", "ExAC, South Asian", "ExAC, Latino", "1000 Genome, Combined"]
+
+  # If allele not found then set the frequence to zero
+  exac_af            = dbnsfpInfo["exac"]["af"]      rescue 0
+  exac_african       = dbnsfpInfo["exac"]["afr_af"]  rescue 0
+  exac_non_finish_eu = dbnsfpInfo["exac"]["nfe_af"]  rescue 0
+  exac_finish_eu     = dbnsfpInfo["exac"]["fin_af"]  rescue 0
+  exac_east_asian    = dbnsfpInfo["exac"]["eas_af"]  rescue 0
+  exac_south_asian   = dbnsfpInfo["exac"]["sas_af"]  rescue 0
+  exac_latino        = dbnsfpInfo["exac"]["amr_af"]  rescue 0
+  t000g_af           = dbnsfpInfo["1000gp3"]["af"]   rescue 0
+
+  # Array to be used for generating plot
+  af_values = [exac_af,exac_african,exac_non_finish_eu,exac_finish_eu,exac_east_asian,exac_south_asian,exac_latino,t000g_af]
+  frequency_nil = true if af_values.eql?([0,0,0,0,0,0,0,0])
+%>
+
+<!-- Generate HTML view -->
+<!-- When variant is not found myvariant.info gives back JSON with notround flag -->
+<% if @json["notfound"] %>
+    <section class="white-bg">
+      <div class="cotainer">
+        <div class="row" style="width:80%;margin:auto">
+          <div class="col-xs-12">
+            <h2> Allele not found in myvariant.info </h2>
+          </div>
+        </div>
+      </div>
+    </section>
+<% else %>
+
+    <!--Information for the top panel-->
+    <section class="blue-bg">
+      <div class="cotainer">
+        <div class="row" style="width:80%;margin:auto">
+          <div class="custom-blue-bg">
+            <div class="head-text"><h2 class="text-center col-xs-12"><b><%= _id %> (<%= gene_name %>) </b></h2></div>
+            <div class="head-text"><p class="text-center col-xs-12"><b>Ref : </b>  <%= reference %>, <b>Alt : </b>  <%= alternate %> </p></div>
+            <div class="head-text"><p class="text-center col-xs-12"><b>hg38: </b>  <%= hg38_start%>-<%=hg38_end%> </p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <% if ! snpeffInfo.nil? %>
+        <hr>
+        <!--snpeff annotations-->
+        <section class="white-bg">
+          <div class="cotainer">
+            <div class="row" style="width:80%;margin:auto">
+              <h2>SnpEff annotations/predictions</h2>
+            </div>
+            <div class="row" style="width:80%;margin:auto">
+              <div class="col-sm-12">
+                <table class="table">
+                  <thead>
+                  <tr>
+                    <th>Coding Change</th>
+                    <th>Protein Change</th>
+                    <th>Effect of change</th>
+                    <th>Transcript id</th>
+                    <th>Prediction by snpeff</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <% (0...hgvs_c.length).each do |i| %>
+                      <tr>
+                        <td> <a href="https://scholar.google.com/scholar?q=<%=hgvs_c[i]%> AND <%= gene_name %>" target="_blank"> <%= hgvs_c[i]  %> </a></td>
+                        <td> <a href="https://scholar.google.com/scholar?q=<%=hgvs_p[i]%> AND <%= gene_name %>" target="_blank"> <%= hgvs_p[i]  %> </a></td>
+                        <td> <%= effect[i]       %>   </td>
+                        <td> <a href="http://www.ncbi.nlm.nih.gov/nuccore/<%=transcript[i]%>" target="_blank"><%= transcript[i] %></a></td>
+                        <td> <%= snp_eff_pred[i] %>   </td>
+                      </tr>
+                  <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+    <% end %>
+    <hr>
+
+    <!--Predictor scores -->
+    <section class="white-bg">
+
+      <div class="row" style="width:80%;margin:auto">
+
+        <h2>Predictor Scores</h2>
+        <% if ! gerppp_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= gerppp_class %>">
+              <span class="large-para"><a href="http://mendel.stanford.edu/SidowLab/downloads/gerp/" target="_blank">Gerp++:</a></span>
+              <span class="large-para"><%= gerppp_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! phylop_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= phylop_class %>">
+              <span class="large-para"> PhyloP: </span>
+              <span class="large-para"><%= phylop_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! phastcons_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= phastcons_class %>">
+              <span class="large-para"> <a target="_blank" href="http://compgen.cshl.edu/phast/phastCons-HOWTO.html">PhastCons:</a> </span>
+              <span class="large-para"><%= phastcons_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! sift_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= sift_class %>">
+              <span class="large-para"><a target="_blank" href="http://sift.bii.a-star.edu.sg/">SIFT:</a> </span>
+              <span class="large-para"><%= sift_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! polyphen_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= polyphen_class %>">
+              <span class="large-para"><a target="_blank" href="http://genetics.bwh.harvard.edu/pph/data/">Polyphen:</a> </span>
+              <span class="large-para"><%= polyphen_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! ma_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= ma_class %>">
+              <span class="large-para"><a target="_blank" href="http://mutationassessor.org/r3/">Mutation Assessor:</a> </span>
+              <span class="large-para"><%= ma_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! mt_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= mt_class %>">
+              <span class="large-para"><a target="_blank" href="http://www.mutationtaster.org/">Mutation Taster:</a> </span>
+              <span class="large-para"><%= mt_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if ! metasvm_pred_score.nil? %>
+            <div class="text-center col-xs-12 <%= metasvm_class %>">
+              <span class="large-para"> Meta SVM: </span>
+              <span class="large-para"><%= metasvm_pred_score %></span>
+            </div>
+        <% end %>
+
+        <% if metasvm_pred_score.nil? and mt_pred_score.nil? and ma_pred_score.nil? and  polyphen_pred_score.nil? and gerppp_pred_score.nil? and phylop_pred_score.nil? and phastcons_pred_score.nil? and sift_pred_score.nil? %>
+            <div class="col-xs-12">
+              <%= "No snpeff data available" %>
+            </div>
+        <% end %>
+
+      </div>
+    </section>
+
+
+    <!--Interpro domain information-->
+
+    <% if ! interpro_domain.nil? %>
+        <hr>
+        <section class="white-bg">
+          <div class="row" style="width:80%;margin:auto">
+            <h2> Variant falls in following domain(s): </h2>
+          </div>
+          <div class="row" style="width:80%;margin:auto">
+            <% if interpro_domain.is_a?(Array) %>
+                <% interpro_domain.each do |i| %>
+                    <div class="col-xs-12">
+                      <div class="badge">
+                        <a href="https://www.ebi.ac.uk/interpro/search?q='<%=i%>'" target="_blank"><%=i%></a>
+                      </div>
+                      <br>
+                      <br>
+                    </div>
+                <% end %>
+            <% else %>
+                <div class="col-xs-12">
+                  <div class="badge">
+                    <a href="https://www.ebi.ac.uk/interpro/search?q='<%=interpro_domain%>'" target="_blank"><%=interpro_domain %></a>
+                  </div>
+                  <br>
+                  <br>
+                </div>
+            <% end %>
+          </div>
+        </section>
+    <% end %>
+
+    <!--For uniprot mutation database if any -->
+    <% if ! uniprot_variation.nil? %>
+        <hr>
+        <section class="white-bg">
+          <div class="row" style="width:80%;margin:auto">
+            <h2> Uniprot Variation:</h2>
+            <div class="col-xs-12">
+              <div class="badge"><a target="_blank" href="http://web.expasy.org/variant_pages/<%=uniprot_variation%>.html"><%= uniprot_variation %></a></div>
+            </div>
+          </div>
+        </section>
+        <hr>
+    <% end %>
+
+
+    <!-- GWAS SNP information -->
+    <% if ! gwassnpsInfo.nil? %>
+        <hr>
+        <section class="white-bg">
+          <div class="row" style="width:80%;margin:auto">
+            <h2> GWAS studies:</h2>
+            <div class="col-xs-12">
+              <div class="badge">
+                <a target="_blank" href="http://www.ncbi.nlm.nih.gov/pubmed/<%= gwassnpsInfo['pubmed']%>"><%=  gwassnpsInfo['title']%></a>
+              </div>
+            </div>
+          </div>
+        </section>
+        </hr>
+    <% end %>
+
+    <!-- Generate allele frequency plot using google api-->
+    <script>
+      google.charts.load('current', {packages: ['corechart', 'bar']});
+      google.charts.setOnLoadCallback(drawBasic);
+
+      function drawBasic() {
+
+        var data = google.visualization.arrayToDataTable([
+          ['Frequency', 'Population',],
+          <% (0...af_mapper.length).each do |i| %>
+          <%= "['#{af_mapper[i]}',#{af_values[i]}]" %>
+          <%  if i != af_mapper.length-1 %>
+          <%= "," %>
+          <% end %>
+          <% end %>
+        ]);
+
+        var options = {
+          chartArea: {width: '50%'},
+          hAxis: {
+            title: 'Allele Frequncy',
+            minValue: 0
+          },
+          vAxis: {
+            title: ''
+          }
+        };
+
+        var chart = new google.visualization.BarChart(document.getElementById('chart_div'));
+
+        chart.draw(data, options);
+      }
+    </script>
+
+    <hr>
+
+    <!-- This is where the actual plot is displayed-->
+
+    <% if ! frequency_nil %>
+        <section class="white-bg">
+          <div class="cotainer">
+            <div class="row" style="width:80%;margin:auto">
+              <h2> Allele Frequency </h2>
+              <div>
+                <div id="chart_div" style="height:500px"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+    <% end %>
+
+    <!-- Some custom styling -->
+
+    <style>
+      .redbg {
+        background-color: #f9ebeb;
+      }
+      .greenbg {
+        background-color: #c7ffc7;
+      }
+      .orangebg {
+        background-color: #FFF0C4;
+      }
+      .badge {
+        padding: 10px;
+        background-color: gainsboro;
+        padding-left: 15px;
+        padding-right: 15px;
+        border-radius: 20px;
+        font-size: 1.3em;
+      }
+      .custom-blue-bg {
+        background-color: #FFCC33;
+      }
+      .blue-bg {
+        padding-top: 5px;
+        padding-bottom: 5px;
+      }
+      .blue-bg > p {
+        font-size: 1.5em;
+      }
+      .large-para {
+        font-size: 1.5em;
+      }
+    </style>
+<% end %>
+</body>

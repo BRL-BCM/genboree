@@ -1,0 +1,666 @@
+<%# RENDER HTML %>
+<%
+  width = (@hasAccess ? 725 : 320)
+  height = (@hasAccess ? 525 : 320)
+  formTag = "<form id=\"wbDialogForm\" name=\"wbDialogForm\" action=\"wbDefault\" style=\"width: #{width}px; height: #{height}px;\" onsubmit=\" return UploadDbFile.submitJob(this); \" method=\"POST\" class=\"wbDialog wbForm\" enctype=\"multipart/form-data\">"
+%>
+  <%= formTag %>
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle, { :includeToolVersion => true }) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+        The <b>exceRpt</b> small RNA-seq Pipeline is for the processing and analysis of RNA-seq data generated to profile small-exRNAs. The pipeline is highly modular, allowing the user to define the libraries containing small RNA sequences that are used during RNA-seq read-mapping, including an option to provide a library of spike-in sequences to allow absolute quantitiation of small-RNA molecules. It also performs automatic detection and removal of 3' adapter sequences. The output data includes abundance estimates for each of the requested libraries, a variety of quality control metrics such as read-length distribution, summaries of reads mapped to each library, and detailed mapping information for each read mapped to each library. 
+        <br><br>
+        After the pipeline finishes processing all submitted samples, a separate post-processing tool (<code>processPipelineRuns</code>) is run on all successful pipeline outputs. This tool generates useful summary plots and tables that can be used to compare and contrast different samples.  You can find your post-processing results in the <code>processedResults_v4.6.3</code> folder within your output folder.
+        <br>&nbsp;<br>
+        The <b>exceRpt</b> small RNA-seq Pipeline was developed by the <a href='http://www.gersteinlab.org/' target='_blank'>Gerstein Lab</a> at Yale University.
+        <br>&nbsp;<br>
+        Check this Wiki page for <a href='http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Version_Updates' target='_blank'>Version Updates</a>.
+        <br>&nbsp;<br>
+
+        <span style='font-size: 80%'><i>This tool has been deployed in the context of the <a href='http://exrna.org/' target='_blank'>Extracellular RNA Communication Consortium</a> (ERCC). Please contact <a href='mailto:sailakss@bcm.edu'>Sai Lakshmi Subramanian</a> or <a href='mailto:thistlew@bcm.edu'>William Thistlethwaite</a> at the Data Coordination Center (DCC) of the ERCC with questions or comments, or for help using it on your own data.</i></span>
+        "
+      })
+  %>
+  <%# Input resource summary %>
+  <%=
+    # The input has been normalized at this point
+    renderFrag(@toolIdStr, :wbDialogSection,
+    {
+      :sectionTitle => "Input Files - Single-end small RNA-seq Reads:",
+      :sectionHtml =>
+        renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Single-end small RNA-seq Read Files" } )
+    })
+  %>
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Location:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews  %>
+  <%=
+    userId = @context['userId']
+    dbu = BRL::Genboree::DBUtil.new("#{@genbConf.dbrcKey}", nil, nil)
+    hostAuthMap = Abstraction::User.getHostAuthMapForUserId(dbu, userId) 
+    
+    apiUriHelper = BRL::Genboree::REST::Helpers::ApiUriHelper.new()
+    if(apiUriHelper.extractType(@outputs[0]) != "db" )
+      @outputs.reverse!
+    end
+
+    uri = URI.parse(@outputs[0])
+    rcscUri = uri.path
+    useIndexOptions = {}
+    listOfIndexes = {}
+    useIndexOptions[:noOligo] = { :label => 'No custom oligo library', :selected => true }
+    useIndexOptions[:uploadNewLibrary] = { :label => 'Upload new custom oligo library' }
+    hiddenIndexList = true
+    hiddenNewIndex = true
+      
+    # Get list of indexes (if any) from user db 
+    apiCaller = ApiCaller.new(uri.host, "#{rcscUri}/files/spikeInLibraries", hostAuthMap)
+    apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
+    apiCaller.get()
+    
+    if(apiCaller.succeeded?)
+      userData = JSON.parse(apiCaller.respBody)['data']
+      userData.each { |subdir|
+        userIndexName = subdir['name'] 
+        #indexDir = userIndexName.split("/")[2]
+        indexFile = userIndexName.split("/")[1]
+         
+        indexUri = @outputs[0].dup
+        indexUri = indexUri.chomp("?")
+     #   indexUri << "/file/spikeInLibraries/#{CGI.escape(indexDir)}/#{CGI.escape(indexFile)}"
+        indexUri << "/file/spikeInLibraries/#{CGI.escape(indexFile)}"
+        listOfIndexes[:"#{indexUri}"] = { :label => "#{indexFile}" }
+      }
+    end # if(apiCaller.succeeded?) for getting index list from user db
+
+    #$stderr.puts "apicall #{listOfIndexes.inspect} \n\n"
+
+    genomeVersion = @settings['genomeVersion'].decapitalize
+
+    # Add options to choose existing index to useIndexOptions
+    if(!listOfIndexes.empty?)   
+      useIndexOptions[:useExistingLibrary] = { :label => 'Use existing oligo library' }
+    end
+    # Options for random barcode locations
+    randomBarcodeLocs = {}
+    randomBarcodeLocs[:"-5p -3p"] = { :label => '-5p -3p', :selected => true }
+    randomBarcodeLocs[:"-5p"] = { :label => '-5p' }
+    randomBarcodeLocs[:"-3p"] = { :label => '-3p' }
+    # Options for exogenous mapping - added some dummy letters so that order of options is ideal (since it's done alphabetically)
+    exogenousMappingOptions = {}
+    exogenousMappingOptions[:"a_off"] = { :label => 'Endogenous-only', :selected => true}
+    exogenousMappingOptions[:"b_miRNA"] = { :label => 'Endogenous + Exogenous (miRNA)' }
+    exogenousMappingOptions[:"c_on"] = { :label => 'Endogenous + Exogenous (miRNA + Genome)' } 
+    # Options for endogenous mismatches
+    endogenousMismatchOptions = {}
+    endogenousMismatchOptions[:"0"] = { :label => '0'}
+    endogenousMismatchOptions[:"1"] = { :label => '1', :selected => true}
+    endogenousMismatchOptions[:"2"] = { :label => '2'}
+    endogenousMismatchOptions[:"3"] = { :label => '3'}
+    # Options for exogenous mismatches
+    exogenousMismatchOptions = {}
+    exogenousMismatchOptions[:"0"] = { :label => '0', :selected => true}
+    exogenousMismatchOptions[:"1"] = { :label => '1'}
+    # Options for 3' adapter sequences
+    adapterOptions = {}
+    adapterOptions[:"a_autoDetect"] = { :label => "Auto-detect 3' adapter", :selected => true}
+    adapterOptions[:"b_AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"] = { :label => "TruSeq p7 or NEB smallRNA (AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC)" }
+    adapterOptions[:"c_TGGAATTCTCGGGTGCCAAGG"] = { :label => "TruSeq smallRNA (TGGAATTCTCGGGTGCCAAGG)" }
+    adapterOptions[:"d_ATCTCGTATGCCGTCTTCTGCTTGC"] = { :label => "Illumina 1.5 smallRNA (ATCTCGTATGCCGTCTTCTGCTTGC)" }
+    adapterOptions[:"e_TCGTATGCCGTCTTCTGCTTG"] = { :label => "Illumina 1.0 smallRNA (TCGTATGCCGTCTTCTGCTTG)" }
+    adapterOptions[:"f_CGCCTTGGCCGTACAGCAG"] = { :label => "SOLiD smallRNA (CGCCTTGGCCGTACAGCAG)" }
+    adapterOptions[:"g_ATCACCGACTGCCCATAGAGAGGAAAGCGG"] = { :label => "IonTorrent (NEXTflex smallRNA) (ATCACCGACTGCCCATAGAGAGGAAAGCGG)" }
+    adapterOptions[:"h_TCGATTCGTATGCCGTCTTCTGCTTG"] = { :label => "Illumina smallRNA (Tuschl Lab) (TCGATTCGTATGCCGTCTTCTGCTTG)" }
+    adapterOptions[:"y_manual"] = { :label => "MANUALLY SPECIFY 3' ADAPTER" }
+    adapterOptions[:"z_none"] = { :label => "NO 3' ADAPTER (already removed from these reads)" }
+    # Options for ERCC PI
+    erccPI = @settings['piName']
+    erccGrantNumbers = @settings['grantNumbers']
+    erccGrantOptions = {}
+    erccGrantNumbers.each { |currentGrant|
+      currentGrantLabel = currentGrant.clone()
+      currentGrant.insert(0, "0_") if(currentGrant.include?("Primary"))
+      erccGrantOptions[currentGrant] = { :label => currentGrantLabel}   
+    }
+    # Options for anticipated data repository 
+    anticipatedDataRepos = @settings['anticipatedDataRepos'] 
+    anticipatedDataRepoOptions = {}
+    anticipatedDataRepos.each { |currentOption|
+      currentAnticipatedDataRepoLabel = currentOption.clone()
+      currentOption.insert(0, "0_") if(currentOption.include?("None"))
+      anticipatedDataRepoOptions[currentOption] = { :label => currentAnticipatedDataRepoLabel }
+    }
+    # Options for submission categories for data repository submission (DCC or not DCC)
+    submissionCategoryOptions = {}
+    submissionCategoryOptions[:"DCC Submission"] = { :label => "Submission Meant for DCC" }
+    submissionCategoryOptions[:"Samples Not Meant for Submission to DCC"] = { :label => "Submission Not Meant for DCC" }
+    # Options for whether PI has registered project with dbGaP (Yes / No / Not Applicable)
+    dbGaPOptions = {}
+    dbGaPOptions[:"Yes"] = { :label => "Yes - Project Registered with dbGaP"}
+    dbGaPOptions[:"No"] = { :label => "No - Project Not Registered with dbGaP"}
+    dbGaPOptions[:"Not Applicable"] = { :label => "Not Applicable", :selected => true}
+    # Options for remote storage areas
+    remoteStorageAreas = @settings['remoteStorageAreas']
+    remoteStorageOptions = {}
+    remoteStorageAreas.each { |currentOption|
+      remoteStorageOptions[currentOption] = { :label => currentOption }
+    }
+    remoteStorageOptions["None Selected"] = { :label => "None Selected", :selected => true }
+    # Options for different exceRpt versions (to support choice between older 3rd gen and new 4th gen)
+    exceRptGenOptions = {}
+    exceRptGenOptions[:"thirdGen"] = { :label => "Third Generation exceRpt (v3.3.0)" }
+    exceRptGenOptions[:"fourthGen"] = { :label => "Fourth Generation exceRpt (v4.6.2)", :selected => true }
+    # Possible options for minBaseCallQuality (10, 20 - default, 30, and 40)
+    minBaseCallQualityOptions = {}
+    minBaseCallQualityOptions[:"10"] = { :label => "10"}
+    minBaseCallQualityOptions[:"20"] = { :label => "20", :selected => true }
+    minBaseCallQualityOptions[:"30"] = { :label => "30"}
+    minBaseCallQualityOptions[:"40"] = { :label => "40"}
+    
+    widgets =
+              [
+                { :id => 'exceRptGen', :label => 'exceRpt Version', :title => 'Choose the version of exceRpt that you want to use for your analysis. By default, we have selected the newest, 4th generation version. If you want to use 3rd generation exceRpt, that option is available as well. We are providing 3rd gen. exceRpt for your convenience and no longer actively support it!', :type => :select, :onChange => "show4thGenOptions(this.value)", :options => exceRptGenOptions }, 
+                { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "35", :value => "exceRpt Pipeline-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'exceRptPipeline_v4.6.2\') used to organize exceRpt Pipeline results.' },
+                { :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the target database."},  
+                { :id => 'erccSubmissionOptions', :toggleText => "ERCC Submission Options", :type => :advancedSection, :startWithExpanded => true, :text => "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter.", :widgets =>
+                  [
+                    { :id => 'piName', :label => 'ERCC PI', :type => :text, :size => "30", :readOnly => true, :value => erccPI, :title => "This box contains the name of your PI."},
+                    { :id => 'grantNumber', :label => 'ERCC Grant Number', :title => 'Choose the appropriate grant number for your submission.', :type => :select, :options => erccGrantOptions },
+                    { :id => 'anticipatedDataRepo', :label => 'Anticipated Data Repository', :title => 'Choose the appropriate option for your anticipated data repository.', :onChange => "showDataRepoOptions(this.value)", :type => :select, :options => anticipatedDataRepoOptions },
+                    { :id => 'otherDataRepo', :label => 'Other Data Repository', :hidden => true, :type => :text, :size => "30", :title => "If you are submitting to a data repository that is not dbGaP / GEO, put that data repository here."},
+                    { :id => 'dataRepoSubmissionCategory', :label => 'Submission Category', :hidden => true, :title => 'Choose the appropriate option to indicate whether your samples are intended for the DCC or not.', :type => :select, :options => submissionCategoryOptions },
+                    { :id => 'dbGaP', :label => 'Project Registered with dbGaP?', :hidden => true, :title => 'Choose the appropriate option to indicate whether this project has been registered with dbGaP by your PI.', :type => :select, :options => dbGaPOptions },
+                  ]
+                },                
+                { :id => 'adapterSequenceOptions', :toggleText => "3\' Adapter Sequence Options", :type => :advancedSection, :startWithExpanded => true, :text => "Pick your 3' adapter sequence below. By default, we will attempt to auto-detect your 3' adapter sequence. If your 3' adapters have already been clipped from your input reads, then choose the NO ADAPTER option. If you want to manually put in your own 3' adapter sequence, then choose the MANUALLY SPECIFY option.", :widgets =>
+                  [
+                    { :id => 'adapterSequence', :label => '3\' Adapter Sequence', :title => 'Choose the appropriate 3\' adapter sequence option.', :onChange => "showManualAdapterBox(this.value)", :type => :select, :options => adapterOptions },
+                    { :id => 'manualAdapter', :label => 'Manual Input of 3\' Adapter Sequence', :type => :text, :size => "35", :maxlength => "50", :hidden => true, :title => "If you want to manually input your 3' adapter sequence, please enter it here."},
+                  ]
+                },
+                { :id => 'randomBarcodeOptions', :toggleText => "Random Barcode Options", :type => :advancedSection, :startWithExpanded => true, :text => "If your samples were prepped with adapters containing short random barcodes, click the checkbox below. These library preps typically contain distinct 4nt random sequences on both the 5' and 3’ sequencing adapters. You can change these defaults below if your sample was prepped in a different way. The exceRpt pipeline can also compute frequency and enrichment statistics for samples with random barcodes - such metrics can be useful in some circumstances for identifying ligation/amplification biases in smallRNA samples. To enable this option, click the 'Compute Barcode Stats' box. This option will make your job run more slowly.", :widgets =>
+                  [
+                    { :id => 'randomBarcodesEnabled', :label => 'Random Barcodes Present in Samples?', :type => :checkbox, :checked => false, :onClick => "showRandomBarcodeOptions(this.checked)", :title => "Check the box if you have random barcodes present in your samples."},
+                    { :id => 'randomBarcodeLength', :label => 'Random Barcode Length', :type => :text, :size => "10", :maxlength => "20", :value => 4, :hidden => true, :title => "Enter the length of the random barcodes given in your adapter sequence. Default: 4."},
+                    { :id => 'randomBarcodeLocation', :label => 'Random Barcode Location', :type => :select, :options => randomBarcodeLocs, :value => :"-5p -3p", :hidden => true, :title => "Enter the location(s) of the random barcodes given in your adapter sequence. Default: -5p -3p (both ends of adapter sequence)."},
+                    { :id => 'randomBarcodeStats', :label => 'Compute Barcode Stats', :type => :checkbox, :checked => false, :hidden => true, :title => "Check the box if you want to compute frequency and enrichment statistics for your samples."},
+                  ]
+                },
+                { :id => 'advancedPreprocessingOptions', :toggleText => "Advanced Preprocessing Options", :type => :advancedSection, :text => "Below, you can change a variety of different advanced preprocessing options.", :widgets =>
+                  [
+                    { :id => 'trimBases3p', :label => 'Trim Bases on 3p End', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 0, :allowBlank => false, :size => "10", :value => 0, :title => "This option will trim N bases from the 3' end of every read, where N is the value you choose. Default: 0."},
+                    { :id => 'trimBases5p', :label => 'Trim Bases on 5p End', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 0, :allowBlank => false, :size => "10", :value => 0, :title => "This option will trim N bases from the 5' end of every read, where N is the value you choose. Default: 0."},
+                    { :id => 'minAdapterBases3p', :label => 'Minimum Bases for 3p Adapter', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 3, :maxValue => 10, :allowBlank => false, :size => "10", :value => 7, :title => "This option will set the minimum number of bases for the 3' adapter. Note that any legitimate insert sequence with even a modest poly-A run will be mishandled if you choose a lower value. Minimum value allowed is 3, and maximum value allowed is 10. Default: 7."},
+                    { :id => 'minReadLength', :label => 'Minimum Read Length', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 10, :allowBlank => false, :size => "10", :value => 18, :title => "Enter your minimum read length here. This value will be the minimum read length we will use after adapter (and random barcode) removal. Minimum value allowed is 10. Default: 18."},
+                    { :id => 'minBaseCallQuality', :label => 'Minimum Base-call Quality of Reads', :type => :select, :options => minBaseCallQualityOptions, :title => "Choose your minimum base-call quality of reads here. Default: 20."},
+                    { :id => 'fractionForMinBaseCallQuality', :label => 'Percentage of Read That Must Meet Minimum Base-call Quality', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 0, :maxValue => 100, :allowBlank => false, :size => "10", :value => 80, :title => "This value is the percentage of the read that must meet the minimum base-call quality given above. Default: 80."},
+                  ]
+                },
+                # Note: wbContext and newSpikeInLibrary are used in uploadDbFile.js (is subdirs necessary?)
+                { :id => 'spikeInOptions', :toggleText => "Oligo (Spike-in) Library Options", :type => :advancedSection, :startWithExpanded => true, :text => "You can choose to first align your samples to a custom oligo (spike-in) library. You can upload your oligo library with the 'Upload new custom oligo library' option, or you can select a previously uploaded oligo library from your Database with the 'Use existing oligo library' option. By default, the 'No custom oligo library' option is selected.", :widgets =>
+                  [
+                    { :id => 'useLibrary', :label => 'Select Library', :title => 'Do you want to use a custom oligo (spike-in) library? Default: No custom library', :onChange => "showIndexOption(this.value)", :type => :select, :options => useIndexOptions },                   
+                    { :id => 'existingLibraryName', :label => 'Existing Libraries', :title => 'Select a previously uploaded oligo (spike-in) library', :type => :select, :options => listOfIndexes, :hidden => hiddenIndexList },
+                    { :id => 'indexBaseName', :label => 'Oligo Bowtie2 Index Name', :type => :text, :size => '15', :maxlength => '30', :hidden => hiddenNewIndex, :title => "Provide a name for the Bowtie2 index of your custom spike-in library. This name should be less than 30 characters in length." },
+                    { :id => 'wbContext', :type => :hidden },
+                    { :id => 'subdirs', :type => :text , :value => "spikeInLibraries", :hidden => true },
+                    { :id => 'uploadFile', :label => 'Upload Custom Oligo FASTA File', :hidden => hiddenNewIndex, :type => :file },
+                    { :id => 'newSpikeInLibrary', :type => :hidden },
+                  ]
+                },
+                { :id => 'endogenousAlignment', :toggleText => "Endogenous Alignment Options", :type => :advancedSection, :startWithExpanded => true, :text => 'Below, you can select your order of preference for endogenous library alignment. Numbers are listed in order of priority (\'1\' is higher priority than \'2\', etc.). By default, the quantification engine will first align to miRNA (miRBase), then tRNA (gtRNAdb), then pIRNA (piRNABank), then Ensembl transcripts (Gencode), and then circularRNA (circBase). You can change the order of priority by altering the numbers below. If you do not want to align to a particular library, erase the number for that particular library. You may also use the \'Remove\' buttons. You may not choose the same priority for multiple libraries.', :widgets =>
+                  [
+                    { :id => 'miRNAOrder', :label => 'miRNA', :type => :extSpinner, :allowDecimals => false, :onChange => "createPriorityList('miRNA')", :allowNegative => false, :allowBlank => true, :width => 50, :value => 1, :minValue => 1, :maxValue => 5, :title => "This dictates the order of alignment for miRNA." },
+                    { :id => 'remove_miRNA', :label => '', :type => :extBtnGroup, :btnCols => 1, :btnGroupWidth => 5, :btnList => ['Remove miRNA Mapping'], :title => "Click this button to remove mapping to the miRNA library." },
+                    { :id => 'tRNAOrder', :label => 'tRNA', :type => :extSpinner, :allowDecimals => false, :onChange => "createPriorityList('tRNA')", :allowNegative => false, :allowBlank => true, :width => 50, :value => 2, :minValue => 1, :maxValue => 5, :title => "This dictates the order of alignment for tRNA." },
+                    { :id => 'remove_tRNA', :label => '', :type => :extBtnGroup, :btnCols => 1, :btnList => ['Remove tRNA Mapping'], :title => "Click this button to remove mapping to the tRNA library." },
+                    { :id => 'piRNAOrder', :label => 'piRNA', :type => :extSpinner, :allowDecimals => false, :onChange => "createPriorityList('piRNA')", :allowNegative => false, :allowBlank => true, :width => 50, :value => 3, :minValue => 1, :maxValue => 5, :title => "This dictates the order of alignment for piRNA." },
+                    { :id => 'remove_piRNA', :label => '', :type => :extBtnGroup, :btnCols => 1, :btnList => ['Remove piRNA Mapping'], :title => "Click this button to remove mapping to the piRNA library." },
+                    { :id => 'gencodeOrder', :label => 'Gencode', :type => :extSpinner, :allowDecimals => false, :onChange => "createPriorityList('Gencode')", :allowNegative => false, :allowBlank => true, :width => 50, :value => 4, :minValue => 1, :maxValue => 5, :title => "This dictates the order of alignment for Gencode annotations." },
+                    { :id => 'remove_gencodeRNA', :label => '', :type => :extBtnGroup, :btnCols => 1, :btnList => ['Remove Gencode Mapping'], :title => "Click this button to remove mapping to the Gencode library." },
+                    { :id => 'circRNAOrder', :label => 'CircularRNA', :type => :extSpinner, :allowDecimals => false, :onChange => "createPriorityList('circRNA')", :allowNegative => false, :allowBlank => true, :width => 50, :value => 5, :minValue => 1, :maxValue => 5, :title => "This dictates the order of alignment for circular RNA." },
+                    { :id => 'remove_circRNA', :label => '', :type => :extBtnGroup, :btnCols => 1, :btnList => ['Remove circRNA Mapping'], :title => "Click this button to remove mapping to the circular RNA library." },
+                    { :id => 'priorityList', :label => 'Current Priority List', :type => :text, :value => "miRNA > tRNA > piRNA > Gencode > circRNA", :readOnly => true, :size => '50', :title => "This is the current priority list, as dictated by the above priority numbers."},
+                  ]
+                },
+                { :id => 'advancedEndogenousOptions', :toggleText => "Advanced Endogenous Alignment Options", :type => :advancedSection, :text => "Below, you can change a variety of different advanced endogenous alignment options.", :widgets =>
+                  [
+                    { :id => 'endogenousMismatch', :label => 'Maximum Number of Endogenous Mismatches Allowed', :type => :select, :options => endogenousMismatchOptions, :title => "This option allows you to select the maximum number of mismatches permitted during endogenous alignment. Default: 1."},
+                    { :id => 'readRemainingAfterSoftClipping', :label => 'Minimum Fraction of Read Remaining After Soft Clipping', :type => :extNumber, :allowNegative => false, :minValue => 0, :maxValue => 1, :allowBlank => false, :size => "10", :value => 0.9, :title => "This value is the minimum fraction of the read that must remain following soft-clipping (in a local alignment). Default: 0.9."},
+                    { :id => 'downsampleRNAReadsEnabled', :label => 'Downsample RNA Reads for Transcriptome Alignments?', :type => :checkbox, :checked => false, :onClick => "showDownsampleOptions(this.checked)", :title => "Check the box if you want to downsample your RNA reads after assigning reads to the various transcriptome libraries. This may be useful for normalizing very different yields."},
+                    { :id => 'downsampleRNAReads', :label => 'Number of RNA Reads', :type => :extNumber, :size => "10", :maxlength => "20", :hidden => true, :allowDecimals => false, :allowNegative => false, :allowBlank => false, :minValue => 1, :value => 100000, :title => "You will downsample to this number of RNA reads after assigning reads to the various transcriptome libraries. We recommend using a minimum of 100,000, but any value above 0 is acceptable."}
+                  ]
+                },
+                { :id => 'exogenousAlignment', :toggleText => "Exogenous Alignment Options", :type => :advancedSection, :startWithExpanded => true, :text => 'Below, you can select your preference for exogenous library alignment. The first choice, endogenous-only, will disable mapping to exogenous miRNAs.  The second choice, endogenous + exogenous (miRNA), will make the pipeline map to exogenous miRNAs in miRBase (i.e., from plants and viruses). Finally, the third choice, endogenous + exogenous (miRNA + Genome), will make the pipeline map to exogenous miRNAs in miRBase AND the genomes of all sequenced species in Ensembl/NCBI. Note that if you choose either the second or third option, then you cannot turn off any of the endogenous mappings above. If you have already turned off any mappings above, then you cannot select either of these options. Please note that full exogenous alignment will require significantly more time (anywhere from 3 to 15 hours per sample, with some samples taking even longer) compared to the other options.', :widgets =>
+                  [
+                    { :id => 'exogenousMapping', :label => 'Exogenous Alignment', :type => :select, :options => exogenousMappingOptions, :onChange => "checkEndogenousLibraries(this.value)", :previousValue => "a_off", :title => "Choose an exogenous alignment option." },    
+                  ]
+                },
+                { :id => 'advancedExogenousOptions', :toggleText => "Advanced Exogenous Alignment Options", :type => :advancedSection, :text => "Below, you can change a variety of different advanced exogenous alignment options.", :widgets =>
+                  [
+                    { :id => 'exogenousMismatch', :label => 'Maximum Number of Exogenous Mismatches Allowed', :type => :select, :options => exogenousMismatchOptions, :title => "This option allows you to select the maximum number of mismatches permitted during exogenous alignment. Default: 0."},
+                  ]
+                },
+                { :id => 'advancedOptions', :toggleText => "Other Advanced Options", :type => :advancedSection, :text => 'Below, you can select your preference for advanced options that don\'t fit into the other categories above. The \'Remote Storage Area\' option will allow you to choose a remote storage (FTP) area where your result files will be uploaded. You can learn more by visiting the <a href=\'http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Using_Remote_%28FTP%29_Storage_for_exceRpt\' target=\'_blank\'>tutorial</a>. For 3rd gen exceRpt, The \'Bowtie Seed Length\' option will allow you to adjust the Bowtie seed length used during alignment.', :widgets =>
+                  [
+                    { :id => 'remoteStorageArea', :'label' => 'Remote Storage Area', :type => :select, :options => remoteStorageOptions, :title => "If you've used the 'Create Remote Storage Area' tool to create a remote storage (FTP) area, you can choose an area where your results will be uploaded. Default: 'None Selected'."},
+                    { :id => 'bowtieSeedLength', :label => 'Bowtie Seed Length', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 15, :maxValue => 30, :hidden => true, :allowBlank => false, :size => "10", :value => 19, :title => "Enter your Bowtie seed length here. Value can range from 15 (most sensitive) to 30 (most conservative). Default: 19."},
+                    { :id => 'suppressRunExceRptEmails', :label => 'Suppress Individual Sample Emails', :type => :checkbox, :checked => false, :title => "Check the box if you want to suppress success emails for each individual sample processed (useful to avoid email spam with large number of samples). If any of your samples fail processing, you will still receive an email even if you check this box."},
+                    { :id => 'uploadFullResults', :'label' => 'Upload Full Results', :type => :checkbox, :title => "If you need access to the full alignment files (.bam) for each sample processed by exceRpt, click the box."}
+                  ]
+                }
+              ]
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "exceRpt Pipeline Settings",
+      :widgets => widgets
+    })
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+
+
+  
+<%= WorkbenchFormHelper.renderInlineScriptFrag(["#{@genbConf.cacheDirBasePath}/javaScripts/progressUpload.js", "#{@genbConf.toolViewRoot}/smRNAPipeline/uis/UploadDbFile.js"]) %>
+
+  <script type="text/javascript">
+    
+    // Method which is used to hide/unhide certain options associated with random barcode options.
+    // Basically, if user hits randomBarcodesEnabled checkbox, then he/she can put information in for various random barcode options.
+    // Note that we further enforce certain rules in the exceRpt wrapper (if user puts in various info for random barcode options 
+    // and then unchecks randomBarcodesEnabled box, we won't take any of those options into account).
+    function showRandomBarcodeOptions(checked)
+    {
+      // Grab all of the various random barcode widgets 
+      var randomBarcodeLength = Ext.get('randomBarcodeLength');
+      var randomBarcodeLengthLabel = Ext.get('randomBarcodeLengthLabel');
+      var randomBarcodeLocation = Ext.get('randomBarcodeLocation');
+      var randomBarcodeLocationLabel = Ext.get('randomBarcodeLocationLabel');
+      var randomBarcodeStats = Ext.get('randomBarcodeStats');
+      var randomBarcodeStatsLabel = Ext.get('randomBarcodeStatsLabel');
+      // If user checked randomBarcodesEnabled checkbox, then make all widgets visible - otherwise, they're hidden
+      if(checked)
+      {
+        randomBarcodeLength.setStyle('display', '');
+        randomBarcodeLengthLabel.setStyle('display', '');
+        randomBarcodeLocation.setStyle('display', '');
+        randomBarcodeLocationLabel.setStyle('display', '');
+        randomBarcodeStats.setStyle('display', '');
+        randomBarcodeStatsLabel.setStyle('display', '');
+      } 
+      else 
+      {
+        randomBarcodeLength.setStyle('display', 'none');
+        randomBarcodeLengthLabel.setStyle('display', 'none');
+        randomBarcodeLocation.setStyle('display', 'none');
+        randomBarcodeLocationLabel.setStyle('display', 'none');
+        randomBarcodeStats.setStyle('display', 'none');
+        randomBarcodeStatsLabel.setStyle('display', 'none');
+      }
+    }
+
+    // Method which is used, much like the method above, to show / hide certain options depending on the user's choice.
+    // Here, we are looking at options related to the anticipated data repository (used in tool usage doc).
+    function showDataRepoOptions(value) {
+      // Grab various widgets related to anticipated data repository
+      var otherDataRepo = Ext.get('otherDataRepo');
+      var otherDataRepoLabel = Ext.get('otherDataRepoLabel');
+      var dataRepoSubmissionCategory = Ext.get('dataRepoSubmissionCategory');
+      var dataRepoSubmissionCategoryLabel = Ext.get('dataRepoSubmissionCategoryLabel');
+      var dbGaP = Ext.get('dbGaP');
+      var dbGaPLabel = Ext.get('dbGaPLabel');
+      // If value is "0_None", then user cannot fill out information.
+      if(value == "0_None") {
+        dataRepoSubmissionCategory.setStyle('display', 'none');
+        dataRepoSubmissionCategoryLabel.setStyle('display', 'none');
+        dbGaP.setStyle('display', 'none');
+        dbGaPLabel.setStyle('display', 'none');
+        otherDataRepo.setStyle('display', 'none');
+        otherDataRepoLabel.setStyle('display', 'none');
+      } else {
+        // We always display data repository submission category (DCC or not DCC?)
+        dataRepoSubmissionCategory.setStyle('display', '');
+        dataRepoSubmissionCategoryLabel.setStyle('display', '');
+        // If user picks GEO, then we don't display dbGap options or Other data repo text box 
+        if(value == "GEO") {
+          dbGaP.setStyle('display', 'none');
+          dbGaPLabel.setStyle('display', 'none');
+          otherDataRepo.setStyle('display', 'none');
+          otherDataRepoLabel.setStyle('display', 'none');
+        // If user picks dbGaP or Both GEO & dbGap, then we display dbGaP options but don't display Other data repo text box
+        } else if(value == "dbGaP" || value == "Both GEO & dbGaP") {
+          dbGaP.setStyle('display', '');
+          dbGaPLabel.setStyle('display', '');
+          otherDataRepo.setStyle('display', 'none');
+          otherDataRepoLabel.setStyle('display', 'none');
+        // If user picks Other, then we display Other data repo text box but don't display dbGaP options
+        } else if(value == "Other") {
+          dbGaP.setStyle('display', 'none');
+          dbGaPLabel.setStyle('display', 'none');
+          otherDataRepo.setStyle('display', '');
+          otherDataRepoLabel.setStyle('display', '');
+        }
+      } 
+    }
+
+    // Add spin listeners to endogenous library alignment spinners
+    Ext.getCmp('spinnerField_miRNAOrder').on('spin', createPriorityList, 'miRNA');
+    Ext.getCmp('spinnerField_tRNAOrder').on('spin', createPriorityList, 'tRNA');
+    Ext.getCmp('spinnerField_piRNAOrder').on('spin', createPriorityList, 'piRNA');
+    Ext.getCmp('spinnerField_gencodeOrder').on('spin', createPriorityList, 'Gencode');
+    Ext.getCmp('spinnerField_circRNAOrder').on('spin', createPriorityList, 'circRNA');
+
+    // Add click listeners to remove library buttons (endogenous library alignment)
+    Ext.getCmp('btnGroup_remove_miRNA').el.on('click', removeLibrary, 'miRNA');
+    Ext.getCmp('btnGroup_remove_tRNA').el.on('click', removeLibrary, 'tRNA'); 
+    Ext.getCmp('btnGroup_remove_piRNA').el.on('click', removeLibrary, 'piRNA'); 
+    Ext.getCmp('btnGroup_remove_gencodeRNA').el.on('click', removeLibrary, 'Gencode'); 
+    Ext.getCmp('btnGroup_remove_circRNA').el.on('click', removeLibrary, 'circRNA'); 
+
+    // This method is used to create the priority list for endogenous library alignment.
+    // We adjust the list every time the user makes a change of some kind to the list.
+    // If that change is illegal, then we ignore it.
+    function createPriorityList(currentLibrary)
+    {
+      // currentLibrary can be string (in onChange) or entire extJS object (in onSpin), so let's handle that at beginning
+      // Note that when entire extJS object is passed in as currentLibrary, 'this' is equivalent to the scope parameter passed in below.
+      // This scope parameter is set to be the same value as passed above in onChange
+      if(typeof currentLibrary != "string") {
+        currentLibrary = this;
+      }
+      // Find priority value associated with current library
+      // We have to remember to lowercase Gencode to gencode since our id uses gencode (but we display Gencode because it looks nicer)
+      currentPrefix = currentLibrary.charAt(0).toLowerCase() + currentLibrary.slice(1);
+      var currentLibraryValue = Ext.get('spinnerField_'.concat(currentPrefix).concat('Order')).getValue();
+      // Grab current priority list and put it into array
+      var currentPriorityList = document.getElementById('priorityList');
+      var newList = currentPriorityList.value.slice(0);
+      newList = newList.split(" > ");
+      // Remove all instances of "" from list (happens from above split call)
+      for(var oo = 0; oo < newList.length ; oo++) {
+        if(newList[oo] == "") {
+          newList.splice(oo, 1);
+        }
+      }
+      // Reject value change if new value is not blank and below 1 (0) or above 5
+      if(currentLibraryValue.length > 0 && (currentLibraryValue < 1 || currentLibraryValue > 5)) {
+        // found will keep track of whether we found the current library in our original list 
+        var found = false;
+        // Search original list for current library - if we find it, then reset the value for current library and set found to true
+        for(var kk = 0; kk < newList.length; kk++) {
+          if(newList[kk] == currentLibrary) {
+            Ext.getCmp('spinnerField_'.concat(currentPrefix).concat('Order')).setValue(kk + 1);
+            found = true;
+          }
+        }
+        // If we couldn't find the library in the original list, then that means it was previously blank (had no value). 
+        // So we will reset the current library to have no value.
+        if(!found) {
+          Ext.getCmp('spinnerField_'.concat(currentPrefix).concat('Order')).setValue("");
+        }
+      // Reject value change if new value is blank and exogenous mapping is on
+      } else if(currentLibraryValue.length == 0 && (document.getElementById('exogenousMapping').value == "c_on" || document.getElementById('exogenousMapping').value == "b_miRNA" || newList.length == 1)) {
+        // Search original list for current library - if we find it, then reset its value
+        for(var mm = 0; mm < newList.length; mm++) {
+          if(newList[mm] == currentLibrary) {
+            Ext.getCmp('spinnerField_'.concat(currentPrefix).concat('Order')).setValue(mm + 1);
+          }
+        }
+      } else {
+        // Remove current library from list
+        for(var ii = newList.length - 1; ii >= 0; ii--) {
+          if(newList[ii] == currentLibrary) {
+            newList.splice(ii, 1);
+          }
+        }
+        // If user deletes the value for the current library, then it is not added back to the list 
+        if(currentLibraryValue.length > 0) {
+          // Insert current library into proper location in new list
+          newList.splice(currentLibraryValue - 1, 0, currentLibrary);
+        }
+        // Update every library's value according to new list
+        // The value of each element will be its index + 1 
+        for(var jj = 0; jj < newList.length; jj++) {
+          // Same issue as above - lowercase Gencode to gencode
+          currentPrefix = newList[jj].charAt(0).toLowerCase() + newList[jj].slice(1);
+          Ext.getCmp('spinnerField_'.concat(currentPrefix).concat('Order')).setValue(jj + 1); 
+        }
+        // Save new priority list 
+        currentPriorityList.value = newList.join(" > ");
+      }
+    }
+
+    // This method is used to remove an endogenous library from endogenous library alignment.
+    function removeLibrary(currentLibrary) {
+      // currentLibrary can be string (in onChange) or entire extJS object (in onSpin), so let's handle that at beginning
+      // Note that when entire extJS object is passed in as currentLibrary, 'this' is equivalent to the scope parameter passed in below.
+      // This scope parameter is set to be the same value as passed above in onChange
+      if(typeof currentLibrary != "string") {
+        currentLibrary = this;
+        currentLibrary = currentLibrary.toString();
+      }
+      currentPrefix = currentLibrary.charAt(0).toLowerCase() + currentLibrary.slice(1);
+      Ext.getCmp('spinnerField_'.concat(currentPrefix).concat('Order')).setValue('');
+      createPriorityList(currentLibrary);
+    }
+ 
+    // Method to ensure that users cannot select any exogenous option if any endogenous libraries are disabled, and cannot select full exogenous option if 3rd gen exceRpt is selected.
+    function checkEndogenousLibraries(value) {
+      // Grab priority list and split it up by '>' char. There should be 5 elements if all endogenous libraries are selected.
+      var currentPriorityList = document.getElementById('priorityList');
+      var newList = currentPriorityList.value.slice(0);
+      newList = newList.split(" > ");
+      // Grab current exceRpt version (4th gen or 3rd gen)
+      var currentExceRptVersion = document.getElementById('exceRptGen').value;
+      // If number of elements in endogenous library is not 5, then we won't allow any kind of exogenous mapping, so we'll reset user's choice to previous choice (endogenous only).
+      if(((value == "c_on") || (value == "b_miRNA")) && newList.length != 5) {
+        document.getElementById('exogenousMapping').value = document.getElementById('exogenousMapping').getAttribute('previousvalue');
+      // If user has selected 3rd gen exceRpt, then we won't allow full exogenous mapping, so we'll reset user's choice to previous choice (endogenous only or endogenous + exogenous (miRNA))
+      } else if(value == "c_on" && currentExceRptVersion == "thirdGen") {
+        document.getElementById('exogenousMapping').value = document.getElementById('exogenousMapping').getAttribute('previousvalue');              
+      } else {
+        // If we don't hit one of the above conditions, then we'll just update the previousvalue field with the current value 
+        // (so we can properly reset to previous value when user does hit one of the above conditions).
+        document.getElementById('exogenousMapping').setAttribute('previousvalue', value);
+      }
+    }
+
+    // This method is used to show the text box where users can put in their adapter sequence manually.
+    // This text box is only displayed if users pick "Other / Unknown adapter" for adapterSequence
+    // and "No (input 3' adapter sequence manually)" for autoDetectAdapter.
+    function showManualAdapterBox(value)
+    {
+      var manualAdapter = Ext.get('manualAdapter');
+      var manualAdapterLabel = Ext.get('manualAdapterLabel');
+      if(value == "y_manual")
+      {
+        manualAdapter.setStyle('display', '');
+        manualAdapterLabel.setStyle('display', '');
+      } else {
+        manualAdapter.setStyle('display', 'none');
+        manualAdapterLabel.setStyle('display', 'none');
+      }
+    }
+
+    // This method is used to change between 4th gen options and 3rd gen options.
+    // We want to (temporarily) support 3rd gen exceRpt, because users might be finishing up analyses with 3rd gen.
+    // Thus, this method will show certain options and hide other options depending on whether user wants to do 3rd gen or 4th gen analysis.
+    function show4thGenOptions(value)
+    {
+      var bowtieSeedLength = Ext.get('bowtieSeedLength');
+      var bowtieSeedLengthLabel = Ext.get('bowtieSeedLengthLabel');
+      var trimBases5p = Ext.get('trimBases5p');
+      var trimBases5pLabel = Ext.get('trimBases5pLabel');
+      var trimBases3p = Ext.get('trimBases3p');
+      var trimBases3pLabel = Ext.get('trimBases3pLabel');
+      var minReadLength = Ext.get('minReadLength');
+      var minReadLengthLabel = Ext.get('minReadLengthLabel');
+      var minBaseCallQuality = Ext.get('minBaseCallQuality');
+      var minBaseCallQualityLabel = Ext.get('minBaseCallQualityLabel');
+      var fractionForMinBaseCallQuality = Ext.get('fractionForMinBaseCallQuality');
+      var fractionForMinBaseCallQualityLabel = Ext.get('fractionForMinBaseCallQualityLabel');
+      var readRemainingAfterSoftClipping = Ext.get('readRemainingAfterSoftClipping');
+      var readRemainingAfterSoftClippingLabel = Ext.get('readRemainingAfterSoftClippingLabel');
+      var downsampleRNAReadsEnabled = Ext.get('downsampleRNAReadsEnabled');
+      var downsampleRNAReadsEnabledLabel = Ext.get('downsampleRNAReadsEnabledLabel');
+      var downsampleRNAReads = Ext.get('downsampleRNAReads');
+      var downsampleRNAReadsLabel = Ext.get('downsampleRNAReadsLabel');
+      if(value == "fourthGen")
+      {
+        bowtieSeedLength.setStyle('display', 'none');
+        bowtieSeedLengthLabel.setStyle('display', 'none');
+        trimBases5p.setStyle('display', '');
+        trimBases5pLabel.setStyle('display', '');
+        trimBases3p.setStyle('display', '');
+        trimBases3pLabel.setStyle('display', '');
+        minReadLength.setStyle('display', '');
+        minReadLengthLabel.setStyle('display', '');
+        minBaseCallQuality.setStyle('display', '');
+        minBaseCallQualityLabel.setStyle('display', '');
+        fractionForMinBaseCallQuality.setStyle('display', '');
+        fractionForMinBaseCallQualityLabel.setStyle('display', '');
+        readRemainingAfterSoftClipping.setStyle('display', '');
+        readRemainingAfterSoftClippingLabel.setStyle('display', '');
+        downsampleRNAReadsEnabled.setStyle('display', '');
+        downsampleRNAReadsEnabledLabel.setStyle('display', '');
+      } else {
+        bowtieSeedLength.setStyle('display', '');
+        bowtieSeedLengthLabel.setStyle('display', '');
+        trimBases5p.setStyle('display', 'none');
+        trimBases5pLabel.setStyle('display', 'none');
+        trimBases3p.setStyle('display', 'none');
+        trimBases3pLabel.setStyle('display', 'none');
+        minReadLength.setStyle('display', 'none');
+        minReadLengthLabel.setStyle('display', 'none');
+        minBaseCallQuality.setStyle('display', 'none');
+        minBaseCallQualityLabel.setStyle('display', 'none');
+        fractionForMinBaseCallQuality.setStyle('display', 'none');
+        fractionForMinBaseCallQualityLabel.setStyle('display', 'none');
+        readRemainingAfterSoftClipping.setStyle('display', 'none');
+        readRemainingAfterSoftClippingLabel.setStyle('display', 'none');
+        document.getElementById('downsampleRNAReadsEnabled').checked = false;
+        downsampleRNAReadsEnabled.setStyle('display', 'none');
+        downsampleRNAReadsEnabledLabel.setStyle('display', 'none');
+        downsampleRNAReads.setStyle('display', 'none');
+        downsampleRNAReadsLabel.setStyle('display', 'none');  
+      }
+    }
+
+    // Method which is used to hide/unhide certain options associated with downsampling RNA reads.
+    // Basically, if user hits randomBarcodesEnabled checkbox, then he/she can put information in for various downsampling options.
+    // Note that we further enforce certain rules in the exceRpt wrapper (if user puts in various info for downsampling options 
+    // and then unchecks downsamplingRNAReadsEnabled box, we won't take any of those options into account).
+    function showDownsampleOptions(checked)
+    {
+      // Grab all of the various random barcode widgets 
+      var downsampleRNAReads = Ext.get('downsampleRNAReads');
+      var downsampleRNAReadsLabel = Ext.get('downsampleRNAReadsLabel');
+      // If user checked randomBarcodesEnabled checkbox, then make all widgets visible - otherwise, they're hidden
+      if(checked)
+      {
+        downsampleRNAReads.setStyle('display', '');
+        downsampleRNAReadsLabel.setStyle('display', '');
+      } 
+      else 
+      {
+        downsampleRNAReads.setStyle('display', 'none');
+        downsampleRNAReadsLabel.setStyle('display', 'none');
+      }
+    }
+
+    // This method is used to show/hide various options related to oligo (spike-in) libraries.
+    function showIndexOption(value)
+    {
+      var existingLibraryName = Ext.get('existingLibraryName');
+      var existingLibraryNameLabel = Ext.get('existingLibraryNameLabel')
+    
+      var indexBaseName = Ext.get('indexBaseName');
+      var indexBaseNameLabel = Ext.get('indexBaseNameLabel');
+    
+      var newOligoFile = Ext.get('uploadFile');
+      var newOligoFileLabel = Ext.get('uploadFileLabel');
+      
+      if(value == "useExistingLibrary")
+      {
+        existingLibraryName.setStyle('display', '') ;
+        existingLibraryNameLabel.setStyle('display', '') ;
+  
+        indexBaseName.setStyle('display', 'none') ;
+        indexBaseNameLabel.setStyle('display', 'none') ;
+        
+        newOligoFile.setStyle('display', 'none') ;
+        newOligoFileLabel.setStyle('display', 'none') ;
+      }
+      else if(value == "uploadNewLibrary")
+      {
+        existingLibraryName.setStyle('display', 'none') ;
+        existingLibraryNameLabel.setStyle('display', 'none') ;
+        
+        indexBaseName.setStyle('display', '') ;
+        indexBaseNameLabel.setStyle('display', '') ;
+        
+        newOligoFile.setStyle('display', '') ;
+        newOligoFileLabel.setStyle('display', '') ;
+      }
+      else if(value == "noOligo")
+      {
+        existingLibraryName.setStyle('display', 'none') ;
+        existingLibraryNameLabel.setStyle('display', 'none') ;
+        
+        indexBaseName.setStyle('display', 'none') ;
+        indexBaseNameLabel.setStyle('display', 'none') ;
+        
+        newOligoFile.setStyle('display', 'none') ;
+        newOligoFileLabel.setStyle('display', 'none') ;
+      }
+    }
+    </script>
+
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <br>
+          <ul>
+            <li>We are investigating anomalies in pipeline execution for certain cases. </li>
+            <li>We have disabled this tool while we investigate, in case there is an 
+            effect on output correctness. </li>
+          </ul>
+          <span style='color: red;'>
+            We aim to have the exceRpt smallRNA-seq Pipeline available again soon.
+            Sorry for the inconvenience.
+          </span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

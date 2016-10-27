@@ -1,0 +1,197 @@
+
+/* ------------------------------------------------------------------
+ * WORKBENCH PANEL-RELATED STYLES
+ * ------------------------------------------------------------------
+ */
+
+/** ------------------------------------------------------------------
+ * Data Selector-Related
+ * ------------------------------------------------------------------
+ */
+/* Styling for the data selector tree: */
+.wbTree
+{
+  overflow: auto ;
+  border: 1px solid #c3daf9 ;
+}
+
+/* Override the tab strip from the Ext JS */
+.wbColumn ul.x-tab-strip
+{
+  width: auto ;
+}
+
+/* "Empty" nodes don't have an icon */
+.wbNoIconTreeNode {
+  background: none !important;
+}
+
+.wbHostTreeNode {
+  background-image: url('/images/silk/computer.png') !important;
+}
+
+.wbHostsTreeNode {
+  background-image: url('/images/silk/server.png') !important;
+}
+
+.wbGrpTreeNode {
+  background-image: url('/images/silk/group.png') !important;
+}
+
+.wbGrpsTreeNode {
+  background-image: url('/images/silk/folder_user.png') !important;
+}
+
+.wbDbTreeNode {
+  background-image: url('/images/workbench/dbTreeNode.png') !important;
+}
+
+.wbDbsTreeNode {
+  background-image: url('/images/silk/folder_database.png') !important;
+}
+
+.wbKbsTreeNode {
+  background-image: url('/images/silk/folder_lightbulb.png') !important;
+}
+
+.wbKbTreeNode {
+  background-image: url('/images/silk/lightbulb.png') !important;
+}
+
+.wbCollsTreeNode {
+  background-image: url('/images/silk/folder_database.png') !important;
+}
+
+.wbCollTreeNode {
+  background-image: url('/images/silk/database.png') !important;
+}
+
+.wbTransTreeNode {
+  background-image: url('/images/silk/folder_go.png') !important;
+}
+
+.wbTranTreeNode {
+  background-image: url('/images/silk/bullet_go.png') !important;
+}
+
+.wbHubsTreeNode {
+  background-image: url('/images/silk/folder_picture.png') !important;
+}
+
+.wbHubTreeNode {
+  background-image: url('/images/silk/layers.png') !important;
+}
+.wbGenomesTreeNode {
+  background-image: url('/images/silk/folder_palette.png') !important;
+}
+
+.wbGenomeTreeNode {
+  background-image: url('/images/workbench/genome.png') !important;
+  transform:rotate(-45deg);
+  -ms-transform:rotate(-45deg); /* IE 9 */
+  -webkit-transform:rotate(-45deg); /* Opera, Chrome, and Safari */
+}
+
+.wbFileTreeNode {
+  background-image: url('/images/silk/table.png') !important;
+}
+
+.wbFilesTreeNode {
+  background-image: url('/images/silk/folder_table.png') !important;
+}
+
+.wbSampleTreeNode {
+  background-image: url('/images/workbench/sampleIcon16.png') !important;
+}
+.wbSamplesTreeNode {
+  background-image: url('/images/workbench/sampleFolder16.png') !important;
+}
+
+.wbSampleSetTreeNode {
+  background-image: url('/images/workbench/sampleSetIcon16.png') !important;
+}
+.wbSampleSetsTreeNode {
+  background-image: url('/images/workbench/sampleSetFolder16.png') !important;
+}
+
+.wbExperimentTreeNode {
+  background-image: url('/images/workbench/experimentIcon16.png') !important;
+}
+.wbExperimentsTreeNode {
+  background-image: url('/images/workbench/experimentFolder16.png') !important;
+}
+
+.wbQueriesTreeNode {
+  background-image: url('/images/silk/folder_find.png') !important;
+}
+
+.wbQueryTreeNode {
+  /* background-image: url('/images/workbench/queryTreeNode.png') !important; */
+  background-image: url('/images/silk/find.png') !important;
+}
+
+.wbPrjTreeNode {
+  background-image: url('/images/silk/application_side_tree.png') !important;
+}
+
+.wbPrjsTreeNode {
+  background-image: url('/images/silk/folder_table.png') !important;
+}
+
+.wbRedminePrjTreeNode {
+  background-image: url('/images/silk/ruby.png') !important;
+}
+
+.wbRedminePrjsTreeNode {
+  background-image: url('/images/silk/ruby.png') !important;
+}
+
+.wbRefresh {
+  background-image: url('/images/silk/arrow_refresh.png') !important;
+}
+
+.wbAdd {
+  background-image: url('/images/silk/add.png') !important;
+}
+
+.wbDelete {
+  background-image: url('/images/silk/delete.png') !important;
+}
+
+.wbSave {
+  background-image: url('/images/silk/disk.png') !important;
+}
+
+.wbPublicResource a span {
+  border: 1px dotted #00CC33 ;
+  /* background: #BCE2D5 ;  */
+}
+
+/** ------------------------------------------------------------------
+ * Details Panel-Related
+ * ------------------------------------------------------------------
+ */
+/* Styling for the details grid: */
+#wbDetailsGridDiv {
+  margin-bottom: 10px ;
+}
+
+#wbDetailsGrid .x-grid3-cell-inner,.x-grid3-hd-inner
+{
+  white-space: normal;
+}
+
+/** ------------------------------------------------------------------
+ * Input/Output Container-Related
+ * ------------------------------------------------------------------
+ */
+/* Styling for the input data and output targets tree-leaf containers. */
+.wbSelectionContainer {
+  margin-top: 10px ;
+}
+
+.wbSeltree
+{
+  overflow: auto ;
+  border: 1px solid #c3daf9 ;
+}

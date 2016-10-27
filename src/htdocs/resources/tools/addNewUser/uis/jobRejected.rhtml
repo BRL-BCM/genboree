@@ -1,0 +1,14 @@
+<%# We need to set the radio button value from the warnings and the warningsConfirmed back to empty and false respectively %>
+<script type='text/javascript'>
+  Ext.onReady( function()
+  {
+    wbFormSettings.set('warningsSelectRadioBtn', '') ;
+    wbHash.get('context').set('warningsConfirmed', false) ;
+  }) ;
+</script>
+<div class="wbDialog" style="height:auto; width:auto;">
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolErrorTitle, { :title => @context['toolTitle'] } ) %>
+  <%# Error Info %>
+  <%= renderFrag(@toolIdStr, :wbErrorMsg, { :context => @context } ) %>
+</div>

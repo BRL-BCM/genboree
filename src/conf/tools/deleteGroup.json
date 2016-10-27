@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "deleteGroup",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "cluster": {
+    "pvmem": "750mb",
+    "mem" : null,
+    "vmem" : null
+  },
+  "ui": {
+    "label": "Delete Group",
+    "shortLabel": "[NOT SET]"
+  }
+}

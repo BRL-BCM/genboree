@@ -1,0 +1,13 @@
+{
+  "info": {
+    "idStr": "newickToTrackList",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Convert Newick Tree to Track Lists",
+    "shortLabel": "newickToTrackList",
+    "groupAccessUri": null
+  }
+}

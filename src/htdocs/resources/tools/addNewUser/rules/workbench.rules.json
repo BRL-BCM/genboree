@@ -1,0 +1,41 @@
+{
+  "inputs": {
+    "maxItemCount": 0,
+    "ruleSet": [
+
+    ],
+    "minItemCount": 0
+  },
+  "settings": {
+    "patterns": {
+      "lName": [
+        "^(?:^.+$)$",
+        "'Last Name' cannot be left blank"
+      ],
+      "fName": [
+        "^(?:^.+$)$",
+        "'First Name' cannot be left blank"
+      ],
+      "email": [
+        "^(?:^.+$)$",
+        "'Email Address' cannot be left blank"
+      ]
+    }
+  },
+  "context": {
+    "required": [
+
+    ]
+  },
+  "outputs": {
+    "maxItemCount": 1,
+    "ruleSet": [
+      [
+        "/grp/[^/ \\t\\n]+(\\?.*)?$",
+        1,
+        1
+      ]
+    ],
+    "minItemCount": 1
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "messageGroup",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Message Group",
+    "shortLabel": "[NOT SET]"
+  }
+}

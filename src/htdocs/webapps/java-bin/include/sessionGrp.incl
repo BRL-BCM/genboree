@@ -1,0 +1,13 @@
+ <%
+    String grpChangeState = request.getParameter("grpChanged");
+    String databaseChangeState = request.getParameter("databaseChanged");
+
+     boolean sessionCleared = false;
+    if (( grpChangeState!= null && grpChangeState.compareTo("1") ==0 )  || ( databaseChangeState!= null && databaseChangeState.compareTo("1") ==0 ) )
+    {
+        sessionCleared = true;
+        mys.removeAttribute("lastBrowserView");
+        mys.removeAttribute( "editStart" );
+        mys.removeAttribute( "editStop" );
+    }
+%>

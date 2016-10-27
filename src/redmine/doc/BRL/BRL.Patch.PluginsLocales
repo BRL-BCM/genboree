@@ -1,0 +1,70 @@
+
+ORIGINAL SOURCE: http://genboree.org/theCommons/boards/3/topics/3509
+
+
+Redmine 2.4.1 - Dealing with the Activity tab (and related)
+
+Added by Jackson, Andrew R 3 months ago
+
+Say you want to change the parochial @label_ldap_authentication@ text, which by default is @LDAP authentication@.
+* But you have some _other_ non-LDAP authentication (like, say, Genboree)
+* So you want it to be more correct, obvious, and non-parochial.
+** Say @Authentication modes@
+* Thus you try to +override+ the @label_ldap_authentication@ setting in your plugin's @config/locales/en.yml@
+** But +this doesn't work+
+
+It does nothing because until receently, Redmine's core code didn't arrange for plugins to override core locale settings.
+
+_But that's a major part of customizing a Redmine. And plugins are good for that!_
+
+h3. To Fix Locale Setting Overriding in Redmine:
+
+Either:
+# You need Redmine Revision 12482 (from 2014-01-05 or better), OR
+# You need to patch this file in Redmine: @lib/redmine/plugin.rb@
+
+Note: if you try to apply the patch and it fails, you probably have an up-to-date version
+of Redmine where the patch is _unnecessary_. You should manually confirm this is the case by
+looking at the file mentioned (lib/redmine/plugin.rb) and search for uses of "I18n"...do you
+see the Rails.application.config.i18n.load_path line in your Redmine? If so, you already have
+the patch.
+
+The patch file (@fix_plugin_locale_override.patch@) looks like this and is placed in the Redmine installation folder:
+
+<pre>
+--- lib/redmine/plugin.rb       2014-04-08 16:56:30.558564279 -0500
++++ lib/redmine/plugin.rb.ORIG  2014-04-08 16:54:07.593274960 -0500
+@@ -81,9 +81,7 @@
+ 
+       # Adds plugin locales if any
+       # YAML translation files should be found under <plugin>/config/locales/
+-      # BRL ; patched in Redmine Revision 12482:
+-      #::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
+-      Rails.application.config.i18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
++      ::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
+ 
+       # Prepends the app/views directory of the plugin to the view path
+       view_path = File.join(p.directory, 'app', 'views')
+[root@tyrosine redmine_genbKB_dev]# cat fix_plugin_locale_override.patch 
+--- lib/redmine/plugin.rb.ORIG  2014-04-08 16:54:07.593274960 -0500
++++ lib/redmine/plugin.rb       2014-04-08 16:54:41.127552677 -0500
+@@ -81,7 +81,9 @@
+ 
+       # Adds plugin locales if any
+       # YAML translation files should be found under <plugin>/config/locales/
+-      ::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
++      # BRL ; patched in Redmine Revision 12482:
++      #::I18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
++      Rails.application.config.i18n.load_path += Dir.glob(File.join(p.directory, 'config', 'locales', '*.yml'))
+ 
+       # Prepends the app/views directory of the plugin to the view path
+       view_path = File.join(p.directory, 'app', 'views')
+</pre>
+
+Now you can patch your Redmine with this command:
+* @patch -p0 < ./fix_plugin_locale_override.patch@
+** It will just say: @patching file lib/redmine/plugin.rb@ and be successful
+* Restart redmine after this.
+
+Now your plugins can override core local settings.
+

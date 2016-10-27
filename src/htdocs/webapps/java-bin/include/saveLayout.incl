@@ -1,0 +1,37 @@
+<%
+	String radioChecked = request.getParameter("viewfm");
+	      if ( radioChecked != null && radioChecked.length() > 0 )
+	        mys.setAttribute("createView","true"); 
+	    else
+	mys.removeAttribute("createView");
+	
+		String selectedView = request.getParameter("viewInput"); 
+			String viewStatus = request.getParameter("viewStatus");
+        if (viewStatus != null) {       
+                if (viewStatus.equals("1")) {            
+                selectedView = request.getParameter("viewInput"); 
+                if (selectedView != null) {      
+                selectedView = Util.urlDecode(selectedView);
+                
+                if (jsparams != null  && jsparams.length() > 0 ) {                         
+                JSONObject json = new JSONObject( jsparams ) ; 
+                if (json != null) {
+                groupId = SessionManager.getSessionGroupId(mys); 
+                rseq_id = SessionManager.getSessionDatabaseId(mys); 
+                String rootPath = org.genboree.upload.LffConstants.ROOTDIR_ANNOTATION_TABLE_VIEW +  "/annoTableViews"; 
+                
+                String userName = (String) mys.getAttribute( "username" );
+                LayoutHelper.saveUserConfig(out, chrName, startString, stopString, userName,   groupMode ,  rootPath, groupId, rseq_id, selectedView, json);                       
+                mys.setAttribute("sessionLayout", selectedView);
+                }        
+                }
+                }               
+                }        
+        }    
+		//if (selectedView != null && selectedView.indexOf("Create New Layout") > 0)  
+      //  mys.removeAttribute("sessionLayout");
+        
+      //  if (selectedView != null) 
+        mys.setAttribute("sessionLayout", selectedView); 
+	   
+%>

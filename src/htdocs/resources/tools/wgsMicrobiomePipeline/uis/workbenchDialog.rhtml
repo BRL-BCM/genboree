@@ -1,0 +1,254 @@
+<%# RENDER HTML%>
+<%
+  require 'brl/genboree/rest/apiCaller'
+  require 'brl/genboree/rest/helpers/databaseApiUriHelper'
+  require 'brl/genboree/rest/helpers/fileApiUriHelper'
+  require "brl/db/dbrc"
+  require 'uri'
+  require 'json'
+  width = (@hasAccess ? 540 : 320)
+  height = (@hasAccess ? 630 : 320)
+%>
+<form id="wbDialogForm" name="wbDialogForm" action="wbDefault" style="width: <%=width%>px; height: <%=height%>px;" onsubmit="return submitToolJob(this);" method="POST" class="wbDialog wbForm" >
+
+  <%# Tool Title %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolTitle) %>
+<%
+  if(@hasAccess)
+%>
+  <%# Overview text %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolOverview,
+      { :toolOverview =>
+        "
+          This tool runs the Whole Genome Shotgun (WGS) Microbiome Pipeline developed by Kevin Riehle at <a href=\"http://brl.bcm.tmc.edu\" target=\"_blank\">BRL</a>.
+          <br>&nbsp;<br>
+          The pipeline comprises of the following steps:
+          <ol>
+            <li><b>Sequence Import</b>: User uploads sample metadata file along with sequence files to the workbench.</li>
+            <li><b>Taxanomic Abundance</b>: Taxanomic Abundance is computed using MetaPhlAn.</li>
+            <li><b>Digital Normalization, Assembly, and Finding ORFs.</b></li>
+            <li><b>Functional Annotation.</b></li>
+          </ol>
+          <br>&nbsp;<br>
+          <div style='width:100%; text-align:center; font-size: 80%;'><i>Additional details about the metadata file and pipeline are available in the Help dialog.</i></div>
+        "
+      })
+  %>
+
+  <%# Input data summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Input Files:",
+        :sectionHtml =>
+          renderFrag(@toolIdStr, :wbFileListSummary, { :filesList => @inputs, :label => "Metadata File" } )
+      })
+  %>
+
+  <%# Output database summary %>
+  <%=
+      renderFrag(@toolIdStr, :wbDialogSection,
+      {
+        :sectionTitle => "Output Database:",
+        :sectionHtml => renderFrag(@toolIdStr, :wbDatabaseListSummary, { :databaseList => @outputs } )
+      })
+  %>
+
+  <%# Tool-specific UI widgets user provides/reviews %>
+  <%=
+    renderFrag(@toolIdStr, :wbToolSettingsUI,
+    {
+      :sectionTitle => "Settings",
+      :widgets =>
+      [
+        { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "25", :value => "WGS-Pipeline-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => "The top-level output folder used to organize the results"},
+        { :id => 'importSequencesSection', :type => :advancedSection,
+          :width => '500px',
+          :toggleText => "Import Sequences:",
+          :startWithExpanded => true,
+          :widgets => [
+            { :id => '--importSequencesFlag', :label => 'Run?', :type => :checkbox, :title => "Initial step of the pipeline [Cannot uncheck]", :checked => true, :disabled => true},
+            { :id => 'importSequencesSettings', :type => :advancedSection,
+              :width => '480px',
+              :text => '(The default values for these settings are what will be used if you do not change them.)',
+              :toggleText => "Settings:",
+              :widgets =>
+              [
+                { :id => 'removeHostContamination', :label => 'Remove Host Contamination', :labelStyle => 'width:250px;', :onClick => "toggleHost(this.checked)", :type => :checkbox, :checked => true, :style => 'font-size: 80%'},
+                { :id => '--host', :label => 'Genome Version', :labelStyle => 'width:250px;', :type => :select, :style => 'font-size: 80%',
+                  :options => {'hg19' => {:label => "Human Hg19", :selected => true}}
+                }
+                # When enabling options below, also uncomment the Ext.onReady function on this page
+                #{ :id => 'qualityFiltering', :label => 'Quality Filtering', :labelStyle => 'width:250px;', :type => :checkbox, :checked => false, :style => 'font-size: 80%', :onClick => "toggleQFVals(this.checked)"},
+                #{ :id => '--minQual', :label => 'Min Quality Score', :labelStyle => 'width:250px;', :type => :text, :value => '20', :size => '6', :style => 'font-size: 80%'},
+                #{ :id => '--minSeqLen', :label => 'Min Sequence Length', :labelStyle => 'width:250px;', :type => :text, :value => '40', :size => '6', :style => 'font-size: 80%'}
+              ]
+            }
+          ]
+        },
+        { :id => 'taSection', :type => :advancedSection,
+          :width => '500px',
+          :toggleText => "Taxanomic Abundance - MetaPhlAn:",
+          :startWithExpanded => true,
+          :addTopPaddingToToggleText => "5",
+          :widgets =>
+          [
+            { :id => '--metaphlanFlag', :label => 'Run?', :type => :checkbox, :title => "", :checked => true}
+          ]
+        },
+        {
+          :id => 'dnSection', :type => :advancedSection,
+          :width => '500px',
+          :toggleText => "Digital Normalization, Assembly and Find ORFs:",
+          :startWithExpanded => true,
+          :widgets => [
+            { :id => '--digiNormAssemblyORFflag', :label => 'Run?', :type => :checkbox, :title => "", :checked => true, :onClick => "disableFARunAndSelf(this.checked)"},
+            { :id => 'digitalNormalizationSettings', :type => :advancedSection,
+              :width => '480px',
+              :text => '(The default values for these settings are what will be used if you do not change them.)',
+              :toggleText => "Settings:",
+              :widgets =>
+              [
+                { :id => 'normalization', :label => 'Normalization/Filter', :labelStyle => 'width:250px;', :type => :select, :style => 'font-size: 80%',
+                  :options => {'digitalNormalization' => {:label => "Digital Normalization", :selected => true}}
+                },
+                { :id => 'assemble', :label => 'Assemble', :labelStyle => 'width:250px;', :type => :select, :style => 'font-size: 80%',
+                  :options => {'velvet-1.2.03' => {:label => "Velvet 1.2.03", :selected => true}}
+                },
+                { :id => 'findORFs', :label => 'Find ORFs', :labelStyle => 'width:250px;', :type => :select, :style => 'font-size: 80%',
+                  :options => {'metAMOS' => {:label => "MetaGeneMark", :selected => true}}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          :id => 'faSection', :type => :advancedSection,
+          :width => '500px',
+          :toggleText => "Functional Annotation - KEGG and HUMAnN:",
+          :startWithExpanded => true,
+          :widgets => [
+            { :id => '--functionalAnnotationFlag', :label => 'Run?', :type => :checkbox, :title => "", :checked => true, :onClick => "enableDN(this.checked)"},
+            { :id => 'functionalAnnotationSettings', :type => :advancedSection,
+              :width => '480px',
+              :text => '(The default values for these settings are what will be used if you do not change them.)',
+              :toggleText => "Settings:",
+              :widgets =>
+              [
+                { :id => '--dbStub', :label => 'KEGG Database', :labelStyle => 'width:250px;', :type => :select, :style => 'font-size: 80%',
+                  :options => {'genes.v54.prokaryotes' => {:label => "Genes v54 Prokaryotes", :selected => true}}
+                },
+                { :id => '--eValCutoffORFs', :label => 'E-value cutoff for mapping ORFs', :labelStyle => 'width:250px;', :type => :text, :value => '9.0e-46', :size => '10', :style => 'font-size: 80%'},
+                { :id => '--eValCutoffUnassembledReads', :label => 'E-value cutoff for mapping unassembled reads', :labelStyle => 'width:250px;', :type => :text, :value => '0.01', :size => '10', :style => 'font-size: 80%'}
+              ]
+            }
+          ]
+        }
+      ]
+    })
+
+  %>
+  <%= renderStaticFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :submit }, { :type => :cancel} ]
+      })
+  %>
+</form>
+<script type="text/javascript">
+
+  function enableDN(checked)
+  {
+    if(checked)
+    {
+      Ext.get('--digiNormAssemblyORFflag').dom.checked = true ;
+      Ext.get('--dbStub').dom.disabled = false ;
+      Ext.get('--eValCutoffORFs').dom.disabled = false ;
+      Ext.get('--eValCutoffUnassembledReads').dom.disabled = false ;
+      document.getElementById('--dbStubLabelTh').style.color = '' ;
+      document.getElementById('--eValCutoffORFsLabelTh').style.color = '' ;
+      document.getElementById('--eValCutoffUnassembledReadsLabelTh').style.color = '' ;
+    }
+    else
+    {
+      Ext.get('--dbStub').dom.disabled = true ;
+      Ext.get('--eValCutoffORFs').dom.disabled = true ;
+      Ext.get('--eValCutoffUnassembledReads').dom.disabled = true ;
+      document.getElementById('--dbStubLabelTh').style.color = '#A4A4A4' ;
+      document.getElementById('--eValCutoffORFsLabelTh').style.color = '#A4A4A4' ;
+      document.getElementById('--eValCutoffUnassembledReadsLabelTh').style.color = '#A4A4A4' ;
+    }
+  }
+  function disableFARunAndSelf(checked)
+  {
+    if(!checked)
+    {
+      Ext.get('--functionalAnnotationFlag').dom.checked = false ;
+      Ext.get('normalization').dom.disabled = true ;
+      Ext.get('assemble').dom.disabled = true ;
+      Ext.get('findORFs').dom.disabled = true ;
+      enableDN(false) ;
+      document.getElementById('normalizationLabelTh').style.color = '#A4A4A4' ;
+      document.getElementById('assembleLabelTh').style.color = '#A4A4A4' ;
+      document.getElementById('findORFsLabelTh').style.color = '#A4A4A4' ;
+    }
+    else
+    {
+      Ext.get('normalization').dom.disabled = false ;
+
+      Ext.get('assemble').dom.disabled = false ;
+      Ext.get('findORFs').dom.disabled = false ;
+      document.getElementById('normalizationLabelTh').style.color = '' ;
+      document.getElementById('assembleLabelTh').style.color = '' ;
+      document.getElementById('findORFsLabelTh').style.color = '' ;
+    }
+  }
+  function toggleHost(checked)
+  {
+    var host = Ext.get('--host').dom ;
+    if(checked)
+    {
+      host.disabled = false ;
+    }
+    else
+    {
+      host.disabled = true ;
+    }
+  }
+  function toggleQFVals(checked)
+  {
+    var minQual = Ext.get('--minQual').dom ;
+    var minSeqLen = Ext.get('--minSeqLen').dom ;
+    if(checked)
+    {
+      minQual.disabled = false ;
+      minSeqLen.disabled = false ;
+    }
+    else
+    {
+      minQual.disabled = true ;
+      minSeqLen.disabled = true ;
+    }
+  }
+</script>
+<%
+  else
+%>
+<%= renderFrag(@toolIdStr, :wbToolHelpOverview,
+      { :toolHelpOverview =>
+        "
+          <img src='/images/workbench/underConstruction_wikipedia_free_74x64.png' style='float:left; padding: 0px 4px 10px 4px; width:74px; height:64px;'>
+          <div style='float: left; width: 288px; margin-top: 10px ; color: red;'>This tool is currently in review. Thus, the tool is currently only available to the authors, testers, and reviewers.</div>
+          <span style='color: red;'>Prototype will be made available for evaluation when ready.</span>
+        "
+      })
+  %>
+  <%# Cancel Button %>
+  <%= renderFrag(@toolIdStr, :wbToolButtons,
+      {
+        :buttons => [ { :type => :cancel} ]
+      })
+  %>
+</form>
+<%
+  end
+%>

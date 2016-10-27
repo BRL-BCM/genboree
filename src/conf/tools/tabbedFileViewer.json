@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "tabbedFileViewer",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "gbToolJob"
+  },
+  "ui": {
+    "label": "Tabbed File Viewer",
+    "shortLabel": "[NOT SET]"
+  }
+}

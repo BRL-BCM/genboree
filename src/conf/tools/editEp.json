@@ -1,0 +1,12 @@
+{
+  "info": {
+    "idStr": "editEp",
+    "releaseStatus": "release",
+    "version": "0.1",
+    "toolType": "utilityJob"
+  },
+  "ui": {
+    "label": "Edit Entrypoints",
+    "shortLabel": "[NOT SET]"
+  }
+}

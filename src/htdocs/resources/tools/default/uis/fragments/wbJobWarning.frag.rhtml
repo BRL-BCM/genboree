@@ -1,0 +1,11 @@
+<%# RENDER HTML %>
+<div class="wbDialog" style="height:200px;width:auto;" >
+  <%# Warnings Info %>
+  <div class="wbDialogFeedback wbDialogWarning">
+    <span class='wbWarningLabel'><b>WARNING</b>: Your job generated a warning. The job has not been accepted yet.</span>
+    <br />
+    <br />
+    <b>Warning Details:</b><br>
+    <%= @html %>
+  </div>
+</div>

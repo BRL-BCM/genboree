@@ -1,0 +1,19 @@
+<div class="wbDialog" style="height:auto; width:auto;">
+  <div class="wbToolTitleInDialog wbSubmitMsg">
+    <%= @context['toolTitle'] %>
+  </div>
+  <div class="wbDialogFeedback wbDialogSuccess">
+    <br/>
+    Please click the link below to launch the UCSC Genome Browser:
+    <br/>
+    <%
+      ucscUrl = "http://genome.ucsc.edu/cgi-bin/hgTracks?db=#{@settings['dbVersion']}&hgct_customText=#{CGI.escape(@settings['apiUrl'])}"
+    %>
+    <br/><a class="wbDialogLinkLauncher" href="<%=ucscUrl%>" target="_blank">
+    <img class="wbDialogLinkImage" src="/images/silk/link.png" alt="link" ></img>
+    Launch UCSC Genome Browser</a>.
+    <br/>
+    <br/>
+    If you have questions, please contact <a href="mailto:<%= @genbConf.gbAdminEmail %>"><%= @genbConf.gbAdminEmail %></a> for assistance.
+  </div>
+</div>

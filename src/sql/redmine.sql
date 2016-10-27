@@ -1,0 +1,6 @@
+
+
+CREATE DATABASE `redmine` DEFAULT CHARACTER SET utf8;
+
+USE redmine;
+

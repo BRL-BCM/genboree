@@ -1,0 +1,379 @@
+form {
+  padding: 0 ;
+  margin: 0 ;
+}
+
+hr.projectFullRule {
+  margin-top: 5px ;
+  margin-bottom: 5px ;
+}
+
+/* For individually creating/editing/deleting items: */
+.insertableHover {
+  border-width: 2px ;
+  border-top-color: green ;
+  border-bottom-style: none ;
+  border-left-style: none ;
+  border-right-style: none ;
+  border-top-style: dashed ;
+}
+
+.insertableItem {
+  border-width: 2px ;
+  border-top-color: lightgrey ;
+  border-bottom-style: none ;
+  border-left-style: none ;
+  border-right-style: none ;
+  border-top-style: dashed ;
+}
+
+.selectableHover {
+  border-width: 2px ;
+  border-color: green ;
+  border-bottom-style: dashed ;
+  border-left-style: dashed ;
+  border-right-style: dashed ;
+  border-top-style: dashed ;
+}
+
+.selectableItem {
+  border-width: 2px ;
+  border-color: lightgrey ;
+  border-bottom-style: dashed ;
+  border-left-style: dashed ;
+  border-right-style: dashed ;
+  border-top-style: dashed ;
+}
+
+.selectClick {
+  border-width: 2px ;
+  border-style: solid ;
+}
+
+/* For the parent container of individually creating/editing/deleting items: */
+.itemListParent {
+}
+
+.insertableHoverParent {
+  border-width: 2px ;
+  padding-bottom: 8px ;
+  border-bottom-color: green ;
+  border-bottom-style: dashed ;
+  border-left-style: none ;
+  border-right-style: none ;
+  border-top-style: none ;
+}
+
+.insertableItemParent {
+  border-width: 2px ;
+  padding-bottom: 8px ;
+  border-bottom-style: dashed ;
+  border-left-style: none ;
+  border-right-style: none ;
+  border-top-style: none ;
+  border-color: lightgrey ;
+}
+
+div.editButtonDiv, div.editToolBarButtonDiv {
+  position: absolute ;
+  /*display: none ;*/
+  border-width: 0px ;
+  padding: 0 ;
+  margin: 0;
+  right: 0px ;
+  top: 0px ;
+  width: 18px ;
+  height: 18px ;
+  max-height: 18px ;
+  max-width: 18px ;
+  font-size: 10pt ;
+}
+
+div.editToolBarButtonDiv {
+  margin: 0 ;
+  /*background-image: url(/images/silk/pencil_go.png) ;*/
+}
+
+div.editButtonDiv {
+  margin: 0 ;
+  /*background-image: url(/images/silk/pencil.png) ;*/
+}
+
+/* Contains the 3 edit buttons in expandable toolbar */
+div.editToolBarDiv {
+  border: 1px solid black ;
+  background-color: white ;
+}
+
+img.editHandleIcon {
+  margin: 0 ;
+  padding: 0 ;
+}
+
+div.toolBarIconWrapper {
+  margin: 0 ;
+  padding: 0 ;
+  border: none ;
+  float: left ;
+}
+
+img.toolBarIcon {
+  margin: 0 ;
+  padding: 0 ;
+  border: none ;
+}
+
+img.toolBarIconLast {
+  margin: 0 ;
+  padding: 0 ;
+  border: none ;
+}
+
+img.toolBarIconHover {
+  background-color: lightgrey ;
+  border: none ;
+}
+
+img.toolBarActiveIcon {
+  background-color: lightgrey ;
+}
+
+div.noDisplay {
+  display: none ;
+}
+
+.feedback div {
+  padding: 10px ;
+}
+
+.feedback div.success {
+  background-color: #E6FFEA ;
+  background-image: url(/images/vgpCheckmark.png) ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #58A263 ;
+  color: #58A263 ;
+  min-height: 2.5em ;
+  padding-bottom: 2em ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+}
+
+.feedback div.failure {
+  background-color: #FFEFEF ;
+  background-image: url(/images/vgpFailure.png) ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #C64848 ;
+  color: #C64848 ;
+  min-height: 2.5em ;
+  padding-bottom: 2em ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+}
+
+.feedback div.warning {
+  background-color: #FBE4D2 ;
+  background-image: url(/images/vgpWarning.png) ;
+  background-position: 0.75em 0.75em ;
+  background-repeat: no-repeat ;
+  border: 2px solid #DC6709 ;
+  color: #DC6709 ;
+  min-height: 2.5em ;
+  padding-bottom: 2em ;
+  padding-left: 4.5em ;
+  padding-top: 0.75em ;
+}
+
+.feedback div.failure li {
+  border-left: 2px solid #D53333 ;
+  padding-left: 5px ;
+  padding-bottom: 0px ;
+  padding-top: 0px ;
+  list-style-type: none ;
+}
+
+div#status {
+  width: 100% ;
+  margin-top: 10px ;
+  margin-bottom: 10px ;
+}
+
+div#projectEditBtnBar {
+  position: relative ;
+  text-align: right ;
+  width: 100% ;
+  top: -15px ;
+}
+
+div#projectEditBtn {
+  float: right ;
+  border: 1px dotted black ;
+  background-color: lightgrey ;
+  text-align: center ;
+  width: 62px ;
+  cursor: pointer ;
+}
+
+div#projectTitleImg {
+  position: relative ;
+  float: left ;
+  width: 28% ;
+  padding-bottom: 5px ;
+}
+
+div#projectTitleAndDesc {
+  float: right ;
+  width: 71% ;
+  padding-bottom: 5px ;
+}
+
+div#projectTitle {
+  position: relative ;
+  font-weight: bold ;
+  font-size: 24pt ;
+  text-align: center ;
+  padding-bottom: 5px ;
+}
+
+div#projectDesc {
+  position: relative ;
+  font-size: 120% ;
+  text-align: left ;
+  padding-left: 10px ;
+  padding-bottom: 10px ;
+  padding-right: 18px ;
+}
+
+div#projectPageMiddle {
+  float: left ;
+  width: 100% ;
+}
+
+div#projectPageMiddleLeft {
+  float: left ;
+  width: 30% ;
+  padding-left: 0px ;
+  padding-right: 0px ;
+  border: 1px solid #BBBBBB ;
+}
+
+div#projectPageMiddleRight {
+  float: left ;
+  width: 68% ;
+  padding-left: 5px ;
+  padding-right: 5px ;
+}
+
+div#projectCustomLinks_title, div#projectNews_title, div#projectFiles_title {
+  position: relative ;
+  text-decoration: underline ;
+  font-size: 120% ;
+  font-weight: bold ;
+  text-align: left ;
+  padding-bottom: 10px ;
+}
+
+div#projectCustomLinks_list {
+  padding-left: 5px ;
+  padding-top: 0px ;
+}
+
+div.projectCustomLink {
+  padding-bottom: 5px ;
+  padding-top: 5px ;
+  padding-left: 30px ;
+  text-indent: -30px ;
+}
+
+div.projectFile_fileDesc {
+  margin-left: 30px ;
+  padding-bottom: 0px ;
+  padding-top: 1px ;
+}
+
+a.archivedProjectFilesLink {
+  background-image: url(/images/vgpPlus.gif) ;
+  background-position: 2px 50% ;
+  background-repeat: no-repeat ;
+  clear: left ;
+  float: left ;
+  padding-left: 16px ;
+  font-size: 120% ;
+  margin-bottom: 10px ;
+}
+
+a.archivedProjectFilesLink:hover {
+  text-decoration: underline ;
+  cursor: pointer ;
+}
+
+div#archivedDetailedFileListDiv {
+  padding-left: 15px ;
+}
+
+div#projectNews_list, div#projectFiles_list {
+  padding-left: 5px ;
+  padding-top: 0px ;
+  margin-bottom: 20px ;
+}
+
+div.projectNews, div.projectFile {
+  width: 100% ;
+  padding-top: 2px ;
+  padding-bottom: 5px ;
+  margin-bottom: 0px ;
+}
+
+div.projectNews_date {
+  float: left ;
+  width: 80px ;
+}
+
+span.projectFile_fileUploadDate {
+  font-style: italic ;
+  text-indent: -2em ;
+}
+
+div.projectNews_updateText {
+  float: right ;
+  width: 350px ;
+}
+
+div#projectQuickLinks_title {
+  position: relative ;
+  text-decoration: underline ;
+  font-size: 120% ;
+  font-weight: bold ;
+  text-align: left ;
+  padding-top: 0px ;
+  padding-bottom: 10px ;
+}
+
+div.projectQuickLink {
+  padding-bottom: 2px ;
+  padding-top: 2px ;
+}
+
+div#projectAdditionalPages_title {
+  text-decoration: underline ;
+  font-size: 120% ;
+  font-weight: bold ;
+  text-align: left ;
+  padding-top: 0px ;
+  padding-bottom: 10px ;
+}
+
+div#projectExtraContent {
+  position: relative ;
+  padding-left: 5px ;
+  padding-right: 5px ;
+  padding-top: 10px ;
+  padding-bottom: 10px ;
+  padding-right: 18px ;
+}
+
+input.projectSubmitButton {
+  font-size: 82% ;
+  padding: 0 ;
+}
