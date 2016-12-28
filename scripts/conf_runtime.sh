@@ -17,8 +17,6 @@ export TMPDIR=${DIR_TARGET}/tmp
 
 # svn://histidine.brl.bcmd.bcm.edu/brl-repo/PATCH_NOTES/genboree/2014-11-12.contentGen
 export OMIM_API_KEY=VKGiMHRGQwe3m18OEED1Yw
-# API key for bioPortal
-export BIOPORTAL_API_KEY=e750aaca-98af-49fa-8349-82caf2ce4f5b
 
 # svn://histidine.brl.bcmd.bcm.edu/brl-repo/PATCH_NOTES/genboree/2015-08-13.snifferMove
 export SNIFFER_CONF_FILE=${DIR_TARGET}/conf/snifferFormatInfo.json

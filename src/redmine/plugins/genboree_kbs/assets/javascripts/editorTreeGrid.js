@@ -220,7 +220,8 @@ function initTreeGrid(currentSearchBoxData)
             else if (md.record.data.domain && md.record.data.domain == 'fileUrl') {
               if (value.match(/\/REST\/v1\/grp/))
               {
-                value = "<a href=\"javascript:downloadFile('"+escape(value)+"')\">"+unescape(value)+"</a>" ;
+                fileUrlToDownload = value ;
+                value = "<a href=\"javascript:downloadFile()\">"+unescape(value)+"</a>" ;
               }
               else
               {
@@ -271,12 +272,6 @@ function initTreeGrid(currentSearchBoxData)
   // Load up the contents of the previous contents of search box. We don't want to lose that.
   if (currentSearchBoxData) {
     Ext.getCmp('searchComboBox').getStore().loadData(currentSearchBoxData) ;
-  }
-  else{
-    // Looks like we have not been been provided with any list of docs to load in search box. Load a fresh set if a collection is already selected
-    if (Ext.getCmp('collectionSetCombobox') && Ext.getCmp('collectionSetCombobox').value != "") {
-      loadInitialDocList(false) ;
-    }
   }
 }
 
@@ -391,48 +386,9 @@ function displayPropMenu(e, showAt)
 }
 
 // Downloads file for a 'fileUrl' property
-function downloadFile(fileUrl)
+function downloadFile()
 {
-  checkFile(fileUrl) ;
-}
-
-function checkFile(fileUrl)
-{
-  maskObj.show() ;
-  var url = 'genboree_kbs/doc/checkFile' ;
-  var timeout = 900000 ;
-  var params = {
-    "authenticity_token": csrf_token,
-    project_id: projectId,
-    fileUrl: fileUrl
-  } ;
-  var callback = function(opts, success, response)
-  {
-    maskObj.hide() ;
-    try
-    {
-      var apiRespObj  = JSON.parse(response.responseText) ;
-      var statusObj   = apiRespObj['status'] ;
-      if( response.status >= 200 && response.status < 400 )
-      {
-        appendIframe('genboree_kbs/doc/downloadfile?authenticity_token='+csrf_token+'&project_id='+projectId+'&fileUrl='+escape(fileUrl)) ;
-      }
-      else
-      {
-        var displayMsg = "The following error was encountered while downloading the file:<br><br>" ;
-        displayMsg += ( "<b>Error Code:</b> <i>" + (statusObj['statusCode'] ? statusObj['statusCode'] : "[ NOT INTELLIGIBLE ]") + "</i><br>" );
-        displayMsg += ( "<b>Error Message:</b> <i>" + (statusObj['msg'] ? statusObj['msg'] : "[ NOT INTELLIGIBLE ]") + "</i>" );
-        displayMsg += "<br><br>Please contact a project admin to arrange investigation and resolution." ;
-        Ext.Msg.alert("ERROR", displayMsg) ;
-      }
-    }
-    catch(err)
-    {
-      Ext.Msg.alert('ERROR: '+err, "Bad data returned from server when checking the existence of the file.<br><br>Please contact a project admin to arrange investigation and resolution." ) ;
-    }
-  }
-  var method = "GET" ;
-  genericAjaxCall(url, timeout, method, params, callback) ;
+  appendIframe('genboree_kbs/doc/downloadfile?authenticity_token='+csrf_token+'&project_id='+projectId+'&fileUrl='+escape(fileUrlToDownload)) ;
 }
 
 // Get the role of the user
@@ -759,5 +715,4 @@ function resetMainPanel()
   destroyModelVersionsGrid() ;
   destroyDocsVersionsGrid() ;
   destroyKbStatsPanel() ;
-  destroyQuestionnaireGrid() ;
 }

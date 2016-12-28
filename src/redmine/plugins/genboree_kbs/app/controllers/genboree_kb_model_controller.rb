@@ -18,6 +18,7 @@ class GenboreeKbModelController < ApplicationController
     fieldMap = { :coll => collName, :ver => version } # :grp & :kb auto-filled for us if we don't supply them
     rsrcPath = (version == "" ? "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model" : "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model/ver/{ver}" )
     apiResult = apiGet( rsrcPath, fieldMap )
+    #$stderr.puts "API MODEL RESP:\n\n#{JSON.pretty_generate(apiResult[:respObj]) rescue apiResult[:respObj].inspect}\n\n"
     respond_with(apiResult[:respObj], :status => apiResult[:status])
   end
   
@@ -68,20 +69,6 @@ class GenboreeKbModelController < ApplicationController
     rsrcPath= "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}"
     fieldMap =  { :coll => coll }
     apiResult = apiGet( rsrcPath, fieldMap )
-    respond_with(apiResult[:respObj], :status => apiResult[:status])
-  end
-  
-  def propDefs()
-    coll = params['collectionSet']
-    propPaths = params['propPaths']
-    rsrcPath= "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model/props"
-    fieldMap =  { :coll => coll }
-    payload = []
-    propPathsArr = propPaths.split(",")
-    propPathsArr.each {|propPath|
-      payload.push( { 'text' => propPath } )  
-    }
-    apiResult = apiGet( rsrcPath, fieldMap, true, nil, payload )
     respond_with(apiResult[:respObj], :status => apiResult[:status])
   end
 

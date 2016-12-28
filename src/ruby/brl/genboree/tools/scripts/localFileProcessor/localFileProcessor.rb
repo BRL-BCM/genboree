@@ -81,19 +81,6 @@ module BRL; module Genboree; module Tools; module Scripts
       begin
         # First move the file from tmp area to the final target
         if(@doMove)
-          # Do some checking to make sure that file size of source file is not still 0 (because of nginx bug).
-          # We do allow the job to finish eventually - in that case, the file size is probably actually 0!
-          maxIterations = 10
-          currentIteration = 0
-          fileSizeOfSource = File.size(@source)
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "File size of source file #{@source} is #{File.size(@source)} (before any sleeping is done).")  
-          while(currentIteration < maxIterations and fileSizeOfSource == 0)
-            fileSizeOfSource = File.size(@source)
-            $stderr.debugPuts(__FILE__, __method__, "STATUS", "File size of source file #{@source} is #{File.size(@source)} (on sleep iteration #{currentIteration+1}).")
-            sleep(2)
-            currentIteration += 1
-          end
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final file size of source file #{@source} is #{File.size(@source)} (after any sleeping is done).")
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Moving #{@source} to #{@fullFilePath}")
           cmd = "mv -f #{Shellwords.escape(@source)} #{Shellwords.escape(@fullFilePath)};"
           `#{cmd}` 

@@ -89,12 +89,6 @@ module BRL; module Sites
     attr_reader :parsedBody
     attr_accessor :debug
 
-    # @return [Array<Symbol>] OPTIONAL OVERRIDE. List of preferred protocol to use and any fallbacks. Currently only
-    #   'http', 'https' supported. Defaults to ['http']
-    def self.protocols()
-      [ :https, :http ].dup
-    end
-
     def pmid=(pmid)
       @pmid = pmid
       @parsedBody = requestRecordsByPmid(pmid)
@@ -192,23 +186,12 @@ module BRL; module Sites
     #   records and has an array mapped at brlSym)
     def requestRecordsByPmid(pmid=@pmid)
       retVal = nil
-      respSize = nil
       begin
         if(@parsedBody and @parsedBody[:pmid] and (@parsedBody[:pmid].to_s.strip() == @pmid))
           retVal = @parsedBody
         else
-          while( !@tryProtos.empty? and respSize.nil? )
-            proto = @tryProtos.shift
-            # We have preferred and possible fallback protocol to try
-            url = buildUrl(HOST, buildPath(pmid), DEFAULT_QUERY, true, { :proto => proto })
-
-            # Rescue any problem with (just) the get(url)
-            begin
-              respSize = get(url)
-            rescue => err
-              $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Encountered error doing simple get() on #{url.inspect}. Will try fallback protocol (if available) in case it works instead.\n    Error Class: #{err.class}\n    Error Message: #{err.message}\n\n")
-            end
-          end
+          url = buildUrl(HOST, buildPath(pmid), DEFAULT_QUERY)
+          respSize = get(url)
           retVal = parse()
         end
       rescue => err
@@ -321,8 +304,9 @@ module BRL; module Sites
     # @note response body is acessible through @respBody
     def get(url, headers={})
       @respBody = ''
-      #$stderr.debugPuts(__FILE__, __method__, "PUBMED", "making request at #{url}")
-      open(url, headers){ |ff|
+      url.gsub!("http://", "https://")
+      $stderr.debugPuts(__FILE__, __method__, "PUBMED", "making request at #{url}")
+      open(url, headers){|ff|
         @respBody = ff.read()
       }
       return @respBody.size
@@ -517,19 +501,15 @@ module BRL; module Sites
       rv = { :doi => nil, :pii => nil, :other => [] }
       doiRe = /(.*)\s*\[doi\]/
       piiRe = /(.*)\s*\[pii\]/ # dont know if some piis have spaces in them, leave match generic
-      # Older pubmed records don't have Article ID ("AID") attributes and don't have DOI or other similar.
-      # - So this can be nil
-      if(aids)
-        aids.each { |aid|
-          if(doiRe.match(aid))
-            rv[:doi] = $1.strip
-          elsif(piiRe.match(aid))
-            rv[:pii] = $1.strip
-          else
-            rv[:other].push(aid)
-          end
-        }
-      end
+      aids.each { |aid|
+        if(doiRe.match(aid))
+          rv[:doi] = $1.strip
+        elsif(piiRe.match(aid))
+          rv[:pii] = $1.strip
+        else
+          rv[:other].push(aid)
+        end
+      }
       return rv
     end
 

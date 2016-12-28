@@ -13,7 +13,7 @@ module BRL; module REST; module Resources
     HTTP_METHODS = { :get => true, :delete => true, :put => true }
     RSRC_TYPE = 'kbDocProp'
     ITEM_MATCH = /\.\[\s*(FIRST|LAST|\d+)\s*\](?:$|\.((?!\.).)*$)/
-    SUPPORTED_ASPECTS = { 'put' => { 'value' => true }, 'get' => { 'value' => true }, 'delete'=> {} }
+    SUPPORTED_ASPECTS = { 'put' => { }, 'get' => { 'value' => true }, 'delete'=> {} }
     REJECTION_SET_REG_EXPS = [ /\[\s*\d+\s*,/,  /\.</, /\{\s*\}/]
 
     def cleanup()
@@ -37,6 +37,7 @@ module BRL; module REST; module Resources
       @collName   = Rack::Utils.unescape(@uriMatchData[3])
       @docName    = Rack::Utils.unescape(@uriMatchData[4])
       @propPath   = Rack::Utils.unescape(@uriMatchData[5])
+      raise BRL::Genboree::GenboreeError.new(:"Bad Request", "property path cannot be nil or empty. Please provide a valid property path") if(@propPath.nil? or @propPath == "")
       # Optional Parameter for performing a no-op put/delete
       @save     = ( ( @nvPairs['save'] and @nvPairs['save'] == 'false' ) ? false : true  )
       # @todo: test and enable the save=false option
@@ -44,6 +45,8 @@ module BRL; module REST; module Resources
       # Optional supporting parameter for @save
       @validate = ( ( @nvPairs['validate'] and @nvPairs['validate'] == 'false' ) ? false : true )
       raise BRL::Genboree::GenboreeError.new(:"Bad Request", "validate cannot be set to false if save=true.") if(@save and !@validate)
+      raise BRL::Genboree::GenboreeError.new(:"Bad Request", "Both validate and save cannot be set to false.") if(!@save and !@validate)
+      @aspect = nil
       if(@uriMatchData[6])
         @aspect = Rack::Utils::unescape(@uriMatchData[6])
         unless(SUPPORTED_ASPECTS[@reqMethod.to_s.downcase].key?(@aspect))
@@ -60,8 +63,11 @@ module BRL; module REST; module Resources
       @modelDoc = @mh.modelForCollection(@collName)
       raise BRL::Genboree::GenboreeError.new(:"Not Found", "Model document not found for this collection.") unless(@modelDoc)
       model = @modelDoc.getPropVal('name.model')
+      @model = model
       dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
-      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "@propPath: #{@propPath.inspect}")
+      @dataHelper = dataHelper
+      @revisionsHelper = @mongoKbDb.revisionsHelper(@collName) rescue nil
+      @identifierProp = dataHelper.getIdentifierName()
       docNameValidation = docNameCast(@docName, model, dataHelper)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC NAME cast results: #{docNameValidation.inspect}")
       if(docNameValidation and docNameValidation[:result] == :VALID) # looks compatible and has now been casted appropriately
@@ -85,6 +91,7 @@ module BRL; module REST; module Resources
         propSel = BRL::Genboree::KB::PropSelector.new(@doc)
         entity = nil
         begin
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "beginning get()")
           propObj = propSel.getMultiObj(@propPath)
           if(@propPath =~ /\]$/)
             unless(@aspect)
@@ -105,7 +112,13 @@ module BRL; module REST; module Resources
               end
             end
           end
+          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "setting md")
+          #docRef = @dataHelper.getDocRefFromDocName(@model['name'], @docName)
+          #metadata = @dataHelper.getMetadata(docRef, nil, @propPath)
+          #entity.setMetadata(metadata)
         rescue => err
+          $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
+          $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
           raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
         end
         @statusName = configResponse(entity)
@@ -124,7 +137,6 @@ module BRL; module REST; module Resources
       return @resp
     end
 
-    # @todo: implement PUT properly. This method is only partly done.
     # Process a PUT operation on this resource.
     # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
     #   or containing correct error information.
@@ -149,6 +161,7 @@ module BRL; module REST; module Resources
                 # Get payload doc
                 payloadDoc = BRL::Genboree::KB::KbDoc.new(payload.doc) rescue nil
                 kbDoc = BRL::Genboree::KB::KbDoc.new(@doc)
+                originalKbDoc = kbDoc.deep_clone
                 propSel = BRL::Genboree::KB::PropSelector.new(kbDoc)
                 begin
                   paths = propSel.getMultiPropPaths(@propPath)
@@ -157,12 +170,12 @@ module BRL; module REST; module Resources
                   if(paths.empty?)
                     # Trying to put a new item using {}
                     raise BRL::Genboree::GenboreeError.new(:"Bad Request", "Cannot create property within an item which does not exist.") if(@propPath !~ /\}$/)
-                    elems = @propPath.split(".")
-                    subsPropPath = "#{elems[0..elems.size-4].join(".")}.[LAST]"
+                    pathElements = @propPath.split(".")
+                    subsPropPath = "#{pathElements[0..pathElements.size-4].join(".")}.[LAST]"
                     paths = propSel.getMultiPropPaths(subsPropPath)
                   end
-                  elems = kbDoc.parsePath(paths[0])
-                  parent = kbDoc.findParent(elems)
+                  pathElements = kbDoc.parsePath(paths[0])
+                  parentProp = kbDoc.findParent(pathElements)
                 rescue => err
                   raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
                 end
@@ -177,9 +190,10 @@ module BRL; module REST; module Resources
                   respPayload = {}
                   subdoc = nil
                   @propDef = @mh.findPropDef(@propPath.gsub(/\.\{([^\.])*\}/, ''), @modelDoc)
-                  # Looks like an item
+                  # We will now update the document with the updated property and perform a validation to ensure
+                  # @propPath ends with an ']' which means an item is being inserted/replaced using index
                   if(@propPath =~ /\]$/)
-                    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@propDef: #{@propDef.inspect}")
+                    itemInsertion = true
                     itemRootProp = @propDef['items'][0]['name']
                     propItems = propSel.getMultiPropItems(@propPath)
                     @propPath =~ ITEM_MATCH
@@ -194,103 +208,69 @@ module BRL; module REST; module Resources
                     else
                       raise BRL::Genboree::GenboreeError.new(:"Bad Request", "The index: #{extractedIdx} is not supported.")
                     end
-                    # Check if parent has the items field, add it if it doesn't
-                    # At this point, we don't care if this property really supports 'items' or not. Downstream validation will make sure user is not trying something which is not allowed.
-                    parent['items'] = [] unless(parent.key?('items'))
-                    idx = parent['items'].size if(extractedIdx == 'LAST')
-                    if(idx >= parent['items'].size)
-                      # Entire sub doc provided as payload
-                      unless(@aspect)
-                        parent['items'].push(payloadDoc)
-                      else
-                        # @todo move this block into a function for better aspect handling
-                        if(@aspect == 'value')
-                          parent['items'].push( { @propDef['items'][0]['name'] => payloadDoc } )
-                        end
-                      end
-                      idx = parent['items'].size - 1
+                    unless(parentProp.key?('items'))
+                      parentProp['items'] = [] 
+                      addItemsPropToParent = true  
+                    end
+                    idx = parentProp['items'].size if(extractedIdx == 'LAST')
+                    if(idx >= parentProp['items'].size)
+                      newItem = true
+                      parentProp['items'].push(payloadDoc)
+                      idx = parentProp['items'].size - 1
                     else
-                      unless(@aspect)
-                        parent['items'][idx] = payloadDoc 
-                      else
-                        if(@aspect == 'value')
-                          parent['items'][idx][itemRootProp]['value'] = payloadDoc['value']
-                        end
-                      end
+                      parentProp['items'][idx] = payloadDoc 
                     end
                     itemValue = payloadDoc['value']
-                    #@propPath.gsub!(ITEM_MATCH, ".[].#{itemRootProp}.{\"#{itemValue}\"}")
-                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "@propPath: #{@propPath.inspect}")
-                    if(!@save)
-                      dv.validateProperty(propName, parent, @propDef, pathEls)
-                      if(!dv.contentNeeded.empty?)
-                        generator = BRL::Genboree::KB::ContentGenerators::Generator.new(dv.contentNeeded, kbDoc, @collName, @mongoKbDb)
-                        contentStatus = generator.addContentToDoc()
-                      end
-                    end
-                    respPayload = parent['items'][idx]
-                  elsif(@propPath =~ /\}$/)
-                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "@propPath: #{@propPath}")
-                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "subsPropPath: #{subsPropPath.inspect}")
-                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "elems: #{elems.inspect}")
+                    respPayload = parentProp['items'][idx]
+                  elsif(@propPath =~ /\}$/) # Also an item but being accessed using identifier and not index. 
+                    itemInsertion = true
                     if(subsPropPath.nil?)
-                      itemIdx = elems[elems.size-2] 
-                      parent[itemIdx][@propDef['name']] = payloadDoc
+                      itemIdx = pathElements[pathElements.size-2] 
+                      parentProp[itemIdx][@propDef['name']] = payloadDoc
                     else
-                      parent['items'] = [] unless(parent.key?('items'))
-                      parent['items'].push( { @propDef['name'] => payloadDoc } )
+                      unless(parentProp.key?('items'))
+                        parentProp['items'] = [] 
+                        addItemsPropToParent = true  
+                      end
+                      parentProp['items'].push( { @propDef['name'] => payloadDoc } )
+                      newItem = true
                     end
-                  else # Not an item, regular property
+                    respPayload = payloadDoc
+                  else # Regular property or the "items" array of a list
                     @mh = @mongoKbDb.modelsHelper()
                     @modelDoc = @mh.modelForCollection(@collName)
                     propName = @propPath.split(".").last
-                    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "parent: #{parent.inspect}")
-                    parent['properties'] = {} unless(parent.key?('properties'))
-                    unless(@aspect)
-                      parent['properties'][propName] = payloadDoc
-                    else
-                      if(@aspect == 'value')
-                        if(parent['properties'].key?(propName))
-                          parent['properties'][propName]['value'] = payloadDoc['value']
-                        else
-                          parent['properties'][propName] = payloadDoc
-                        end
+                    if(parentProp.is_a?(Hash))
+                      unless(parentProp.key?('properties'))
+                        parentProp['properties'] = {} 
+                        addPropertiesPropToParent = true ;
                       end
-                    end
-                    if(!@save)
-                      dv.validateProperty(propName, payloadDoc, @propDef, pathEls)
-                      if(!dv.contentNeeded.empty?)
-                        generator = BRL::Genboree::KB::ContentGenerators::Generator.new(dv.contentNeeded, kbDoc, @collName, @mongoKbDb)
-                        contentStatus = generator.addContentToDoc()
+                      parentProp['properties'][propName] = payloadDoc
+                    else # parentProp is an array object (items)
+                      # Extract index
+                      itemInsertion = true
+                      idx = pathElements[pathElements.size-2]
+                      if(idx >= parentProp.size)
+                        newItem = true
+                        parentProp.push({ pathElements[pathElements.size-1 ] => payloadDoc})
+                      else
+                        parentProp[idx] = { pathElements[pathElements.size-1 ] => payloadDoc}
                       end
                     end
                     respPayload = payloadDoc
                   end
-                  if(@save) # This is an actual save operation. Not a no-op
-                    objId = dataHelper.save(kbDoc, @gbLogin, {:subDocPath => @propPath, :newValue => payloadDoc})
-                    if(objId.is_a?(BSON::ObjectId))
-                      # We are fine.
-                    elsif(objId.is_a?(BRL::Genboree::KB::KbError))
-                      raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DOC_REJECTED: your put operation was rejected because validation after putting the subdoc failed. Validation complained that: #{objId.message}")
-                    else
-                      raise BRL::Genboree::GenboreeError.new(:"Internal Server Error", "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug.")
+                  # Do a fake save just for validation
+                  objId = dataHelper.save(kbDoc, @gbLogin, {:save => false})
+                  #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "kbDoc:\n#{JSON.pretty_generate(kbDoc)}")
+                  if(objId.is_a?(BSON::ObjectId))
+                    if(@save)
+                      payloadDocClone = payloadDoc.deep_clone
+                      objId = dataHelper.saveSubDoc(@docName, @gbLogin, @propPath, payloadDocClone, { })
                     end
-                  else # This is a no-op operation. Just validate the doc if validate=true
-                    if(@validate)
-                      $stderr.debugPuts(__FILE__, __method__, "STATUS", "validating doc after adding subdoc...")
-                      valid = dataHelper.valid?(kbDoc, false, true)
-                      if(!valid)
-                        if(dataHelper.lastValidatorErrors.is_a?(Array))
-                          validationErrStr = "  - #{dataHelper.lastValidatorErrors.join("\n  - ")}"
-                        else
-                          validationErrStr = "  - [[ No detailed validation error messages available ; likely a code bug or crash in validation or content-generation code ]]"
-                        end
-                        raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DOC_REJECTED: your PUT operation was rejected because validation of the document after adding the subdoc failed. Validator complained that: #{validationErrStr}")
-                        $stderr.debugPuts(__FILE__, __method__, "ERROR", "Validator complained that: #{validationErrStr}")
-                      else
-                        $stderr.debugPuts(__FILE__, __method__, "STATUS", "validation complete.")
-                      end
-                    end
+                  elsif(objId.is_a?(BRL::Genboree::KB::KbError))
+                    raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DOC_REJECTED: your put operation was rejected because validation after putting the subdoc failed. Validation complained that: #{objId.message}")
+                  else
+                    raise BRL::Genboree::GenboreeError.new(:"Internal Server Error", "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug.")
                   end
                   bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload)
                   configResponse(bodyData)
@@ -340,6 +320,8 @@ module BRL; module REST; module Resources
           elems = kbDoc.parsePath(paths[0])
           parent = kbDoc.findParent(elems)
         rescue => err
+          $stderr.debugPuts(__FILE__, __method__, "ERROR", err.message)
+          $stderr.debugPuts(__FILE__, __method__, "ERROR-TRACE", err.backtrace.join("\n"))
           raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
         end
         respPayload = {}
@@ -372,49 +354,40 @@ module BRL; module REST; module Resources
           deleted = parent.delete_at(itemIdx)
           respPayload = deleted
         else # Regular property (non-item)
-          @mh = @mongoKbDb.modelsHelper()
-          @modelDoc = @mh.modelForCollection(@collName)
-          if(@propDef.key?('required') and @propDef['required'] == true and @validate)
-            raise BRL::Genboree::GenboreeError.new(:"Bad Request", "The property indicated by the path #{@propPath} is tagged as required. You cannot delete it.")
-          end
-          propName = @propPath.split(".").last
-          respPayload = parent['properties'][propName]
-          parent['properties'].delete(propName)
-        end
-        if(@save) # This is an actual delete operation. Not a no-op
-          #objId = dataHelper.save(kbDoc, @gbLogin)
-          objId = dataHelper.save(kbDoc, @gbLogin, {:subDocPath => @propPath, :newValue => {}, :deleteProp => true})
-          if(objId.is_a?(BSON::ObjectId))
-            bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload )
-            @statusName = :OK
-            @statusMsg = "DELETED_SUBDOC: The subdoc at path #{@propPath} was deleted."
-            configResponse(bodyData)
-          elsif(objId.is_a?(BRL::Genboree::KB::KbError))
-            raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DOC_REJECTED: your delete operation was rejected because validation after deleting the subdoc failed. Validation complained that: #{objId.message}")
+          if(parent.is_a?(Hash))
+            if(@propDef.key?('required') and @propDef['required'] == true and @validate)
+              raise BRL::Genboree::GenboreeError.new(:"Bad Request", "The property indicated by the path #{@propPath} is tagged as required. You cannot delete it.")
+            end
+            propName = @propPath.split(".").last
+            respPayload = parent['properties'][propName]
+            parent['properties'].delete(propName)
           else
-            raise BRL::Genboree::GenboreeError.new(:"Internal Server Error", "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug.")
-          end
-        else # This is a no-op operation. Just validate the doc if validate=true. 
-          if(@validate)
-            $stderr.debugPuts(__FILE__, __method__, "STATUS", "validating doc after removing sub doc...")
-            valid = dataHelper.valid?(kbDoc, false, true)
-            if(!valid)
-              if(dataHelper.lastValidatorErrors.is_a?(Array))
-                validationErrStr = "  - #{dataHelper.lastValidatorErrors.join("\n  - ")}"
-              else
-                validationErrStr = "  - [[ No detailed validation error messages available ; likely a code bug or crash in validation or content-generation code ]]"
-              end
-              raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DELETE_REJECTED: your delete operation was rejected because validation of the document after deleting the subdoc failed. Validator complained that: #{validationErrStr}")
-              $stderr.debugPuts(__FILE__, __method__, "ERROR", "Validator complained that: #{validationErrStr}")
+            idx = elems[elems.size-2]
+            deleted = parent.delete_at(idx)
+            unless(deleted)
+              raise BRL::Genboree::GenboreeError.new(:"Not Found", "There is no item at index: #{idx} for property path: #{@propPath} in the document #{@docName}")
             else
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "validation complete.")
+              respPayload = deleted
             end
           end
-          bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload)
-          @statusName = :OK
-          @statusMsg = "NO_SAVE_SUCCESS: The sub document at #{@propPath} can be successfully deleted. Use save=true for performing a real DELETE operation."
-          configResponse(bodyData)
         end
+        # Do validation.
+        objId = dataHelper.save(kbDoc, @gbLogin, {:save => false})
+        if(objId.is_a?(BSON::ObjectId))
+          if(@save) # Validation successful, do real delete
+            objId = dataHelper.deleteSubDoc(@docName, @gbLogin, @propPath)
+            @statusMsg = "SUCCESS: The sub document at #{@propPath} has been successfully deleted."
+          else
+            @statusMsg = "NO_SAVE_SUCCESS: The sub document at #{@propPath} can be successfully deleted. Use save=true for performing a real DELETE operation."
+          end
+        elsif(objId.is_a?(BRL::Genboree::KB::KbError))
+          raise BRL::Genboree::GenboreeError.new(:"Bad Request", "DOC_REJECTED: your delete operation was rejected because validation after deleting the subdoc failed. Validation complained that: #{objId.message}")
+        else
+          raise BRL::Genboree::GenboreeError.new(:"Internal Server Error", "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug.")
+        end
+        @statusName = :OK
+        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload, true)
+        configResponse(bodyData)
       rescue => err
         if(err.is_a?(BRL::Genboree::GenboreeError))
           @statusName = err.type

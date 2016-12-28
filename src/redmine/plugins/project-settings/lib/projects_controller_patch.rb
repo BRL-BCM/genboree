@@ -21,8 +21,8 @@ module ProjectsControllerPatch
      
       # Set up any plugin related models that you want for the setting tabs
       @project = Project.find(params['id'])
-     # @genboreeKb = GenboreeKb.find_by_project_id(@project)
-     # @genboreeAc = GenboreeAc.find_by_project_id(@project)
+      @genboreeKb = GenboreeKb.find_by_project_id(@project)
+      @genboreeAc = GenboreeAc.find_by_project_id(@project)
       return retVal
     end     
   end

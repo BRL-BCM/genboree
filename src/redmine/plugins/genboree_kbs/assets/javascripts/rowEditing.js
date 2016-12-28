@@ -565,11 +565,8 @@ function castPropValue(domain, domainOpts, propValue, context)
 
 // Updates the column editor for the second column based on the domain info of the first column
 // For special domains such as fileUrl, displays a dialog/window for uploading file
-function updateEditor(fieldDomain, fieldDomainOpts, gridId)
+function updateEditor(fieldDomain, fieldDomainOpts)
 {
-  if (gridId == undefined || gridId == null) {
-    gridId = 'mainTreeGrid' ;
-  }
   if(fieldDomain == "posInt" || fieldDomain == "negInt" || fieldDomain == "int" || fieldDomain == 'pmid')
   {
     var edConf = { xtype : 'numberfield', step: 1, allowDecimals: false, allowExponential: false, allowBlank: true, minWidth: editorConfigHash['int']['minWidth'], maxWidth: editorConfigHash['int']['maxWidth'] } ;
@@ -590,7 +587,7 @@ function updateEditor(fieldDomain, fieldDomainOpts, gridId)
     {
       edConf.maxValue = 0 ;
     }
-    Ext.getCmp(gridId).columns[1].setEditor(edConf) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor(edConf) ;
   }
   else if(fieldDomain == "posFloat" || fieldDomain == "negFloat" || fieldDomain == "float")
   {
@@ -622,18 +619,18 @@ function updateEditor(fieldDomain, fieldDomainOpts, gridId)
     {
       edConf.maxValue = 0.0 ;
     }
-    Ext.getCmp(gridId).columns[1].setEditor(edConf) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor(edConf) ;
   }
   else if(fieldDomain == "date")
   {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'datefield', emptyText: 'YYYY/MM/DD', format: "Y/m/d", altFormats: "Y-m-d|m d Y",  width: editorConfigHash['date']['width'] }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'datefield', emptyText: 'YYYY/MM/DD', format: "Y/m/d", altFormats: "Y-m-d|m d Y",  width: editorConfigHash['date']['width'] }) ;
   }
   else if(fieldDomain == "regexp")
   {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'textfield', regex: new RegExp(fieldDomainOpts["pattern"]) }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'textfield', regex: new RegExp(fieldDomainOpts["pattern"]) }) ;
   }
   else if (fieldDomain == 'measurement') {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'textfield', emptyText: 'Number Units (Example: 20 ml)', regex:  /^((?:-|\+)?[0-9]*\.?[0-9]+(e(?:-|\+)?[0-9]+)?)\s+(?:([A-Z]|'|#|%|"|1)+)$/i }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'textfield', emptyText: 'Number Units (Example: 20 ml)', regex:  /^((?:-|\+)?[0-9]*\.?[0-9]+(e(?:-|\+)?[0-9]+)?)\s+(?:([A-Z]|'|#|%|"|1)+)$/i }) ;
   }
   else if(fieldDomain == "enum")
   {
@@ -644,25 +641,25 @@ function updateEditor(fieldDomain, fieldDomainOpts, gridId)
     {
       enumVals.push(fieldOpts[ii].trim()) ;
     }
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'combobox', editable: false, store: enumVals, minWidth: editorConfigHash['enum']['minWidth'], maxWidth: editorConfigHash['enum']['maxWidth'] }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'combobox', editable: false, store: enumVals, minWidth: editorConfigHash['enum']['minWidth'], maxWidth: editorConfigHash['enum']['maxWidth'] }) ;
   }
   else if(fieldDomain == 'url')
   {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'textfield' }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'textfield' }) ;
   }
   else if (fieldDomain == 'fileUrl')
   {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'textfield' }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'textfield' }) ;
     if (editModeValue) {
       initFileUploadDialog() ;  
     }
   }
   else if(fieldDomain == 'boolean')
   {
-    Ext.getCmp(gridId).columns[1].setEditor({xtype: 'checkbox', width: editorConfigHash['boolean']['width']}) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({xtype: 'checkbox', width: editorConfigHash['boolean']['width']}) ;
   }
   else if (fieldDomain == 'bioportalTerm') {
-    Ext.getCmp(gridId).columns[1].setEditor({
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({
       xtype       : 'combo',
       id          : 'bioPSearchBox',
       width       : 200,
@@ -731,7 +728,7 @@ function updateEditor(fieldDomain, fieldDomainOpts, gridId)
   }
   else
   {
-    Ext.getCmp(gridId).columns[1].setEditor({ xtype: 'textfield' }) ;
+    Ext.getCmp('mainTreeGrid').columns[1].setEditor({ xtype: 'textfield' }) ;
   }
 }
 

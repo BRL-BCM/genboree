@@ -2,13 +2,14 @@
 
 require 'cgi'
 require 'json'
+require 'openssl'
 require 'brl/util/util'
 require 'brl/extensions/http'
 
 module BRL; module Sites
   # functions shared by bioOntology, pubmed, etc.
   class AbstractSite
-    
+    OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE
     attr_reader :proxyHost, :proxyPort, :proxyPathRoot
     attr_accessor :tryProtos
 

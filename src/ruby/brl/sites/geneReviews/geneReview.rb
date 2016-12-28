@@ -20,7 +20,9 @@ module BRL ; module Sites ; module GeneReviews
       />>/ => '&gt;&gt;',
       /<</ => '&lt;&lt'
     }
-    URL_TEMPLATE = URITemplate.new('{proto}://www.ncbi.nlm.nih.gov/pubmed/?term=GeneReviews%5BBook%5D+and+%28+{grId}+or+{grId}%5Bpmid%5D+%29&report=xml')
+    #URL_TEMPLATE = URITemplate.new('{proto}://www.ncbi.nlm.nih.gov/pubmed/?term=GeneReviews%5BBook%5D+and+%28+{grId}+or+{grId}%5Bpmid%5D+%29&report=xml')
+    # Sameer: This URL seems to work. grId can be either pmid for that GeneReview or the geneReview id itself.
+    URL_TEMPLATE = URITemplate.new('{proto}://www.ncbi.nlm.nih.gov/pubmed/?term=GeneReviews+and+%28+{grId}+or+{grId}%5Bpmid%5D+%29&report=xml')
     DEFAULT_OPTS = { :connect_timeout => 10, :inactivity_timeout => 60, :headers => {} }
     RESP_HEAD = 500
 

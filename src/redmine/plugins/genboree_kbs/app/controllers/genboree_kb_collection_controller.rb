@@ -38,9 +38,7 @@ class GenboreeKbCollectionController < ApplicationController
     @showModelVersionsGrid = ( params['showModelVersionsGrid'] and params['showModelVersionsGrid'] == 'true' ) ? true : false
     @createNewDoc = ( params['createNewDoc'] and params['createNewDoc'] == 'true' ) ? true : false
     @createNewDocWithTemplate = ( params['createNewDocWithTemplate'] and params['createNewDocWithTemplate'] == 'true' ) ? true : false
-    @createNewDocWithQuestionnaire = ( params['createNewDocWithQuestionnaire'] and params['createNewDocWithQuestionnaire'] == 'true' ) ? true : false
     @templateId = params['templateId'] || ''
-    @questionnaireId = params['questionnaireId'] || ''
     @kbMount = RedmineApp::Application.routes.default_scope[:path]
     # If the page is being accessed without logging in, redirect user to login page
     # If the original URL was pointing to a particular document and/or collection,
@@ -65,6 +63,7 @@ class GenboreeKbCollectionController < ApplicationController
       getCollList()
     end
   end
+  
   
   
   def getCollList()
@@ -172,9 +171,7 @@ class GenboreeKbCollectionController < ApplicationController
     backUrl << "&showViewGrid=true" if(@showViewGrid)
     backUrl << "&createNewDoc=true" if(@createNewDoc)
     backUrl << "&createNewDocWithTemplate=true" if(@createNewDocWithTemplate)
-    backUrl << "&createNewDocWithQuestionnaire=true" if(@createNewDocWithQuestionnaire)
     backUrl << "&templateId=#{CGI.escape(@templateId)}" if(@templateId != "")
-    backUrl << "&questionnaireId=#{CGI.escape(@questionnaireId)}" if(@questionnaireId != "")
     return backUrl
   end
   

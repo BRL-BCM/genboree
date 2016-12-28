@@ -53,8 +53,7 @@ body {
 }
 
 #wrapper {
-	//width: 940px;
-	max-width: 1050px;
+	width: 940px;
 	margin-left: auto;
 	margin-right: auto;
 	background: transparent;

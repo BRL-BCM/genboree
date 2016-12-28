@@ -18,7 +18,6 @@ var recordsFuncStore = Ext.create('Ext.data.Store',
   [
     { recordFuncName : 'Create new Document', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create Document' },
     { recordFuncName : 'Create new Document with Template', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create Document (Template)' },
-    { recordFuncName : 'Create new Document with Questionnaire', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create Document (Questionnaire)' },
     { recordFuncName : 'Edit Document', genbKbIconCls : 'genbKb-editRecord', displayStr: 'Edit Document' },
     { recordFuncName : 'Delete Document', genbKbIconCls : 'genbKb-deleteRecord', displayStr: 'Delete Document' },
     { recordFuncName : 'History', genbKbIconCls : 'genbKb-recordHistory', displayStr: 'Document History' }
@@ -167,7 +166,7 @@ var funcGrids =
                 }
                 else
                 {
-                  if(!mainPanelInUse()) {
+                  if(!Ext.getCmp('viewGrid') && !Ext.getCmp('modelTreeGrid') && !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid') && !newdocObj) {
                     renderDocTreeGrid() ;
                   }
                   else{
@@ -232,7 +231,7 @@ var funcGrids =
               'beforeselect': function(aa, bb){
                 var retVal = true ;
                 var funcName = bb.data.recordFuncName ;
-                if(funcName == 'Create new Document' || funcName == 'Create new Document with Template' || funcName == 'Create new Document with Questionnaire')
+                if(funcName == 'Create new Document' || funcName == 'Create new Document with Template')
                 {
                   if(role == null || role == 'subscriber'){
                     retVal = false ;                    
@@ -244,11 +243,6 @@ var funcGrids =
                       Ext.getCmp('manageModelsGrid').getSelectionModel().deselectAll() ;
                       if (funcName == 'Create new Document with Template') {
                         createNewDocumentWithTemplate() ;
-                      }
-                      else if (funcName == 'Create new Document with Questionnaire') {
-                        if (!Ext.getCmp('questionnaireGrid')) {
-                          createNewDocumentWithQuestionnaire() ;
-                        }
                       }
                       else{
                         createNewDocument()  ;
@@ -302,11 +296,12 @@ var funcGrids =
                           buttons: Ext.Msg.YESNO,
                           id: 'deleteDocumentMessBox',
                           fn: function(btn){
+                            var selModel = Ext.getCmp('manageDocsGrid').getSelectionModel() ;
                             if(btn == 'yes')
                             {
                               clearAndReloadTree(null) ;
                               disablePanelBtn('editDelete') ;
-                              Ext.getCmp('manageDocsGrid').getSelectionModel().deselectAll() ;
+                              selModel.deselectAll() ;
                               Ext.getCmp('mainTreeGrid').setTitle('Edit Mode: OFF') ;
                               editModeValue = false ; // This is returned from the 'before edit' event of the row plugin.
                               toggleNodeOperBtn(false) ;
@@ -320,8 +315,8 @@ var funcGrids =
                             }
                             else
                             {
-                              funcGridsBtnToggler('manageDocsGrid', 'Delete Document', 'deselect') ;
-                              funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+                              selModel.deselect(selModel.store.data.items[3]) ;
+                              selModel.select(selModel.store.data.items[2]) ;
                             }
                             Ext.getCmp('browseDocsGrid').getSelectionModel().deselectAll() ;
                             Ext.getCmp('manageModelsGrid').getSelectionModel().deselectAll() ;
@@ -352,18 +347,18 @@ var funcGrids =
                             var urlLink = "http://"+location.host+kbMount+"/genboree_kbs?project_id="+projectIdentifier+"&coll="+escape(currentCollection)+"&showDocsVersionsGrid=true"+"&doc="+escape(originalDocumentIdentifier) ;
                             var win = window.open(urlLink, '_blank') ;
                             win.focus() ;
-                            funcGridsBtnToggler('manageDocsGrid', 'History', 'deselect') ;
+                            Ext.getCmp('manageDocsGrid').getView().deselect(4) ;
                             // Set Edit Mode: true if user was editing the document
                             if (editModeValue) {
-                              funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+                              Ext.getCmp('manageDocsGrid').getView().select(2) ;
                             }
                           }
                           else
                           {
-                            funcGridsBtnToggler('manageDocsGrid', 'History', 'deselect') ;
+                            Ext.getCmp('manageDocsGrid').getView().deselect(4) ;
                             // Set Edit Mode: true if user was editing the document
                             if (editModeValue) {
-                              funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+                              Ext.getCmp('manageDocsGrid').getView().select(2) ;
                             }
                           }
                         }
@@ -395,7 +390,7 @@ var funcGrids =
                 }
                 else
                 {
-                  if(recName == 'Create new Document' || recName == 'Create new Document with Template' || recName == 'Create new Document with Questionnaire')
+                  if(recName == 'Create new Document' || recName == 'Create new Document with Template')
                   {
                     return 'genbKb-gray-font-create' ;
                   }
@@ -461,7 +456,7 @@ var funcGrids =
                       displayModelTree() ;
                     }
                     else if (bb.data.modelFuncName == 'History') {
-                      if (Ext.getCmp('modelTreeGrid') || newdocObj || Ext.getCmp('docsVersionsGrid') || Ext.getCmp('viewGrid') || Ext.getCmp('questionnaireGrid'))
+                      if (Ext.getCmp('modelTreeGrid') || newdocObj || Ext.getCmp('docsVersionsGrid') || Ext.getCmp('viewGrid'))
                       {
                         Ext.Msg.show({
                           title: "Warning",
@@ -668,32 +663,3 @@ var funcGrids =
 ] ;
 
 
-function mainPanelInUse()
-{
-  retVal = true ;
-  if(!Ext.getCmp('viewGrid') && !Ext.getCmp('modelTreeGrid') && !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid') && !newdocObj && !Ext.getCmp('questionnaireGrid'))
-  {
-    retVal = false ;    
-  }
-  return retVal ;
-}
-
-function funcGridsBtnToggler(section, btnName, action)
-{
-  var selModel = Ext.getCmp(section).getSelectionModel() ;
-  var btns = selModel.store.data.items ;
-  var ii ;
-  for(ii=0; ii<btns.length; ii++)
-  {
-    var btn = btns[ii] ;
-    if (btn.data.recordFuncName == btnName) {
-      if (action == 'select') {
-        selModel.select(btn) ;
-      }
-      else{
-        selModel.deselect(btn) ;
-      }
-      break ;
-    }
-  }
-}

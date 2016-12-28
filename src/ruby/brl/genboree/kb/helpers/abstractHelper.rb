@@ -117,22 +117,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
         versionsHelper = @kbDatabase.versionsHelper(@coll.name)
         revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
         versionObjId  = versionsHelper.createNewHistory(@coll.name, savedDoc, author)
-        subDocPath = setSubdocPath(opts)
-        if(subDocPath != "/")
-          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "subDocPath: #{subDocPath}\n\nvalueDoc:\n#{JSON.pretty_generate(opts[:newValue])}")
-        end
-        newValue = (opts.key?(:newValue) ?  opts[:newValue] : savedDoc)
-        deleteProp = ((opts.key?(:deleteProp) and opts[:deleteProp]) ? true : false)
-        if( deleteProp )
-          revisionObjId = revisionsHelper.createDeletionHistory(@coll.name, docObjId, subDocPath, author)
-        else
-          revisionObjId = revisionsHelper.createNewHistory(@coll.name, docObjId, subDocPath, newValue, author)
-        end
+        revisionObjId = revisionsHelper.createNewHistory(@coll.name, docObjId, "/", savedDoc, author)
       end
       return docObjId
     end
-    
-    # Essnetially used to replace the subDocPath for paths ending with [] to have {"identifier"} when saving sub documents
+
+    # Essentially used to replace the subDocPath for paths ending with [] to have {"identifier"} when saving sub documents
     # This is important since indices for item lists cannot be used reliably for lookups as they can change.
     # @param [Hash] opts
     # @return [String] The updated/correct subDocPath which will be saved in mongoDB
@@ -141,12 +131,19 @@ module BRL ; module Genboree ; module KB ; module Helpers
       if(opts.key?(:subDocPath))
         subDocPath = opts[:subDocPath]
         if(subDocPath =~ /\]$/)
-          valueDoc = opts[:newValue]
-          rootProp = valueDoc.keys[0]
-          identifierVal = valueDoc[rootProp]['value']
+          rootProp = nil
+          identifierVal = nil
+          if(opts.key?(:newValue))
+            valueDoc = opts[:newValue]
+            rootProp = valueDoc.keys[0]
+            identifierVal = valueDoc[rootProp]['value']
+          else
+            rootProp = opts[:itemIdentifierProp]
+            identifierVal = opts[:itemIdentifierPropValue]
+          end
           subDocPath.gsub!(/\[\S+\]$/, "[].#{rootProp}.{\"#{identifierVal}\"}")
           # Change the value doc object as well
-          opts[:newValue] = valueDoc[rootProp]
+          opts[:newValue] = valueDoc[rootProp] if(opts.key?(:newValue))
         end
         retVal = "/#{subDocPath}"
       else
@@ -155,6 +152,15 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return retVal 
     end
 
+
+
+    # Drop this collection
+    def dropCollection()
+      $stderr.debugPuts(__FILE__, __method__, 'STATUS', "About to mongo-drop collection: #{@coll.name.inspect}")
+      result = @coll.drop()
+    end
+
+    
 
     # @todo Test, document.
     def distinctValsForProp(propPath, model, aggOperation = :count)

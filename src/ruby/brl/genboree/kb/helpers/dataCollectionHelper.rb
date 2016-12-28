@@ -15,7 +15,7 @@ require 'brl/genboree/kb/contentGenerators/generator'
 module BRL ; module Genboree ; module KB ; module Helpers
 
   class DataCollectionHelper < AbstractHelper
-
+    ITEM_MATCH = /\.\[\s*(FIRST|LAST|\d+)\s*\](?:$|\.((?!\.).)*$)/
     attr_accessor :lastValidatorErrors
     # @return [ModelsValidator] If we already have a ModelsValidator object that's been run on the collection model.
     #   Provide our {DataCollectionHelper} object with that, in case it wants to ask questions about what
@@ -27,7 +27,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   then can provide to our {DataCollectionHelper} with it, so it doesn't have to waste time calling {ModelsHelper#modelForCollection}
     #   when it needs the model. Keep in mind it's not the raw model data structre but rather the {KbDoc} that wraps & stores it.
     attr_writer :modelKbDoc
-
+    
     # Create new instance of this helper.
     # @param [MongoKbDatabase] kbDatabase The KB database object this helper is assisting.
     # @param [String] collName The name of the document collection this helper uses.
@@ -116,6 +116,269 @@ module BRL ; module Genboree ; module KB ; module Helpers
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "    - Num. indices failed: #{indexingResults ? indexingResults[:failedIndices].size : "ALL FAILED - !!COMPLETE FAILURE!! - unexpectedly returned this non-Hash value:\n\n#{indexingResults.inspect}\n\n"}")
       return indexingResults
     end
+    
+    # Performs a targeted deletion/removal of a sub document inside a document using the mongo find_and_replace method
+    # @param [String] docId The document to update. NOTE: It is assumed validation is already done on the "updated" document.
+    # @param [Author] string
+    # @param [String] subDocPath The path to the sub document which needs to be removed from the document
+    # @param [Hash] opts options hash with various settings
+    # @return [BSON::ObjectId, KbError] The ObjectId for the updated document
+    def deleteSubDoc(docId, author, subDocPath, opts={})
+      updatedDoc = nil
+      doc = getByIdentifier(docId)
+      doc.delete("_id")
+      opts[:subDocPath] = subDocPath
+      docObjId = nil
+      identProp = getIdentifierName()
+      kbd = BRL::Genboree::KB::KbDoc.new(doc)
+      ps = BRL::Genboree::KB::PropSelector.new(doc)
+      # Normalizes path to always have '[]' even if the original path had '{}'
+      propSelectorPaths =  ps.getMultiPropPaths(subDocPath)
+      psPath = nil
+      subsPropPath = nil
+      if(!propSelectorPaths.empty?)
+        psPath = propSelectorPaths[0] 
+      else
+        pathElements = subDocPath.split(".")
+        subsPropPath = "#{pathElements[0..pathElements.size-4].join(".")}.[LAST]"
+        psPath = ps.getMultiPropPaths(subsPropPath)[0]
+      end
+      pathElements = kbd.parsePath(psPath)
+      parentProp = kbd.findParent(pathElements)
+      mh = @kbDatabase.modelsHelper()
+      mongoPath = nil
+      itemDeletion = false
+      if(psPath =~ /\]/) # The path is under an item list
+        itemIdentifier = nil
+        itemDeletion = true if(subDocPath =~ /\}$/ or subDocPath =~ /\]$/ or parentProp.is_a?(Array))
+        if(parentProp.is_a?(Array))
+          subDocPathEls = subDocPath.split(".")
+          itemIdentifier = subDocPathEls[subDocPathEls.size-1]
+        end
+        if(subDocPath =~ /\]$/)
+          idx = 0
+          subDocPath =~ ITEM_MATCH
+          extractedIdx = $1
+          if(extractedIdx == 'LAST')
+            idx = parentProp['items'].size - 1
+          elsif(extractedIdx == "FIRST")
+            idx = 0
+          else
+            idx = extractedIdx.to_i
+          end
+        elsif(subDocPath =~ /\}$/)
+          subDocPathEls = subDocPath.split(".")
+          itemIdentifier = subDocPathEls[subDocPathEls.size-2]
+        end
+        nestedDelete = ( psPath.count("]") == 1 ? false : true  )
+        # First collect the order of the indices from the path
+        psPathEls = psPath.split(".")
+        idxOrder = []
+        psPathEls.each { |el|
+          if(el =~ /\[\d/)
+            idxOrder.push(el.gsub(/^\[/, "").gsub(/\]$/, ""))
+          end
+        }
+        mongoPath = mh.modelPath2MongoPath(psPath, @coll.name)
+        # Strip off the 'value' at the end.
+        mongoPath.gsub!(/\.value$/, "")
+        # Add in the indices
+        mongoPath = addIndicesToMongoPath(mongoPath, idxOrder)
+        # Deleting an entire item object
+        if(itemDeletion)
+          currentItemObj = ps.getMultiObj(subDocPath)
+          itemIdentifier = currentItemObj[0].keys[0]
+          identValue = currentItemObj[0][itemIdentifier]['value']
+          opts[:itemIdentifierProp] = itemIdentifier
+          opts[:itemIdentifierPropValue] = identValue
+          if(mongoPath =~ /\.\d+\.#{itemIdentifier}$/)
+            mongoPath.gsub!(/\.\d+\.#{itemIdentifier}$/, "")
+          elsif(mongoPath =~ /\.\d+$/)
+            mongoPath.gsub!(/\.\d+$/, ".items")
+          elsif(mongoPath !~ /\.items$/)
+            mongoPath << ".items"
+          end
+          queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$pull" => { mongoPath =>  { "#{itemIdentifier}.value" => identValue }  } } }
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+          updatedDoc = @coll.find_and_modify(queryDoc)
+        end
+      end
+      # Handles both cases where property to delete is buried inside of an item list and also where it is not.
+      if(!itemDeletion) 
+        mongoPath = mh.modelPath2MongoPath(psPath, @coll.name) if(psPath !~ /\]/)
+        mongoPath.gsub!(/\.value$/, "") 
+        queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$unset" => { mongoPath =>  ""  } } }
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+        updatedDoc = @coll.find_and_modify(queryDoc)   
+      end
+      docObjId = updatedDoc['_id']
+      subDocPath = setSubdocPath(opts)
+      unless(MongoKbDatabase::KB_HISTORYLESS_CORE_COLLECTIONS.include?(@coll.name))
+        # Retrieve the actual saved doc
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating revision/version document for subDocPath: #{subDocPath.inspect}")
+        savedDoc = @kbDatabase.docByRef(docObjId, @coll.name)
+        versionsHelper = @kbDatabase.versionsHelper(@coll.name)
+        revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
+        versionObjId  = versionsHelper.createNewHistory(@coll.name, savedDoc, author)
+        revisionObjId = revisionsHelper.createDeletionHistory(@coll.name, docObjId, subDocPath, author)
+      end
+      return docObjId
+    end
+    
+    # Performs a targeted save of a sub document inside a document using the mongo find_and_replace method
+    # This approach ensures that concurrent updates to various sub documents inside of a single document do not result in bad read/writes
+    # @param [String] docId The document to update. NOTE: It is assumed validation is already done on the "updated" document.
+    # @param [Author] string
+    # @param [String] subDocPath The path to the sub document which needs to be updated
+    # @param [Hash] payloadDoc The value object document that the subDocPath points to
+    # @param [Hash] opts options hash with various settings
+    # @return [BSON::ObjectId, KbError] The ObjectId for the updated document
+    def saveSubDoc(docId, author, subDocPath, payloadDoc, opts={})
+      updatedDoc = nil
+      doc = getByIdentifier(docId)
+      doc.delete("_id")
+      opts[:newValue] = payloadDoc
+      opts[:subDocPath] = subDocPath
+      docObjId = nil
+      identProp = getIdentifierName()
+      kbd = BRL::Genboree::KB::KbDoc.new(doc)
+      ps = BRL::Genboree::KB::PropSelector.new(doc)
+      # Normalizes path to always have '[]' even if the original path had '{}'
+      propSelectorPaths =  ps.getMultiPropPaths(subDocPath)
+      psPath = nil
+      subsPropPath = nil
+      if(!propSelectorPaths.empty?)
+        psPath = propSelectorPaths[0] 
+      else
+        pathElements = subDocPath.split(".")
+        subsPropPath = "#{pathElements[0..pathElements.size-4].join(".")}.[LAST]"
+        psPath = ps.getMultiPropPaths(subsPropPath)[0]
+      end
+      pathElements = kbd.parsePath(psPath)
+      parentProp = kbd.findParent(pathElements)
+      mh = @kbDatabase.modelsHelper()
+      mongoPath = nil
+      itemInsertion = false
+      if(psPath =~ /\]/) # The path is under an item list
+        itemIdentifier = nil
+        itemInsertion = true if(subDocPath =~ /\}$/ or subDocPath =~ /\]$/ or parentProp.is_a?(Array))
+        if(parentProp.is_a?(Array))
+          subDocPathEls = subDocPath.split(".")
+          itemIdentifier = subDocPathEls[subDocPathEls.size-1]
+        end
+        newItem = false
+        if(subDocPath =~ /\]$/)
+          idx = 0
+          subDocPath =~ ITEM_MATCH
+          extractedIdx = $1
+          if(extractedIdx == 'LAST')
+            
+          elsif(extractedIdx == "FIRST")
+            idx = 0
+          else
+            idx = extractedIdx.to_i
+          end
+          idx = parentProp['items'].size if(extractedIdx == 'LAST')
+          newItem = true if(idx >= parentProp['items'].size)
+        elsif(subDocPath =~ /\}$/)
+          newItem = true if(!subsPropPath.nil?)
+          subDocPathEls = subDocPath.split(".")
+          itemIdentifier = subDocPathEls[subDocPathEls.size-2]
+        end
+        nestedInsert = ( psPath.count("]") == 1 ? false : true  )
+        # First collect the order of the indices from the path
+        psPathEls = psPath.split(".")
+        idxOrder = []
+        psPathEls.each { |el|
+          if(el =~ /\[\d/)
+            idxOrder.push(el.gsub(/^\[/, "").gsub(/\]$/, ""))
+          end
+        }
+        mongoPath = mh.modelPath2MongoPath(psPath, @coll.name)
+        # Strip off the 'value' at the end.
+        mongoPath.gsub!(/\.value$/, "")
+        # Add in the indices
+        mongoPath = addIndicesToMongoPath(mongoPath, idxOrder)
+        # If we are adding/replacing a complete item object, we need to know if we are doing a push or replace.
+        if(itemInsertion)
+          # Normalize the path and payload document
+          valueDoc = normalizePayloadDocForItemInsert(payloadDoc, itemIdentifier)
+          if(newItem)
+            propPathToUpdate = mongoPath.gsub(/\.\d+$/, ".items")
+            queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$push" => { propPathToUpdate =>  valueDoc } } }
+            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+            updatedDoc = @coll.find_and_modify(queryDoc)
+          else
+            if(nestedInsert) # Cannot use '$' operator for nested arrays :( We will have to rely on indices
+              valueDoc = valueDoc[itemIdentifier] if(itemIdentifier)
+              queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$set" => { mongoPath =>  valueDoc    }  }}
+              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+              updatedDoc = @coll.find_and_modify(queryDoc)
+            else # We can use the '$' operator to do dynamic lookup and replace the item by it's identifier
+              itemIdentifier = valueDoc.keys[0]
+              currentItemObj = ps.getMultiObj(subDocPath)
+              identValue = currentItemObj[0][itemIdentifier]['value']
+              propPathToFind = nil
+              propPathToSet = nil
+              if(mongoPath =~ /\.#{itemIdentifier}$/)
+                propPathToFind = mongoPath.gsub(/\.\d+\.#{itemIdentifier}$/, ".#{itemIdentifier}.value")
+                propPathToSet = mongoPath.gsub(/\.\d+\.#{itemIdentifier}$/, ".$")
+              else
+                propPathToFind = mongoPath.gsub(/\.\d+$/, ".items.#{itemIdentifier}.value")
+                propPathToSet = mongoPath.gsub(/\.\d+$/, ".items.$")  
+              end
+              queryDoc = { "query" => { "#{identProp}.value" => docId, propPathToFind => identValue  }, "update" => { "$set" => { propPathToSet =>  valueDoc  } } }
+              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+              updatedDoc = @coll.find_and_modify(queryDoc)
+            end
+          end
+        end
+      end
+      # Handles both cases where property to update is buried inside of an item list and also where it is not.
+      if(!itemInsertion) 
+        mongoPath = mh.modelPath2MongoPath(psPath, @coll.name) if(psPath !~ /\]/)
+        valueDoc = payloadDoc
+        mongoPath.gsub!(/\.value$/, "") 
+        queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$set" => { mongoPath =>  valueDoc  } } }
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+        updatedDoc = @coll.find_and_modify(queryDoc)   
+      end
+      docObjId = updatedDoc['_id']
+      subDocPath = setSubdocPath(opts)
+      unless(MongoKbDatabase::KB_HISTORYLESS_CORE_COLLECTIONS.include?(@coll.name))
+        # Retrieve the actual saved doc
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating revision/version document for subDocPath: #{subDocPath.inspect}")
+        savedDoc = @kbDatabase.docByRef(docObjId, @coll.name)
+        versionsHelper = @kbDatabase.versionsHelper(@coll.name)
+        revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
+        versionObjId  = versionsHelper.createNewHistory(@coll.name, savedDoc, author)
+        revisionObjId = revisionsHelper.createNewHistory(@coll.name, docObjId, subDocPath, opts[:newValue], author)
+      end
+      return docObjId
+    end
+    
+    def normalizePayloadDocForItemInsert(payloadDoc, itemIdentifier)
+      updatedPayloadDoc = nil
+      if(payloadDoc.key?('properties') or payloadDoc.key?('value'))
+        updatedPayloadDoc = { itemIdentifier => payloadDoc}
+      else
+        updatedPayloadDoc = payloadDoc
+      end
+      return updatedPayloadDoc
+    end
+    
+    def addIndicesToMongoPath(mongoPath, idxOrder)
+      mpEls = mongoPath.split(".")
+      finalMongoPath = []
+      mpEls.each { |el|
+        finalMongoPath << el
+        finalMongoPath << idxOrder.shift if(el == "items")
+      }
+      finalMongoPath << idxOrder.shift if(!idxOrder.empty?)
+      return finalMongoPath.join(".")
+    end
+    
+    
 
     # Save a doc to the collection this helper instance uses & assists with. Will also save
     #   history records as well, unless {#coll} for this helper is one of the core collections
@@ -459,19 +722,223 @@ module BRL ; module Genboree ; module KB ; module Helpers
       raise ">>>> NOT IMPLEMENTED <<<< - making empty docs is not yet in place"
     end
 
-    # @todo Implement this. Need to consider not only removing collections, but version/revision collections
+    # Fully drop the whole collection. Will lose all data, all history, everything.
+    # @param [String] author The Genboree user name who is deleting the collection
     #   and kbModel doc and kbColl.metadata doc. May want to consider some way to keep around version/revision
     #   collections to allso a "restore" (probably need the kbColl.metadata doc  too...would need to tag it as
     #   "deletect" so it doesn't come back in various lists [like mdb.collections or {kb}/colls API call])
-    def dropCollection(collName, opts={ :fullScrub => true })
-      raise ">>>> NOT IMPLEMENTED <<<< - correctly dropping a database is not yet implemented"
-      # @todo Here are the mongo command to delete all aspects of the user collection. Convert, verify, robustify, optionify:
-      #      collName = "acmg-lit"
-      #      db[collName].drop()
-      #      db[collName + ".versions"].drop()
-      #      db[collName + ".revisions"].drop()
-      #      db["kbModels"].remove({ "name.value" : collName })
-      #      db["kbColl.metadata"].remove({ "name.value" : collName })
+    # @return [Boolean] Whether it succeeded or not ; generally errors will result in an Exception being raised. Currently the
+    #   only time false is returned is when the collection doesn't appear to exist.
+    # @raise [RuntimeExpeption] When an unexpected error happns during some phase of the deletion, usually after SOME
+    #   tasks have succeed. Very bad, since likely have corrupted (partially deleting) KB w.r.t. this collection.
+    def dropCollection(author, opts={ :fullScrub => true })
+      $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Begin drop of #{@coll.name.inspect} collection...")
+      collName = @coll.name
+
+      # Collection metadata helper
+      collMetadataHelper = @kbDatabase.collMetadataHelper()
+      # Get coll metadata document
+      collMetadataDoc = collMetadataHelper.metadataForCollection(collName, true)
+      if(collMetadataDoc)
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Have coll metadata.")
+        # Due to a long-standing collMetadata bug, 'name.internal' doesn't have a value object, just true|false
+        # - Now fixed but must check both for backwards compatibility
+        if( collMetadataDoc.getPropVal('name.internal') or (collMetadataDoc.getPropProperties('name')['internal'] == true) )
+          raise "ERROR: You cannot delete internal collections like #{collName.inspect} !"
+        end
+
+        # Version helper
+        versionsHelper = @kbDatabase.versionsHelper(collName)
+        raise "ERROR: Could not get versionsHelper for apparently valid data collection #{collName.inspect}." unless(versionsHelper)
+        # Revisions helper
+        revisionsHelper = @kbDatabase.revisionsHelper(collName)
+        raise "ERROR: Could not get revisionsHelper for apparently valid data collection #{collName.inspect}." unless(revisionsHelper)
+        # Model helper
+        modelsHelper = @kbDatabase.modelsHelper()
+        raise "ERROR: Could not get modelsHelper." unless(modelsHelper)
+
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Have versionsHelper, revisionsHelper, modelsHelper")
+
+        # Remove model doc
+        result = modelsHelper.deleteForCollection(collName, author)
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Removing the model gave: #{result.inspect}")
+
+        # Remove versions collection
+        result = versionsHelper.dropCollection()
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Dropping the versions collection gave: #{result.inspect}")
+        # Remove revisions collection
+        revisionsHelper.dropCollection()
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Dropping the revisions collection gave: #{result.inspect}")
+        # Remove collection metadata doc
+        result = collMetadataHelper.deleteForCollection(collName, author)
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Removing the collection metadata doc gave: #{result.inspect}")
+
+        # Drop self
+        result = @coll.drop()
+        $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Dropping self collection (#{@coll.name.inspect}) gave: #{result.inspect}")
+        retVal = true
+      else
+        $stderr.debugPuts(__FILE__, __method__, 'ERROR', "No collection metadata for data collection named #{collName.inspect}. Is this a real collection or a mistake?")
+        retVal = false
+      end
+
+      $stderr.debugPuts(__FILE__, __method__, 'DROP COLL STATUS', "Done drop of #{@coll.name.inspect} collection ; retVal will be #{retVal.inspect}")
+      return retVal
+    end
+
+    # Rename a user data collection. Does it properly by not only renaming the collection, but also the
+    #   versions/revisions collections, the kbModels record, the kbModels history records, and the kbColl.metadata record.
+    # @param [String] newCollName The new name for the collection.
+    # @param [String] author The Genboree user name who is renaming the collection
+    # @return [Boolean] Whether it succeeded or not ; generally errors will result in an Exception being raised. Currently the
+    #   only time false is returned is when the collection doesn't appear to exist.
+    # @raise [RuntimeExpeption] When an unexpected error happns during some phase of the renaming, usually after SOME
+    #   tasks have succeed. Very bad, since likely have corrupted (partially renamed) KB w.r.t. this collection.
+    def renameCollection( newCollName, author, opts={} )
+      $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Begin rename of #{@coll.name.inspect} collection...")
+      if(newCollName and newCollName =~ /\S/)
+        raise "ERROR: New collectiion name #{newCollName.inspect }is same as old one #{@coll.name.inspect}. Appears to be an error. Nothing to do." if( newCollName == @coll.name )
+        raise "ERROR: New collection name #{newCollName.inspect} TOO LONG. No more than 22 chars." unless(newCollName.size <= 22)
+        collName = @coll.name.dup
+        # Collection metadata helper
+        collMetadataHelper = @kbDatabase.collMetadataHelper()
+        # Get current coll metadata document
+        collMetadataDoc = collMetadataHelper.metadataForCollection(collName, true)
+        if(collMetadataDoc)
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Have coll metadata.")
+
+          # Due to a long-standing collMetadata bug, 'name.internal' doesn't have a value object, just true|false
+          # - Now fixed but must check both for backwards compatibility
+          if( collMetadataDoc.getPropVal('name.internal') or (collMetadataDoc.getPropProperties('name')['internal'] == true) )
+            raise "ERROR: You cannot rename internal collections like #{collName.inspect} !"
+          end
+
+          # Version helper
+          versionsHelper = @kbDatabase.versionsHelper(collName)
+          raise "ERROR: Could not get versionsHelper for apparently valid data collection #{collName.inspect}." unless(versionsHelper)
+          # Revisions helper
+          revisionsHelper = @kbDatabase.revisionsHelper(collName)
+          raise "ERROR: Could not get revisionsHelper for apparently valid data collection #{collName.inspect}." unless(revisionsHelper)
+          # Model helper
+          modelsHelper = @kbDatabase.modelsHelper()
+          raise "ERROR: Could not get modelsHelper." unless(modelsHelper)
+
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Have versionsHelper, revisionsHelper, modelsHelper")
+
+          # Rename actual collections
+          # - Do this up front. Will raise Mongo::InvalidNSName for use if new collection name is bad, halting any furtehr ops.
+          result = @coll.rename( newCollName )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Renaming collection gave: #{result.inspect}")
+          result = versionsHelper.coll.rename( versionsHelper.class.historyCollName( newCollName ) )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Renaming version collection gave: #{result.inspect}")
+          result = revisionsHelper.coll.rename( revisionsHelper.class.historyCollName( newCollName ) )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Renaming revision collection gave: #{result.inspect}")
+
+          # Update model doc for current model:
+          # - name.value => new coll name
+          result = modelsHelper.coll.update(
+            # selector
+            { 'name.value' => collName },
+            # document edits
+            {
+              '$set' => { 'name.value' => newCollName }
+            },
+            # options
+            { :multi => false, :upsert => false }
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating collection name in relevant model doc gave: #{result.inspect}")
+
+          # Update model revisions and versions docs to they indicate the new colelction
+          # - versionNum.properties.content.value.name.value => new coll name
+          modelVersionsHelper = @kbDatabase.versionsHelper( modelsHelper.coll.name )
+          result = modelVersionsHelper.coll.update(
+            # selector
+            { 'versionNum.properties.content.value.name.value' => collName },
+            # document edits
+            {
+              '$set' => { 'versionNum.properties.content.value.name.value' => newCollName }
+            },
+            # options
+            { :multi => true, :upsert => false }
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating collection name in relevant model version docs gave: #{result.inspect}")
+          # - revisionNum.properties.content.value.name.value => new coll name
+          modelRevisionsHelper = @kbDatabase.revisionsHelper( modelsHelper.coll.name )
+          result = modelRevisionsHelper.coll.update(
+            # selector
+            { 'revisionNum.properties.content.value.name.value' => collName },
+            # document edits
+            {
+              '$set' => { 'revisionNum.properties.content.value.name.value' => newCollName }
+            },
+            # options
+            { :multi => true, :upsert => false }
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating collection name in relevant model revision docs gave: #{result.inspect}")
+
+          # Update kbColl.metadata
+          # - name.value => new coll name
+          # - name.properties.revisions.value => new coll name.revisions
+          # - name.properties.versions.value => new coll name.versions
+          result = collMetadataHelper.coll.update(
+            # selector
+            { 'name.value' => collName },
+            # document edits
+            {
+              '$set' => {
+                'name.value' => newCollName,
+                'name.properties.versions.value' => versionsHelper.class.historyCollName( newCollName ),
+                'name.properties.revisions.value' => revisionsHelper.class.historyCollName( newCollName )
+              }
+            },
+            { :multi => false, :upsert => false }
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating collection name in relevant collection metadata gave: #{result.inspect}")
+
+          # Update renamed coll.versions and coll.revisions so old, out-of-date docRefs will point to correct document
+          # - i.e. fix the namespace in the docRef value, which is a DBRef object ; namespace available via $ref "field"
+          # . first, get a helper for the new collection (we are in a helper for the old collection)
+          # Versions helper for renamed collection
+          versionsHelper = @kbDatabase.versionsHelper( newCollName )
+          raise "ERROR: could not get a versions helper for the renamed collection even after renamed from #{collName.inspect} to #{newCollName.inspect} supposedly completed!" unless(versionsHelper)
+          result = versionsHelper.coll.update(
+            # selector (all old version docs)
+            { },
+            # doc edits
+            {
+              '$set' => { 'versionNum.properties.docRef.value.$ref' => newCollName }
+            },
+            # options
+            { :multi => true, :upsert => false}
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating ALL existing version docs for the collection to change DBRef pointers gave: #{result.inspect}")
+          # Revisions helper for renamed collection
+          revisionsHelper = @kbDatabase.revisionsHelper( newCollName )
+          raise "ERROR: could not get a versions helper for the renamed collection even after renamed from #{collName.inspect} to #{newCollName.inspect} supposedly completed!" unless(revisionsHelper)
+          result = revisionsHelper.coll.update(
+            # selector (all old revison docs)
+            { },
+            # doc edits
+            {
+              '$set' => { 'revisionNum.properties.docRef.value.$ref' => newCollName }
+            },
+            # options
+            { :multi => true, :upsert => false}
+          )
+          $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Updating ALL existing revision docs for the collection to change DBRef pointers gave: #{result.inspect}")
+
+          retVal = true
+        else
+          $stderr.debugPuts(__FILE__, __method__, 'ERROR', "No collection metadata for data collection named #{collName.inspect}. Is this a real collection or a mistake?")
+          retVal = false
+        end
+
+      else
+        raise "ERROR: The new name #{newCollName.inspect} is not a valid collection name."
+      end
+
+      $stderr.debugPuts(__FILE__, __method__, 'RENAME COLL STATUS', "Done rename of #{collName.inspect} collection to #{newCollName.inspect} ; retVal will be #{retVal.inspect}")
+      return retVal
     end
 
     # Retrieve the set of distinct value and their doc counts for a particular prop path.

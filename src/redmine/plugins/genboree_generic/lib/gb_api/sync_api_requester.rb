@@ -19,12 +19,7 @@ module GbApi
       retVal = { :respObj => '', :status => 500}
       # Add standard field info to fieldMap IFF not provided
       gbAuthHelper = GbApi::GbAuthHelper.new()
-      if(@redmineProject.nil?)
-       login, pass = gbAuthHelper.authPairForUserAndHost(@reqHost, @redmineUser)
-        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Login Pass from authPairForUserAndHost")
-      else
-        login, pass = gbAuthHelper.authPairForUserAndHostInProjContext(@redmineProject, @reqHost, @redmineUser)
-      end
+      login, pass = gbAuthHelper.authPairForUserAndHostInProjContext(@redmineProject, @reqHost, @redmineUser)
       if(login and pass)
         apiCaller = BRL::REST::ApiCaller.new(@reqHost, rsrcPath, login, pass)
         apiCaller.put( fieldMap, payload )

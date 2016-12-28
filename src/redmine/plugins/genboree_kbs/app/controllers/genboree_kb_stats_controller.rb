@@ -20,7 +20,6 @@ class GenboreeKbStatsController < ApplicationController
     rsrcPath = ""
     fieldMap = {}
     jsonResp = false
-    wrapInData = true
     if(statType == 'docsPerColl')
       rsrcPath = "/REST/v1/grp/{grp}/kb/{kb}/colls/stat/docCount?format=hcColumn&scale=linear"
     elsif (statType == 'docCountOverTime')
@@ -36,12 +35,15 @@ class GenboreeKbStatsController < ApplicationController
     elsif(statType == 'pointStats')
       rsrcPath = ( scope == 'kb' ? "/REST/v1/grp/{grp}/kb/{kb}/stat/allPointStats" : "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/stat/allPointStats")
       jsonResp = true
-      wrapInData = false
     end
     fieldMap[:coll] = params['collection'] if(scope == 'coll')
-    asyncGet( env, rsrcPath, fieldMap, wrapInData )
+    apiResult  = apiGet(rsrcPath, fieldMap, jsonResp)
+    if(jsonResp)
+      resp = apiResult[:respObj]['data']
+    else
+      resp = JSON.parse(apiResult[:respObj])
+    end
+    respond_with({ "data" => resp  }, :status =>  apiResult[:status])
   end
-  
-  
   
 end

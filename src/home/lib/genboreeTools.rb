@@ -237,11 +237,6 @@ def genboree_add_kb(group, kb, description = nil)
   api_put(kbUri, payload)
 end
 
-def genboree_delete_kb(group, kb)
-  kbUri = '/REST/v1/grp/' + CGI::escape(group) + '/kb/' + CGI::escape(kb)
-  api_delete(kbUri)
-end
-
 # check if kb exists
 def genboree_kb_exists(group, kb)
   return api_object_exists('/REST/v1/grp/' + CGI::escape(group) + '/kb/' + CGI::escape(kb))
@@ -255,33 +250,20 @@ def genboree_set_kb_public(group, kb)
   # Construct unlock record for the KB we want to unlock
   unlockRec = { "url" => kbUrl, "public" => true }
   # Sent PUT request
-  api_put("/REST/v1/grp/#{CGI::escape(group)}/unlockedResources", [unlockRec].to_json)
+  api_put("/REST/v1/grp/#{group}/unlockedResources", [unlockRec].to_json)
 end
 
 # assign user to group (change role, if user already assigned)
 def genboree_assign_user_to_group_as_subscriber(user, group)
-  api_put("/REST/v1/grp/#{CGI::escape(group)}/usr/#{CGI::escape(user)}/role", {"role"=>"subscriber", "permissionBits"=>""})
+  api_put("/REST/v1/grp/#{group}/usr/#{user}/role", {"role"=>"subscriber", "permissionBits"=>""})
 end
 def genboree_assign_user_to_group_as_author(user, group)
-  api_put("/REST/v1/grp/#{CGI::escape(group)}/usr/#{CGI::escape(user)}/role", {"role"=>"author", "permissionBits"=>""})
-end
-
-def genboree_kb_add_collection(group, kb, collection, model)
-  uri = "/REST/v1/grp/#{CGI::escape(group)}/kb/#{CGI::escape(kb)}/coll/#{CGI::escape(collection)}/model"
-  model = model.to_json if model.is_a?(Hash)
-  api_put(uri, model)
-end
-
-def genboree_kb_add_transform(group, kb, transformDefinition)
-  transformDefinition = JSON.parse(transformDefinition) if transformDefinition.is_a?(String)
-  name = transformDefinition['Transformation']['value']
-  uri = "/REST/v1/grp/#{CGI::escape(group)}/kb/#{CGI::escape(kb)}/transform/#{CGI::escape(name)}"
-  api_put(uri, transformDefinition.to_json)
+  api_put("/REST/v1/grp/#{group}/usr/#{user}/role", {"role"=>"author", "permissionBits"=>""})
 end
 
 # load documents to KB collections
 def genboree_kb_add_documents(group, kb, collection, documents, autoAdjustId=true, substitutions=Hash.new, chunk_size=128)
-  uri = "/REST/v1/grp/#{CGI::escape(group)}/kb/#{CGI::escape(kb)}/coll/#{CGI::escape(collection)}/docs"
+  uri = "/REST/v1/grp/#{group}/kb/#{kb}/coll/#{collection}/docs"
   uri += "?autoAdjust=true" if autoAdjustId
   while documents.size > 0
     payload = { "data" => documents.shift(chunk_size) }
@@ -294,7 +276,7 @@ def genboree_kb_add_documents(group, kb, collection, documents, autoAdjustId=tru
 end
 
 def genboree_kb_add_documents_from_file(group, kb, collection, filename, autoAdjustId=true, substitutions=Hash.new, chunk_size=128)
-  uri = "/REST/v1/grp/#{CGI::escape(group)}/kb/#{CGI::escape(kb)}/coll/#{CGI::escape(collection)}/docs"
+  uri = "/REST/v1/grp/#{group}/kb/#{kb}/coll/#{collection}/docs"
   uri += "?autoAdjust=true" if autoAdjustId
   api_put_from_file_in_chunks(uri, filename, substitutions, chunk_size)
 end
@@ -333,28 +315,6 @@ def redmine_assign_user_to_project(user_login, project_identifier, roles_names)
   redmine_api_post("/projects/#{project_identifier}/memberships.json", '{"membership":{"user_id":' + "#{user_id}" + ',"role_ids":' + roles_ids.to_json + '}}')
 end
 
-# set configuration of genboree_kb project
-def redmine_configure_project_genboree_kb(project_identifier, genboree_group, kb_name)
-  # find project id
-  resp = redmine_api_get("/projects/#{project_identifier}.json")
-  id = resp["project"]["id"]
-  raise "Cannot find project with identifier: #{project_identifier}" if id.nil?
-  # set record's fields
-  fields = Hash.new
-  fields['project_id'] = id
-  fields['name'] = "#{kb_name}"
-  fields['gbGroup'] = "#{genboree_group}"
-  fields['gbHost'] = 'localhost'
-  # check if the record exists and rub insert or update
-  sql = "SELECT COUNT(1) AS count FROM genboree_kbs WHERE project_id=#{id}"
-  if runSqlStatement_redmine(sql).first['count'].to_i == 0
-    sql = sql_insert('genboree_kbs', fields)
-  else
-    sql = sql_update('genboree_kbs', fields) + " WHERE project_id=#{id}"
-  end
-  runSqlStatement_redmine(sql)
-end
-
 # set configuration of genboree_ac project
 def redmine_configure_project_genboree_ac(project_identifier, ac_genboree_group, ac_kb_name, orphanet_kb_name, 
                                           release_kb_name = nil, header_include_file = nil, footer_include_file = nil)
@@ -383,55 +343,6 @@ def redmine_configure_project_genboree_ac(project_identifier, ac_genboree_group,
     sql = sql_insert('genboree_acs', fields)
   else
     sql = sql_update('genboree_acs', fields) + " WHERE project_id=#{id}"
-  end
-  runSqlStatement_redmine(sql)
-end
-
-# set configuration of genboree_exrna_at project
-def redmine_configure_project_genboree_exrna_at(project_identifier, genboree_group, kb_name, home_page = "/redmine/projects/#{project_identifier}/exat")
-  # find project id
-  resp = redmine_api_get("/projects/#{project_identifier}.json")
-  id = resp["project"]["id"]
-  raise "Cannot find project with identifier: #{project_identifier}" if id.nil?
-  # set record's fields
-  fields = Hash.new
-  fields['project_id'] = id
-  fields['gbHost'] = 'localhost'
-  fields['gbGroup'] = genboree_group
-  fields['gbKb'] = kb_name
-  fields['appLabel'] = nil
-  fields['useRedmineLayout'] = 1
-  fields['headerIncludeFileLocation'] = nil
-  fields['footerIncludeFileLocation'] = nil
-  fields['analysesColl'] = 'Analyses'
-  fields['biosamplesColl'] = 'Biosamples'
-  fields['donorsColl'] = 'Donors'
-  fields['experimentsColl'] = 'Experiments'
-  fields['jobsColl'] = 'Jobs'
-  fields['resultFilesColl'] = 'Result Files'
-  fields['runsColl'] = 'Runs'
-  fields['studiesColl'] = 'Studies'
-  fields['submissionsColl'] = 'Submissions'
-  fields['updateData'] = 0
-  fields['newsFile'] = ''
-  fields['contactTo'] = ''
-  fields['contactBccs'] = ''
-  fields['jobHost'] = 'localhost'
-  fields['toolUsageHost'] = ''
-  fields['toolUsageGrp'] = ''
-  fields['toolUsageKb'] = ''
-  fields['toolUsageColl'] = ''
-  fields['toolUsageView'] = ''
-  fields['privateSubmitters'] = ''
-  fields['homePageUrl'] = home_page
-  fields['infoFlashHtml'] = ''
-  fields['prevVersions'] = ''
-  # check if the record exists and rub insert or update
-  sql = "SELECT COUNT(1) AS count FROM genboree_exrna_ats WHERE project_id=#{id}"
-  if runSqlStatement_redmine(sql).first['count'].to_i == 0
-    sql = sql_insert('genboree_exrna_ats', fields)
-  else
-    sql = sql_update('genboree_exrna_ats', fields) + " WHERE project_id=#{id}"
   end
   runSqlStatement_redmine(sql)
 end

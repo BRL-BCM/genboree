@@ -55,7 +55,7 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
       @dbu.setNewDataDb(databaseName)      
  
       # create table
-      raise ArgumentError, "ERROR_CREATE_TABLE: Failed to create kbDocsLink Table for the collection - #{@collName}" if(createTable().nil?)
+      raise ArgumentError "ERROR_CREATE_TABLE: Failed to create kbDocsLink Table for the collection - #{@collName}" if(createTable().nil?)
 
       # skip the links property retrieval if interested only in creating table
       # when a fresh collection is created these steps can be skipped

@@ -1,7 +1,7 @@
 // Solicits identifier name of new doc from user and creates a template document for the currently loaded model
 function createNewDocument()
 {
-  if(newdocObj || Ext.getCmp('questionnaireGrid'))
+  if(newdocObj)
   {
     var msg = "Creating a new document will remove the document/model being currently viewed." ;
     if(documentEdited)
@@ -22,13 +22,9 @@ function createNewDocument()
         }
         else
         {
-          funcGridsBtnToggler('manageDocsGrid', 'Create new Document', 'deselect') ;
-          if (Ext.getCmp('questionnaireGrid')) {
-            funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Questionnaire', 'select') ;
-          }
-          else{
-            funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
-          }
+          var selModel = Ext.getCmp('manageDocsGrid').getSelectionModel() ;
+          selModel.deselect(selModel.store.data.items[0]) ;
+          selModel.select(selModel.store.data.items[2]) ;
         }
       }
     }) ;
@@ -41,7 +37,7 @@ function createNewDocument()
 
 function createNewDocumentWithTemplate()
 {
-  if(newdocObj || Ext.getCmp('questionnaireGrid'))
+  if(newdocObj)
   {
     var msg = "Creating a new document will remove the document/model being currently viewed." ;
     if(documentEdited)
@@ -50,24 +46,21 @@ function createNewDocumentWithTemplate()
     }
     msg += "</br></br>Are you sure you want to continue?" ;
     Ext.Msg.show({
-      title: "Create New Document (Templates)",
+      title: "Create New Document",
       msg: msg,
       buttons: Ext.Msg.YESNO,
-      id: 'createNewDocumentTemplateMessBox',
+      id: 'createNewDocumentMessBox',
       fn: function(btn){
+        // Add handlers to the buttons above which will solicit the name of the identifier if the user does decide to start a new document
         if(btn == 'yes')
         {
           loadTemplates() ;
         }
         else
         {
-          funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Template', 'deselect') ;
-          if (Ext.getCmp('questionnaireGrid')) {
-            funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Questionnaire', 'select') ;
-          }
-          else{
-            funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
-          }
+          var selModel = Ext.getCmp('manageDocsGrid').getSelectionModel() ;
+          selModel.deselect(selModel.store.data.items[1]) ;
+          selModel.select(selModel.store.data.items[2]) ;
         }
       }
     }) ;
@@ -143,11 +136,12 @@ function loadTemplates()
 
 function resetPriorStateIfTemplateRejected()
 {
-  funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Template', 'deselect') ;
+  var selModel = Ext.getCmp('manageDocsGrid').getSelectionModel() ;
+  selModel.deselect(selModel.store.data.items[1]) ;
   // If there was no document loaded, go back to the previous state
   if(!newdocObj)
   {
-    if (!Ext.getCmp('modelTreeGrid') && !Ext.getCmp('viewGrid') &&  !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid') && !Ext.getCmp('questionnaireGrid')) {
+    if (!Ext.getCmp('modelTreeGrid') && !Ext.getCmp('viewGrid') &&  !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid')) {
       if (Ext.getCmp('mainTreeGrid')) {
         disablePanelBtn('editDelete') ;
         Ext.getCmp('mainTreeGrid').setTitle('Edit Mode: OFF') ;
@@ -158,7 +152,7 @@ function resetPriorStateIfTemplateRejected()
   }
   else
   {
-    funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+    selModel.select(selModel.store.data.items[2]) ;
   }
   // Reselect the existing setting
   if (Ext.getCmp('modelTreeGrid')) {
@@ -169,10 +163,7 @@ function resetPriorStateIfTemplateRejected()
   }
   else if (Ext.getCmp('docsVersionsGrid')) {
     showDocsVersionsGrid = true ;
-    funcGridsBtnToggler('manageDocsGrid', 'History', 'select') ;
-  }
-  else if (Ext.getCmp('questionnaireGrid')) {
-    funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Questionnaire', 'select') ;
+    Ext.getCmp('manageDocsGrid').getView().select(4) ;
   }
   else{
     if (!editModeValue && !Ext.getCmp('viewGrid') && Ext.getCmp('mainTreeGrid')) {
@@ -246,6 +237,7 @@ function loadTemplate(templateId)
         if (Ext.getCmp('templatesDisplayWindow')) {
           Ext.getCmp('templatesDisplayWindow').close() ;
         }
+        // Now load up the doc in the editor
         loadTemplateInEditor(template) ;
       }
       else{
@@ -276,7 +268,8 @@ function loadTemplateInEditor(template)
     initTreeGrid(currentSearchBoxData) ;
   }
   loadDocumentInEditor(actualDoc, false, "", true) ;
-  funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+  var selModel = Ext.getCmp('manageDocsGrid').getSelectionModel() ;
+  selModel.select(selModel.store.data.items[2]) ;
   enableToolbarBtnsForNewDoc() ;
   // Expand the tree so that all props that need to be edited are displayed
   var rootNode = Ext.getCmp('mainTreeGrid').store.tree.root ;
@@ -320,7 +313,7 @@ function normalizeTemplateDoc(templateDocObj)
 }
 
 
-function loadDocumentInEditor(docObj, setSearchBoxValueAsSelf, value, isTemplateDoc, setEditMode)
+function loadDocumentInEditor(docObj, setSearchBoxValueAsSelf, value, isTemplateDoc)
 {
   var docModelObj = docModel ;  // docModel is initialized/updated when a collection set is selected
   // Make sure the retrieved document has the identifier
@@ -377,9 +370,6 @@ function loadDocumentInEditor(docObj, setSearchBoxValueAsSelf, value, isTemplate
     if (displayPropPath != '') {
       seekAndDisplayProp(displayPropPath) ;
       // displayPropPath will be set back to empty by the 'afteritemexpand' event of the tree
-    }
-    if (setEditMode != undefined && setEditMode != null && setEditMode) {
-      funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
     }
   }
   else
@@ -557,11 +547,11 @@ function solicitNameOfNewDoc()
       }
       else
       {
-        funcGridsBtnToggler('manageDocsGrid', 'Create new Document', 'deselect') ;
+        selModel.deselect(selModel.store.data.items[0]) ;
         // If there was no document loaded, go back to the previous state
         if(!newdocObj)
         {
-          if (!Ext.getCmp('modelTreeGrid') && !Ext.getCmp('viewGrid') &&  !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid') && !Ext.getCmp('questionnaireGrid')) {
+          if (!Ext.getCmp('modelTreeGrid') && !Ext.getCmp('viewGrid') &&  !Ext.getCmp('docsVersionsGrid') && !Ext.getCmp('modelVersionsGrid')) {
             if (Ext.getCmp('mainTreeGrid')) {
               disablePanelBtn('editDelete') ;
               Ext.getCmp('mainTreeGrid').setTitle('Edit Mode: OFF') ;
@@ -572,7 +562,7 @@ function solicitNameOfNewDoc()
         }
         else
         {
-          funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+          selModel.select(selModel.store.data.items[1]) ;
         }
         // Reselect the model view if we came from there
         if (Ext.getCmp('modelTreeGrid')) {
@@ -583,10 +573,7 @@ function solicitNameOfNewDoc()
         }
         else if (Ext.getCmp('docsVersionsGrid')) {
           showDocsVersionsGrid = true ;
-          funcGridsBtnToggler('manageDocsGrid', 'History', 'select') ;
-        }
-        else if (Ext.getCmp('questionnaireGrid')) {
-          funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Questionnaire', 'select') ;
+          Ext.getCmp('manageDocsGrid').getView().select(4) ;
         }
         else{
           if (!editModeValue && !Ext.getCmp('viewGrid') && Ext.getCmp('mainTreeGrid')) {
@@ -618,7 +605,7 @@ function initNewDoc(text, selModel)
     }
   });
   clearAndReloadTree(newstore) ;
-  funcGridsBtnToggler('manageDocsGrid', 'Create new Document', 'deselect') ;
+  selModel.deselect(selModel.store.data.items[0]) ;
   // If there was no document loaded, go back to the previous state
   if(!newdocObj)
   {
@@ -629,7 +616,7 @@ function initNewDoc(text, selModel)
   }
   else
   {
-    funcGridsBtnToggler('manageDocsGrid', 'Edit Document', 'select') ;
+    selModel.select(selModel.store.data.items[2]) ;
   }
   enableToolbarBtnsForNewDoc() ;
 }

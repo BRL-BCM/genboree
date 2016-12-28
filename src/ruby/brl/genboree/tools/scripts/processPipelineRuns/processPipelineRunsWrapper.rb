@@ -659,8 +659,7 @@ module BRL; module Genboree; module Tools; module Scripts
       # Did we find anything?
       if(retVal)
         @errUserMsg = "exceRpt small RNA-seq Post-processing tool failed. Message from exceRpt small RNA-seq Post-processing tool:\n\n"
-        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]\n")
-        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
+        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]")
         @errInternalMsg = @errUserMsg
         @exitCode = 30
       end

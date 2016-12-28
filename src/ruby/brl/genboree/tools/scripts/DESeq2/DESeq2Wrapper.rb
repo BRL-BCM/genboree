@@ -479,10 +479,9 @@ module BRL; module Genboree; module Tools; module Scripts
     # @param [String] errFile file path to .err file associated with tool run
     # @return [nil]
     def runDESeq2(readCountsFile, factorsFile, outputDir, factorName, firstFactorLevel, secondFactorLevel, outFile, errFile)
-      # Do some necessary R-related updates to text provided by user so that DESeq2 script works properly
-      factorName.gsub!(" ", ".")
       # Create command for actually launching the shell script that will run the tool
-      command = "module unload R ; module load R/3.1 ; computeFoldChange.rb -i #{readCountsFile} -s #{factorsFile} -o #{outputDir} -f \"#{factorName}\" -d \"#{firstFactorLevel}\" -t \"#{secondFactorLevel}\" >> #{outFile} 2>> #{errFile}"
+      factorName.gsub!(" ", ".")
+      command = "computeFoldChange.rb -i #{readCountsFile} -s #{factorsFile} -o #{outputDir} -f \"#{factorName}\" -d \"#{firstFactorLevel}\" -t \"#{secondFactorLevel}\" >> #{outFile} 2>> #{errFile}"
       # Launch command
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching command: #{command}")
       exitStatus = system(command)
@@ -599,8 +598,7 @@ module BRL; module Genboree; module Tools; module Scripts
         @failedRun = true
         @errUserMsg = "DESeq2 run failed.\nReason(s) for failure:\n\n"
         errorMessages = nil if(errorMessages.empty?)
-        @errUserMsg << (errorMessages.join("\n\n") || "[No error info available from DESeq2 tool]\n")
-        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
+        @errUserMsg << (errorMessages.join("\n\n") || "[No error info available from DESeq2 tool]")
       end
       return retVal
     end
@@ -689,8 +687,7 @@ module BRL; module Genboree; module Tools; module Scripts
       # Did we find anything?
       if(retVal)
         @errUserMsg = "exceRpt small RNA-seq Post-processing tool failed. Message from exceRpt small RNA-seq Post-processing tool:\n\n"
-        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]\n")
-        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
+        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]")
         @errInternalMsg = @errUserMsg
         @exitCode = 29
       end

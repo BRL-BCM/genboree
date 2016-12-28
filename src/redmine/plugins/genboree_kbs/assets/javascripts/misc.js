@@ -1,5 +1,5 @@
 
-// Helper function used by many functions to extract domain info of a property based on the property definition coming from the model
+// Helper function used by many functions to extract domain info of a property
 function getDomainInfo(modelEl)
 {
   var domainToUse = modelEl.domain || '' ;
@@ -7,10 +7,7 @@ function getDomainInfo(modelEl)
   if(domainToUse.match(/^enum/))
   {
     domainToUse = "enum" ;
-    // Doesn't handle escaped delimiters (literal \, or in ruby/js quotes "\\,")
-    //domainOptsToUse = {"values": modelEl.domain.replace(/^enum\(/, '').replace(/\)$/, '').split(',')} ;
-    // This one does, using an unlikely placeholder character to protect the escaped commas:
-    domainOptsToUse = { "values" : modelEl.domain.replace(/^enum\(/, "").replace(/\)$/, "").replace(/\\,/g, "\v").split(",").map(function(xx) { return xx.replace(/\v/g, ","); })  } ;
+    domainOptsToUse = {"values": modelEl.domain.replace(/^enum\(/, '').replace(/\)$/, '').split(',')} ;
   }
   else if(domainToUse.match(/^regexp/))
   {
@@ -25,7 +22,7 @@ function getDomainInfo(modelEl)
     domainToUse = "bioportalTerm" ;
     domainOptsToUse = {"url": modelEl.domain.replace(/^bioportalTerm\(/, '').replace(/\)$/, '')} ;
   }
-  else if(domainToUse.match(/^measurement\(/))
+  else if(domainToUse.match(/^measurement/))
   {
     domainToUse = "measurement" ;
   }
@@ -223,15 +220,6 @@ function createViewableDoc(docModelObj, newdocObj, isTemplateDoc)
 
 }
 
-function makeValueUIConsumable(value, domain)
-{
-  var retVal = value ;
-  if (domain == 'modeledDocument') {
-    retVal = JSON.stringify(value) ;
-  }
-  return retVal ;
-}
-
 // Recursive function to traverse nested data and construct all children nodes (descendence) for the root node
 // This nested object is required by ExtJS to render the tree-grid view.
 // Each node is asssociated with all the attributes of a property which can be used for customized rendering (bold font/different icons for leaf/non leaf nodes, etc)
@@ -244,7 +232,6 @@ function constructChildrenObj(el, newdocProperty, isTemplateDoc)
   var domainEls = getDomainInfo(el) ;
   var domain = domainEls[0] ;
   var domainOpts = domainEls[1] ;
-  newdocProperty.value = makeValueUIConsumable(newdocProperty.value, domain) ;
   if(el.properties)
   {
     for(ii=0; ii<el.properties.length; ii++)
@@ -716,12 +703,6 @@ function destroyKbStatsPanel()
 {
   if (Ext.getCmp('kbStatsPanel')) {
     Ext.getCmp('kbStatsPanel').destroy() ;
-  }
-}
-
-function destroyQuestionnaireGrid() {
-  if (Ext.getCmp('questionnaireGrid')) {
-    Ext.getCmp('questionnaireGrid').destroy() ;
   }
 }
 

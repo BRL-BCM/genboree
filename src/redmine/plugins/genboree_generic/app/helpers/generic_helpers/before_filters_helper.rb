@@ -7,14 +7,6 @@ module GenericHelpers
     # BEFORE_FILTERS - useful before_filter methods for your controller
     # ----------------------------------------------------------------
 
-    # Popular the @urlMount variable with this Redmine's mount point (first dir in path)
-    def getKbMount()
-      @redmineMount = @kbMount = @urlMount = RedmineApp::Application.routes.default_scope[:path].to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ') ;
-      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "generic getKbMount has set @redmineMount, @kbMount, @urlMount to #{@redmineMount.inspect}")
-    end
-    alias_method(:redmineMount, :getKbMount)
-    alias_method(:getUrlMount, :getUrlMount)
-
     # Authorize the user for the requested action. In addition to regular checks, allow if project is public.
     #   Always allow members through
     def authorize_with_public_project(ctrl = params[:controller], action = params[:action], global = false)

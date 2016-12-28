@@ -196,15 +196,13 @@ class Lftp
     fullFilePath = firstPartOfFile
     # If we don't have a file at this point, something went wrong above 
     unless(File.exist?(fullFilePath))
-      $stderr.debugPuts(__FILE__, __method__, "ERROR", "Error occurred when trying to retrieve file. It is likely that file is empty or does not exist. Will return application/x-empty") unless(@muted)
-      fileType = "application/x-empty"
-    else
-      # Check file type using sniffer
-      @sniffer.filePath = fullFilePath
-      fileType = @sniffer.mimeType()
-      # Remove temp file grabbed for sniffing and then report file type in response
+      raise "Error occurred when trying to retrieve file. It is likely that file is empty or does not exist."
     end
-    `rm -f #{firstPartOfFile}`
+    # Check file type using sniffer
+    @sniffer.filePath = fullFilePath
+    fileType = @sniffer.mimeType()
+    # Remove temp file grabbed for sniffing and then report file type in response
+    `rm #{firstPartOfFile}`
     return fileType
   end
 

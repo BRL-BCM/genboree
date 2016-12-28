@@ -23,9 +23,6 @@ cp ../src/license.txt  ../src/agpl-3.0.txt  ${DIR_TARGET}
 ./build_data.sh  "$@"
 ./build_final.sh "$@"
 ./build_redmine.sh "$@"
-# ---- remove .svn directories
-find ${DIR_TARGET} -type d -name .svn -exec rm -rf {} \;  || true
-find ${DIR_DATA}   -type d -name .svn -exec rm -rf {} \;  || true
 # ---- Make a final package
 mv ${DIR_TARGET} ./local
 mv ${DIR_DATA}   ./data

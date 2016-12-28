@@ -17,7 +17,6 @@
     var displayPropPath = '<%=@prop.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
     var docVersion = '<%=@docVersion.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
     var templateId = '<%=@templateId.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
-    var questionnaireId = '<%=@questionnaireId.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
     var modelVersion = '<%=@modelVersion.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
     var matchQuery = '<%=@matchQuery.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
     var matchView = '<%=@matchView.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe %>' ;
@@ -33,7 +32,6 @@
     var showModelVersionsGrid = <%=@showModelVersionsGrid%> ;
     var createNewDoc = <%=@createNewDoc%> ;
     var createNewDocWithTemplate = <%=@createNewDocWithTemplate%> ;
-    var createNewDocWithQuestionnaire = <%=@createNewDocWithQuestionnaire%> ;
     var kbMount = '<%=@kbMount%>' ;
     var kbDb = '' ;
 <%
@@ -105,10 +103,6 @@
 
 <% content_for :header_tags do %>
     <%= javascript_include_tag 'docHelper', :plugin => 'genboree_kbs' %>
-<% end %>
-
-<% content_for :header_tags do %>
-    <%= javascript_include_tag 'questionnaires', :plugin => 'genboree_kbs' %>
 <% end %>
 
 <% content_for :header_tags do %>
