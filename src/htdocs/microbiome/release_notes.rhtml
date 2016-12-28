@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8;charset=utf-8" />
+<title>Microbiome Release Notes</title>
+<meta name="description" content="microbiome release notes" />
+<meta name="keywords" content="microbiome, release notes, microbiome release notes" />
+<link href="styles/application.css" media="all" rel="stylesheet" type="text/css" />
+<script src="javascript/prototype.js" type="text/javascript"></script>
+<script src="javascript/effects.js" type="text/javascript"></script>
+<script src="javascript/dragdrop.js" type="text/javascript"></script>
+<script src="javascript/controls.js" type="text/javascript"></script>
+<script src="javascript/application.js" type="text/javascript"></script>
+<link href="styles/jstoolbar.css" media="screen" rel="stylesheet" type="text/css" />
+<!--[if IE]>
+    <style type="text/css">
+      * html body{ width: expression( document.documentElement.clientWidth < 900 ? '900px' : '100%' ); }
+      body {behavior: url(/theCommons/stylesheets/csshover.htc?1265237822);}
+    </style>
+<![endif]-->
+ <script src="javascript/projects_tree_view.js" type="text/javascript"></script><link href="styles/projects_tree_view.css" media="screen" rel="stylesheet" type="text/css" /> <link href="styles/wiki_extion.css" media="screen" rel="stylesheet" type="text/css" /><script src="javascript/wiki_extion.js" type="text/javascript"></script>
+<!-- page specific tags -->
+
+<link href="http://genboree.org/theCommons/projects/tcmcsc/activity.atom?key=c54ce35d3330d734f8ec12a32e04e6ab80f4c739" rel="alternate" title="ATOM" type="application/atom+xml" />
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-24508931-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</head>
+<body>
+<div id="wrapper">
+<div id="top-menu">
+
+    <div id="account">
+<!--    <ul><li><a href="http://genboree.org/theCommons/my/account" class="my-account">My account</a></li>
+<li><a href="http://genboree.org/theCommons/logout" class="logout">Sign out</a></li></ul>    </div>
+    <div id="loggedas">Logged in as <a href="http://genboree.org/theCommons/users/102">kevin_riehle</a> </div>-->
+<!--<ul><li><a href="/theCommons/login" class="login">Sign in</a></li></ul>--> </div>
+
+
+    <ul><li><a href="http://genboree.org/theCommons/projects" class="projects">Projects</a></li>
+<li><a href="http://www.redmine.org/guide" class="help">Help</a></li></ul></div>
+      
+<div id="header">
+    <div id="quick-search">
+        <form action="http://genboree.org/theCommons/search/index/tcmcsc" method="get">
+        
+        <a href="" accesskey="4">Search</a>:
+        <input accesskey="f" class="small" id="q" name="q" size="20" type="text" />
+        </form>
+
+    </div>
+    
+    <h1><a href="" class="root">Integrated Microbiome Toolset</a> </h1>
+    
+    <div id="main-menu">
+        <ul><li><a href="index.rhtml" class="activity">Microbiome Home</a></li>
+<li><a href="release_notes.rhtml" class="overview selected">Release Notes</a></li>
+<li><a href="pending_updates.rhtml" class="activity">Pending Updates</a></li>
+<li><a href="tutorial.rhtml" class="documents">Tutorial</a></li>
+<li><a href="faqs.rhtml" class="wiki">FAQs</a></li>
+<li><a href="citation.rhtml" class="boards">Citation Information</a></li>
+<li><a href="forum.rhtml" class="ezfaq">Forum</a></li>
+<li><a href="supplemental.rhtml" class="settings">Supplemental Information</a></li></ul>
+    </div>
+
+
+</div>
+
+<div class="" id="main">
+        
+    <div id="content">
+				
+
+	
+<div class="wiki">
+  <h1 id="Integrated-Microbiome-Toolset-Release-Notes-Bug-Fixes">Integrated Microbiome Toolset - Release Notes / Bug Fixes<a href="#Integrated-Microbiome-Toolset-Release-Notes-Bug-Fixes" class="wiki-anchor">&para;</a></h1>
+
+
+	<ul>
+	<li><strong><ins>7/7/11</ins></strong>
+	<ul>
+	<li>Fixed bug in Sample Import tool when using a compressed file.</li>
+	</ul>
+	</li>
+		<li><strong><ins>7/1/11</ins></strong>
+
+	<ul>
+	<li>Update to the Sequence Import tool to allow users to drag over the 'Samples' folder instead of having to manually drag over each sample.</li>
+	</ul>
+	</li>
+		<li><strong><ins>6/30/11</ins></strong>
+	<ul>
+	<li>Fixed the locking of large uploaded files.</li>
+
+	</ul>
+	</li>
+		<li><strong><ins>6/17/11</ins></strong>
+	<ul>
+	<li>Chimera Slayer deployed within QIIME pipeline.</li>
+	</ul>
+	</li>
+		<li><strong><ins>6/3/11</ins></strong>
+
+	<ul>
+	<li>Allow users to upload files in compressed formats (.gz/bz2/xz/tar/tar.gz/tar.bz2/tar.xz/zip) or compressed archives.</li>
+	</ul>
+	</li>
+		<li><strong><ins>5/26/11</ins></strong>
+	<ul>
+	<li>Alpha Diversity pipeline updated to produce remove singletons from analysis, produce PNG output files (also visible via the Project pages), and remove labels from within the plots (that are almost always cut-off or hard to read).</li>
+
+		<li>Sequece Import pipeline updated to notify user of the samples that did not contain any sequences via email.</li>
+	</ul>
+	</li>
+		<li><strong><ins>5/12/11</ins></strong>
+	<ul>
+	<li>Remove samples that do not contain any sequences from the meta data mapping file.  This fixes a bug in the Alpha Diversity pipeline.</li>
+	</ul>
+
+	</li>
+		<li><strong><ins>5/10/11</ins></strong>
+	<ul>
+	<li>Update to allow users to re-link samples to a different SFF/SRA file, which alleviates the need to create a whole new database as the result of a manual linking error.</li>
+	</ul>
+	</li>
+		<li><strong><ins>5/6/11</ins></strong>
+
+	<ul>
+	<li>Removed the low-quality window option from the Sequence Import tool for further evaluation</li>
+	</ul>
+	</li>
+		<li><strong><ins>4/11/11</ins></strong>
+	<ul>
+	<li>Improved speed of Sequence Import by obtaining copy of original sequence file once per sample group rather than once per sample.</li>
+
+	</ul>
+	</li>
+		<li><strong><ins>4/8/11</ins></strong>
+	<ul>
+	<li>Update to allow the user to list 'V1V3' or 'V3V5' as the region and not have to specifically list the distal and proximal primer.  If the user provides the distal and proximal primers, we will use those, otherwise if they are not listed we will obtain the stored primer sets for specified by the 'region' field (if they exist).  Also, user can provide only the proximal primer if they do not wish to trim based on the distal primer.  We will add more commonly used primer sets in the future.</li>
+	</ul>
+	</li>
+		<li><strong><ins>4/7/11</ins></strong>
+
+	<ul>
+	<li>Update to allow for PC/UNIX/MAC file formats</li>
+	</ul>
+	</li>
+		<li><strong><ins>3/25/11</ins></strong>
+	<ul>
+	<li>Update to allow a user to independenty upload an OTU table for the machine learning pipeline
+	<ul>
+
+	<li>Machine Learning - Manual</li>
+	</ul>
+	</li>
+	</ul>
+	</li>
+		<li><strong><ins>3/8/11</ins></strong>
+	<ul>
+	<li>IMT deployed to production server
+	<ul>
+
+	<li>Transfer File</li>
+		<li>Import Samples</li>
+		<li>Sample - File Linker</li>
+		<li>Microbiome Sequence Import</li>
+		<li>RDP pipeline</li>
+		<li>QIIME pipeline</li>
+
+		<li>Alpha Diversity pipeline</li>
+		<li>Machine Learning pipeline</li>
+	</ul>
+	</li>
+	</ul>
+	</li>
+		<li><strong><ins>2/10/11</ins></strong>
+
+	<ul>
+	<li>Final planning stages of IMT</li>
+	</ul></li>
+	</ul>
+
+
+	<p></p>
+</div>
+
+
+
+
+  
+	
+
+
+
+				<div style="clear:both;"></div>
+    </div>
+</div>
+
+<div id="ajax-indicator" style="display:none;"><span>Loading...</span></div>
+	
+<div id="footer">
+    Powered by <a href="http://www.redmine.org/">Redmine</a> &copy; 2006-2010 Jean-Philippe Lang
+</div>
+</div>
+
+</body>
+</html>
+

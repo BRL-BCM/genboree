@@ -1,0 +1,43 @@
+tr.parent { border: 1px solid #f8f8f8; }
+tr.parent td.name { white-space: nowrap;  width: 300px; }
+tr.child  { border: 1px solid #f8f8f8; }
+tr.child  td.name { white-space: nowrap;  width: 300px; }
+tr.parent span.expander {
+  background-image: url(bullet_t.png);
+  background-repeat: no-repeat ;
+  background-position: center center ;
+  padding-left: 8px;
+  margin-left: 0;
+  cursor: pointer;
+}
+span.empty { text-align:right; width: 100%; cursor: pointer;}
+tr.parent.open span.expander {
+  background-image: url(bullet_t.png);
+  background-repeat: no-repeat ;
+  background-position: center center ;
+  cursor: pointer;
+}
+tr.parent.open {background-color:#ffffbb;}
+tr.hide {
+	display:none;
+}
+tr.parent.subprojectRoot {
+  font-weight: bold ;
+  font-size: 1.25em ;
+}
+span.forumsLink {
+  cursor: pointer;
+}
+span.wikiLink {
+  cursor: pointer;
+}
+span.forumsLink img {
+  width: 12px ;
+  height: 12px ;
+  margin-right: 3px ;
+}
+span.wikiLink img {
+  width: 12px ;
+  height: 12px ;
+  margin-right: 3px ;
+}

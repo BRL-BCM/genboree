@@ -1,0 +1,17 @@
+
+.x-panel .task {
+  position: static;
+}
+
+.x-panel input, select {vertical-align: middle; margin-top: 0px; margin-bottom: 0px;}
+
+.x-panel table td {
+  padding: 0;
+}
+
+.genbKb-category-font-weight {
+  font-weight: bold ;
+} 
+
+
+

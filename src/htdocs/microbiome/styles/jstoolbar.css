@@ -1,0 +1,95 @@
+.jstEditor {
+	padding-left: 0px;
+}
+.jstEditor textarea, .jstEditor iframe {
+  margin: 0;
+}
+
+.jstHandle {
+	height: 10px;
+	font-size: 0.1em;
+	cursor: s-resize;
+	/*background: transparent url(img/resizer.png) no-repeat 45% 50%;*/
+}
+
+.jstElements {
+	padding: 3px 3px;
+}
+
+.jstElements button {
+	margin-right : 6px;
+	width : 24px;
+	height: 24px;
+	padding: 4px;
+	border-style: solid;
+	border-width: 1px;
+	border-color: #ddd;
+	background-color : #f7f7f7;
+	background-position : 50% 50%;
+	background-repeat: no-repeat;
+}
+.jstElements button:hover {
+	border-color : #000;
+}
+.jstElements button span {
+	display : none;	
+}
+.jstElements span {
+	display : inline;
+}
+
+.jstSpacer {
+	width : 0px;
+	font-size: 1px;
+	margin-right: 4px;
+}
+
+.jstElements .help { float: right; margin-right: 1em; padding-top: 8px; font-size: 0.9em; }
+
+/* Buttons
+-------------------------------------------------------- */
+.jstb_strong {
+	background-image: url(bt_stron.png);
+}
+.jstb_em {
+	background-image: url(bt_em000.png);
+}
+.jstb_ins {
+	background-image: url(bt_ins00.png);
+}
+.jstb_del {
+	background-image: url(bt_del00.png);
+}
+.jstb_code {
+	background-image: url(bt_code0.png);
+}
+.jstb_h1 {
+	background-image: url(bt_h1000.png);
+}
+.jstb_h2 {
+	background-image: url(bt_h2000.png);
+}
+.jstb_h3 {
+	background-image: url(bt_h3000.png);
+}
+.jstb_ul {
+	background-image: url(bt_ul000.png);
+}
+.jstb_ol {
+	background-image: url(bt_ol000.png);
+}
+.jstb_bq {
+	background-image: url(bt_bq000.png);
+}
+.jstb_unbq {
+	background-image: url(bt_bq_re.png);
+}
+.jstb_pre {
+	background-image: url(bt_pre00.png);
+}
+.jstb_link {
+	background-image: url(bt_link0.png);
+}
+.jstb_img {
+	background-image: url(bt_img00.png);
+}

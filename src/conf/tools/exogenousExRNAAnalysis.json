@@ -1,0 +1,16 @@
+{
+  "info": {
+    "idStr": "exogenousExRNAAnalysis",
+    "releaseStatus": "beta",
+    "version": "4.6.2"
+  },
+  "ui": {
+    "label": "Exogenous exRNA Analysis Tool (One Sample)",
+    "shortLabel": "Exogenous exRNA Analysis Tool (One Sample)",
+    "groupAccessUri": null
+  },
+  "settings": {
+    "speciesDir": "/cluster.shared.scratch/clusterUser/atlasSpecies",
+    "doNotCapture": ["Bacteria", "Fungi"]
+  }
+}
