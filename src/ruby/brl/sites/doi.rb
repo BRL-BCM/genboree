@@ -3,7 +3,7 @@ module BRL; module Sites
 
   # Functions for resolving DOIs and obtaining metadata for registered DOIs
   class DOI < AbstractSite
-    DOI_RESOLVE_SERV = "http://dx.doi.org"
+    DOI_RESOLVE_SERV = "https://doi.org"
     DOI_META_SERV = "https://api.crossref.org/v1/works"
 
     # Generate URL for DOI resolution service
