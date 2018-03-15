@@ -113,9 +113,9 @@ make install
 cd ..
 rm -rf ncurses-5.9*
 # workaround - R won't compile without that - we try to simulate old ncurses here
-ln -s libncursesw.a   ${DIR_TARGET}/lib/libncurses.a
-ln -s libncursesw.so  ${DIR_TARGET}/lib/libncurses.so
-ln -s libncurses++w.a ${DIR_TARGET}/lib/libncurses++.a
+#ln -s libncursesw.a   ${DIR_TARGET}/lib/libncurses.a
+#ln -s libncursesw.so  ${DIR_TARGET}/lib/libncurses.so
+#ln -s libncurses++w.a ${DIR_TARGET}/lib/libncurses++.a
 
 
 # readline
@@ -379,6 +379,71 @@ func_run "FFLAGS='-fPIC' LDFLAGS='${LDFLAGS} -shared' python setup.py build" # b
 func_run "python setup.py install"
 cd ..
 rm -rf scipy-0.14.0*
+
+# ================== required by matplotlib
+#python) pyparsing
+func_get_package 'pyparsing-2.2.0'
+cd pyparsing-2.2.0
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf pyparsing-2.2.0*
+
+#python) six
+func_get_package 'six-1.11.0'
+cd six-1.11.0
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf six-1.11.0*
+
+#python) backports.ssl_match_hostname
+func_get_package 'backports.ssl_match_hostname-3.5.0.1'
+cd backports.ssl_match_hostname-3.5.0.1
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf backports.ssl_match_hostname-3.5.0.1*
+
+#python) singledispatch
+func_get_package 'singledispatch-3.4.0.3'
+cd singledispatch-3.4.0.3
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf singledispatch-3.4.0.3*
+
+#python) certifi
+func_get_package 'certifi-2018.1.18'
+cd certifi-2018.1.18
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf certifi-2018.1.18*
+
+#python) backports_abc
+func_get_package 'backports_abc-0.5'
+cd backports_abc-0.5
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf backports_abc-0.5*
+
+#python) python-dateutil
+func_get_package 'python-dateutil-2.6.1'
+cd python-dateutil-2.6.1
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf python-dateutil-2.6.1*
+
+#python) tornado
+func_get_package 'tornado-4.5.3'
+cd tornado-4.5.3
+func_run "python setup.py build"
+func_run "python setup.py install"
+cd ..
+rm -rf tornado-4.5.3*
 
 #python) matplotlib
 func_get_package "matplotlib-1.3.1"
@@ -1296,3 +1361,45 @@ func_run "make install"
 func_run_test "make check"
 cd ..
 rm -rf wget-1.15*
+
+
+# iostat from sysstat (needed by 2017-12-05.deferrableBodyThrottling)
+func_get_package 'sysstat-11.6.2'
+cd sysstat-11.6.2
+func_run "./configure --prefix=${DIR_TARGET} --disable-sensors --disable-nls --enable-copy-only --disable-documentation "
+func_run "make all -j ${CORES_NUMBER}"
+cp iostat ${DIR_TARGET}/bin/
+cd ..
+rm -rf sysstat-11.6.2*
+
+
+# libyajl (needed by Kafka)
+func_get_package 'yajl-2.1.0'
+cd yajl-2.1.0
+func_run "cmake -DCMAKE_INSTALL_PREFIX=\"${DIR_TARGET}\" -DCMAKE_POLICY_DEFAULT_CMP0026=\"OLD\""
+func_run "make all"
+func_run "make install"
+cd ..
+rm -rf yajl-2.1.0*
+
+
+# librdkafka (needed by Kafka)
+func_get_package 'librdkafka-0.11.3'
+cd librdkafka-0.11.3
+func_run "./configure --prefix=${DIR_TARGET} --no-download --disable-debug-symbols"
+func_run "make"
+func_run "make install"
+cd ..
+rm -rf librdkafka-0.11.3*
+
+
+# kafkacat-1.3.1 (needed by Kafka)
+func_get_package 'kafkacat-1.3.1'
+cd kafkacat-1.3.1
+func_run "./configure --prefix=${DIR_TARGET} --no-download --disable-debug-symbols"
+func_run "make"
+func_run "make install"
+cd ..
+rm -rf kafkacat-1.3.1*
+
+

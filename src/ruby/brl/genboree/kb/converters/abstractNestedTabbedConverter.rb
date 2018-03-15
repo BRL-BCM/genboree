@@ -1,6 +1,7 @@
 require 'brl/util/util'
 require 'brl/extensions/bson'
 require 'brl/extensions/simpleDelegator'
+require 'brl/genboree/kb/validators/modelValidator'
 
 module BRL ; module Genboree ; module KB ; module Converters
   class AbstractNestedTabbedConverter
@@ -29,6 +30,8 @@ module BRL ; module Genboree ; module KB ; module Converters
       @col2idx = {}
       # @errors will keep track of which lines contain errors
       @errors = {}
+      # @currentError will keep track of the current error
+      @currentError = ""
       # @lineNo will keep track of the current line number in our tabbed delimited file 
       @lineNo = 0
       # @nameIdx will keep track of the column index where we can find our property names
@@ -108,69 +111,81 @@ module BRL ; module Genboree ; module KB ; module Converters
             # We strip the line and then check to see whether we've seen the header already
             line.strip!
             if(@seenHeader) # If we've seen the header already, then we know that this is a non-blank record line that we need to process into our KB doc(s)
+              @currentError = ""
               # We split the record line and find the property name information (includes any nesting info).  We use the index @nameIdx as found in our parseHeader method
               rec = line.split(/\t/)
-              # We will parse the property name and extract its name info and nesting info
-              propNameInfo = rec[@nameIdx]
-              propInfo = parsePropNameInfo(propNameInfo)
+              # Are there too many columns in the current line?
               if(rec.count > @columns.count)
-                @errors[@lineNo] = "The record for #{propInfo[:name]} contains more tab-separated columns than the header line. You have either included extra columns for this particular property that aren't covered by the header line, or your value(s) has an unescaped tab character. Please make sure that all columns are covered by the header line and that you escape your tab characters (\\t)!"
+                @currentError = "The record for line #{@lineNo} contains more tab-separated columns than the header line. You have either a) included extra columns for this particular property that aren't covered by the header line, or b) your line contains an unescaped tab character. Please make sure that all columns are covered by the header line and that you escape your tab characters (\\t)!"
               end
-              # If we didn't run into any errors while parsing the property, we proceed to add its value(s) to respective KB doc(s)
-              if(@errors.empty?)
-                # Unless bulk is true, we proceed with our single document
-                unless(bulk)
-                  # We create a property object using the line we grabbed
-                  propObj = createPropObj(propInfo, rec)
-                  # Unless we've already seen the root, we need to set @result to be the property object - this'll be what we return at the end of parsing
-                  unless(@seenRoot)
-                    @result = propObj
-                    @seenRoot = true
+              if(@currentError.empty?)
+                # If we're processing a multi-column formatted doc, does the domain information look OK?
+                if(bulk)
+                  currentDomain = rec[@col2idx[:domain][0]] rescue nil
+                  # Cut out " / ' chars at ends of domain name if they're present
+                  if(!currentDomain.nil? and !currentDomain.empty?)
+                    currentDomain = currentDomain[1..-2] if((currentDomain[0].chr == "\"" and currentDomain[-1].chr == "\"") or (currentDomain[0].chr == "'" and currentDomain[-1].chr == "'"))
                   end
-                  # Figure out where to add this property
-                  addProp(propObj, propInfo, ancestors)
-                else
-                  # If bulk IS true, then we need to traverse each key in @valIndices to set up all our KB docs
-                  @valIndices.each_key { |index|
-                    # We essentially use the above code but do it for multiple docs (using @valIndices)
-                    propObj = createPropObj(propInfo, rec, index)
-                    unless(@valIndices[index][0])
-                      @valIndices[index][1] = propObj
-                      @valIndices[index][0] = true
-                      @seenRoot = true
-                    end
-                    # Figure out where to add this property
-                    # We grab the current value and current depth of our property
-                    currentVal = propObj.values.first["value"]
-                    currentDepth = (propInfo[:nesting] ? propInfo[:nesting].size : 0)
-                    currentDomain = rec[@col2idx[:domain][0]] rescue nil
-                    unless(currentDomain)
-                      @errMsg = "You have submitted a multi-column tabbed doc\nbut you are most likely missing the \"domain\" column."
-                      raise @errMsg
-                    end
-                    emptyValueAllowed = true if(currentDomain == "string" or currentDomain == "[valueless]" or currentDomain.include?("regexp") or currentDomain == "url" or currentDomain == "fileUrl" or currentDomain.include?("autoID") or currentDomain.include?("numItems"))
-                    # If the current value is "#MISSING#" or the current value is blank and no empty values are allowed, AND the current depth is less than or equal to the depth of the previous missing property
-                    # then we need to make sure that we set our missing flag to true ([3]) and also save the depth of the new missing property ([4])
-                    if((currentVal=="#MISSING#" or (currentVal=="" and !emptyValueAllowed)) and currentDepth <= @valIndices[index][4].to_i)
-                      @valIndices[index][3] = true
-                      @valIndices[index][4] = currentDepth
-                    else
-                      # If the current value is not one of the above, then we proceed.  If our missing flag is on and our current depth is deeper than the missing property, 
-                      # we know we're visiting the missing property's child, so we don't want to add it to our doc.
-                      unless(@valIndices[index][3] and currentDepth > @valIndices[index][4])
-                        # Otherwise, we add the property to our doc.
-                        addProp(propObj, propInfo, @valIndices[index][2])
-                        # Also, if the missing flag is on, we turn it off and reset the depth associated with the missing property to a huge number
-                        # That way, when we come across a missing value again, at any depth in the document, we'll be able to enter the appropriate branch of the if/else statement above on line 154.
-                        if(@valIndices[index][3])
-                          @valIndices[index][3] = false
-                          @valIndices[index][4] = 50000000000
-                        end
+                  @currentError = checkDomain(currentDomain)
+                end
+                if(@currentError.empty?)
+                  # We will parse the property name and extract its name info and nesting info
+                  propNameInfo = rec[@nameIdx]
+                  propInfo = parsePropNameInfo(propNameInfo)
+                  # Were there any errors in parsing out the name info / nesting info?
+                  # If we didn't run into any errors while parsing the property, we proceed to add its value(s) to respective KB doc(s)
+                  if(@currentError.empty?)
+                    # Unless bulk is true, we proceed with our single document
+                    unless(bulk)
+                      # We create a property object using the line we grabbed
+                      propObj = createPropObj(propInfo, rec)
+                      # Unless we've already seen the root, we need to set @result to be the property object - this'll be what we return at the end of parsing
+                      unless(@seenRoot)
+                        @result = propObj
+                        @seenRoot = true
                       end
+                      # Figure out where to add this property
+                      addProp(propObj, propInfo, ancestors)
+                    else
+                      # If bulk IS true, then we need to traverse each key in @valIndices to set up all our KB docs
+                      @valIndices.each_key { |index|
+                        # We essentially use the above code but do it for multiple docs (using @valIndices)
+                        propObj = createPropObj(propInfo, rec, index)
+                        unless(@valIndices[index][0])
+                          @valIndices[index][1] = propObj
+                          @valIndices[index][0] = true
+                          @seenRoot = true
+                        end
+                        # Figure out where to add this property
+                        # We grab the current value and current depth of our property
+                        currentVal = propObj.values.first["value"]
+                        currentDepth = (propInfo[:nesting] ? propInfo[:nesting].size : 0)
+                        emptyValueAllowed = true if(currentDomain == "string" or currentDomain == "[valueless]" or currentDomain.include?("regexp") or currentDomain == "url" or currentDomain == "fileUrl" or currentDomain.include?("autoID") or currentDomain.include?("numItems"))
+                        # If the current value is "#MISSING#" or the current value is blank and no empty values are allowed, AND the current depth is less than or equal to the depth of the previous missing property
+                        # then we need to make sure that we set our missing flag to true ([3]) and also save the depth of the new missing property ([4])
+                        if((currentVal=="#MISSING#" or (currentVal=="" and !emptyValueAllowed)) and currentDepth <= @valIndices[index][4].to_i)
+                          @valIndices[index][3] = true
+                          @valIndices[index][4] = currentDepth
+                        else
+                          # If the current value is not one of the above, then we proceed.  If our missing flag is on and our current depth is deeper than the missing property, 
+                          # we know we're visiting the missing property's child, so we don't want to add it to our doc.
+                          unless(@valIndices[index][3] and currentDepth > @valIndices[index][4])
+                            # Otherwise, we add the property to our doc.
+                            addProp(propObj, propInfo, @valIndices[index][2])
+                            # Also, if the missing flag is on, we turn it off and reset the depth associated with the missing property to a huge number
+                            # That way, when we come across a missing value again, at any depth in the document, we'll be able to enter the appropriate branch of the if/else statement above on line 154.
+                            if(@valIndices[index][3])
+                              @valIndices[index][3] = false
+                              @valIndices[index][4] = 50000000000
+                            end
+                          end
+                        end
+                      }
                     end
-                  }
+                  end
                 end
               end
+              @errors[@lineNo] = @currentError unless(@currentError.empty?)
             # Otherwise, if we haven't seen the header, we need to parse it
             else
               # We call the parseHeader method on the current line, with the parameter bulk telling us whether we're dealing with bulk docs
@@ -293,14 +308,17 @@ module BRL ; module Genboree ; module KB ; module Converters
           end
         end
       }
+      # We'll add the required bulk cols to our required columns if bulk is true
+      requiredCols = self.class::REQUIRED_COLS
+      requiredCols += self.class::REQUIRED_BULK_COLS if(bulk)
       # Do we have at least minimum number of columns?  If so, proceed.  Otherwise, error!
-      if(@columns.size >= self.class::REQUIRED_COLS.size)
-        # Do we have at least :name and :identifier [for the root property, to support a minimum model]?  If so, we're good.  Otherwise, error!
-        unless( (@columns.find_all { |xx| self.class::REQUIRED_COLS.include?(xx) }.size) >= self.class::REQUIRED_COLS.size )
-          @errors[@lineNo] = "Found column headers, but missing some required columns. (Minimum required columns: #{self.class::REQUIRED_COLS.join(', ')})"
+      if(@columns.size >= requiredCols.size)
+        # Do we have at least the required columns? If so, we're good.  Otherwise, error!
+        unless((@columns.uniq.find_all { |xx| requiredCols.include?(xx) }.size) >= requiredCols.size)
+          @errors[@lineNo] = "Found column headers, but missing some required columns. (Minimum required columns: #{requiredCols.join(', ')})"
         end
       else
-        @errors[@lineNo] = "Found column headers, but there are only #{colNames.size} columns. Minimum is #{self.class::REQUIRED_COLS.size} columns. (Minimum required columns: #{self.class::REQUIRED_COLS.join(', ')})"
+        @errors[@lineNo] = "Found column headers, but there are only #{colNames.size} columns. Minimum is #{requiredCols.size} columns. (Minimum required columns: #{requiredCols.join(', ')})"
       end
       # @col2idx is a hash that connects column names to their location within the document
       @col2idx = {}
@@ -316,11 +334,11 @@ module BRL ; module Genboree ; module KB ; module Converters
           @col2idx[@columns[idx]] << idx
         }
       end
-      # Save name column in @nameIdx since it always comes first in REQUIRED_COLS
+      # Save name column in @nameIdx since it always comes first in requiredCols
       unless(bulk)
-        @nameIdx = @col2idx[self.class::REQUIRED_COLS.first]
+        @nameIdx = @col2idx[requiredCols.first]
       else
-        @nameIdx = @col2idx[self.class::REQUIRED_COLS.first][0]
+        @nameIdx = @col2idx[requiredCols.first][0]
       end
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "END: Parse header for line #{@lineNo.inspect}")
       return @columns
@@ -341,22 +359,46 @@ module BRL ; module Genboree ; module KB ; module Converters
         propName      = $2
         # Prop name can't be empty - if it is, we give an error
         if(propName !~ /\S/)
-          @errors[@lineNo] = "The property name info in column #{@nameIdx.inspect} doesn't appear to have an actual name. From #{propNameInfo.inspect} we see there is #{propTreeInfo ? propTreeInfo.inspect : 'NO'} tree nesting info, but there is #{propName.inspect} for the property name. While the root property will have no tree information, ALL properties must have a name."
+          @currentError = "The property name info in column #{@nameIdx.inspect} doesn't appear to have an actual name. From #{propNameInfo.inspect} we see there is #{propTreeInfo ? propTreeInfo.inspect : 'NO'} tree nesting info, but there is #{propName.inspect} for the property name. While the root property will have no tree information, ALL properties must have a name."
         else
           if(@seenRoot and !propTreeInfo) # Already seen root, but this record also looks like root
-            @errors[@lineNo] = "A top-level property has already been seen. It is the only property with no tree nesting info. All other properties MUST be nested under the top level property. Yet the property here for #{propName.inspect} has no tree nesting information. It is also possible that you have new line characters in your value for a particular property. You must escape these characters (\\n) before submitting your document!"
+            @currentError = "A top-level property has already been seen. It is the only property with no tree nesting info. All other properties MUST be nested under the top level property. Yet the property here for #{propName.inspect} has no tree nesting information. It is also possible that you have newline characters in your value for a particular property. You must escape these characters (\\n) before submitting your document!"
           elsif(!@seenRoot and propTreeInfo)  # No root yet, but trying to define child properties nested within tree
-              @errors[@lineNo] = "A top-level property has not been defined yet. But here we appear to have a sub-ordinate/child property called #{propName.inspect} because it has tree nesting information (#{propTreeInfo.inspect}). The top-level property must be seen FIRST, before any others that appear somewhere within the doc; the root property is the ONLY property that will have no tree-nesting information (obviously)."
+            @currentError = "A top-level property has not been defined yet. But here we appear to have a sub-ordinate/child property called #{propName.inspect} because it has tree nesting information (#{propTreeInfo.inspect}). The top-level property must be seen FIRST, before any others that appear somewhere within the doc; the root property is the ONLY property that will have no tree-nesting information."
           else # Should be ok to parse
             propInfo[:nesting]  = propTreeInfo
             propInfo[:name]     = propName
           end
         end
       else # If propNameInfo is empty or doesn't contain any non-space characters, we give an error
-        @errors[@lineNo] = "Empty property name found. According to the column headers, the property name can be found in column #{@nameIdx.inspect}. But this non-blank line has nothing in that column. Not allowed; all properties must have names!"
+        @currentError = "Empty property name found. According to the column headers, the property name can be found in column #{@nameIdx.inspect}. But this non-blank line has nothing in that column. This is not allowed; all properties must have names!"
       end
       # Finally, we return propInfo
       return propInfo
     end
+
+    # Method that checks whether domain is present and looks valid for a given record (used for multi-column tabbed docs)
+    # @param [String or nil] currentDomain current domain
+    # @return [String] error string (empty if no errors are found)
+    def checkDomain(currentDomain)
+      currentError = ""
+      # Error if domain is left blank
+      unless(currentDomain)
+        currentError = "You have submitted a multi-column tabbed doc\nbut the current line doesn't contain any text for the \"domain\" column.\nThus, the line could not be parsed."
+      end
+      if(currentError.empty?)
+        validDomain = false
+        BRL::Genboree::KB::Validators::ModelValidator::POSSIBLE_DOMAINS.each { |currentRegExp|
+          if(currentDomain =~ currentRegExp)
+            validDomain = true 
+          end
+        }
+        unless(validDomain)
+          currentError = "You have submitted a document with an invalid domain (#{currentDomain}).\nThus, the line could not be parsed."
+        end
+      end
+      return currentError
+    end
+                      
   end # class TabbedModelConverter
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Converters

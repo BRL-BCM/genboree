@@ -110,6 +110,63 @@ public class RESTapiUtil
     }
     return computeFinalURL(coreURI, gbKey) ;
   }
+  
+  
+  // Compute the final REST API URL based on coreURI, but containing the
+  // appropriate gbLogin, gbTime, and gbToken parameters based on the
+  // userInfo String[] that comes from the current session.
+  // - in this version the components are provided separately
+  public static String computeFinalURL(String host, String rsrcPath, String rsrcParamsStr, String[] userInfo, String scheme, Integer port)
+  {
+    String coreURI ;
+    if(scheme == null ){
+      scheme = "http" ;
+    }
+    if(port == null || port == -1) {
+      coreURI = scheme+"://" + host.trim() + rsrcPath.trim() ;
+    }
+    else{
+      coreURI = scheme+"://" + host.trim() + ":" + Integer.toString(port)  + rsrcPath.trim() ;
+    }
+    if(coreURI.indexOf("?") < 0)
+    {
+      coreURI = coreURI + "?" ;
+    }
+    if(rsrcParamsStr != null)
+    {
+      coreURI += rsrcParamsStr.trim() ;
+    }
+    return computeFinalURL(coreURI, userInfo) ;
+  }
+
+  // Compute the final REST API URL but using the indicated gbKey rather
+  // than gb* auth parameters. If the gbKey is null, the rsrcPath had better include
+  // the gbKey parameter itself already.
+  // - in this version the components are provided separately
+  public static String computeFinalURL(String host, String rsrcPath, String rsrcParamsStr, String gbKey, String scheme, Integer port)
+  {
+    String coreURI ;
+    if(scheme == null ){
+      scheme = "http" ;
+    }
+    if(port == null || port == -1) {
+      coreURI = scheme+"://" + host.trim() + rsrcPath.trim() ;
+    }
+    else{
+      coreURI = scheme+"://" + host.trim() + ":" + Integer.toString(port)  + rsrcPath.trim() ;
+    }
+    if(coreURI.indexOf("?") < 0)
+    {
+      coreURI = coreURI + "?" ;
+    }
+    if(rsrcParamsStr != null)
+    {
+      coreURI += rsrcParamsStr.trim() ;
+    }
+    return computeFinalURL(coreURI, gbKey) ;
+  }
+  
+  
 
   // Compute the authentication token using the already-computed digestURL, given a
   // userInfo String[] that comes from the current session.

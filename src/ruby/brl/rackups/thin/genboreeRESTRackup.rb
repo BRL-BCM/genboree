@@ -88,64 +88,64 @@ class GenboreeRESTRackup
   # [+env+] : [required] When called by Rack handler, it supplies appropriate environment hash.
   # _returns_ A Rack::Response object the Rack handler will use to send response.
   def call(env)
-    t1 = Time.now
-    req = Rack::Request.new(env)
-    defResp = Rack::Response.new()
-    resp = Rack::Response.new()
-    #$stderr.puts "#{'-'*60}\n#{"*"*30}\nenv:\n#{"*"*30}\n#{env.inspect}\n#{"*"*30}\nRequest: #{req.inspect} ; methods:\n#{JSON.pretty_generate(req.methods.sort)}\nvariables:\n#{JSON.pretty_generate(req.instance_variables.sort)}\n#{'*'*30}\nResponse: #{resp.inspect} ; methods:\n#{JSON.pretty_generate(req.methods.sort)}\nvariables:\n#{JSON.pretty_generate(req.instance_variables.sort)}\n#{'*'*30}\nENV:\n#{"*"*30}\n#{ENV.inspect}\n#{'-'*60}"
-    #$stderr.puts "#{'-'*60}\n#{"*"*30}\nenv:\n#{"*"*30}\n#{env.inspect}\n#{"*"*30}\nRequest: #{req.inspect}\n#{'*'*30}\nResponse: #{resp.inspect}\n#{'*'*30}\nENV:\n#{"*"*30}\n#{ENV.inspect}\n#{'-'*60}"
-    # Default response is a bad one...ought to be set to successfull response or a ~informative error response:
-    respBodyObj = BRL::Genboree::REST::Data::AbstractEntity.new(false, true, :'Internal Server Error', "FATAL: server code failed to verify and process your request. Cannot even give clues as to nature of the error.")
-    defResp.body = resp.body = respBodyObj.to_json()
-    defResp.status = resp.status = BRL::REST::Resource::HTTP_STATUS_NAMES[:'Internal Server Error']
-    defResp['Content-Type'] = resp['Content-Type'] = BRL::Genboree::REST::Data::AbstractEntity::FORMATS2CONTENT_TYPE[:JSON]
-    # Locate the first Resource whose pattern indicates the class can handle the request
-    uriMatchData = nil
-    rsrcClass = GenboreeRESTRackup.resources.find { |resource|
-      req.path_info =~ resource.pattern()
-      uriMatchData = $~
-    }
-    
     rsrc = nil
     begin
-      # If found a proper rsrcClass and call the appropriate request method
-      unless(rsrcClass.nil?)
-        rsrc = rsrcClass.new(req, resp, uriMatchData) # Make a new resource handler instance (can be thread safe by not sharing 1 instance)
-        unless(rsrc.reqMethod.nil?)
-          resp = rsrc.process()
-          rsrc.cleanup()  # Aid GC (remove a reference to rsrc obj)
-          rsrc = nil
-        else # bad request, couldn't get method from request
-          resp = prepCoreError(resp, :'Bad Request', "ERROR: Couldn't locate a sensible http request method in received packet. (req method: #{req.request_method})")
+      t1 = Time.now
+      req = Rack::Request.new(env)
+      defResp = Rack::Response.new()
+      resp = Rack::Response.new()
+      #$stderr.puts "#{'-'*60}\n#{"*"*30}\nenv:\n#{"*"*30}\n#{env.inspect}\n#{"*"*30}\nRequest: #{req.inspect} ; methods:\n#{JSON.pretty_generate(req.methods.sort)}\nvariables:\n#{JSON.pretty_generate(req.instance_variables.sort)}\n#{'*'*30}\nResponse: #{resp.inspect} ; methods:\n#{JSON.pretty_generate(req.methods.sort)}\nvariables:\n#{JSON.pretty_generate(req.instance_variables.sort)}\n#{'*'*30}\nENV:\n#{"*"*30}\n#{ENV.inspect}\n#{'-'*60}"
+      #$stderr.puts "#{'-'*60}\n#{"*"*30}\nenv:\n#{"*"*30}\n#{env.inspect}\n#{"*"*30}\nRequest: #{req.inspect}\n#{'*'*30}\nResponse: #{resp.inspect}\n#{'*'*30}\nENV:\n#{"*"*30}\n#{ENV.inspect}\n#{'-'*60}"
+      # Default response is a bad one...ought to be set to successfull response or a ~informative error response:
+      respBodyObj = BRL::Genboree::REST::Data::AbstractEntity.new(false, true, :'Internal Server Error', "FATAL: server code failed to verify and process your request. Cannot even give clues as to nature of the error.")
+      defResp.body = resp.body = respBodyObj.to_json()
+      defResp.status = resp.status = BRL::REST::Resource::HTTP_STATUS_NAMES[:'Internal Server Error']
+      defResp['Content-Type'] = resp['Content-Type'] = BRL::Genboree::REST::Data::AbstractEntity::FORMATS2CONTENT_TYPE[:JSON]
+      # Locate the first Resource whose pattern indicates the class can handle the request
+      uriMatchData = nil
+      rsrcClass = GenboreeRESTRackup.resources.find { |resource|
+        req.path_info =~ resource.pattern()
+        uriMatchData = $~
+      }
+      begin
+        # If found a proper rsrcClass and call the appropriate request method
+        unless(rsrcClass.nil?)
+          rsrc = rsrcClass.new(req, resp, uriMatchData) # Make a new resource handler instance (can be thread safe by not sharing 1 instance)
+          unless(rsrc.reqMethod.nil?)
+            resp = rsrc.process()
+            # Doesn't need to be here, handled by the ensure block
+            # @todo Can this be re-activated safely, given new db disconnect code?
+            #rsrc.cleanup()  # Aid GC (remove a reference to rsrc obj)
+            #rsrc = nil
+          else # bad request, couldn't get method from request
+            resp = prepCoreError(resp, :'Bad Request', "ERROR: Couldn't locate a sensible http request method in received packet. (req method: #{req.request_method})")
+          end
+        else # no rsrcClass found
+          resp = prepCoreError(resp, :'Bad Request', "ERROR: Request URI doesn't indicate an exposed resource or is otherwise incorrect. (req uri path: #{req.path_info.inspect})")
         end
-      else # no rsrcClass found
-        resp = prepCoreError(resp, :'Bad Request', "ERROR: Request URI doesn't indicate an exposed resource or is otherwise incorrect. (req uri path: #{req.path_info.inspect})")
+      rescue => err # Ouch, some exception thrown!
+        begin
+          BRL::Genboree::GenboreeUtil.logError("Fatal Error processing REST http request.", err)
+          bktrace = err.backtrace.join("\n")
+          resp = prepCoreError(resp, :'Internal Server Error', "FATAL: failed during processing of the request.\n#{err}:\n#{bktrace}")
+        rescue => re_err
+          # died handling error, so can't try to deal nicely with it...log as simply as possible and let it go
+          $stderr.puts "#{'#'*40}\nAPI ERROR: COULDN'T MAKE FATAL RESPONSE TO CLIENT AFTER EXCEPTION CAUGHT\n  Message: #{re_err.inspect}\n  Backtrace:\n" + re_err.backtrace.join("\n") + ('#'*40)
+        end
       end
-    rescue => err # Ouch, some exception thrown!
-      begin
-        BRL::Genboree::GenboreeUtil.logError("Fatal Error processing REST http request.", err)
-        bktrace = err.backtrace.join("\n")
-        resp = prepCoreError(resp, :'Internal Server Error', "FATAL: failed during processing of the request.\n#{err}:\n#{bktrace}")
-      rescue => re_err
-        # died handling error, so can't try to deal nicely with it...log as simply as possible and let it go
-        $stderr.puts "#{'#'*40}\nAPI ERROR: COULDN'T MAKE FATAL RESPONSE TO CLIENT AFTER EXCEPTION CAUGHT\n  Message: #{re_err.to_s}\n  Backtrace:\n" + re_err.backtrace.join("\n") + ('#'*40)
+
+      if(resp)
+        resp['Content-Length'] = resp.body.size.to_s if(resp.body and resp.body.is_a?(String))   # Just to be sure. Resources should set this directly themselves for non-strings (eg files)
+        retVal = resp.finish()
+      else
+        retVal = defResp.finish()
       end
-    ensure
-      begin
-        rsrc.cleanup() if(rsrc)
-      rescue => cuErr
-        $stderr.puts "#{'#'*40}\nAPI ERROR: COULDN'T CLEANUP RESOURCE FOLLOWING AN ERROR RESPONSE TO CLIENT\n  Message: #{cuErr.to_s}\n  Backtrace:\n" + cuErr.backtrace.join("\n") + ('#'*40)
-      end
-      rsrc = nil
+      $stderr.debugPuts(__FILE__, __method__, ">>>>>", "  Rackup call() finished. Leaving Genboree code. (#{Time.now - t1} sec)")
+    rescue => outerErr
+      # died handling error, so can't try to deal nicely with it...log as simply as possible and let it go
+      $stderr.puts "#{'#'*40}\nAPI ERROR: UNEXPECTED RESCUE IN OUTER CATCH-ALL RESCUE. Likely very fundamental problemm setting up request handling or calling finish() at the very end.\n  - Message: #{outerErr.inspect}\n  - Backtrace:\n\n#{outerErr.backtrace.join("\n")}#{'#'*40}"
     end
 
-    if(resp)
-      resp['Content-Length'] = resp.body.size.to_s if(resp.body and resp.body.is_a?(String))   # Just to be sure. Resources should set this directly themselves for non-strings (eg files)
-      retVal = resp.finish()
-    else
-      retVal = defResp.finish()
-    end
-    #$stderr.debugPuts(__FILE__, __method__, ">>>>>", "  Rackup call() finished. Leaving Genboree code. (#{Time.now - t1} sec)")
     return retVal
   end # def call(env)
 

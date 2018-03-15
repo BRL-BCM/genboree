@@ -20,36 +20,27 @@ GENB_INIT_DIR=/usr/local/brl/local/etc/init.d
 # $prog must be executable, else error
 [ -x $prog ] || exit 1
 
+
+SCRIPTS_START=`ls ${GENB_INIT_DIR}/ | grep _init_[0-9]$ | sort -t _ -k 3`
+SCRIPTS_STOP=`ls ${GENB_INIT_DIR}/ | grep _init_[0-9]$ | sort -t _ -k 3 -r`
+
+
 start() {
-    ${GENB_INIT_DIR}/configurator_init  start
-    ${GENB_INIT_DIR}/mysqld_init        start
-    ${GENB_INIT_DIR}/thin_init          start
-    ${GENB_INIT_DIR}/tomcat_init        start
-    ${GENB_INIT_DIR}/httpd_init         start
-    ${GENB_INIT_DIR}/redmine_init       start
-    ${GENB_INIT_DIR}/website_init       start
-    ${GENB_INIT_DIR}/nginx_init         start
-    ${GENB_INIT_DIR}/jobsSubmitter_init start
-    ${GENB_INIT_DIR}/mongodb_init       start
-    ${GENB_INIT_DIR}/crontab_init       start
+    for script in ${SCRIPTS_START}
+    do
+        ${GENB_INIT_DIR}/${script}  start
+    done
     RETVAL=$?  # TODO 
-	return $RETVAL
+    return $RETVAL
 }
 
 stop() {
-    ${GENB_INIT_DIR}/crontab_init       stop
-    ${GENB_INIT_DIR}/mongodb_init       stop
-    ${GENB_INIT_DIR}/jobsSubmitter_init stop
-    ${GENB_INIT_DIR}/nginx_init         stop
-    ${GENB_INIT_DIR}/website_init       stop
-    ${GENB_INIT_DIR}/redmine_init       stop
-    ${GENB_INIT_DIR}/httpd_init         stop
-    ${GENB_INIT_DIR}/tomcat_init        stop
-    ${GENB_INIT_DIR}/thin_init          stop
-    ${GENB_INIT_DIR}/mysqld_init        stop
-    ${GENB_INIT_DIR}/configurator_init  stop
-	RETVAL=$?
-	return $RETVAL
+    for script in ${SCRIPTS_STOP}
+    do
+        ${GENB_INIT_DIR}/${script}  stop
+    done
+    RETVAL=$?
+    return $RETVAL
 }
 
 restart() {
@@ -86,3 +77,4 @@ else
 fi
 
 exit $RETVAL 
+

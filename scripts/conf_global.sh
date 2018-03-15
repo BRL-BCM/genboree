@@ -30,4 +30,6 @@ export GENB_CONFIG=${DIR_TARGET}/conf/genboree.config.properties
 export INLINEDIR=${DIR_TARGET}/lib/ruby_inline
 export NETWORK_SCRATCH=/usr/local/brl/scratch
 
+# SSL stuff (Kafka - 2018-01-05.sslKeypairSetup)
+export SSL_BASE_DIR=/usr/local/brl/data/var/ssl
 

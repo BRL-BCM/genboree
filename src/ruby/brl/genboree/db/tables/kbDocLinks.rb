@@ -18,6 +18,7 @@ module BRL ; module Genboree
     # @param [String] collName The name of the collection.
     # @return [String] The name of table (may or may not exist yet).
     def kbDocLinks_tableName(collName)
+      collName = collName.gsub(/\.|-/, "")
       return '{collName}_kbDocLinks'.gsub(/\{collName\}/, mysql2gsubSafeEsc(collName.makeSafeStr))
     end
 

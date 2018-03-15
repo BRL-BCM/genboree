@@ -163,6 +163,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
                     ]
                   }
                 ]
+              },
+              {
+                "name"        => "workingRevisionRequiredForUpdate",
+                "description" => "A flag indicating whether the workingRevision parameter MUST be supplied for saves/deletes.",
+                "domain"      => "boolean",
+                "default"     => false
               }
             ]
           }
@@ -188,9 +194,13 @@ module BRL ; module Genboree ; module KB ; module Helpers
         # - can't use getCollection() based methods here, as appropriate for other helpers
         #   because database may not exist yet, but we need a working kbColl.metadata collection
         #   to support creation and those getCollection() calls ets.
-        if(@kbDatabase.db and @kbDatabase.db.collections_info(collName).count == 1)
-          @coll = @kbDatabase.db[collName]
-        end
+
+        # @todo Deal with reconnection better...should not be accessing db directly probably and doing retries more formally with exp sleep and in MongoKbDatabase. Noticed 1 case where this collections_info timed out.
+        @kbDatabase.attemptDirect() {
+          if(@kbDatabase.db and @kbDatabase.db.collections_info(collName).count == 1)
+            @coll = @kbDatabase.db[collName]
+          end
+        }
       end
       # Set default collection labels
       @pluralLabel = "Documents"
@@ -280,6 +290,33 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return docObjId
     end
 
+    # Delete the metadata document for a collection.
+    # @param [String] docCollName The name of the collection of interest.
+    # @param [String] author The Genboree user name who is deleting the collection
+    # @param [Hash<Symbol,Object>] opts Optional. Hash with additional parameters.
+    # @return [Boolean] Indicating success or not.
+    def deleteForCollection(docCollName, opts={})
+      #$stderr.debugPuts(__FILE__, __method__, 'STATUS', "About to delete doc for collection #{docCollName.inspect} from this collection: #{@coll.name.inspect}")
+      # Create selector
+      selector = { 'name.value' => docCollName }
+      # Do delete
+      result = self.coll.remove( selector )
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Remove doc result:\n\n#{result.inspect}\n\n")
+      if(result.is_a?(Hash) and result["ok"] == 1.0)
+        if(result['n'] == 1)
+          retVal = true
+          @docForCollectionCache.delete(docCollName)
+        else
+          $stderr.debugPuts(__FILE__, __method__, '!! FATAL !!', "The remove reports it succeeded but remove MORE THAN ONE (1) metadata document. This is bad, since only the document for collection #{docCollName.inspect} should have been deleted! Rather, #{result['n'].inspect} documents were deleted! More info:\n\n#{result.inspect}\n\n")
+          retVal = false
+        end
+      else
+        $stderr.debugPuts(__FILE__, __method__, 'ERROR', "Failed to remove the metadata document for collection #{docCollName.inspect}. Result code was #{result['ok'].inspect} rather than 1.0 and the number of affected docs was #{result['n'].inspect} rather than 1. More info:\n\n#{result.inspect}\n\n")
+        retVal = false
+      end
+      return retVal
+    end
+
     # Get a document template suitable for the collection this helper assists with.
     # @note The template should be filled in with sensible and convenient default
     #   values, but the calling code will have to fill in appropriate values to
@@ -297,7 +334,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       {
         "name"        => { "value" => docCollName, "properties" =>
         {
-          "internal"    => false,
+          "internal"    => { "value" => false },
           "description" => { "value" => "This is the metadata doc for the #{docCollName.inspect} collection." },
           "status"      => { "value" => "created", "properties" =>
           {

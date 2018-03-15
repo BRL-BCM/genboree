@@ -14,18 +14,18 @@ module BRL ; module Genboree ; module Tools
     
     def rulesSatisfied?(wbJobEntity, sectionsToSatisfy=[ :inputs, :outputs, :context, :settings ], toolIdStr=@toolIdStr)
       # Grab necessary variables for grabbing submitter's ERCC info (used for tool usage doc)
-      @exRNAInternalKBHost = @genbConf.exRNAInternalKBHost
-      wbJobEntity.settings['exRNAInternalKBHost'] = @exRNAInternalKBHost
-      @exRNAInternalKBGroup = @genbConf.exRNAInternalKBGroup
-      wbJobEntity.settings['exRNAInternalKBGroup'] = @exRNAInternalKBGroup
-      @exRNAInternalKBName = @genbConf.exRNAInternalKBName
-      wbJobEntity.settings['exRNAInternalKBName'] = @exRNAInternalKBName
-      @exRNAInternalKBPICodesColl = @genbConf.exRNAInternalKBPICodesColl
-      wbJobEntity.settings['exRNAInternalKBPICodesColl'] = @exRNAInternalKBPICodesColl
-      @submitterPropPath = "ERCC PI Code.Submitters.Submitter ID.Submitter Login"
+      exRNAInternalKBHost = @genbConf.exRNAInternalKBHost
+      wbJobEntity.settings['exRNAInternalKBHost'] = exRNAInternalKBHost
+      exRNAInternalKBGroup = @genbConf.exRNAInternalKBGroup
+      wbJobEntity.settings['exRNAInternalKBGroup'] = exRNAInternalKBGroup
+      exRNAInternalKBName = @genbConf.exRNAInternalKBName
+      wbJobEntity.settings['exRNAInternalKBName'] = exRNAInternalKBName
+      exRNAInternalKBPICodesColl = @genbConf.exRNAInternalKBPICodesColl
+      wbJobEntity.settings['exRNAInternalKBPICodesColl'] = exRNAInternalKBPICodesColl
+      submitterPropPath = "ERCC PI Code.Submitters.Submitter ID.Submitter Login"
       # We also save tool usage collection name for filling out tool usage doc later on
-      @exRNAInternalKBToolUsageColl = @genbConf.exRNAInternalKBToolUsageColl
-      wbJobEntity.settings['exRNAInternalKBToolUsageColl'] = @exRNAInternalKBToolUsageColl
+      exRNAInternalKBToolUsageColl = @genbConf.exRNAInternalKBToolUsageColl
+      wbJobEntity.settings['exRNAInternalKBToolUsageColl'] = exRNAInternalKBToolUsageColl
       # Grab dbrc info for making API call to PI Codes collection
       user = @superuserApiDbrc.user
       pass = @superuserApiDbrc.password
@@ -122,10 +122,13 @@ module BRL ; module Genboree ; module Tools
         secondFile = secondFile.select { |currentToken| currentToken =~ /^[^\r\n]/ }
         # Split up file into individual tab-delimited elements on lines
         secondFile.map! { |currentToken| currentToken.split("\t") }
-        # Grab column headers for each file (and eliminate carriage returns)
+        # Strip all tokens of extra white space
+        firstFile.each { |currentArray| currentArray.map! { |currentToken| currentToken.strip } }
+        secondFile.each { |currentArray| currentArray.map! { |currentToken| currentToken.strip } }
+        # Grab column headers for each file
         firstFileColumnHeaders = firstFile[0]
         secondFileColumnHeaders = secondFile[0]
-        # Grab row headers for each file (and eliminate carriage returns)
+        # Grab row headers for each file 
         firstFileRowHeaders = []
         secondFileRowHeaders = []
         firstFile.each { |currentLine|
@@ -204,30 +207,31 @@ module BRL ; module Genboree ; module Tools
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Checking user's ERCC info.")
         # Check to see what PI the user is associated with
         submitterLogin = wbJobEntity.context['userLogin']
-        apiCaller = ApiCaller.new(@exRNAInternalKBHost, "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProp={matchProp}&matchValues={matchVal}&matchMode=exact&detailed=true", user, pass)
+        apiCaller = ApiCaller.new(exRNAInternalKBHost, "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProp={matchProp}&matchValues={matchVal}&matchMode=exact&detailed=true", user, pass)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
-        apiCaller.get({:grp => @exRNAInternalKBGroup, :kb => @exRNAInternalKBName, :coll => @exRNAInternalKBPICodesColl, :matchProp => @submitterPropPath, :matchVal => submitterLogin})
-        if(!apiCaller.succeeded? and apiCaller.parseRespBody["status"]["statusCode"] != "Forbidden")
+        apiCaller.get({:grp => exRNAInternalKBGroup, :kb => exRNAInternalKBName, :coll => exRNAInternalKBPICodesColl, :matchProp => submitterPropPath, :matchVal => submitterLogin})
+        apiCaller.parseRespBody()
+        if(!apiCaller.succeeded? and apiCaller.apiStatusObj["statusCode"] != "Forbidden")
           $stderr.debugPuts(__FILE__, __method__, "ERROR", "API caller resp body for failed call to PI KB: #{apiCaller.respBody}")
-          errorMsgArr.push("API call failed when trying to grab PI associated with current user. Please try again. If you continue to experience issues, contact Sai (sailakss@bcm.edu).")
+          wbJobEntity.context['wbErrorMsg'] = "API call failed when trying to grab PI associated with current user. Please try again. If you continue to experience issues, contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu)."
           rulesSatisfied = false
         else
           # Set up arrays to store grant numbers and anticipated data repository options
           wbJobEntity.settings['grantNumbers'] = []
           wbJobEntity.settings['anticipatedDataRepos'] = []
           # If we can't find user (or we are unable to search the KB because we're not a member), then he/she is not registered as an ERCC user. We will prompt the user to contact Sai if he/she IS an ERCC user
-          if(apiCaller.parseRespBody["data"].size == 0 or apiCaller.parseRespBody["status"]["statusCode"] == "Forbidden")
+          if(apiCaller.apiDataObj.size == 0 or apiCaller.apiStatusObj["statusCode"] == "Forbidden")
             wbJobEntity.settings['piName'] = "Non-ERCC PI"
             wbJobEntity.settings['grantNumbers'] << "Non-ERCC Funded Study"
             # Currently, if user is not a member of ERCC, his/her anticipated data repository is "None". This might not make sense, though (what if user is submitting data to dbGaP but isn't ERCC?)
             wbJobEntity.settings['anticipatedDataRepos'] << "None"
           # If user is associated with more than 1 PI, a mistake has occurred and we need to fix it.
-          elsif(apiCaller.parseRespBody["data"].size > 1)
-            errorMsgArr.push("You are listed as being a submitter under two or more PIs. This is not allowed. Please contact Sai (sailakss@bcm.edu) to fix this issue.")
+          elsif(apiCaller.apiDataObj.size > 1)
+            wbJobEntity.context['wbErrorMsg'] = "You are listed as being a submitter under two or more PIs. This is not allowed. Please contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu) to fix this issue."
             rulesSatisfied = false
           else
             # If user is associated with only one PI, then we get that PI's information and save it (PI name, organization, grant numbers and associated grant tags)
-            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.parseRespBody["data"][0])
+            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.apiDataObj[0])
             # PI ID 
             piID = piDoc.getPropVal("ERCC PI Code")
             wbJobEntity.settings['piID'] = piID
@@ -235,7 +239,7 @@ module BRL ; module Genboree ; module Tools
             firstName = piDoc.getPropVal("ERCC PI Code.PI First Name")
             middleName = piDoc.getPropVal("ERCC PI Code.PI Middle Name") if(piDoc.getPropVal("ERCC PI Code.PI Middle Name"))
             lastName = piDoc.getPropVal("ERCC PI Code.PI Last Name")
-            piName = "#{firstName}"
+            piName = firstName
             piName << " #{middleName}" if(middleName)
             piName << " #{lastName}"
             wbJobEntity.settings['piName'] = piName
@@ -253,8 +257,6 @@ module BRL ; module Genboree ; module Tools
             wbJobEntity.settings['anticipatedDataRepos'] = ["GEO", "dbGaP", "Both GEO & dbGaP", "None", "Other"]
           end
         end
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Done checking user's ERCC info.")
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Checking user's remote storage area info.")
         # Save user's remote storage areas in remoteStorageAreas array
         remoteStorageAreas = []
         output = @dbApiHelper.extractPureUri(outputs[0])
@@ -266,14 +268,22 @@ module BRL ; module Genboree ; module Tools
         apiCaller = ApiCaller.new(host, rcscUri, @hostAuthMap)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
         apiCaller.get()
-        listOfFiles = apiCaller.parseRespBody()["data"]
+        apiCaller.parseRespBody()
+        listOfFiles = apiCaller.apiDataObj
         listOfFiles.each { |currentFile|
           nameOfFile = currentFile["name"].chomp("/")
           storageType = currentFile["storageType"]
           remoteStorageAreas << nameOfFile if(storageType != "local")
         }
         wbJobEntity.settings['remoteStorageAreas'] = remoteStorageAreas
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Done checking user's remote storage area info.")
+      end
+      if(rulesSatisfied and sectionsToSatisfy.include?(:settings))
+        if(wbJobEntity.settings['analysisName'].empty? or wbJobEntity.settings['factorName1'].empty? or wbJobEntity.settings['factorLevel1'].empty? or wbJobEntity.settings['factorLevel2'].empty?)
+          errorMsgArr.push("BLANK ANALYSIS NAME: You cannot leave your analysis name blank. Please fill in a value and try again.") if(wbJobEntity.settings['analysisName'].empty?)
+          errorMsgArr.push("BLANK FACTOR NAME: You cannot leave your factor name blank. Please fill in a value and try again.") if(wbJobEntity.settings['factorName1'].empty?)
+          errorMsgArr.push("BLANK FACTOR LEVEL: You cannot leave either factor level blank. Please fill in both values and try again.") if(wbJobEntity.settings['factorLevel1'].empty? or wbJobEntity.settings['factorLevel2'].empty?)
+          rulesSatisfied = false
+        end
       end
       # If rules are not satisfied, then fill out error message with all the files that were invalid
       unless(rulesSatisfied)
@@ -311,7 +321,7 @@ module BRL ; module Genboree ; module Tools
       apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
       apiCaller.get()
       sniffedType = JSON.parse(apiCaller.respBody)['data']['text']
-      if(sniffedType != 'ascii' and sniffedType != 'gz')
+      if(sniffedType != 'ascii' and sniffedType != 'bedGraph' and sniffedType != 'gz')
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "File type for #{fileName} is neither ASCII nor .tgz format (is #{sniffedType}). Rejecting job.")
         errorMsgArr.push("INVALID FILE FORMAT: Input file #{fileName} is neither ASCII text format nor .tgz format (is #{sniffedType}). Please check the file format.")
       else
@@ -321,7 +331,7 @@ module BRL ; module Genboree ; module Tools
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "File type for #{fileName} is gz, but the file doesn't look like a CORE_RESULTS archive file (at least by name). It's possible that user renamed CORE_RESULTS archive, but why? Rejecting job.")
           errorMsgArr.push("INVALID FILE: Input file #{fileName} is in .gz format, but its name doesn't include the CORE_RESULTS identifier for exceRpt core result archives. Did you rename your CORE_RESULTS archive, or submit a different .gz file? Please submit CORE_RESULTS archives generated directly by exceRpt.") 
         else 
-          asciiFiles << File.basename(fileName) if(sniffedType == 'ascii')
+          asciiFiles << File.basename(fileName) if(sniffedType == 'ascii' or sniffedType == 'bedGraph')
           coreResultFiles << File.basename(fileName) if(sniffedType == 'gz')
         end
       end

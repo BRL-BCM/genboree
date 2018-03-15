@@ -7,11 +7,13 @@ module BRL ; module Genboree ; module KB ; module Converters
   class NestedTabbedDocConverter < AbstractNestedTabbedConverter
 
     REQUIRED_COLS = [ :property, :value ]
+    REQUIRED_BULK_COLS = [ :domain ]
     KNOWN_COLS    =
     {
       :property => true,
-      :value => true
-    }
+      :value => true,
+      :domain => true
+    }    
 
     # ------------------------------------------------------------------
     # HELPERS - mainly for use internally as parsing done, etc
@@ -42,7 +44,7 @@ module BRL ; module Genboree ; module KB ; module Converters
       elsif(propTreeInfo =~ /\*$/)
         valObj['items'] = []
       else # huh? unknown tree nesting character
-        @errors[@lineno] = "Could not interpret the tree nesting info #{propTreeInfo.inspect} here; especially the last character, which is not '-' nor '*'."
+        @errors[@lineNo] = "Could not interpret the tree nesting info #{propTreeInfo.inspect} here; especially the last character, which is not '-' nor '*'."
       end
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "  END: Create prop def obj")
       return prop
@@ -63,7 +65,7 @@ module BRL ; module Genboree ; module KB ; module Converters
         if(parentProp)
           addStatus = addChild(parentProp, prop)
           unless(addStatus)
-            @errors[@lineno] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
+            @errors[@lineNo] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
           end
         end
         # Regardless of whether added root not or a child node,
@@ -85,10 +87,10 @@ module BRL ; module Genboree ; module KB ; module Converters
         if(parentProp)
           addStatus = addChild(parentProp, prop)
           unless(addStatus)
-            @errors[@lineno] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
+            @errors[@lineNo] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
           end
         else
-          @errors[@lineno] = "Could not add property here to the document because it appears to be a root-level property. The document jumps from deep within the nested document all the way to the root/top-level property somehow. Either document is wrong/bad or there's some bad parsing code being triggered by this document."
+          @errors[@lineNo] = "Could not add property here to the document because it appears to be a root-level property. The document jumps from deep within the nested document all the way to the root/top-level property somehow. Either document is wrong/bad or there's some bad parsing code being triggered by this document."
         end
         # Add the curr prop to ancestors list. It's our current active prop.
         ancestors << prop
@@ -98,17 +100,17 @@ module BRL ; module Genboree ; module KB ; module Converters
         parentProp = ancestors.last
         addStatus = addChild(parentProp, prop)
         unless(addStatus)
-          @errors[@lineno] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
+          @errors[@lineNo] = "Could not determine how to add the property here to the document, given property records in the file up to this point. The property here is at depth #{propDepth.inspect} in the tree and should be added under the previous property (depth of properties at this point in the tree is #{ancDepth.inspect}). But the previous property has neither 'properties' nor 'items' available to add things. Unexpected; likely bug in code."
         end
         # It becomes the new last prop
         ancestors << prop
       elsif(propDepth > (ancDepth + 1))
         # ERROR! This prop is a grandchild or Nth-great-grandchild of the last prop
         #   in ancestors and we've skipped the offspring and maybe some grandchild, etc etc!
-        @errors[@lineno] = "The property here (#{propInfo[:name].inspect}) has bad tree nesting information. At this point in the document, we are at a depth of #{ancDepth.inspect}. Yet the property here indicates is should be at depth #{propDepth.inspect}...how did we jump deeper without the intervening #{(propDepth - ancDepth) - 1} properties??? The data provided here cannot produce a sensible document."
+        @errors[@lineNo] = "The property here (#{propInfo[:name].inspect}) has bad tree nesting information. At this point in the document, we are at a depth of #{ancDepth.inspect}. Yet the property here indicates is should be at depth #{propDepth.inspect}...how did we jump deeper without the intervening #{(propDepth - ancDepth) - 1} properties??? The data provided here cannot produce a sensible document."
       else
         # ERROR! Some case we didn't handle or think about. How got here? Should be wrong.
-        @errors[@lineno] = "Unexpectedly, the depth of the current property is #{propDepth.inspect} while the depth of the previous property is #{ancDepth.inspect} and this is not one of the expected cases handled by the parser. Code bug?"
+        @errors[@lineNo] = "Unexpectedly, the depth of the current property is #{propDepth.inspect} while the depth of the previous property is #{ancDepth.inspect} and this is not one of the expected cases handled by the parser. Code bug?"
       end
       return ancestors
     end

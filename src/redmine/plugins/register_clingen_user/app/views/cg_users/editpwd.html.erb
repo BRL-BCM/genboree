@@ -1,0 +1,35 @@
+<%= render :partial => "status" %>
+<%= render :partial => "notices" %>
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+      <%= form_tag ("updatep" , "method" => :post) do %>
+       <div class="well">
+        <div class="row">
+            <div class="col-sm-12">
+             <h3>Change password</h3>
+            </div>
+            <%# Field for old password %>
+            <div class="col-sm-12">
+               <%= label_tag 'current_password', 'Current password:' %>
+            </div>
+            <div class="col-sm-12">
+               <%= password_field_tag 'current_password', "" , { "class" => "form-control", "required" => true } %>
+            </div>
+            <%# Field for new password %>
+            <%= render :partial => "password" %>
+
+            <div class="col-sm-12 submit-button">
+             <%= submit_tag "Change Password", "class" => "btn btn-primary" %>
+            </div>
+       </div>
+       </div>
+      <% end %>
+    </div>
+ </div>
+<style>
+.submit-button, .form-row {
+  padding-top: 30px;
+}
+</style>

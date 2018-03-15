@@ -87,6 +87,8 @@ module BRL ; module Genboree ; module Prequeue ; module Preconditions
     def evaluate()
       retVal = false
       if(@job)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "The preCheckInfo provided by the PreconditionSet is:\n\n#{@preCheckInfo.inspect}\n\n")
+        dependencyJobStatusMap = @preCheckInfo[:jobStatusMap] rescue nil
         if(@dependencyJobUrl)
           # Ensure @dependencyJobUrl is a URI object and that it is valid!
           if(@dependencyJobUrl.is_a?(String))
@@ -94,39 +96,51 @@ module BRL ; module Genboree ; module Prequeue ; module Preconditions
           end
           urlOk = validateDependencyJobUrl(@dependencyJobUrl)
           if(urlOk)
-            # Use @dependencyJobUrl to make API call on behalf of user to get Job status
-            # - need user and host authmap job which is dependent upon the one in @dependencyJobUrl
-            userName = @job.user
-            userRows = @job.dbu.getUserByName(userName)
-            userId = userRows.first['userId']
-            hostAuthMap = Abstraction::User.getHostAuthMapForUserId(@dbu, userId)
-            # - use host auth map to get status of job at @dependencyJobUrl
-            fullPath = "#{@dependencyJobUrl.path}/status?connect=no"
-            apiCaller = BRL::Genboree::REST::ApiCaller.new(@dependencyJobUrl.host, fullPath, hostAuthMap)
-            httpResp = apiCaller.get()
-            if(apiCaller.succeeded?)
-              # parse out and get status
-              apiCaller.parseRespBody()
-              jobStatus = apiCaller.apiDataObj['text'].to_s.strip
-              # is the status one of the acceptable ones? If so, return true.
-              retVal = @acceptableStatuses.key?(jobStatus)
-            else # call failed
-              # Record error in @feedback Hash for trace purposes
-              @feedback <<
-              {
-                'type' => 'apiFailure',
-                'info' =>
+            # Get jobName from url
+            dependencyJobName = @job.class.jobInfoFromUrl( @dependencyJobUrl.path, :jobName )
+            #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "The dependencyJobName is: #{dependencyJobName.inspect}")
+            # Need the job status. This MAY already be available within the preCheckInfo supplied, so check there first.
+            if( dependencyJobName and dependencyJobStatusMap and dependencyJobStatusMap[dependencyJobName] ) # If present but nil, this will cause it to be individually checked
+              jobStatus = dependencyJobStatusMap[dependencyJobName]
+              #$stderr.debugPuts(__FILE__, __method__, 'STATUS', "Found pre-fetched status of #{jobStatus.inspect} for dependency job #{dependencyJobName.inspect}")
+            else # Not available from any pre-check work by PreconditionSet, need to check for it individually (possibly re-check)
+              #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "No pre-fetched status for #{@dependencyJobUrl.inspect}, going to individually query")
+              # Use @dependencyJobUrl to make API call on behalf of user to get Job status
+              # - need user and host authmap job which is dependent upon the one in @dependencyJobUrl
+              userName = @job.user
+              userRows = @job.dbu.getUserByName(userName)
+              userId = userRows.first['userId']
+              hostAuthMap = Abstraction::User.getHostAuthMapForUserId(@dbu, userId)
+              # - use host auth map to get status of job at @dependencyJobUrl
+              fullPath = "#{@dependencyJobUrl.path}/status?connect=no"
+              apiCaller = BRL::Genboree::REST::ApiCaller.new(@dependencyJobUrl.host, fullPath, hostAuthMap)
+              httpResp = apiCaller.get()
+              if(apiCaller.succeeded?)
+                # parse out and get status
+                apiCaller.parseRespBody()
+                jobStatus = apiCaller.apiDataObj['text'].to_s.strip
+                # is the status one of the acceptable ones? If so, return true.
+              else # call failed
+                # Record error in @feedback Hash for trace purposes
+                @feedback <<
                 {
-                  'code'            => httpResp.code,
-                  'name'            => httpResp.message,
-                  'location'        => "#{self.class}#{__method__}",
-                  'message'         => "FAILED: API call to get job status via #{@dependencyJobUrl.inspect}.",
-                  'responsePayload' => "#{apiCaller.respBody.inspect}"
+                  'type' => 'apiFailure',
+                  'info' =>
+                  {
+                    'code'            => httpResp.code,
+                    'name'            => httpResp.message,
+                    'location'        => "#{self.class}#{__method__}",
+                    'message'         => "FAILED: API call to get job status via #{@dependencyJobUrl.inspect}.",
+                    'responsePayload' => "#{apiCaller.respBody.inspect}"
+                  }
                 }
-              }
-              @feedbackSet = true
-              raise "#{@feedback.last['info']['message']}. HTTP response type: #{httpResp.code} #{httpResp.message.inspect}. Payload:\n  #{apiCaller.respBody.inspect}"
-            end # if(apiCaller.succeeded?)
+                @feedbackSet = true
+                raise "#{@feedback.last['info']['message']}. HTTP response type: #{httpResp.code} #{httpResp.message.inspect}. Payload:\n  #{apiCaller.respBody.inspect}"
+              end # if(apiCaller.succeeded?)
+            end # if( jobName and jobStatusMap and jobStatusMap[dependencyJobName] )
+
+            # We've got the status, one way or another.
+            retVal = @acceptableStatuses.key?(jobStatus)
           else # url not valid
             raise "#{@feedback.last['info']['message']}."
           end # if(dependencyJobUri)

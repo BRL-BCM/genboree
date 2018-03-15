@@ -3,6 +3,7 @@ require 'json'
 require 'yaml'
 require 'uri'
 require 'cgi'
+require 'memoist'
 require 'brl/extensions/bson' # BEFORE require 'mongo' or require 'bson'!
 require 'mongo'
 require 'socket'
@@ -17,6 +18,11 @@ module BRL ; module Genboree ; module KB ; module Helpers
   #   some core functionality, some constants, and some accessors all sub-classes
   #   will have (and may override).
   class AbstractHelper
+    extend Memoist
+    MEMOIZED_INSTANCE_METHODS = [
+      :getIdentifierName,
+      :getRootProp
+    ]
     # @return [String] Abstract placeholder for a constant ALL sub-classes MUST provide.
     #   The name of the core GenboreeKB collection the helper assists with.
     KB_CORE_COLLECTION_NAME = nil
@@ -90,6 +96,52 @@ module BRL ; module Genboree ; module KB ; module Helpers
       @queryBatchSize = 0
     end
 
+    # In our version of mongo, when your :fields=>[] or :fields=>{} output projection info contains BOTH
+    #   general/parent fields AND specific embedded/subordinate fields, the specific fields MASK/HIDE the general
+    #   ones, so you don't get what you expect. i.e. :fields=>['versionNum', 'versionNum.properties.timestamp']
+    #   only returns a doc with the 'versionNum.properties.timestamp' subdoc due to this masking bug.
+    # A solution is to remove fields for which there is already a more general/parent field being asked for, since
+    #   that general/parent field will include the specific one as well.
+    # @note This is an O(N^2) processes that uses string matching, but it should be ok when the NUMBER OF FIELDS INVOLVED
+    #   IS SMALL.
+    # @note At first blush, this bug appears to be fixed in Mongo 3.x
+    # @note Since specifying a :fields=>[] or :fields=>{} means "only give me a doc with the special _id prop", this
+    #   method also does you the favor of returning nil if your fields argument is empty (i.e. you forgot to deal with
+    #   this nuance).
+    # @params [Array, Hash] fields The Array of output field Strings or Hash of field String=>Numeric.
+    # @return [Array, Hash, nil]
+    def self.reduceProjectionFields( fields )
+      if( ( fields.is_a?(Array) or fields.is_a?(Hash) ) and !fields.empty? )
+        if( fields.is_a?(Array) )
+          newFields = []
+          fields = fields.sort
+          fields.each { |field|
+            field = field.to_s
+            unless( newFields.any? { |xx| field.start_with?(xx) } )
+              newFields << field
+            end
+          }
+        else # Hash
+          newFields = {}
+          newFieldsNames = []
+          fields.keys.sort.each { |field|
+            unless( newFieldsNames.any? { |xx| field.start_with?(xx) } )
+              newFields[field] = fields[field]
+              newFieldsNames << field
+            end
+          }
+        end
+      else
+        newFields = nil
+      end
+      return newFields
+    end
+
+    # @see AbstractHelper.reduceProjectionFields
+    def reduceProjectionFields( fields )
+      return self.class.reduceProjectionFields( fields )
+    end
+
     # Method to help aid in the clean up, garbage collection, and resource release.
     # Be a dear, call {#clear}
     def clear()
@@ -98,6 +150,132 @@ module BRL ; module Genboree ; module KB ; module Helpers
       @kbDatabase = @coll = nil
     end
 
+    # Name of KB prop that acts as the single-rooted unique doc identifier.
+    def getIdentifierName( collName=@coll.name )
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "here...")
+      modelsHelper = getModelsHelper()
+      if( collName == @coll.name )
+        if( !@idPropName.is_a?(String) or @idPropName.empty? )
+        # Ask modelsHelper for the name of the identifier (root) property for this object's collection
+        #   (kept in @idPropName but won't be valid for other collections we might need the name from [for example
+        #   the root prop of the DATA collection which working in a version/revision helper class]).
+        @idPropName = modelsHelper.getRootProp( collName )
+        end
+        idPropName = @idPropName
+      else # some other collection than ours ; must be a real collection that has actual model doc, not .versions or .revisions
+        idPropName = modelsHelper.getRootProp( collName )
+      end
+      return idPropName
+    end
+    alias_method( :getRootProp, :getIdentifierName )
+
+    # Get a modelsHelper() to help answer questions for this collection's (or any collection's) model.
+    # @return [BRL::Genboree::KB::Helpers::ModelsHelper, nil] A {ModelsHelper} object; most methods will need
+    #   to be provided @@coll@ in order to answer questions about this user collection's model.
+    def getModelsHelper()
+      retVal = nil
+      if(@kbDatabase)
+        retVal = @kbDatabase.modelsHelper()
+      end
+      return retVal
+    end
+
+    def docByRef( dbRef )
+      return @kbDatabase.docByRef( dbRef )
+    end
+
+    # Matches the current revision of a document/subdocument with the working revision provided in the request
+    # @param [Integer] workingRevision
+    # @overload currentRevision(docId)
+    #   Use a reference to the document to get its current revisioning record. Preferred.
+    #   @param [BSON::DBRef] docId The reference pointing to the data document.
+    # @overload currentRevision(docId, docCollName)
+    #   Use an object that can be interpretted as a {BSON::ObjectId} by {BSON::ObjectId.interpret}
+    #     as the ObjectId within the collection named in @docCollName@.
+    #   @param (see BSON::ObjectId.interpret)
+    #   @param [String] docCollName The name of the data collection.
+    # @param [String] propPath
+    # @return [Boolean] TRUE if working revision matches the current revision. FALSE otherwise
+    def matchWorkingRevisionWithCurrentRevision(workingRevision, docId, docCollName, propPath=nil)
+      retVal = false
+      revNum = nil
+      if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+        docRef = docId
+        docCollName = docRef.namespace
+      elsif(docId and docCollName) # need to construct a docRef
+        docId = BSON::ObjectId.interpret(docId)
+        docRef = BSON::DBRef.new(docCollName, docId)
+      else
+        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+      end
+      # Add revision if collection maintains it's history
+      unless(MongoKbDatabase::KB_HISTORYLESS_CORE_COLLECTIONS.include?(@coll.name))
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "collection has history")
+        revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
+        revNum = revisionsHelper.getRevisionNumForDocOrSubDoc(docRef, propPath)
+        if(workingRevision == revNum)
+          retVal = true
+        end
+      else
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "collection does not have history")
+        raise "INCORRECT_USE: Cannot use this method on documents which reside in collections that do not maintain history (version/revision)."
+      end
+      return retVal
+    end
+    
+    # Returns metadata hash to be added to the API response object.
+    # @overload getMetadata(docId)
+    #   Use a reference to the document to get its current revisioning record. Preferred.
+    #   @param [BSON::DBRef, Array] docIds or docId The reference(s) pointing to the data document. 
+    # @overload getMetadata(docId, docCollName)
+    #   Use an object that can be interpretted as a {BSON::ObjectId} by {BSON::ObjectId.interpret}
+    #     as the ObjectId within the collection named in @docCollName@.
+    #   @param (see BSON::ObjectId.interpret)
+    #   @param [String] docCollName The name of the data collection.
+    # @param [String] propPath
+    # @return [Hash] metadata
+    def getMetadata(docIds, docCollName=nil, propPath=nil)
+      metadata = {}
+      docRefs = []
+      if(!docIds.is_a?(Array))
+        docId = docIds
+        if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+          docRef = docId
+          docCollName = docRef.namespace
+        elsif(docId and docCollName) # need to construct a docRef
+          docId = BSON::ObjectId.interpret(docId)
+          docRef = BSON::DBRef.new(docCollName, docId)
+        else
+          raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+        end
+        docRefs << docRef
+      else
+        docIds.each { |did|
+          if(docCollName)
+            docRefs << BSON::DBRef.new(docCollName, did)
+          else
+            docRefs << docId
+          end
+        }
+      end
+      # Add revision if collection maintains it's history
+      # For a single document, add the current revision. For a list of docs, add the maximum revision.
+      # Currently, propPath is only support for single doc.
+      unless(MongoKbDatabase::KB_HISTORYLESS_CORE_COLLECTIONS.include?(@coll.name))
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "collection has history")
+        revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
+        if(docRefs.size == 1)
+          metadata["revision"] = revisionsHelper.getRevisionNumForDocOrSubDoc(docRefs[0], propPath=nil)
+        else
+          metadata["revision"] = revisionsHelper.getMaxRevisionForDocs(docRefs)
+        end
+      else
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "collection does not have history")
+      end
+      return metadata
+    end
+    
+    
     # Save a doc to the collection this helper instance uses & assists with. Will also save
     #   history records as well, unless {#coll} for this helper is one of the core collections
     #   which doesn't track history (like @kbColl.metadata@ and @kbGlobals@).
@@ -152,17 +330,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return retVal 
     end
 
-
-
     # Drop this collection
     def dropCollection()
       $stderr.debugPuts(__FILE__, __method__, 'STATUS', "About to mongo-drop collection: #{@coll.name.inspect}")
       result = @coll.drop()
     end
 
-    
-
-    # @todo Test, document.
     def distinctValsForProp(propPath, model, aggOperation = :count)
       # Need as a mongo path
       modelsHelper = @kbDatabase.modelsHelper()
@@ -325,6 +498,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     end
 
     # Retrieve all docs in this Helper's collection.
+    # @todo This should support incoming skip/limit to support pagination.
     # @note If there may be 1000's of documents (e.g. for user data collections and any
     #   history-related collections), then probably should ask for @:cursor@ rather than
     #   the default of @:docList@. That way you can iterate over the {Mongo::Cursor} without
@@ -335,17 +509,19 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   {Mongo::Cursor} (which you will close).
     # @return [Array<Hash>,Mongo::Cursor] either the set of docs (Hashes) or a cursor you can iterator over.
     # @raise [ArgumentError] if @provide@ is not one of the supported Symbols.
-    def allDocs(provide=:docList)
+    def allDocs(provide=:docList, outputProps=nil, sortInfo=nil, extraOpts={})
       retVal = nil
+      opts = buildFindOptions(outputProps, sortInfo, extraOpts)
       if(provide == :docList)
         retVal = []
-        @coll.find() { |cur|
+        @coll.find( {}, opts ) { |cur|
           cur.each { |doc|
             retVal << BRL::Genboree::KB::KbDoc.new(doc)
           }
         }
       elsif(provide == :cursor)
-        retVal = @coll.find()
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "opts: #{opts.inspect}")
+        retVal = @coll.find( {}, opts )
       else
         raise ArgumentError, "ERROR: the provide parameter must be one of @:docList@ or @:cursor@, not #{provide.inspect}."
       end
@@ -517,7 +693,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @raise [RuntimeError] if the @@coll@ property is @nil@. This is only OK if you're in the middle of creating
     #   a database and its collections; otherwise, it's the sign of a bug.
     def docForCollection(collName, field="name.value", forceRefresh=false)
-      #$stderr.debugPuts(__FILE__, __method__, "DBEUG", "@coll.class: #{@coll.class} ; collName: #{collName.inspect} ; field: #{field.inspect}\n         - @docForCollectionCache.class: #{@docForCollectionCache.class}\n         - @docForCollectionCache.keys:\n         #{@docForCollectionCache.keys.join("\n")}")
+      #$stderr.debugPuts(__FILE__, __method__, "DBEUG", "@coll.class: #{@coll.class} ; @coll.name: #{@coll.name.inspect rescue 'N/A'} collName: #{collName.inspect} ; field: #{field.inspect}\n         - @docForCollectionCache.class: #{@docForCollectionCache.class}\n         - @docForCollectionCache.keys:\n         #{@docForCollectionCache.keys.join("\n")}")
       if(@coll)
         if(forceRefresh or !@docForCollectionCache.key?(collName) or !@docForCollectionCache[collName].key?(field) or !@docForCollectionCache[collName][field])
           doc = docFromCollectionByFieldAndValue(collName, field, @coll)
@@ -548,6 +724,29 @@ module BRL ; module Genboree ; module KB ; module Helpers
       raise NotImplementedError, "ERROR: this method should be implemented in #{self.class} to return a template or starter #{collName.inspect} doc which can be fleshed out--or in some cases used as-is."
     end
 
+    # Create a {BSON::DBRef} object for a document in this helper's collection, from its unique KB doc identifier.
+    #   DBRef objects are useful
+    #   because some methods want them anyway (this is fastest way to get at matching version record, rather than
+    #   digging into the versionNum.content.{something} value...which won't be indexed), but ALSO they have the _id
+    #   field value in case you have methods that need that value for lookups (or if you want to do efficient
+    #   lookups using _id). So getting one of these for a given doc is very very useful, permits very very efficient
+    #   lookups, and should be very fast to get [because so useful]
+    # @note This is specific to this helper's collection. If a data doc collection, it will be a document identifier value
+    #   (a.k.a. the doc name) whereas if it's a version/revision helper it will be a version [or revision] NUMBER
+    #   because that's the unique identifier for version doc records.
+    # @param [String] docName The value of the KbDoc "identifier" or root field. What that field is will be looked up
+    #   if not already cached.
+    # @return [BSON::DBRef] The reference to the document. The collection name is available via dbRef.namespace while
+    #   the _id value is avialble via dbRef.object_id or dbRef.object_id.to_s if you really must (generally you don't)
+    def dbRefFromRootPropVal( docName, collName=@coll.name )
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "docName: #{docName.inspect} ; collName: #{collName.inspect}")
+      idPropName = getIdentifierName( collName ) # default is for @coll.name which is NOT what we want here (it would be versions collection)
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "idPropName: #{idPropName.inspect}")
+      # Specifically gets only the internal mongo _id field value.
+      return dbRefFromCollectionByUniqueFieldAndValue( docName, "#{idPropName}.value", collName )
+    end
+    alias_method( :dbRefByIdentifier, :dbRefFromRootPropVal )
+
     # ------------------------------------------------------------------
     # INTERNAL METHODS - mainly for use by this class and the framework, rarely outside this framework
     # ------------------------------------------------------------------
@@ -562,21 +761,75 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   @"_id"@ this should be a {BSON::ObjectId}.
     # @param [String] field The field to match @value@ against.
     # @return [KbDoc, nil] the doc requested or @nil@ if not found.
-    def docFromCollectionByFieldAndValue(value, field="_id", coll=@coll)
+    def docFromCollectionByFieldAndValue(value, field='_id', coll=@coll)
       retVal = nil
-      if(field == "_id")
+      if(field == '_id')
         # Try to convert value into BSON::ObjectId (noop if already is one, like normally the case)
         valueAsObjId = BSON::ObjectId.interpret(value)
         # If coll is same as this object's @coll, then we can just use Mongo::DB#defeference
         if(coll.name == @coll.name)
           retVal = @kbDatabase.docByRef(valueAsObjId, @coll.name)
-        else # some other coll, but using _id (odd, but ok) and a value which should match
+        else # some other coll, but using _id (odd, but ok; maybe version/revision coll) and a value which should match
           retVal = coll.find_one(field => value)
         end
       else
         retVal = coll.find_one(field => value)
       end
       return (retVal.nil? ? retVal : BRL::Genboree::KB::KbDoc.new(retVal))
+    end
+
+    # Utility method for quickly getting the _id value for a doc using some unique field and value combo.
+    #   Generally, used to get the _id value via {rootProp}.value. Using the _id value or
+    #   a DbRef for subsequent lookups greatly speeds things up compared to other lookups and
+    #   is invaluable when wanting to quickly locate and work with version/revision records
+    #   (since you avoid digging into versionNum.content.{rootProp} just to make matches...and
+    #   nothing in content is indexed since don't know {rootProp} ahead of time).
+    # @note If you already have a {BSON::DBRef} and want the actual document referenced, it's more
+    #   efficient to use @MongoKbDatabase.db.dereference@ (see #Mongo::DB#dereference) rather
+    #   than hacking things so you can use this method.
+    # @note You should consider using {#dbRefFromCollectionByUniqueFieldAndValue} INSTEAD. It will
+    #   give you a nice BSON::DBRef object that can be used very efficiently in some methods and
+    #   gives you a good way to search versionNum.dbRef and revisionNum.dbRef. AND that BSON::DBRef
+    #   object has this _id value embedded within! Just use BSON::DBRef#object_id['_id'].to_s to get it.
+    # @param [String] value The value to match in @field@.
+    # @param [String] field The field to match @value@ against. Fields is a MONGO doc path,
+    #   not a model path, so will already have .value or whatever. In most cases this parameter
+    #   will be "{rootProp}.value" to support looking up by value.
+    # @return [BSON::ObjectId] The _id field value for the matching doc or @nil@ if not found.
+    def docIdFromCollectionByUniqueFieldAndValue(value, field, coll=@coll)
+      if( coll.is_a?(String) )
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "coll arg: #{coll.inspect}")
+        coll = @kbDatabase.getCollection( coll )
+      end
+      retVal = coll.find_one( { field => value }, { :fields => [ '_id' ] } )
+      return ( retVal.is_a?(Hash) ? retVal['_id'] : retVal )
+    end
+
+    # Utility method for quickly getting a BSON::DBRef object for a doc using some unique field and value combo,
+    #   generally the {rootProp}.value plus the document identifier/name. Using the _id value or
+    #   a DbRef for subsequent lookups greatly speeds things up compared to other lookups and
+    #   is invaluable when wanting to quickly locate and work with version/revision records
+    #   (since you avoid digging into versionNum.content.{rootProp} just to make matches...and
+    #   nothing in content is indexed since don't know {rootProp} ahead of time).
+    # @param [String] value The value to match in @field@.
+    # @param [String] field The field to match @value@ against. Fields is a MONGO doc path,
+    #   not a model path, so will already have .value or whatever. In most cases this parameter
+    #   will be "{rootProp}.value" to support looking up by value.
+    # @param [String, Mongo::Collection] coll The collection to get the doc DBRef for
+    # @return [BSON::DBRef] The DBRef object for the doc, containing the collection name, the _id value, and
+    #   also usable as-is to lookup matching version/revision records.
+    def dbRefFromCollectionByUniqueFieldAndValue(value, field, coll=@coll)
+      tt = Time.now
+      if( coll.is_a?(String) )
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "coll arg: #{coll.inspect}")
+        coll = @kbDatabase.getCollection( coll )
+      end
+      retVal = coll.find_one( { field => value }, { :fields => [ '_id' ] } )
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "retVal: #{retVal.inspect}")
+      retVal = ( retVal.is_a?(Hash) ? BSON::DBRef.new( coll.name, retVal['_id'] ) : retVal )
+
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Done for => value arg: #{value.inspect} ; field: #{field.inspect} ; coll class: #{coll.class} ; DBRef retVal: #{retVal.inspect} in #{Time.now.to_f - tt.to_f} sec")
+      return retVal
     end
 
     # Utility method for finding all documents whose specified field value matches one
@@ -914,5 +1167,10 @@ module BRL ; module Genboree ; module KB ; module Helpers
       end
       return opts
     end
-  end # class Helper
+
+    # ----------------------------------------------------------------
+    # MEMOIZE now-defined methods
+    # ----------------------------------------------------------------
+    MEMOIZED_INSTANCE_METHODS.each { |meth| memoize meth }
+  end # class AbstractHelper
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Helpers

@@ -8,13 +8,15 @@ module BRL ; module Genboree ; module Pipeline ; module FTP ; module Pollers
 class FtpPoller < BRL::Genboree::Pipeline::FTP::Pollers::Poller
   VERSION = "1.0"
   COMMAND_LINE_ARGS = {
-    "--confFile" => [:REQUIRED_ARGUMENT, "-c", "location of poller configuration file"]
+    "--confFile" => [:REQUIRED_ARGUMENT, "-c", "location of poller configuration file"],
+    "--waitTimeForPendingUploads" => [:OPTIONAL_ARGUMENT, "-w", "amount of time to wait for pending uploads"]
   }
   DESC_AND_EXAMPLES = {
     :description => "Polls FTP locations for newly deposited files to be processed",
     :authors     => [ "Aaron Baker (ab4@bcm.edu)", "Andrew R Jackson (andrewj@bcm.edu)" ],
     :examples    => [
       "#{File.basename(__FILE__)} --confFile=ftpPoller.conf",
+      "#{File.basename(__FILE__)} --waitTimeForPendingUploads=600",
       "#{File.basename(__FILE__)} --help"
     ]
   }

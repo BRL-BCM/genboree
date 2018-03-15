@@ -10,6 +10,11 @@ rm -rf ${DIR_TARGET} ${DIR_DATA}
 
 date
 echo "=================== START ================"
+PACKAGE_NAME="genboree-${GENB_VERSION}"
+mkdir   ${PACKAGE_NAME}
+mkdir ./${PACKAGE_NAME}/docs
+cp ../docs/installation.pdf ./${PACKAGE_NAME}/docs/
+cp ./conf_global.sh ./conf_runtime.sh ./install.sh ./upgrade.sh ../License.txt ./${PACKAGE_NAME}/
 # ---- build base libs
 ./build_libs.sh "$@"
 ./build_R_packages.sh "$@"
@@ -17,8 +22,7 @@ echo "=================== START ================"
 ./build_gems.sh "$@"
 ./build_servers.sh "$@"
 # ---- set license
-func_run "./add_header.rb  ../src/header.txt  ../src/"
-cp ../src/license.txt  ../src/agpl-3.0.txt  ${DIR_TARGET}
+func_run "./add_header.rb  ../header.txt  ../src/"
 # ---- build the rest of components
 ./build_data.sh  "$@"
 ./build_final.sh "$@"
@@ -26,14 +30,9 @@ cp ../src/license.txt  ../src/agpl-3.0.txt  ${DIR_TARGET}
 # ---- Make a final package
 mv ${DIR_TARGET} ./local
 mv ${DIR_DATA}   ./data
-PACKAGE_NAME="genboree-${GENB_VERSION}"
-mkdir   ${PACKAGE_NAME}
 tar czf ${PACKAGE_NAME}/local.tgz local
 tar czf ${PACKAGE_NAME}/data.tgz  data
 rm -rf local data
-cp ./conf_global.sh ./conf_runtime.sh ./install.sh ./upgrade.sh ../src/license.txt ../src/agpl-3.0.txt ./${PACKAGE_NAME}/
-mkdir ./${PACKAGE_NAME}/docs
-cp ../docs/HowToInstall.pdf ./${PACKAGE_NAME}/docs/
 tar cf ${PACKAGE_NAME}.tar ${PACKAGE_NAME}
 echo "==================== END ================="
 date

@@ -1,6 +1,5 @@
 require 'brl/genboree/kb/questions/docBuildHelper'
 require 'brl/genboree/kb/validators/answerValidator'
-require 'brl/genboree/kb/validators/questionValidator'
 
 module BRL ; module Genboree ; module KB ; module Questions
 
@@ -12,7 +11,6 @@ module BRL ; module Genboree ; module KB ; module Questions
         
     attr_accessor :questAndAnsErrors
     attr_accessor :isAnswerValid
-    attr_accessor :isQuestionValid
 
     # all the property paths in the questDoc
     def initialize(mongoKbDb, dataCollName, ansDoc)
@@ -21,7 +19,6 @@ module BRL ; module Genboree ; module KB ; module Questions
       @collectionName = dataCollName
       @questAndAnsErrors = []
       @isAnswerValid = false
-      @isQuestionValid = false
     end 
 
     def getDocFromAnswers()
@@ -31,14 +28,10 @@ module BRL ; module Genboree ; module KB ; module Questions
       if(@isAnswerValid)
         # 2. Check if the quest document id valid. Not quite necessary but can fetch some useful information
         docBuilt = nil
-        qsValidator = BRL::Genboree::KB::Validators::QuestionValidator.new(@mgKb, @collectionName)
-        questDoc = anValidator.questDoc
-        @isQuestionValid = qsValidator.validate(questDoc)
 
-        if(@isQuestionValid)
           # 3. Get the paths and values for the docBuilder in place
           # keys are full paths - root+propPath
-          qsPaths = qsValidator.questPaths
+          qsPaths = anValidator.qv.questPaths
           #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "qsPaths::: #{qsPaths.inspect} ")
 
           # keys are answer paths. Values are answers for each property
@@ -65,7 +58,7 @@ module BRL ; module Genboree ; module KB ; module Questions
           # Will be handled separately in the next version of this code
           # get the main template(the one which has the root to the document identifier)
           # question Validator has already that information
-          mainTemplate  = qsValidator.mainTemplate
+          mainTemplate  = anValidator.qv.mainTemplate
           # get the template doc
         
           templatesHelper = @mgKb.templatesHelper()
@@ -113,12 +106,15 @@ module BRL ; module Genboree ; module KB ; module Questions
             @questAndAnsErrors << "NO_TEMPLATE: Failed to find the template #{mainTemplate[:template]}"
           end 
           #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "path And Values ::: #{pathsAndValues.inspect} ")
-        else
-          @questAndAnsErrors << "BAD_QUEST_DOC: validation of the questionnaire failed #{qsValidator.validationErrors}"
-          # handle error
-        end
      else
-       @questAndAnsErrors << "BAD_ANS_DOC: validation of the answer document failed #{anValidator.validationErrors}"
+       # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+       if( anValidator.respond_to?(:buildErrorMsgs) )
+         validatorErrors = anValidator.buildErrorMsgs()
+       else
+         validatorErrors = modelValidator.validationErrors
+       end
+
+       @questAndAnsErrors << "BAD_ANS_DOC: validation of the answer document failed #{validatorErrors.join("\n")}"
      end
      docBuilt = @questAndAnsErrors.empty? ? docBuilt : nil
      return docBuilt

@@ -46,14 +46,17 @@ class KbQuestion < GenboreeResource
       unless(@mongoQh.coll.nil?)
         if(READ_ALLOWED_ROLES[@groupAccessStr])
           dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
+          questHelper = @mongoKbDb.questionsHelper()
           if(dataHelper)
             entity = nil
             mgCursor = @mongoQh.coll.find({ "Questionnaire.value" =>  @questId })
             if(mgCursor and mgCursor.is_a?(Mongo::Cursor) and mgCursor.count == 1)
                 mgCursor.rewind! # resets the cursor to its unevaluated state
                 doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
+                qdocId = doc['_id']
                 if(doc.getPropVal('Questionnaire.Coll') == @collName)
                   entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                  entity.metadata = questHelper.getMetadata(qdocId, questCollName)
                   @statusName = configResponse(entity)
                 else
                   @statusName = :'Not Found'
@@ -108,6 +111,7 @@ class KbQuestion < GenboreeResource
                 questDoc = payload.doc
                 isValid = validator.validate(questDoc)
                 if(isValid)
+                  questHelper = @mongoKbDb.questionsHelper()
                   kbDocQuest = BRL::Genboree::KB::KbDoc.new(questDoc)
                   if(kbDocQuest.getPropVal('Questionnaire') != @questId)
                     @statusName = :"Bad Request"
@@ -118,14 +122,24 @@ class KbQuestion < GenboreeResource
                     cursor.each {|dd|
                       qDoc = dd
                     }
+                    # For an existing questionnaire
                     if(qDoc and !qDoc.empty?)
                       questDoc['_id'] = qDoc["_id"]
-                      @mongoQh.save(questDoc, @gbLogin)
-                      bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, questDoc)
-                      configResponse(bodyData)
-                      @statusName = :'Moved Permanently'
-                      @statusMsg = "UPDATED_QUESTIONNAIRE: The questionnaire with the id: #{@questId.inspect} was updated."
-                    else
+                      workingRevisionMatched = true
+                      if(@workingRevision)
+                        workingRevisionMatched = questHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, qdoc["_id"], questCollName)
+                      end
+                      if(workingRevisionMatched)
+                        @mongoQh.save(questDoc, @gbLogin)
+                        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, questDoc)
+                        configResponse(bodyData)
+                        @statusName = :'Moved Permanently'
+                        @statusMsg = "UPDATED_QUESTIONNAIRE: The questionnaire with the id: #{@questId.inspect} was updated."
+                      else
+                        @statusName = :"Conflict"
+                        @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
+                      end
+                    else # New questionnaire
                       @mongoQh.save(questDoc, @gbLogin)
                       bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, questDoc)
                       configResponse(bodyData)
@@ -134,8 +148,13 @@ class KbQuestion < GenboreeResource
                     end
                   end
                 else
+                  if( validator.respond_to?(:buildErrorMsgs) )
+                    errors = validator.buildErrorMsgs()
+                  else
+                    errors = validator.validationErrors
+                  end
                   @statusName = :"Bad Request"
-                  @statusMsg = "BAD_QUESTIONNAIRE_DOC: The questionnaire document does not follow the specification of the questionnaire model or is invalid. Details : #{validator.validationErrors}"
+                  @statusMsg = "BAD_QUESTIONNAIRE_DOC: The questionnaire document does not follow the specification of the questionnaire model or is invalid. Details : #{errors.join("\n")}"
                 end
               rescue => err
                 @statusName = :'Internal Server Error'
@@ -178,13 +197,23 @@ class KbQuestion < GenboreeResource
               if(mgCursor and mgCursor.is_a?(Mongo::Cursor))
                 if(mgCursor.count == 1)
                   mgCursor.rewind!
-                  doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
+                  origDoc = mgCursor.first
+                  doc = BRL::Genboree::KB::KbDoc.new(origDoc.deep_clone)
                   if(doc.getPropVal('Questionnaire.Coll') == @collName)
                     entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
-                    @mongoQh.coll.remove( { "Questionnaire.value" => @questId } )
-                    @statusMsg = "DELETED: The questionnaire document: #{@questId} was deleted from the database."
-                    @statusName = :OK
-                    configResponse(entity)
+                    workingRevisionMatched = true
+                    if(@workingRevision)
+                      workingRevisionMatched = @mongoQh.matchWorkingRevisionWithCurrentRevision(@workingRevision, origDoc["_id"], questCollName)
+                    end
+                    if(workingRevisionMatched)
+                      @mongoQh.coll.remove( { "Questionnaire.value" => @questId } )
+                      @statusMsg = "DELETED: The questionnaire document: #{@questId} was deleted from the database."
+                      @statusName = :OK
+                      configResponse(entity)
+                    else
+                      @statusName = :"Conflict"
+                      @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
+                    end
                   else
                     @statusName = :'Not Found'
                     @statusMsg = "NO_QUESTIONNAIRE_DOCUMENT: There is no questionnaire document, #{@questId.inspect} for the collection - #{@collName} under #{@kbName} KB."

@@ -2,6 +2,7 @@ require 'cgi'
 require 'brl/util/util'
 require 'brl/extensions/units'
 require 'brl/extensions/object'
+require 'brl/genboree/kb/propSelector'
 
 module BRL ; module Genboree ; module KB
 
@@ -39,6 +40,11 @@ class KbDoc < Hash
     else
       raise ArgumentError, "ERROR: If provided the opts parameter must be a Symbol keyed Hash, not a #{opts.class}."
     end
+  end
+
+  # Get a {BRL::Genboree::KB::PropSelector} instance for this {KbDoc}.
+  def propSelector()
+    return BRL::Genboree::KB::PropSelector.new( self )
   end
 
   # Construct a trivial property-oriented document from a Hash
@@ -95,6 +101,12 @@ class KbDoc < Hash
     return self.class.docPath2ModelPath(path)
   end
 
+  # @todo Do faster and/or without the Producer?
+  # @todo Fix bug: doesn't go into the "versionNum.content" doc correctly. Which sort of makes sense given the
+  #   non-normal transition from version rec KbDoc to the data KbDoc at 'versionNum.content.value', but this is
+  #   known domain type and maybe should work. Or it's a fundamental problem in KbDoc which won't go down into
+  #   versionNum.content.value.value and versionNum.content.properties since they look "wrong". HOWEVER, this
+  #   method could be written such that it will go down through all keys even if don't look like sensible KbDoc.
   def flattenDoc()
     require 'brl/genboree/kb/producers/fullPathTabbedDocProducer'
     producer = BRL::Genboree::KB::Producers::FullPathTabbedDocProducer.new({})
@@ -112,6 +124,11 @@ class KbDoc < Hash
     matchingPaths = flatDoc.keys.reduce([]) { |mpaths, path| mpaths << path.strip if(path.strip =~ regexp) ; mpaths }
     return matchingPaths
   end
+
+  def allPaths()
+    return getMatchingPaths( /./ )
+  end
+  alias_method :allPropPaths, :allPaths
 
   def getRootProp()
     retVal = nil
@@ -131,6 +148,29 @@ class KbDoc < Hash
     end
     return retVal
   end
+
+  # Does the indicated path exist in the doc?
+  # @param [String] path The path to the property for which you want the value.
+  # @param [String] sep The path element separator. If provided, usually '/' and with @cgiEscaped=true@
+  # @param [Boolean] cgiEscaped Indicates whether the path elements are CGI escaped or not. Usually
+  #   to be used with @sep='/'@
+  # @return [Boolean] Whether indicated path is valid in the doc or not; basically follow the path down to
+  #   the leaf property and then see if it has a Value Object or not. Else false.
+  def exists?(path, sep='.', cgiEscaped=false)
+    retVal = false
+    # Temporarily set @nilGetOnPathError to true for path testing. Will restore when done
+    origNilGetOnPathError = @nilGetOnPathError
+    @nilGetOnPathError = true
+    begin
+      valObj = self.getPropValueObj(path, sep, cgiEscaped)
+      retVal = true if(valObj)
+    ensure
+      @nilGetOnPathError = origNilGetOnPathError
+    end
+
+    return retVal
+  end
+
 
   # Get the 'value' of a property using the "path" to the property in this document.
   # * The "path" is a series of propety names (used as keys in the Hash at each lel)
@@ -396,10 +436,10 @@ class KbDoc < Hash
   # If the property does not yet have an 'items' Array, it will be added automatically.
   # @note Path components (property names and indices) _cannot_ have leading or trailing spaces.
   #   If present, they will be stripped off before being examined.
+  # @param [String] path The path to the property to which you want to add a new sub-item.
   # @param [Hash] item The item to add. Must be a Hash or Hash-like object corresponding to
   #   a property (1 top-level key mapped to a value object Hash which uses the keys @'value'@,
   #   @'properties'@, @'items'@ appropriately)
-  # @param [String] path The path to the property to which you want to add a new sub-item.
   # @param (see #setPropVal)
   # @return [Hash] the item you wanted to add to the property's items list.
   # @raise [ArgumentError] if item is not a valid property (singly rooted Hash or Hash-like object whose value appears

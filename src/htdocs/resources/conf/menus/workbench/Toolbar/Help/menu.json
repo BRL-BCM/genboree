@@ -40,6 +40,7 @@
     "href": "/java-bin/showHelp.jsp?topic=top",
     "hrefTarget": "_blank",
     "cls": "wbBtnReady",
-    "iconCls": "wbDeprecated"
+    "iconCls": "wbDeprecated",
+    "tooltip": "Old API description."
   }
 ]

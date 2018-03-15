@@ -115,6 +115,7 @@ def create_toolbars_conf(path, struct):
 
 
 dir_conf = os.environ['DIR_DATA'] + '/conf/'
+dir_files = os.environ['DIR_TARGET'] + '/etc/conf/'
 file_conf_toolbar = dir_conf + 'toolbar.yaml'
 file_conf_toolbar_original = file_conf_toolbar + '_original'
 dir_toolbar = os.environ['DIR_TARGET'] + '/apache/htdocs/resources/conf/menus/workbench/Toolbar'
@@ -165,16 +166,31 @@ conf_files_to_update = [ os.environ['DIR_TARGET'] + '/conf/genboree.config.prope
                        , os.environ['DIR_TARGET'] + '/etc/.dbrc'
                        , os.environ['DIR_TARGET'] + '/etc/nginx.conf'
                        , os.environ['DIR_TARGET'] + '/etc/thin_api.conf'
+                       , os.environ['DIR_TARGET'] + '/etc/thin_redmine.conf'
                        , os.environ['DIR_TARGET'] + '/etc/tomcat.conf'
-                       , os.environ['DIR_TARGET'] + '/conf/apiExtensions/clingenActionability/actionabilityInfoButton.json'
+                       , os.environ['DIR_TARGET'] + '/etc/init.d/conf_runtime.sh'
                        ]
+
+files_conf_files = glob.glob(dir_files + '*.conf_files')
+files_conf_files.sort()
+
+for file_conf_files in files_conf_files:
+    fs = open(file_conf_files, "r")
+    lines = fs.readlines()
+    fs.close()
+    for line in lines:
+        line = line.strip()
+        conf_files_to_update.append( os.environ['DIR_TARGET'] + line )
 
 # --- special calculated values
 # nginx configuration file needs spaces instead of commas
 settings['NGINX_allowedHostnames'  ] = ' '.join(settings['allowedHostnames'])
 settings['NGINX_thinApiWorkersList'] = ''
+settings['NGINX_thinRedmineWorkersList'] = ''
 for i in range(0,settings['thinApiWorkersCount']):
     settings['NGINX_thinApiWorkersList'] += '        server    unix://usr/local/brl/local/var/thin_api.' + str(i) + '.sock ;\n'
+for i in range(0,settings['thinRedmineWorkersCount']):
+    settings['NGINX_thinRedmineWorkersList'] += '        server    unix://usr/local/brl/local/var/thin_redmine.' + str(i) + '.sock ;\n'
 
 for conf_file in conf_files_to_update:
     # if there is no file then just skip
@@ -191,8 +207,12 @@ for conf_file in conf_files_to_update:
         # convert yaml arrays to strings
         if type(value) in (tuple, list):
             value = ','.join(value)
+        elif type(value) in (int, long, float, bool):
+            value = str(value)
+        if type(value) is not str:
+            continue 
         # substitution
-        conf_data = conf_data.replace('__GENBOREE_' + key + '__', str(value))
+        conf_data = conf_data.replace('__GENBOREE_' + key + '__', value)
     # save new configuration file
     text_file = open(conf_file, "w")
     text_file.write(conf_data)

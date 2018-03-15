@@ -105,6 +105,7 @@ module BRL; module Genboree; module Tools; module Scripts
         @isFTPJob = @settings['isFTPJob']
         if(@isFTPJob)
           @finishedFtpDir = @settings['finishedFtpDir']
+          @backupFtpDir = @settings['backupFtpDir']
           @manifestLocation = @settings['manifestLocation']
           @metadataArchiveLocation = @settings['metadataArchiveLocation']
           @dataArchiveLocation = @settings['dataArchiveLocation']
@@ -121,11 +122,11 @@ module BRL; module Genboree; module Tools; module Scripts
           @producer = BRL::Genboree::KB::Producers::NestedTabbedDocProducer.new(nil)
           @postProcOutputDir = @settings['postProcOutputDir'] 
           @toolVersionPPR = @settings['toolVersionPPR']
-          @uploadRawFiles = @settings['uploadRawFiles']
           @uploadReadCountsDocs = @settings['uploadReadCountsDocs']
           @kbBulkUploadJobConfDir = "#{@settings['jobSpecificSharedScratch']}/kbBulkUploadJobConfs"
           `mkdir -p #{@kbBulkUploadJobConfDir}`
           @kbBulkUploadIndex = 0
+          @dateOfSubmission = @settings['dateOfSubmission']
         end
         @uploadFullResults = @settings['uploadFullResults']
         @isRemoteStorage = true if(@settings['remoteStorageArea'])
@@ -185,7 +186,16 @@ module BRL; module Genboree; module Tools; module Scripts
         apiCaller = WrapperApiCaller.new(@host, "/REST/v1/job/{jobId}?detailed=summary", @userId)
         @jobs = {}
         # Traverse all jobIds
-        @listOfJobIds = JSON.parse(File.read(@settings['filePathToListOfJobIds']))
+        # Grab job IDs and put them in @listOfJobIds - all important job IDs are present in @settings['importantJobIdsDir']
+        @listOfJobIds = {}
+        importantJobIdsDir = @settings['importantJobIdsDir']
+        jobIdFiles = Dir.entries(importantJobIdsDir)
+        jobIdFiles.delete(".")
+        jobIdFiles.delete("..")
+        jobIdFiles.each { |currentFile|
+          jobId = JSON.parse(File.read("#{importantJobIdsDir}/#{currentFile}"))
+          @listOfJobIds.merge!(jobId)
+        }
         @listOfJobIds.each_key { |jobId|
           apiCaller.get( { "jobId" => jobId})
           status = apiCaller.parseRespBody['data']['status']
@@ -203,23 +213,33 @@ module BRL; module Genboree; module Tools; module Scripts
           sampleNameAndStatus = @jobs[currentJob].split(" - ")
           # If job is not an actual sample (PPR job or exogenousSTARMapping job), then skip it
           next if(sampleNameAndStatus[0] == "Process Pipeline Runs Job" or sampleNameAndStatus[0] == "Exogenous STAR Mapping Job")
+          # Grab sample name and status for current job
           sampleName = sampleNameAndStatus[0]
           status = sampleNameAndStatus[1]
-          @sampleStatus[sampleName] = status
           if(status == "completed")
             @sampleStatus[sampleName] = "Completed"
             @successfulSamples += 1
           else
-            @sampleStatus[sampleName] = "Failed"
+            @sampleStatus[sampleName] = "Failed" unless(@sampleStatus[sampleName] == "Completed")
             @failedSamples += 1
           end
         }
-        # If we're processing an FTP job, we'll upload metadata and then transfer our original manifest / metadata archive / data archive to the user's finished directory on FTP server
+        # If we're processing an FTP job, we'll upload metadata and then transfer our original manifest / metadata archive / data archive to the user's finished directory on FTP server.
         if(@isFTPJob)
+          # Add all updated metadata files to new zip archive that we will upload to finished area and backup area
+          @metadataDirForFtpUpload = "#{@scratchDir}/metadataDirForFtpUpload"
+          `mkdir #{@metadataDirForFtpUpload}`
+          @finalMetadataArchiveLocation = "#{@metadataDirForFtpUpload}/#{File.basename(@metadataArchiveLocation)}"
           finishAndUploadMetadata()
           raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
+          `cd #{@finalizedMetadataDir} ; cp * #{@metadataDirForFtpUpload}`
+          `cd #{@metadataDirForFtpUpload} ; zip #{File.basename(@metadataArchiveLocation)} *`
+          # We are transferring updated files to backup area and original files to finished area
+          # Note that data has already been transferred to backup area via runExceRpt jobs
           transferFtpFile(@manifestLocation, "#{@finishedFtpDir}#{File.basename(@manifestLocation)}", true)
+          transferFtpFile(@manifestFile, @backupFtpDir, false)
           transferFtpFile(@metadataArchiveLocation, "#{@finishedFtpDir}#{File.basename(@metadataArchiveLocation)}", true)
+          transferFtpFile(@finalMetadataArchiveLocation, @backupFtpDir, false)
           transferFtpFile(@dataArchiveLocation, "#{@finishedFtpDir}#{File.basename(@dataArchiveLocation)}", true)
         end
         # We won't submit tool usage docs if it's an AUTO job
@@ -260,6 +280,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @metadataFiles = []
       @analysisMetadataFile = {}
       @biosampleMetadataFiles = {}
+      @failedBiosampleMetadataFiles = {}
       @donorMetadataFiles = {}
       @experimentMetadataFiles = {}
       @resultFilesMetadataFiles = {}
@@ -269,6 +290,7 @@ module BRL; module Genboree; module Tools; module Scripts
       # Set up arrays / strings to hold IDs for each document type (by collection)
       @analysisID = ""
       @biosampleIDs = []
+      @failedBiosampleIDs = []
       @donorIDs = []
       @experimentIDs = []
       @readCountsIDs = []
@@ -292,9 +314,12 @@ module BRL; module Genboree; module Tools; module Scripts
         unextractedToExtractedMappings = JSON.parse(File.read("#{@settings['jobSpecificSharedScratch']}/samples/unextractedToExtractedMappings/#{currentSample}"))
         if(sampleHash.keys[0] != unextractedToExtractedMappings.keys[0])
           # Update the key for the hash to be the unextracted archive name (as opposed to extracted name) since that will match the original entry in the @inputFiles hash
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating key #{sampleHash.keys[0]} to be #{unextractedToExtractedMappings.keys[0]}")
           sampleHash[unextractedToExtractedMappings.keys[0]] = sampleHash.delete(sampleHash.keys[0])
           # Let's 1) delete the job that failed due to memory issues and 2) rename the successful re-run job with the old sample name
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Deleting #{File.basename(unextractedToExtractedMappings.keys[0])} from @sampleStatus")
           @sampleStatus.delete(File.basename(unextractedToExtractedMappings.keys[0]))
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating key #{unextractedToExtractedMappings.values[0]} to be #{File.basename(unextractedToExtractedMappings.keys[0])}")
           @sampleStatus[File.basename(unextractedToExtractedMappings.keys[0])] = @sampleStatus.delete(unextractedToExtractedMappings.values[0])
         end
         currentInput = sampleHash.keys[0]
@@ -305,20 +330,30 @@ module BRL; module Genboree; module Tools; module Scripts
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Removing unsuccessful biosamples (failed runs) from @biosampleMetadataFiles and @biosampleIDs")
       @inputFiles.each_key { |currentFile|
         if(@sampleStatus[File.basename(currentFile)] == "Failed")
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Removing #{File.basename(currentFile)}'s biosample because it's associated with a failed sample")
           currentKbDoc = @biosampleMetadataFiles[@inputFiles[currentFile]["biosampleMetadataFileName"]]
           currentBioID = currentKbDoc.getPropVal("Biosample")
           @biosampleIDs.delete(currentBioID)
+          @failedBiosampleIDs << currentBioID
+          @failedBiosampleMetadataFiles[@inputFiles[currentFile]["biosampleMetadataFileName"]] = @biosampleMetadataFiles[@inputFiles[currentFile]["biosampleMetadataFileName"]].clone()
+          File.open(@inputFiles[currentFile]["biosampleMetadataFileName"], 'w') { |file| file.write(@producer.produce(@failedBiosampleMetadataFiles[@inputFiles[currentFile]["biosampleMetadataFileName"]]).join("\n")) }
+          `cp #{@inputFiles[currentFile]["biosampleMetadataFileName"]} #{@metadataDirForFtpUpload}/#{@inputFiles[currentFile]["biosampleMetadataFileName"]}`          
           @biosampleMetadataFiles.delete(@inputFiles[currentFile]["biosampleMetadataFileName"])
         end
       }
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Successfully removed unsuccessful biosamples")
+      #### GRABBING CONDITIONS ASSOCIATED WITH SUCCESSFUL BIOSAMPLES ####
+      @conditions = []
+      @biosampleMetadataFiles.each_value { |currentBioDoc|
+        @conditions << currentBioDoc.getPropVal("Biosample.Biological Sample Elements.Disease Type") unless(@conditions.include?(currentBioDoc.getPropVal("Biosample.Biological Sample Elements.Disease Type")))
+      }
       #### FILLING IN METADATA DOCUMENTS (STAGE 2)
       # RUN: Fill in info for run document (real info now that samples have been processed and unsuccessful samples have been removed)
       @exitCode = fillInRunDoc(@biosampleIDs.count)
       raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)      
       # RUN: Fill in proper file type in run document for each biosample
-      @exitCode = fillInFileTypeForRunDoc()
-      raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
+      #@exitCode = fillInFileTypeForRunDoc()
+      #raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
       # ANALYSIS: Fill in analysis document with preliminary information
       @exitCode = fillInPrelimAnalysisInfo(@successfulSamples)
       raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
@@ -337,18 +372,19 @@ module BRL; module Genboree; module Tools; module Scripts
       #        1) Only successful biosamples should be added to the Job doc (which means that the Job doc should be created AFTER the pipeline runs are finished)
       #        2) The Job doc includes the IDs for our Result Files docs, and these docs are created in the "fillInAnalysisDoc" method (which is run near the end of our wrapper)
       @exitCode = fillInJobDoc()
-      #### UPLOADING METADATA DOCUMENTS ####
-      @metadataFiles.each { |currentDocs|
-        uploadMetadataDocs(currentDocs)
-        raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
-      }
+      raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
       #### POST-PROCESSING ####
       # ANALYSIS: Fill in analysis document with information from processPipelineRuns
-      fillInPostProcessingInfo()
+      @exitCode = fillInPostProcessingInfo()
       raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
-      # Since we edited the analysis doc, we need to re-upload it to the KB 
-      uploadMetadataDocs(@analysisMetadataFile)
-      raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
+      #### UPLOADING METADATA DOCUMENTS ####
+      # Delete @finalizedMetadataDir and then create a new version since we're going to be replacing our old docs with the ACTUAL, truly finalized docs
+      `rm -rf #{@finalizedMetadataDir}`
+      `mkdir #{@finalizedMetadataDir}`
+      @metadataFiles.each { |currentDocs|
+        @exitCode = uploadMetadataDocs(currentDocs)
+        raise @errUserMsg unless(@errUserMsg.nil? or @errUserMsg.empty?)
+      }
     end
 
     # Reads text files and loads metadata files into hashes
@@ -439,19 +475,22 @@ module BRL; module Genboree; module Tools; module Scripts
           currentSampleInRun.setPropVal("Biosample ID", biosampleID)
           currentSampleInRun.setPropVal("Biosample ID.File Name", fileName)
           currentSampleInRun.setPropVal("Biosample ID.DocURL", "coll/#{CGI.escape(@biosampleCollection)}/doc/#{biosampleID}")
-          # Link the raw file for the current sample if uploadRawFiles is true
-          if(@uploadRawFiles)
-            @inputFiles.each_key { |currentInput|
-              inputFileBiosample = @inputFiles[currentInput]["biosampleMetadataFileName"]
-              if(inputFileBiosample == currentBiosampleName)
+          @inputFiles.each_key { |currentInput|
+            inputFileBiosample = @inputFiles[currentInput]["biosampleMetadataFileName"]
+            if(inputFileBiosample == currentBiosampleName)
+              currentRawInput = @inputFiles[currentInput]["rawInput"]
+              md5 = @inputFiles[currentInput]["md5"]
+              currentSampleInRun.setPropVal("Biosample ID.File Name", currentRawInput)
+              currentSampleInRun.setPropVal("Biosample ID.MD5 Checksum", md5)
+              if(@uploadFullResults)
                 currentSampleName = @inputFiles[currentInput]["sampleName"]
-                currentCompressedInput = @inputFiles[currentInput]["compressedInput"]
+                currentCompressedInput = "#{@inputFiles[currentInput]["rawInput"]}.gz"
                 currentURL = @outputAreaOnGenboree.clone
                 currentURL << "/file/#{CGI.escape(@remoteStorageArea)}/exceRptPipeline_v#{@processingPipelineVersion}/#{CGI.escape(@analysisName)}/#{CGI.escape(currentSampleName)}/rawInput/#{CGI.escape(currentCompressedInput)}"
-                currentSampleInRun.setPropVal("Biosample ID.File URL", currentURL) 
-              end    
-            }
-          end
+                currentSampleInRun.setPropVal("Biosample ID.File URL", currentURL)
+              end
+            end
+          }
           # The file type below is a dummy value. We cannot fill out this info accurately the first time we run this method because it is run before the data archive is downloaded.
           # We will fill out this info accurately after the data archive is downloaded by using the fillInFileTypeForRunDoc method.
           currentSampleInRun.setPropVal("Biosample ID.Type", "FASTQ")
@@ -497,6 +536,7 @@ module BRL; module Genboree; module Tools; module Scripts
 
     # Fills in the file type for each biosample in the run document
     # This process has to be done AFTER the data archive is downloaded, so that's why it's a separate method
+    # CURRENTLY NOT BEING USED!
     # @return [Fixnum] exit code indicating whether filling in file type for run doc succeeded (0) or failed (51)
     def fillInFileTypeForRunDoc()
       begin
@@ -578,6 +618,11 @@ module BRL; module Genboree; module Tools; module Scripts
         # Job doc root prop value is the primary job ID associated with the job (FTPexceRpt job ID, basically)
         jobDoc.setPropVal("Job", @settings['primaryJobId'])
         jobDoc.setPropVal("Job.Status", "Add")
+        jobDoc.setPropVal("Job.Original Data Archive Name", File.basename(@dataArchiveLocation))
+        jobDoc.setPropVal("Job.Manifest File Name", File.basename(@manifestLocation))
+        jobDoc.setPropVal("Job.Manifest File Location", "#{@backupFtpDir}#{File.basename(@manifestLocation)}")
+        jobDoc.setPropVal("Job.Metadata Archive Name", File.basename(@finalMetadataArchiveLocation))
+        jobDoc.setPropVal("Job.Metadata Archive Location", "#{@backupFtpDir}#{File.basename(@finalMetadataArchiveLocation)}")
         # Save run / submission / study / analysis IDs and docURLs
         jobDoc.setPropVal("Job.Related Run", @runID)
         jobDoc.setPropVal("Job.Related Run.DocURL", "coll/#{CGI.escape(@runCollection)}/doc/#{@runID}")
@@ -594,6 +639,37 @@ module BRL; module Genboree; module Tools; module Scripts
           currentIDDoc.setPropVal("Related Experiment", currentID)
           currentIDDoc.setPropVal("Related Experiment.DocURL", "coll/#{CGI.escape(@experimentCollection)}/doc/#{currentID}")
           jobDoc.addPropItem("Job.Related Experiments", currentIDDoc)
+        }
+        biosampleIDToRawFileName = {}
+        @biosampleMetadataFiles.each_key { |currentBiosampleName|
+          currentBioKbDoc = @biosampleMetadataFiles[currentBiosampleName]
+          biosampleID = currentBioKbDoc.getPropVal("Biosample")
+          sampleName = currentBioKbDoc.getPropVal("Biosample.Name")
+          fileName = ""
+          @manifest.each { |currentSampleInManifest|
+            if(currentSampleInManifest["sampleName"] == sampleName)
+              fileName = currentSampleInManifest["dataFileName"]
+              fileName.chomp!(".zip")
+              fileName.chomp!(".gz")
+              fileName << ".gz"
+              biosampleIDToRawFileName[biosampleID] = fileName
+            end
+          }
+        }
+        @failedBiosampleMetadataFiles.each_key { |currentBiosampleName|
+          currentBioKbDoc = @failedBiosampleMetadataFiles[currentBiosampleName]
+          biosampleID = currentBioKbDoc.getPropVal("Biosample")
+          sampleName = currentBioKbDoc.getPropVal("Biosample.Name")
+          fileName = ""
+          @manifest.each { |currentSampleInManifest|
+            if(currentSampleInManifest["sampleName"] == sampleName)
+              fileName = currentSampleInManifest["dataFileName"]
+              fileName.chomp!(".zip")
+              fileName.chomp!(".gz")
+              fileName << ".gz"
+              biosampleIDToRawFileName[biosampleID] = fileName
+            end
+          }
         }
         # Next, we'll save biosample IDs, as well as docs related to those biosamples (donors / result files / read counts)
         jobDoc.setPropVal("Job.Related Biosamples", 0)
@@ -622,6 +698,21 @@ module BRL; module Genboree; module Tools; module Scripts
               currentIDDoc.addPropItem("Related Biosample.Related Read Counts Docs", currentReadCountsIDDoc)
             }
           end
+          currentIDDoc.setPropVal("Related Biosample.Sample Status", "Succeeded")
+          currentIDDoc.setPropVal("Related Biosample.File Name", biosampleIDToRawFileName[currentID])
+          currentIDDoc.setPropVal("Related Biosample.File Location", "#{@backupFtpDir}data/#{biosampleIDToRawFileName[currentID]}")
+          # Add biosample item with all doc IDs to larger Job doc
+          jobDoc.addPropItem("Job.Related Biosamples", currentIDDoc)
+        }
+        @failedBiosampleMetadataFiles.each_value { |currentBiosampleMetadataFile|
+          biosampleID = currentBiosampleMetadataFile.getRootPropVal()
+          donorID = currentBiosampleMetadataFile.getPropVal("Biosample.Donor ID")
+          currentIDDoc = BRL::Genboree::KB::KbDoc.new({})
+          currentIDDoc.setPropVal("Related Biosample", biosampleID)
+          currentIDDoc.setPropVal("Related Biosample.Related Donor", donorID)
+          currentIDDoc.setPropVal("Related Biosample.Sample Status", "Failed")
+          currentIDDoc.setPropVal("Related Biosample.File Name", biosampleIDToRawFileName[biosampleID])
+          currentIDDoc.setPropVal("Related Biosample.File Location", "#{@backupFtpDir}data/#{biosampleIDToRawFileName[biosampleID]}")
           # Add biosample item with all doc IDs to larger Job doc
           jobDoc.addPropItem("Job.Related Biosamples", currentIDDoc)
         }
@@ -660,6 +751,14 @@ module BRL; module Genboree; module Tools; module Scripts
         analysisKbDoc.setPropVal("Analysis.Data Analysis Level.Type.Level 1 Reference Alignment.Alignment Method", "exceRpt smallRNA-seq Pipeline Version #{@processingPipelineVersion}")
         analysisKbDoc.setPropVal("Analysis.Data Analysis Level.Type.Level 1 Reference Alignment.Genome Version", @settings['genomeVersion'])
         analysisKbDoc.setPropVal("Analysis.Data Analysis Level.Type.Level 1 Reference Alignment.Biosamples", successfulSamples)
+        # Add info for atlas statistics
+        analysisKbDoc.setPropVal("Analysis.Date of Analysis", @dateOfSubmission)
+        analysisKbDoc.setPropVal("Analysis.Conditions Associated with Analysis", @conditions.size)
+        @conditions.each { |currentCond|
+          condDoc = BRL::Genboree::KB::KbDoc.new({})
+          condDoc.setPropVal("Condition", currentCond)
+          analysisKbDoc.addPropItem("Analysis.Conditions Associated with Analysis", condDoc)
+        }
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Successfully added preliminary info into #{@analysisMetadataFile.keys[0]}")
       rescue => err
         # Generic error message
@@ -695,7 +794,8 @@ module BRL; module Genboree; module Tools; module Scripts
         readInStatsFile = File.read(statsFile)
         # These fields should be in every .stats file (regardless of exogenous mapping setting)
         totalReads = readInStatsFile.match(/^input\s+(\d+)$/)[1]
-        totalReadsAfterClipping = readInStatsFile.match(/^successfully_clipped\s+(\d+)$/)[1]
+        # Total reads after clipping will either be an integer or NA if no 3' adapter sequence is used - we'll rescue nil if it's NA, and we'll know not to save it in our doc if total reads after clipping is nil
+        totalReadsAfterClipping = readInStatsFile.match(/^successfully_clipped\s+(\d+)$/)[1] rescue nil
         failedQualityFilter = readInStatsFile.match(/^failed_quality_filter\s+(\d+)$/)[1]
         failedHomopolymerFilter = readInStatsFile.match(/^failed_homopolymer_filter\s+(\d+)$/)[1]
         # Calibrator will either be an integer or NA if calibrator not used - we'll rescue nil if it's NA, and we'll know not to save it in our doc if calibrator is nil
@@ -737,7 +837,7 @@ module BRL; module Genboree; module Tools; module Scripts
         currentBioInfo.setPropVal("Biosample ID.DocURL", "coll/#{CGI.escape(@biosampleCollection)}/doc/#{currentBioName}")
         currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages", "")
         currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.Input Reads", totalReads)
-        currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.After Clipping", totalReadsAfterClipping)
+        currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.After Clipping", totalReadsAfterClipping) if(totalReadsAfterClipping)
         currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.Failed Quality Filter", failedQualityFilter)
         currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.Failed Homopolymer Filter", failedHomopolymerFilter)
         currentBioInfo.setPropVal("Biosample ID.Read Counts at Various Stages.Calibrator", calibrator) if(calibrator)
@@ -1031,7 +1131,7 @@ module BRL; module Genboree; module Tools; module Scripts
             analysisKbDoc.setPropVal("Analysis.Data Analysis Level.Type.Level 1 Reference Alignment.Exogenous Ribosomal Taxonomy Cumulative Read Counts File Name.Genboree URL", currentURL)
           end
         }
-        pprArchive = "#{CGI.escape(@analysisName)}_postProcessedResults_v#{@toolVersionPPR}.tgz"
+        pprArchive = "#{CGI.escape(@analysisName)}_exceRpt_postProcessedResults_v#{@toolVersionPPR}.tgz"
         currentURL = @outputAreaOnGenboree.clone
         currentURL << "/file/#{CGI.escape(@remoteStorageArea)}/exceRptPipeline_v#{@processingPipelineVersion}/#{CGI.escape(@analysisName)}/postProcessedResults_v#{@toolVersionPPR}/#{CGI.escape(pprArchive)}"  
         analysisKbDoc.setPropVal("Analysis.Data Analysis Level.Type.Level 1 Reference Alignment.Post-processing Results Archive File Name", pprArchive)
@@ -1077,6 +1177,7 @@ module BRL; module Genboree; module Tools; module Scripts
         # Write each metadata file to disk and then upload it to user's Genboree database
         docs.each_key { |currentDocName|
           File.open(currentDocName, 'w') { |file| file.write(@producer.produce(docs[currentDocName]).join("\n")) }
+          `cp #{currentDocName} #{@finalizedMetadataDir}/#{currentDocName}`
           uploadFile(targetUri.host, rsrcPath, @subUserId, currentDocName, {:analysisName => @analysisName, :outputFile => File.basename(currentDocName)})
           # Add current input path to inputFiles array
           inputPath = "http://#{targetUri.host}"
@@ -1133,7 +1234,7 @@ module BRL; module Genboree; module Tools; module Scripts
         $stderr.debugPuts(__FILE__, __method__, "STATUS", errBacktrace)
         @exitCode = 52
       end 
-      return @exitCode    
+      return @exitCode
     end
 
     # Upload a given file to Genboree server
@@ -1288,6 +1389,12 @@ module BRL; module Genboree; module Tools; module Scripts
       emailObject.outputsText   = nil
       emailObject.settings      = @jobConf['settings']
       emailObject.exitStatusCode = @exitCode
+      gbDccAdminEmails = ""
+      if(@genbConf.gbDccAdminEmails.class == Array)
+        gbDccAdminEmails = @genbConf.gbDccAdminEmails.join(", ")
+      else
+        gbDccAdminEmails = @genbConf.gbDccAdminEmails
+      end
       additionalInfo = ""
       additionalInfo << "All the samples from the #{@processingPipeline} batch submission have been processed and the results were uploaded to your Genboree Database.\n" +
                         "You can download result files from this location:\n" + 
@@ -1312,11 +1419,10 @@ module BRL; module Genboree; module Tools; module Scripts
       additionalInfo << "\nIf there are any jobs with \'failed\' status in the list above,\nplease look at the email from the job to identify the cause of failure.\n\n"
       if(@isFTPJob)
         additionalInfo << "======================ACCESSING RESULTS ON ATLAS=================\n" +
-                        "NOTE 1:\nYou can view your results on the private, ERCC-only Atlas at the following location:\n#{@settings['exRNAAtlasURL']}\n" +
-                        "NOTE 2:\nIf you would like to deposit your results in the public Atlas (available to all users),\ncontact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")})\n" +
+                        "NOTE 1:\nYou can view your results on the private, ERCC-only Atlas at the following location:\n#{@settings['exRNAAtlasURL']}\nPlease give us some time to expose your data on the Atlas.\n" +
+                        "NOTE 2:\nIf you would like to deposit your results in the public Atlas (available to all users),\ncontact a DCC admin (#{gbDccAdminEmails})\n" +
                         "======================ACCESSING RESULTS USING FTP CLIENT=========\n" +
-                        "NOTE 1:\nIn order to access your results via FTP client,\nyou will need to contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")})\nwith your Genboree username and the Genboree Group / Database / Virtual FTP Area\nlocated in your manifest file. After a DCC admin gives you access,\nyou will be able to find your results here:\n/genboree:#{@outputHost}/#{@groupName}/#{@dbName}/#{@remoteStorageArea}/#{@processingPipelineIdAndVersion}/#{@analysisName}\n" +
-                        "NOTE 2:\nIf other members of your lab want to access the results using their FTP client,\nthey must also contact a DCC admin beforehand to obtain access.\n" +
+                        "NOTE 1:\nIn order to access your results via FTP client,\nyou will need to contact a DCC admin (#{gbDccAdminEmails})\n" +
                         "======================NOTES ON RESULT FILES======================\n" +
                         "NOTE 1:\nEach sample you submitted will have its own unique subfolder\nwhere you can find the exceRpt pipeline results for that sample.\n" +
                         "NOTE 2:\nIf you chose to upload full results,\nthe file that ends in '_results_v#{@processingPipelineVersion}' is a large archive\nthat contains all the result files from the exceRpt pipeline.\n" +
@@ -1332,7 +1438,7 @@ module BRL; module Genboree; module Tools; module Scripts
                         "NOTE 1:\nYou can find the IDs of your metadata documents in your Job document\non the exRNA GenboreeKB UI. Your Job document has the following ID:\n    #{@settings['primaryJobId']}" + 
                                "\nTo view your Job document on the exRNA GenboreeKB UI, use the following link:\nhttp://#{@exRNAHost}/#{@genboreeKbArea}/genboree_kbs?project_id=#{@exRNAKbProject}&coll=#{@jobCollection}&doc=#{@settings['primaryJobId']}&docVersion=\nIt will take a moment for your documents to be uploaded.\n" +
                         "NOTE 2:\nYou must be a member of the \"Extracellular RNA Atlas - Consortium v2\" project\non GenboreeKB in order to view your Job document." +
-                               "\nPlease contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")})\nif you are having difficulty viewing your Job document.\n" +
+                               "\nPlease contact a DCC admin (#{gbDccAdminEmails})\nif you are having difficulty viewing your Job document.\n" +
                         "NOTE 3:\nIf you need help navigating the exRNA GenboreeKB UI,\nview the following Wiki page for guidance:\nhttp://genboree.org/theCommons/projects/exrna-mads/wiki/GenboreeKB%20exRNA%20Metadata%20Tracking%20System%20-%20Navigating%20the%20Metadata%20UI\n"
       end
       emailObject.additionalInfo = additionalInfo
@@ -1367,7 +1473,11 @@ module BRL; module Genboree; module Tools; module Scripts
     # @return [nil]  
     def cleanUpSettingsForEmail()
       @settings.delete("indexBaseName") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
-      @settings.delete("newSpikeInLibrary") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+      unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+        @settings.delete('newSpikeInLibrary') 
+      else
+        @settings['newSpikeInLibrary'].gsub!("gbmainprod1.brl.bcmd.bcm.edu", "genboree.org")
+      end
       @settings.delete("existingLibraryName") unless(@settings['useLibrary'] =~ /useExistingLibrary/)
       @settings.delete("jobSpecificSharedScratch")
       @settings.delete("autoDetectAdapter") unless(@settings['adapterSequence'] == "other")
@@ -1430,7 +1540,7 @@ module BRL; module Genboree; module Tools; module Scripts
       # Delete local path to post-processing input dir
       @settings.delete('postProcDir')
       # Delete local path to list of job IDs text file
-      @settings.delete('filePathToListOfJobIds')
+      @settings.delete('importantJobIdsDir')
       @settings.delete('filePathToListOfExogenousTaxoTreeJobIds')
       @settings.delete('exogenousMappingInputDir')
       # Delete information about number of threads / tasks for exogenous mapping (used in exogenousSTARMapping wrapper)
@@ -1450,6 +1560,11 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('exRNAAtlasURL')
       @settings.delete('listOfExogenousTaxoTreeJobIds')
       @settings.delete('exogenousTaxoTreeJobIDDir')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete('exogenousClaves')
+      @settings.delete('backupFtpDir')
+      @settings.delete('databaseGenomeVersion')
     end
 
   end

@@ -1,0 +1,6 @@
+<div class="col-sm-12">
+ <%= label_tag 'user_id', 'User Name: (at least six numbers/characters, no spaces nor hyphens)' %>
+</div>
+<div class="col-sm-12">
+ <%= text_field_tag 'user_id', @user_info["user_id"] , { "class" => "form-control", "required" => true }%>
+</div>

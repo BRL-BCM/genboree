@@ -1,0 +1,39 @@
+<%= render :partial => "status" %>
+<%= render :partial => "notices" %>
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+       <div class="well">
+          <div class="row form-row">
+            <div class="col-sm-12">
+             <h3>User profile</h3>
+            </div>
+            <div class="col-sm-12">
+              <br>
+              <strong>Login: </strong> <%= @gu.login%>
+              <br>
+              <strong>Email: </strong><%= @gu.email %>
+              <br>
+              <strong>First Name: </strong><%= @gu.firstName %>
+              <br>
+              <strong>Last Name: </strong> <%= @gu.lastName %>
+              <br>
+              <strong>Affiliation: </strong><%= @gu.institution.to_s %>
+              <br>
+            </div>
+            <div class="col-sm-12 leave-space-before">
+              <%= link_to 'Edit', 'edit', :class => "btn btn-primary" %>
+            </div>
+            <div class="col-sm-12 leave-space-before">
+              <%= link_to 'Change Password', 'editpwd', :class => "btn btn-primary" %>
+            </div>
+          </div>
+       </div>
+    </div>
+</div>
+<style>
+.leave-space-before {
+  margin-top: 20px;
+}
+</style>

@@ -130,8 +130,13 @@ module BRL ; module Genboree ; module KB ; module Transformers
           @transformationErrors << "INVALID_SCOPE_SUBJECT: Scope (#{scope}) and subject (#{subject}) property values in the transformation do not match the supported scope for a transformation. Supported scope and subject domains are #{SUPPORTED_SCOPES.inspect}\n"
         end
       else
+        if( trValidator.respond_to?(:buildErrorMsgs) )
+          errors = trValidator.buildErrorMsgs()
+        else
+          errors = trValidator.validationErrors
+        end
         isValid = false
-        @transformationErrors << "INVALID_DOC: The input document failed vaildation against the transformation model.\n #{trValidator.validationErrors}\n"
+        @transformationErrors << "INVALID_DOC: The input document failed vaildation against the transformation model.\n#{errors.join("\n")}\n"
       end
       return isValid
     end
@@ -187,6 +192,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
               joinItObjs = jnItem.getMultiPropItems('<>.Join.JoinConfigurations.[]') rescue nil
               joinItObjs.each{|jnItem|
                 @associatedColls << jnItem['JoinConfig']['properties']['Coll Name']['value']
+                @associatedColls << jnItem['JoinConfig']['properties']['Target Coll Name']['value']
               }
               @allCrossCollPropSel[prop] = propField
              end
@@ -196,6 +202,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
               break
             end
           }
+          @associatedColls = @associatedColls.uniq
         else
           @transformationErrors << "TR_RULE_INVALID: Transformation rule for the property selector 'Transformation.Output.Data.Partitioning Rules.[]' is #{partitionsObj.inspect}. This itemlist must have atleast one item for the transformation to proceed. #{@propSel.messages}"
           trRulesValid = false
@@ -226,6 +233,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
                 matchProps = jnItem['JoinConfig']['properties']['Match Prop']['value']
                 matchValues = jnItem['JoinConfig']['properties']['Match Values']['value']
                 @associatedColls << jnItem['JoinConfig']['properties']['Coll Name']['value']
+                @associatedColls << jnItem['JoinConfig']['properties']['Target Coll Name']['value']
                 if(matchProps !~ /\S/ or matchValues !~ /\S/)
                   @transformationErrors << "TR_RULE_INVALID: 'Match Prop': #{matchProps.inspect} or 'Match Values': #{matchValues.inspect} fields are empty or invalid for the property selector path #{option.inspect} in the transformation rules document."
                     trRulesValid = false
@@ -239,6 +247,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
               break
            end
          }
+         @associatedColls = @associatedColls.uniq
         else
          @transformationMessages << "MISSING_OPTONAL_RULES: The transformation rule '#{option.inspect}' is empty or missing. Transformation is proceeding without any of these rules.\n"
         end # ok to be empty or nil as these are optional.

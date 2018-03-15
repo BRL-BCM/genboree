@@ -33,6 +33,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                           "execEndDate"   => true,
                           "preconditions" => true
                         }
+    RSRC_TYPE = 'job'
 
     # INTERFACE. CLEANUP: Inheriting classes should also implement any specific
     # cleanup that might save memory and aid GC. Their version should call super()
@@ -59,7 +60,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
     # other services should be matched for first.
     # [+returns+] The priority, from 1 t o 10.
     def self.priority()
-      return 9
+      return 7
     end
 
     def initOperation()

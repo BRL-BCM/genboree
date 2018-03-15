@@ -71,17 +71,12 @@ module BRL; module REST; module Resources
         propSel = BRL::Genboree::KB::PropSelector.new(@doc)
         entity = nil
         # Get the list of property paths to match against since sub doc could have been inserted as part of updating one of the parent properties
-        propsPathsToSelectorMap = getPropPathsForRevQuery(@propPath)
-        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "propsPathsToSelectorMap:\n#{propsPathsToSelectorMap.inspect}")
+        propsPathsToSelectorMap = @revHelper.getPropPathsForRevQuery(@propPath)
         queryPropPaths = propsPathsToSelectorMap.keys
         # Get the docRef of the doc first. We will use this in our query
-        docRef = getDocRefFromDocName()
+        docRef = @dataHelper.getDocRefFromDocName(@modelDoc['name'], @docName)
         orList = []
-        queryPropPaths.each {|qp|
-          orList.push({ "revisionNum.properties.subDocPath.value" => qp })  
-        }
-        # @todo maybe move this to revisionsHelper ?
-        it = @revHelper.coll.find( { 'revisionNum.properties.docRef.value' => docRef, "$or" => orList } ).sort( [ 'revisionNum.value', @sortOpt ] )
+        it = @revHelper.getRevisionDocsForSubDoc(docRef, queryPropPaths, @sortOpt)
         # Once we have out cursor, we need to loop over the documents and compile the list of value objects only for the property of interest (which may be buried under parent properties for some cases)
         respEntity = BRL::Genboree::REST::Data::KbDocRevisionEntityList.new(@connect)
         authorIdHash = {}
@@ -134,73 +129,6 @@ module BRL; module REST; module Resources
     
     
     ################### Helpers ##################################
-    
-    # Gets the content doc for the property of interest (@propPath)
-    def getContentDocForPropPath(kbDoc, subDocPath, propsPathsToSelectorMap)
-      contentDoc = nil
-      selectorPath = propsPathsToSelectorMap[subDocPath]
-      spCmps = selectorPath.split(".")
-      ps = nil
-      pathToProp = nil
-      if(subDocPath == "/")
-        ps = BRL::Genboree::KB::PropSelector.new(kbDoc.getPropVal('revisionNum.content'))
-        pathToProp = spCmps[0..spCmps.size-1].join(".")
-      else
-        ps = BRL::Genboree::KB::PropSelector.new({spCmps[0] => kbDoc.getPropVal('revisionNum.content')})
-        pathToProp = spCmps[1..spCmps.size-1].join(".")
-      end
-      begin
-        contentObj = ps.getMultiObj(pathToProp)[0]
-        if( pathToProp =~ /\}$/ )
-          itemIdentifier = spCmps[spCmps.size-2]
-          contentDoc = contentObj[itemIdentifier]  
-        else
-          propOfInterest = spCmps[spCmps.size-1]
-          contentDoc = contentObj[propOfInterest]  
-        end
-      rescue => err
-        # Nothing to do. Property of interest doesnt exist in the parent prop. Most likely the property of interest was added later on to the parent and we are seeing a revision of the parent prior to adding the property of interest
-      end
-      return contentDoc
-    end
-    
-    # @return [BSON::DBRef] docRef
-    def getDocRefFromDocName()
-      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "ident name:\n#{@modelDoc['name'].inspect}")
-      it = @dataHelper.coll.find("#{@modelDoc['name']}.value" => @docName)
-      docId = nil
-      it.each {|doc|
-        docId = doc['_id']
-      }
-      docRef =  BSON::DBRef.new(@collName, docId)
-      return docRef
-    end
-
-    # Constructs the object to be used in the query to extract all revision documents that can have the property indicated by @propPath
-    #   which includes all the parent properties leading to the property of interest
-    # The keys of the hash are the prop paths and the values will be used for extracting the prop of interest from the returning subdoc
-    # @param [String] propPath property path extracted from the request
-    # @return [Hash]
-    def getPropPathsForRevQuery(propPath)
-      retVal = {}
-      propPathCmps = propPath.split(".")
-      propPathLength = propPathCmps.size
-      processIdx = propPathLength - 1
-      propPathCmps.size.times { |ii|
-        cmp = propPathCmps[processIdx]
-        pp = "/#{propPathCmps[0..processIdx].join(".")}"
-        if(cmp =~ /\{/)
-          retVal[pp] = "#{propPathCmps[processIdx..propPathLength].join(".")}"
-          processIdx -= 3
-        else
-          retVal[pp] = "#{propPathCmps[processIdx..propPathLength].join(".")}"
-          processIdx -= 1
-        end
-        break if(processIdx == 0)
-      }
-      retVal['/'] = propPath
-      return retVal
-    end
 
     def matchRejectionSet?(prop)
       retVal = false
@@ -212,6 +140,42 @@ module BRL; module REST; module Resources
       }
       return retVal
     end
+    
+    # Gets the content doc for the property of interest (@propPath)
+    def getContentDocForPropPath(kbDoc, subDocPath, propsPathsToSelectorMap)
+      retVal = nil
+      selectorPath = propsPathsToSelectorMap[subDocPath]
+      spCmps = selectorPath.split(".")
+      ps = nil
+      pathToProp = nil
+      if(subDocPath == "/")
+        ps = BRL::Genboree::KB::PropSelector.new(kbDoc.getPropVal('revisionNum.content'))
+        pathToProp = spCmps[0..spCmps.size-1].join(".")
+      else
+        contentDoc = kbDoc.getPropVal('revisionNum.content')
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "contentDoc:\n#{JSON.pretty_generate(contentDoc)}")
+        ps = BRL::Genboree::KB::PropSelector.new({spCmps[0] => contentDoc})
+        if(spCmps[1] == "[]")
+          pathToProp = spCmps[0..spCmps.size-1].join(".")
+        else
+          pathToProp = spCmps[1..spCmps.size-1].join(".")
+        end
+      end
+      begin
+        contentObj = ps.getMultiObj(pathToProp)[0]
+        if( pathToProp =~ /\}$/ )
+          itemIdentifier = spCmps[spCmps.size-2]
+          retVal = contentObj[itemIdentifier] if(contentObj and !contentObj.empty?)
+        else
+          propOfInterest = spCmps[spCmps.size-1]
+          retVal = contentObj[propOfInterest]  if(contentObj and !contentObj.empty?)
+        end
+      rescue => err
+        # Nothing to do. Property of interest doesnt exist in the parent prop. Most likely the property of interest was added later on to the parent and we are seeing a revision of the parent prior to adding the property of interest
+      end
+      return retVal
+    end
+    
     
     # @todo - should this move to DataCollectionHelper?? Doc it have access to modelhelper etc for the collection? YES!
     def docNameCast(docName, model, dataHelper)

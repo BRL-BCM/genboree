@@ -145,28 +145,31 @@ module BRL ; module NoSQL ; module MongoDb
       # At this point we either already had a connInfo hash or we made one from the connection string.
       # Create ~normalized DSN connection string (mainly for use as a cache key)
       dsn = BRL::NoSQL::MongoDb::MongoDbDSN.makeDSN(connInfo, opts)
-      # Check cache using DSN
-      mgoDbUtil = MongoDbConnectionCache.getObject(:mongoDbUtil, dsn)
-      # Check if have connection in global cache and connection alive.
-      if(mgoDbUtil and mgoDbUtil.client)
-        unless(mgoDbUtil.client.active?)
-          # Not connected. Need to reconnect.
-          begin
-            mgoDbUtil.client.reconnect()
-            if(mgoDbUtil.client.active?)
-              mgoDbUtil.apply_saved_authentication()
-            else
-              # Checked again after reconnect, STILL not active?? WTF? Wipe and create a new one.
-              mgoDbUtil.removeFromCache()
-              mgoDbUtil = nil
-            end
-          rescue => err
-            # Reconnect failed outright. Let's try a whole new connection below. But first, try to clean out this one.
-            mgoDbUtil.removeFromCache()
-            mgoDbUtil = nil
-          end
-        end
-      end
+
+      # BUG WORKAROUND: Cache disabled. Seeing connection accumulation up to max on dev. Likely it is UNCLOSED CURSORS though.
+      mgoDbUtil = nil
+      # # Check cache using DSN
+      # mgoDbUtil = MongoDbConnectionCache.getObject(:mongoDbUtil, dsn)
+      # # Check if have connection in global cache and connection alive.
+      # if(mgoDbUtil and mgoDbUtil.client)
+      #   unless(mgoDbUtil.client.active?)
+      #     # Not connected. Need to reconnect.
+      #     begin
+      #       mgoDbUtil.client.reconnect()
+      #       if(mgoDbUtil.client.active?)
+      #         mgoDbUtil.client.apply_saved_authentication()
+      #       else
+      #         # Checked again after reconnect, STILL not active?? WTF? Wipe and create a new one.
+      #         mgoDbUtil.removeFromCache()
+      #         mgoDbUtil = nil
+      #       end
+      #     rescue => err
+      #       # Reconnect failed outright. Let's try a whole new connection below. But first, try to clean out this one.
+      #       mgoDbUtil.removeFromCache()
+      #       mgoDbUtil = nil
+      #     end
+      #   end
+      # end
       # Either we have an active mgoDbUtil here from the cache (even if due to a reconnect) and we're good,
       # or it's nil and we need to [re]make one and add to cache.
       unless(mgoDbUtil)
@@ -174,8 +177,9 @@ module BRL ; module NoSQL ; module MongoDb
         mgoDbUtil = MongoDbConnection.new(connInfo, defaultAuthInfo, opts)
         # Ensure we authorize against the "admin" database up front to get full & appropriate access
         mgoDbUtil.addAuth('admin', defaultAuthInfo)
-        # Cache the connection
-        MongoDbConnectionCache.cacheObject(:mongoDbUtil, mgoDbUtil.dsn, mgoDbUtil)
+        # BUG WORKAROUND: Cache disabled. Seeing connection accumulation up to max on dev. Likely it is UNCLOSED CURSORS though.
+        # # Cache the connection
+        # MongoDbConnectionCache.cacheObject(:mongoDbUtil, mgoDbUtil.dsn, mgoDbUtil)
       end
       return mgoDbUtil
     end
@@ -205,7 +209,7 @@ module BRL ; module NoSQL ; module MongoDb
     def destroy()
       disconnect()
       @connInfo = @defaultAuthInfo = @opts = nil
-      removed = MongoDbConnectionCache.removeObject(:mongoDbUtil, @dsn)
+      removed = MongoDbConnectionCache.removeObject(:mongoDbUtil, @dsn) rescue nil
       return removed
     end
 
@@ -367,6 +371,7 @@ module BRL ; module NoSQL ; module MongoDb
       end
       # Create client, using opts merged with default opts
       @opts = DEFAULT_OPTS.merge(newOpts)
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "MongoClient opts: #{@opts.inspect}")
       if(@connInfo.key?(:socket))
         @client = MongoClient.new(@connInfo[:socket], nil, @opts)
       else

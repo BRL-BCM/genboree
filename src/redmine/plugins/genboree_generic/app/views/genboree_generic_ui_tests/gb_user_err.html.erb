@@ -1,0 +1,20 @@
+<%# This error view should work for many possible cases encountered when using GbUser, as long as controller arranges to use
+    it via renderToClient() with sensible info (ideally from GbUser method, but otherwise created manually as fallback) %>
+
+<%# Again, have Rails make us a convenience link %>
+<a href="<%= u1 = url_for( { :action => 'show_test1' }) %>">Show Profile</a>
+
+<h3>Exception encountered:</h3>
+
+<%# Try to dump :err Exception from GbUser method, ideally %>
+<% if( @gbErr.is_a?(Exception) ) %><%# Then have an excpetion extracted from db async lib callback arg %>
+  <br>
+  <b>Error Class:</b> <code><%= @gbErr.class %></code><br>
+  <b>Error Message:</b> <code><%= @gbErr.message %></code><br>
+  <b>Error Trace:</b><br><pre><%= @gbErr.backtrace.join("\n") %></pre>
+<% else %> <%# Oh oh, got here due to error flow, but @gbErr not filled in with useful object? %>
+  An error was encountered. But there is insufficent info captured to relay what it was.<br>
+  <br>
+  Info we have:
+  <pre><%= @gbErr.inspect %></pre>
+<% end %>

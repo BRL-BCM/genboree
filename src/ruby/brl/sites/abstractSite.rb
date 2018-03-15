@@ -1,16 +1,24 @@
 #!/usr/bin/env ruby
 
 require 'cgi'
+require 'thread'
 require 'json'
-require 'openssl'
+require 'memoist'
 require 'brl/util/util'
 require 'brl/extensions/http'
 
 module BRL; module Sites
   # functions shared by bioOntology, pubmed, etc.
   class AbstractSite
-    OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE
-    attr_reader :proxyHost, :proxyPort, :proxyPathRoot
+    # Use mutex for synchronizing thread-unsafe blocks
+    # * Especially where only 1 sub-class instance of ANY kind should run unsafe block
+    MUTEX = Mutex.new
+
+    MEMOIZED_INSTANCE_METHODS = [
+      :buildUrl
+    ]
+
+    attr_reader :proxyHost, :proxyPort, :proxyPathRoot, :doingMemoization
     attr_accessor :tryProtos
 
     def initialize(opts={})
@@ -21,6 +29,31 @@ module BRL; module Sites
       end
       # Init the list of protocols using overridable method:
       @tryProtos = self.class.protocols()
+      @doingMemoization = false
+    end
+
+    # Memoization is NOT on by default because we may be in a web server process and possibly
+    #   this instance could be used for a long time, cross request. But if at all possible,
+    #   memoization should be ENABLED, ESPECIALLY when processing a set of related docs...the ontology
+    #   trees needed are likely to be the same as hit same property in each doc of the set, so why
+    #   retrieve that tree from the network (even if using proxy cache) over and over and over?
+    # @note Once memoization is initialized, it can't be undone. The misleading @unmemoize_all@ method
+    #   only clears the cache, leaving memoization happening on the very next call. Can't disable once enabled.
+    # @note This initialized memoization for THIS INSTANCE. Other instance should be unaffected. This is good/safe
+    #   given that memoization CANNOT BE DISABLED. This is why we didn't do it on the class in general be rather
+    #   this instance's specific singleton_class.
+    # @note Of course, that means for this to have ANY value, you need to reuse this same instance over and over.
+    #   If you are validating vs a bunch of different ontology sub-trees etc, you'll likely use different instances for each.
+    #   So you might want to memoize some @makeBioOntology@ instance method in your OWN class, so you can reuse bioonotolgy
+    #   objects rather than making new ones...and of course each one you make [and memoize] itself would have memoization
+    #   for its own internal re-uses, via this method.
+    def initMemoization()
+      @doingMemoization = true
+      class << self
+        extend Memoist
+        # Memoize instance methods
+        self::MEMOIZED_INSTANCE_METHODS.each { |meth| memoize meth }
+      end
     end
 
     # Construct URL, handling escaping of String and Array query string components

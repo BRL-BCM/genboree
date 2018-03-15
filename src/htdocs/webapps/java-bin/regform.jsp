@@ -2,6 +2,8 @@
 <%@ include file="include/fwdurl.incl" %>
 <%@ include file="include/common.incl" %>
 
+
+
 <%
   String[] userInfo = new String[3] ;
   String adrFrom = "\"Genboree Team\"<" +  GenboreeConfig.getConfigParam("gbFromAddress") + ">" ;
@@ -268,9 +270,13 @@
 <head>
 <title>Genboree - Registration Form</title>
 <link rel="stylesheet" href="/styles/jsp.css<%=jsVersion%>" type="text/css">
-<meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+<meta http-equiv="Refresh" content="0; URL='/<%=GenboreeConfig.getConfigParam("gbKbMount")%>/projects/genboree_profile_management/genboree_profile_management/profile/new'" />
 </head>
-<BODY>
+<BODY style="display:none !important;">
+
+<script type="text/javascript">
+  window.location.href = "/<%= GenboreeConfig.getConfigParam("gbKbMount") %>/projects/genboree_profile_management/genboree_profile_management/profile/new" %> ;
+</script>
 
 <%@ include file="include/header.incl" %>
 

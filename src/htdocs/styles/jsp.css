@@ -19,6 +19,18 @@
   background-repeat: no-repeat;
 }
 
+#loginBox .bad-creds {
+  display: inline-block ;
+  padding: 0px 5px 10px 5px ;
+  width: 100% ;
+  text-align: center ;
+  color: red ;
+}
+#loginBox .bad-creds .title {
+  font-weight : bold ;
+  font-size: 1.08em ;
+}
+
 /* ------------------------------------------------------------------ */
 UNKNOWN {
         TEXT-DECORATION: none

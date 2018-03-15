@@ -51,7 +51,10 @@ module BRL; module Genboree; module Tools; module Scripts
         @userFirstName = @context['userFirstName']
         @userLastName = @context['userLastName']
         @scratchDir = @context['scratchDir']
-        @scratchDir = "." if(@scratchDir.nil? or @scratchDir.empty?)
+        @scratchDir = "." if(@scratchDir.nil? or @scratchDir.empty?)  
+        # @dataDir will store the .fastq file associated with this run
+        @dataDir = "#{@scratchDir}/data"
+        `mkdir #{@dataDir}`
         # Grab group name and db name
         @groupName = @grpApiHelper.extractName(@outputs[0])
         @dbName = @dbApiHelper.extractName(@outputs[0])
@@ -68,6 +71,9 @@ module BRL; module Genboree; module Tools; module Scripts
         @genomeVersion = @settings['genomeVersion']
         @calib = @settings['calib']
         @exogenousMapping = @settings['exogenousMapping']
+        if(@settings['exogenousmiRNAWithAllReads'] and @exogenousMapping == "miRNA")
+          @exogenousMapping = "miRNAAllReads"
+        end
         @endogenousLibraryOrder = @settings['endogenousLibraryOrder']
         @adSeqParameter = @settings['adSeqParameter']
         @randomBarcodeLength = @settings['randomBarcodeLength']
@@ -90,6 +96,32 @@ module BRL; module Genboree; module Tools; module Scripts
         if(@isFTPJob)
           @md5sum = ""
           @fileType = ""
+          @ftpDbrcKey = @genbConf.ftpDbrcKey
+          ii = @ftpDbrcKey.index(":")
+          ftpHost = @ftpDbrcKey[ii+1..-1]
+          ftpKey = @ftpDbrcKey[0...ii].downcase.to_sym
+          dbrc = BRL::DB::DBRC.new(@dbrcFile)
+          dbrcRec = dbrc.getRecordByHost(ftpHost, ftpKey)
+          # Attempt to create @ftpHelper object (using LFTP helper)
+          noOfAttempts = 6
+          attempt = 1
+          while(@ftpHelper.nil? and attempt <= noOfAttempts)
+            begin
+              @ftpHelper = BRL::Genboree::Pipeline::FTP::Helpers::Lftp.new(dbrcRec[:host], dbrcRec[:user], dbrcRec[:password])
+            rescue => err
+              $stderr.debugPuts(__FILE__, __method__, "FTP", "Error encountered while opening @ftpHelper on attempt=#{attempt}")
+              $stderr.debugPuts(__FILE__, __method__, "FTP", "err.message=#{err.message.inspect}")
+              $stderr.debugPuts(__FILE__, __method__, "FTP", "err.backtrace:\n#{err.backtrace.join("\n")}")
+              if(attempt == noOfAttempts)
+                raise err
+              else
+                sleepTime = 2 ** (attempt - 1) * 60
+                $stderr.debugPuts(__FILE__, __method__, "FTP", "sleeping for #{sleepTime} seconds") unless(sleepTime == 0)
+                sleep(sleepTime)
+                attempt += 1
+              end
+            end
+          end
         end
         @exogenousMappingInputDir = @settings['exogenousMappingInputDir']
         @isRemoteStorage = true if(@settings['remoteStorageArea'])
@@ -100,7 +132,6 @@ module BRL; module Genboree; module Tools; module Scripts
         @subUserId = @settings['subUserId']
         @subUserId = @userId unless(@subUserId)
         @totalOutputFileSize = @settings['totalOutputFileSize']
-        @uploadRawFiles = @settings['uploadRawFiles']
         @uploadFullResults = @settings['uploadFullResults']
         @useMoreMemory = @settings['useMoreMemory']
         @exoJobId = @settings['exoJobId']
@@ -129,13 +160,18 @@ module BRL; module Genboree; module Tools; module Scripts
         inputFile.slice!("file://")
         @originalInputFile = inputFile.clone()
         # Move file to local scratch area
-        `mv #{inputFile} #{@scratchDir}/#{File.basename(inputFile)}`
+        `mv #{Shellwords.escape(inputFile)} #{@scratchDir}/#{File.basename(inputFile)}`
         inputFile = "#{@scratchDir}/#{File.basename(inputFile)}"
+        # Write the current runExceRpt job ID to file in importantJobIdsDir
+        @importantJobIdsDir = @settings['importantJobIdsDir']
+        newRunExceRptEntry = {@jobId => File.basename(inputFile)}
+        File.open("#{@importantJobIdsDir}/#{@jobId}.txt", 'w') { |file| file.write(JSON.pretty_generate(newRunExceRptEntry)) }
         # @sampleFile will hold the file path to the actual FASTQ / SRA file (once it's been decompressed and converted to UNIX format)
         @sampleFile = ""
         # @errInputs will contain info about any potential errors that might occur 
         @errInputs = {:emptyFiles => [], :badFormat => [], :badArchives => []}
         # Unpack inputFile (if necessary) and convert to unix format
+        @inputs = [] # Clear out @inputs - we will populate it with the uncompressed inputs
         preprocessInput(inputFile)
         # @failedRun keeps track of whether the sample was successfully processed
         @failedRun = false
@@ -220,7 +256,7 @@ module BRL; module Genboree; module Tools; module Scripts
             oldInputFile = inputFile.clone()
             inputFile = exp.uncompressedFileName
             # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
-            `rm -f #{oldInputFile}` unless(exp.compressedFileName == inputFile)
+            `rm -f #{oldInputFile}` unless(exp.compressedFileName == exp.uncompressedFileName)
             $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
           end
         end
@@ -242,10 +278,13 @@ module BRL; module Genboree; module Tools; module Scripts
             inputFileArr[-1] = fixedInputFile
             fixedInputFile = inputFileArr.join("/")
             # Rename file so that it has fixed file name
-            `mv #{Shellwords.escape(inputFile)} #{fixedInputFile}`
+            `mv #{Shellwords.escape(inputFile)} #{Shellwords.escape(fixedInputFile)}`
+            # Move the file to the data dir
+            `mv #{Shellwords.escape(fixedInputFile)} #{@dataDir}/#{File.basename(fixedInputFile)}`
+            fixedInputFile = "#{@dataDir}/#{File.basename(fixedInputFile)}"
             # Check to see if file is empty. We have to do this again because it might have been inside of a (non-empty) archive earlier!
             if(File.zero?(fixedInputFile))
-              @errInputs[:emptyFiles] << File.basename(inputFile)     
+              @errInputs[:emptyFiles] << File.basename(inputFile)
             else
               # Sniff file and see whether it's FASTQ or SRA
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Sniffing file type of #{fixedInputFile}")
@@ -271,6 +310,7 @@ module BRL; module Genboree; module Tools; module Scripts
                 numLines = `wc -l #{fixedInputFile}`
                 $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in file #{fixedInputFile}: #{numLines}")
                 @filePaths.push(fixedInputFile)
+                @inputs << "file://#{fixedInputFile}"
                 # Temporary - save mapping from unextracted archive to extracted FASTQ / SRA file (for use when we re-run files due to memory issues)
                 if(@isFTPJob and !@useMoreMemory)
                   @unextractedToExtractedMapping = {}
@@ -303,7 +343,11 @@ module BRL; module Genboree; module Tools; module Scripts
       else
         downsampleStr = ""
       end
-      if(@exceRptGen == "fourthGen") 
+      if(@exceRptGen == "fourthGen")
+        # If our reference genome is hg19 and there exists a directory for local indices (on the node), then we will use those local indices versus the shared indices (to reduce competition and make exceRpt run faster)
+        if(@genomeVersion == "hg19" and File.directory?(ENV['EXCERPT_DATABASE_LOCAL']))
+          ENV['EXCERPT_DATABASE'] = ENV['EXCERPT_DATABASE_LOCAL']
+        end
         command = "make -f #{@smRNAMakefile} INPUT_FILE_PATH=#{inFile} EXCERPT_VERSION=#{@toolVersion} N_THREADS=#{@numThreads} JAVA_RAM=#{@javaRam} MAIN_ORGANISM=#{@genomeBuild} MAIN_ORGANISM_GENOME_ID=#{@genomeVersion} CALIBRATOR_LIBRARY=#{@calib} INPUT_FILE_ID=#{@sampleName} OUTPUT_DIR=#{@scratchDir} MAP_EXOGENOUS=#{@exogenousMapping} ENDOGENOUS_LIB_PRIORITY=#{@endogenousLibraryOrder} TRIM_N_BASES_3p=#{@trimBases3p} TRIM_N_BASES_5p=#{@trimBases5p} MIN_ADAPTER_BASES_3p=#{@minAdapterBases3p} ADAPTER_SEQ=#{@adSeqParameter} RANDOM_BARCODE_LENGTH=#{@randomBarcodeLength} RANDOM_BARCODE_LOCATION=\"#{@randomBarcodeLocation}\" KEEP_RANDOM_BARCODE_STATS=#{@randomBarcodeStats} STAR_outFilterMismatchNmax=#{@endogenousMismatch} MAX_MISMATCHES_EXOGENOUS=#{@exogenousMismatch} MIN_READ_LENGTH=#{@minReadLength} QFILTER_MIN_QUAL=#{@minBaseCallQuality} QFILTER_MIN_READ_FRAC=#{@fractionForMinBaseCallQuality} STAR_outFilterMatchNminOverLread=#{@readRemainingAfterSoftClipping}#{downsampleStr} LOCAL_EXECUTION=#{@localExecution} >> #{outFile} 2>> #{errFile}"
       else
         command = "make -f #{@smRNAMakefile} INPUT_FILE_PATH=#{inFile} EXCERPT_VERSION=#{@toolVersion} N_THREADS=#{@numThreads} JAVA_RAM=#{@javaRam} MAIN_ORGANISM=#{@genomeBuild} MAIN_ORGANISM_GENOME_ID=#{@genomeVersion} CALIBRATOR_LIBRARY=#{@calib} INPUT_FILE_ID=#{@sampleName} OUTPUT_DIR=#{@scratchDir} MAP_EXOGENOUS=#{@exogenousMapping} ENDOGENOUS_LIB_PRIORITY=#{@endogenousLibraryOrder} ADAPTER_SEQ=#{@adSeqParameter} RANDOM_BARCODE_LENGTH=#{@randomBarcodeLength} RANDOM_BARCODE_LOCATION=\"#{@randomBarcodeLocation}\" KEEP_RANDOM_BARCODE_STATS=#{@randomBarcodeStats} BOWTIE1_MAX_MISMATCHES=#{@endogenousMismatch} BOWTIE2_MAX_MISMATCHES=#{@exogenousMismatch} BOWTIE_SEED_LENGTH=#{@bowtieSeedLength} LOCAL_EXECUTION=#{@localExecution} >> #{outFile} 2>> #{errFile}"
@@ -314,8 +358,6 @@ module BRL; module Genboree; module Tools; module Scripts
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "exceRpt Pipeline command completed for #{inFile} (exit code: #{statusObj.exitstatus})")
       # Check whether there was an error with the exceRpt pipeline run
       foundError = findError(exitStatus, inFile, outFile, errFile)
-      # If we get a "redo" error, then we want to re-run this sample with more memory.
-      # However, if we've already rerun that sample (useMoreMemory is true), then we won't redo it again, since that would be pointless!
       if(foundError == "redo" and !@useMoreMemory)
         # If we're uploading full results, we need to keep track of the expected output file size for this sample.
         # We'll save that info in the file name and then delete it when we re-submit.
@@ -328,6 +370,7 @@ module BRL; module Genboree; module Tools; module Scripts
         unless(@settings['fullExogenousMapping'])
           `mv #{inFile} #{@postProcDir}/runs/#{File.basename(inFile)}`
         else
+          `mkdir -p #{@exogenousMappingInputDir}/#{@exoJobId}`
           `mv #{inFile} #{@exogenousMappingInputDir}/#{@exoJobId}/#{File.basename(inFile)}`
         end
       else
@@ -357,16 +400,22 @@ module BRL; module Genboree; module Tools; module Scripts
         resultsZip = "#{@sampleName}_#{CGI.escape(@analysisName)}_results_v#{@toolVersion}.zip"
         coreZip = "#{@sampleName}_CORE_RESULTS_v#{@toolVersion}.tgz"
         # Check if core results tgz file is available - if it's not, we'll compress our own core results tgz
+        # We'll mark it as PARTIAL since it SHOULD have been created by the pipeline but wasn't - this likely indicates that something went wrong.
         unless(File.exist?("#{@scratchDir}/#{coreZip}"))
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Core Results zip archive #{coreZip} is not found, so making it now.")
-          # Update name of CORE_RESULTS archive to include analysis name
-          coreZip = "#{@sampleName}_#{CGI.escape(@analysisName)}_CORE_RESULTS_v#{@toolVersion}.tgz"
+          # Update name of CORE_RESULTS archive to include analysis name, and add PARTIAL to the name.
+          # Since the pipeline didn't create this file, it's likely that something went wrong and that the CORE_RESULTS archive is incomplete.
+          coreZip = "#{@sampleName}_#{CGI.escape(@analysisName)}_PARTIAL_CORE_RESULTS_v#{@toolVersion}.tgz"
           command = "cd #{@scratchDir}/#{@sampleName}/; tar -cvz #{@scratchDir}\/#{coreZip} #{@scratchDir}\/#{statsFile} #{@scratchDir}\/*.log readCounts_* *.readLengths.txt *_fastqc.zip *.counts *.adapterSeq *.qualityEncoding >> #{outFile} 2>> #{errFile}"
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching tar command to compress all key result files: #{command}")
           exitStatus = system(command)
           unless(exitStatus)
             @errUserMsg = "Could not create the zip archive of key result files."
             raise "Command: #{command} died. Check #{errFile} for more information."
+          end
+          unless(@failedRun)
+            @errUserMsg = "The CORE_RESULTS archive generated by the run was not created properly, which indicates that the run had an issue." if(@errUserMsg.nil? or @errUserMsg.empty?)
+            @failedRun = true
           end
         else
           # Add analysis name to CORE_RESULTS archive
@@ -393,29 +442,8 @@ module BRL; module Genboree; module Tools; module Scripts
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "DONE Compressing outputs to create #{resultsZip}")
       else
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Results zip archive #{resultsZip} is not found.")
-        @errUserMsg = "Results zip archive #{resultsZip} is not found."
+        @errUserMsg = "The results zip archive #{resultsZip} was not found."
         raise @errUserMsg
-      end
-      # Compress original input FASTQ (if @uploadRawFiles is true)
-      if(@uploadRawFiles)
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Compressing original input FASTQ #{inFile}")
-        command = "cd #{File.dirname(inFile)} ; zip -r #{File.basename(inFile)}.zip #{File.basename(inFile)}"
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching zip command to compress original input file: #{command}")
-        exitStatus = system(command)
-        # Raise error if exit status lets us know that an error occurred
-        unless(exitStatus)
-          @errUserMsg = "Could not create the zip archive of original FASTQ."
-          raise "Command: #{command} died. Check #{errFile} for more information."
-        end
-        @compressedInput = "#{File.dirname(inFile)}/#{File.basename(inFile)}.zip"
-        # If we successfully created results archive, then we're good to go. Otherwise, we raise an error
-        if(File.exist?(@compressedInput))
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "DONE Compressing original input")
-        else
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Compressed original input zip archive #{@compressedInput} could not be found.")
-          @errUserMsg = "Compressed original input zip archive #{@compressedInput} is not found."
-          raise @errUserMsg
-        end
       end
       # Save results zip / core zip / stats file in instance variables to make uploading them easier
       @resultsZip = resultsZip
@@ -423,7 +451,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @statsFile = statsFile
       # If @exogenousMappingInputDir exists (meaning fullExogenousMapping=true), then we need to copy the unaligned.fq.gz file in our results to the cluster shared scratch area so that exogenousSTARMapping
       # can access it for the exogenous genome alignment
-      if(@exogenousMappingInputDir and File.exist?("#{@scratchDir}/#{@sampleName}/EXOGENOUS_rRNA/unaligned.fq.gz"))
+      if(@exogenousMappingInputDir and File.exist?("#{@scratchDir}/#{@sampleName}/EXOGENOUS_rRNA/unaligned.fq.gz") and !foundError and !@failedRun)
         `mkdir -p #{@exogenousMappingInputDir}/#{@exoJobId}/#{@sampleName}/EXOGENOUS_rRNA`
         `cp #{@scratchDir}/#{@sampleName}/EXOGENOUS_rRNA/unaligned.fq.gz #{@exogenousMappingInputDir}/#{@exoJobId}/#{@sampleName}/EXOGENOUS_rRNA/unaligned.fq.gz` 
         # We also copy the .stats file to the exogenous mapping dir since we'll add info from the exogenous mapping to the end of it
@@ -431,11 +459,24 @@ module BRL; module Genboree; module Tools; module Scripts
         # Let's also copy the CORE_RESULTS archive to the exogenous mapping dir since we want to replace the .stats file in it and add our exogenous summary file
         `cp #{@scratchDir}/#{@coreZip} #{@exogenousMappingInputDir}/#{@exoJobId}/#{@sampleName}/#{@coreZip}` 
       end
+      # Compress raw fastq file and upload it to FTP backup area (if we're running an FTP job) - we do this even if the sample failed processing
+      if(@isFTPJob)
+        command = "cd #{File.dirname(inFile)} ; gzip #{File.basename(inFile)}"
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching gzip command to compress original input file for backup: #{command}")
+        exitStatus = system(command)
+        # Raise error if exit status lets us know that an error occurred
+        unless(exitStatus)
+          @errUserMsg = "Could not create the gzip archive of original FASTQ to upload to FTP backup area."
+          raise @errUserMsg
+        end
+        @compressedInput = "#{inFile}.gz"
+        transferFtpFile(@compressedInput, "#{@settings['backupFtpDir']}data", false)
+      end
       # If this runExceRpt job is part of an FTPexceRptPipeline job, then we'll need to copy the CORE_RESULTS archive and .stats file over to the cluster shared area
       # The erccFinalProcessing wrapper will use both of them in filling out the contents of metadata documents
       # Also, the erccFinalProcessing wrapper needs the contents of @inputFileHash to associate the current sample with its various related files
       # We'll write it to disk and then read that hash from disk in erccFinalProcessing
-      if(@isFTPJob)
+      if(@isFTPJob and !foundError and !@failedRun)
         sharedStatsFile = "#{@settings['jobSpecificSharedScratch']}/samples/#{@sampleName}/#{@statsFile}"
         sharedCoreZip = "#{@settings['jobSpecificSharedScratch']}/samples/#{@sampleName}/#{@coreZip}"
         if(@settings['fullExogenousMapping'])
@@ -449,7 +490,7 @@ module BRL; module Genboree; module Tools; module Scripts
         `cp #{@scratchDir}/#{@statsFile} #{sharedStatsFile}`
         `cp #{@scratchDir}/#{@coreZip} #{sharedCoreZip}`
         @inputFileHash = {@originalInputFile => {:sampleName => @sampleName, :statsFile => sharedStatsFile, :coreZip => sharedCoreZip, :resultsZip => resultsZip, :md5 => @md5sum, :fileType => @fileType}}
-        @inputFileHash[@originalInputFile][:compressedInput] = File.basename(@compressedInput) if(@compressedInput)
+        @inputFileHash[@originalInputFile][:rawInput] = File.basename(inFile)
         if(@settings['fullExogenousMapping'])
           @inputFileHash[@originalInputFile][:exoGenomicArchive] = exoGenomicArchive if(@uploadFullResults)
           @inputFileHash[@originalInputFile][:exoGenomicTaxoTree] = exoGenomicTaxoTree
@@ -458,7 +499,7 @@ module BRL; module Genboree; module Tools; module Scripts
           @inputFileHash[@originalInputFile][:exoRibosomalTaxoTree] = exoRibosomalTaxoTree
         end
         File.open("#{@settings['jobSpecificSharedScratch']}/samples/#{@sampleName}.txt", 'w') { |file| file.write(JSON.pretty_generate(@inputFileHash)) }
-      end 
+      end
       # Delete uncompressed results (don't need them anymore)
       `rm -rf #{@scratchDir}/#{@sampleName}`
       return
@@ -479,18 +520,23 @@ module BRL; module Genboree; module Tools; module Scripts
       rsrcPath << "gbKey=#{@dbApiHelper.extractGbKey(@outputs[0])}" if(@dbApiHelper.extractGbKey(@outputs[0]))
       # statsFile
       # :outputFile => each run's statsFile
-      # input is each run's "#{@scratchDir}/#{@statsFile}"
-      # We check to make sure that .stats file is valid by grepping for END OF STATS (always present at end of stats file)
-      cmd = "grep -P \"#END OF STATS\" #{@scratchDir}/#{@statsFile}"
-      grepResult = `#{cmd}`
-      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Grep for end of stats file: #{grepResult}")
-      # If END OF STATS is present, then we upload the .stats file - otherwise, we skip the upload (because it's incomplete or doesn't exist)
-      if(grepResult =~ /#END OF STATS/)
+      # input is the run's "#{@scratchDir}/#{@statsFile}"
+      # We check to make sure that .stats file is valid by checking the total number of lines present in the file.
+      # If the number of lines matches the expected number, then the .stats file is probably valid and we upload it.
+      # If lines are missing, then the .stats file is incomplete and the run failed somehow, EVEN IF IT WASN'T DETECTED BY OUR findError() METHOD!!
+      statsFile = File.read("#{@scratchDir}/#{@statsFile}")
+      totalLines = statsFile.split("\n").size()
+      validStats = true if((@exogenousMapping == "off" and totalLines == 25) or ((@exogenousMapping == "miRNA" or @exogenousMapping == "miRNAAllReads") and totalLines == 31) or (@exogenousMapping == "on" and totalLines == 33))
+      if(validStats)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Trying to upload stats file #{@scratchDir}/#{@statsFile}")
         uploadFile(targetUri.host, rsrcPath, @subUserId, "#{@scratchDir}/#{@statsFile}", {:analysisName => @analysisName, :outputFile => @statsFile})
       else
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Skipping upload of stats file #{@scratchDir}/#{@statsFile}, since it is incomplete.")
-      end        
+        unless(@failedRun)
+          @errUserMsg = "The .stats file generated by the run was incomplete, which indicates that the run had an issue.\nIt is likely that your FASTQ file is corrupt.\nPlease send contents of .stats file to Genboree admins (emails below)." if(@errUserMsg.nil? or @errUserMsg.empty?)
+          @failedRun = true
+        end
+      end
       # resultsZip
       # :outputFile => each run's resultsZip
       # input is each run's "#{@scratchDir}/#{@resultsZip}"
@@ -511,14 +557,18 @@ module BRL; module Genboree; module Tools; module Scripts
         uploadFile(targetUri.host, newRsrcPath, @subUserId, "#{@scratchDir}/#{@coreZip}", {:analysisName => @analysisName, :outputFile => "CORE_RESULTS/#{@coreZip}"})
       else
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "CORE RESULTS zip file #{@coreZip} does not exist. Skipping.")
+        unless(@failedRun)
+          @errUserMsg = "The CORE_RESULTS archive associated with the run could not be found, which indicates that the run had an issue." if(@errUserMsg.nil? or @errUserMsg.empty?)
+          @failedRun = true
+        end
       end
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "DONE transferring outputs of #{@sampleName} to the user database in server")
-      # Remove uncompressed input file and results zip (we don't need them anymore - only keep original input file if uploadRawFiles is true)
+      # Remove uncompressed input file and results zip (we don't need them anymore)
       `rm -f #{inputFile}`
       `rm -f #{@scratchDir}/#{@resultsZip}`
       if(@coreZip)
         # Copy core .tgz to post-processing runs directory (if core .tgz exists)
-        `cp #{@scratchDir}/#{@coreZip} #{@postProcDir}/runs/#{@coreZip}`
+        `cp #{@scratchDir}/#{@coreZip} #{@postProcDir}/runs/#{@coreZip}` unless(@failedRun)
         # If it's an FTP job, then we can't use extract=true to extract the CORE zip on Genboree.
         # We'll just extract it on disk and then upload the files.
         if(@remoteStorageArea)
@@ -534,9 +584,8 @@ module BRL; module Genboree; module Tools; module Scripts
           uploadCoreFiles(targetUri.host, coreZipDir, currentRsrcPath)
         end
       end
-      # If @uploadRawFiles is true, then we need to upload the original FASTQ to Genboree
-      # This is only done under certain conditions (if submitted Study document says that files are uploaded to SRA / GEO)
-      if(@uploadRawFiles and File.exist?(@compressedInput))
+      # If @isFTPJob and @uploadFullResults are true, then we need to upload the original FASTQ to Genboree
+      if(@isFTPJob and @uploadFullResults and @compressedInput and File.exist?(@compressedInput))
         uploadFile(targetUri.host, rsrcPath, @subUserId, @compressedInput, {:analysisName => @analysisName, :outputFile => "rawInput/#{File.basename(@compressedInput)}"})
         `rm -rf #{@compressedInput}`
       end
@@ -605,65 +654,102 @@ module BRL; module Genboree; module Tools; module Scripts
     def findError(exitStatus, inFile, outFile, errFile)
       retVal = false
       errorMessages = nil
-      # Check the obvious things first. Outright failure or putting error messages on stderr:
-      if(exitStatus)
-      #if(exitStatus and File.size("#{errFile}") <= 0)
-        # So far, so good. Look for ERROR lines on stdout and stderr.
-        cmd = "grep -P \"^ERROR\\s\" #{outFile} #{errFile}"
-        errorMessages = `#{cmd}`
-        if(errorMessages.strip.empty?)
-          retVal = false
-        else
-          retVal = true
-        end
+      # Check for truncated file error - this means we need to relaunch this job with more memory.
+      cmd = "grep -e \"\\[bam_sort_core\\] truncated file. Aborting.\" -e \"^make:\\s\\\*\\\*\\\*\\s\\[.*ExogenousRibosomalAlignments\" #{errFile}"
+      errorMessages = `#{cmd}`
+      if(!errorMessages.strip.empty? and !@useMoreMemory)
+        retVal = "redo"
+        errorMessages << "\nBecause this error normally stems from a lack of memory,\nwe are going to reprocess this sample with more memory.\nYou will receive another email when we re-process\nthis sample, letting you know whether the reprocessing was successful."
       else
-        # Check for truncated file error - this means we need to relaunch this job with more memory.
-        cmd = "grep -e \"\\[bam_sort_core\\] truncated file. Aborting.\" #{errFile}"
+        ## Capture the make rule where failure occurred
+        cmd = "grep -e \"^make:\\s\\\*\\\*\\\*\\s\" -e \"bowtie\" -e \"fastx_clipper\" #{errFile}"
         errorMessages = `#{cmd}`
-        unless(errorMessages.strip.empty?)
-          retVal = "redo"
-          errorMessages << "Because this error normally stems from a lack of memory,\nwe are going to reprocess this sample with more memory.\nYou will receive another email when we re-process\nthis sample, letting you know whether the reprocessing was successful."
-        else
-          ## Capture the make rule where failure occurred
-          cmd = "grep -e \"^make:\\s\\\*\\\*\\\*\\s\" -e \"bowtie\" -e \"fastx_clipper\" #{errFile}"
-          errorMessages = `#{cmd}`
-          if(errorMessages =~ /Failed to read complete record/)
-            errorMessages << "ERROR: Your input FASTQ file is incomplete. \nPlease correct your input file and try running the pipeline again.\n"
-          end  
-          if(errorMessages =~ /^make:\s\*\*\*\s\[(.*)\].*/)
-            missingFile = $1
-            errorMessages << "\nsmallRNA-seq Pipeline could not find the file #{missingFile}. \nThe pipeline did not proceed further."
-            if(missingFile =~ /PlantAndVirus\/mature_sense_nonRed\.grouped/)
-              errorMessages << "\nPOSSIBLE REASON: There were no reads to map against plants and virus miRNAs. \nYou can uncheck \"miRNAs in Plants and Viruses\" option under \"small RNA Libraries\" section in the Tool Settings and rerun the pipeline."
-            elsif(missingFile =~ /readsNotAssigned\.fa/)
-              errorMessages << "\nPOSSIBLE REASON: None of the reads in your sample mapped to the main genome of interest."
-            elsif(missingFile =~ /\.clipped\.fastq\.gz/)
-              errorMessages << "\nPOSSIBLE REASON: Clipping of 3\' adapter sequence failed. Check your input FastQ file to ensure the file is complete and correct."
-            elsif(missingFile =~ /\.clipped\.noRiboRNA\.fastq\.gz/)
-              errorMessages << "\nPOSSIBLE REASON: Mapping to external calibrator libraries or rRNA sequences failed. This could be potential failure of Bowtie."
-            elsif(missingFile =~ /\.clipped\.readLengths\.txt/)
-              errorMessages << "\nPOSSIBLE REASON: Calculation of read length distribution of clipped reads failed."
-            elsif(missingFile =~ /reads\.fa/)
-              errorMessages << "\nPOSSIBLE REASON: There were no input reads available for sRNAbench analysis. It is possible that \n1. all reads were removed in the pre-processing stage (or) \n 2. the adapter sequence was not automatically identified by the pipeline, so reads were not clipped. \nAs a result, long reads ended up in the analysis and were rejected by sRNAbench.\n You can try providing the 3\' adapter sequence and redo the analysis. "
-            elsif(missingFile =~ /endogenousUnaligned_ungapped_noLibs\.fq/)
-              errorMessages << "\nPOSSIBLE REASON: All reads from your input file failed the quality filter stage. Please ensure that\nyour input file has good quality reads."
-            end
+        if(errorMessages =~ /Failed to read complete record/)
+          errorMessages << "ERROR: Your input FASTQ file is incomplete. \nPlease correct your input file and try running the pipeline again.\n"
+        end  
+        if(errorMessages =~ /^make:\s\*\*\*\s\[(.*)\].*/)
+          missingFile = $1
+          errorMessages << "\nexceRpt small RNA-seq Pipeline could not find the file #{File.basename(missingFile)}. \nThe pipeline did not proceed further."
+          if(missingFile =~ /PlantAndVirus\/mature_sense_nonRed\.grouped/)
+            errorMessages << "\nPOSSIBLE REASON: There were no reads to map against plants and virus miRNAs. \nYou can uncheck \"miRNAs in Plants and Viruses\" option under \"small RNA Libraries\" section in the Tool Settings and rerun the pipeline."
+          elsif(missingFile =~ /readsNotAssigned\.fa/)
+            errorMessages << "\nPOSSIBLE REASON: None of the reads in your sample mapped to the main genome of interest."
+          elsif(missingFile =~ /\.clipped\.fastq\.gz/)
+            errorMessages << "\nPOSSIBLE REASON: Clipping of 3\' adapter sequence failed. Check your input FASTQ file to ensure the file is complete and correct."
+          elsif(missingFile =~ /\.clipped\.noRiboRNA\.fastq\.gz/)
+            errorMessages << "\nPOSSIBLE REASON: Mapping to external calibrator libraries or rRNA sequences failed. This could be a potential failure of Bowtie."
+          elsif(missingFile =~ /\.clipped\.readLengths\.txt/)
+            errorMessages << "\nPOSSIBLE REASON: Calculation of read length distribution of clipped reads failed."
+          elsif(missingFile =~ /reads\.fa/)
+            errorMessages << "\nPOSSIBLE REASON: There were no input reads available for analysis. It is possible that \n1. all reads were removed in the pre-processing stage (or) \n 2. the adapter sequence was not automatically identified by the pipeline, so reads were not clipped. \nAs a result, long reads ended up in the analysis and were rejected.\n You can try providing the 3\' adapter sequence and redoing the analysis."
+          elsif(missingFile =~ /endogenousUnaligned_ungapped_noLibs\.fq/)
+            errorMessages << "\nPOSSIBLE REASON: All reads from your input file failed the quality filter stage. Please ensure that\nyour input file has good quality reads."
+          elsif(missingFile =~ /ExogenousRibosomalAlignments\.result\.taxaAnnotated\.txt/)
+            errorMessages << "\nPOSSIBLE REASON: Your processing failed due to memory issues even after relaunching your job\nwith significantly more memory. Please contact an admin below for further guidance."
           end
+        end
+        # OK, so we didn't find any errors so far. Let's do a more general check in the .out / .err files just to make sure something weird didn't happen.
+        if(errorMessages.strip.empty?)
+          cmd = "grep -P \"^ERROR\\s\" #{outFile} #{errFile}"
+          errorMessages = `#{cmd}`
           if(errorMessages.strip.empty?)
             retVal = false
           else
             retVal = true
           end
+        else
+          retVal = true
         end
+      end
+      # We will always raise an error if exceRpt exited in any unnatural way
+      unless(exitStatus)
+        retVal = true if(!retVal)
       end
       # Did we find anything?
       if(retVal)
         # Here, we mark the current run as failed and set its error message correspondingly
         @failedRun = true
-        @errUserMsg = "exceRpt small RNA-seq Pipeline Failed.\nMessage from exceRpt:\n\""
-        @errUserMsg << (errorMessages || "[No error info available from exceRpt]")
+        @errUserMsg = "exceRpt small RNA-seq Pipeline Failed.\nMessage from exceRpt:\n\n"
+        if(errorMessages.nil? or errorMessages.empty?)
+          @errUserMsg << "[No error info available from exceRpt]"
+        else
+          @errUserMsg << errorMessages
+        end
       end
       return retVal
+    end
+
+    # Method for moving files on FTP server.  fileAlreadyOnFTP will keep track of whether the file is already present on the FTP server.
+    # If the file is not already present on the FTP server, we will use @ftpHelper.uploadToFtp to upload the file to the FTP server. 
+    # If the file is already present on the FTP server, we will use @ftpHelper.renameOnFtp to simply move the file on the FTP server.
+    # @param [String] input the input path of the file that we are uploading / moving
+    # @param [String] output the output path of the file that we are uploading / moving
+    # @param [boolean] fileAlreadyOnFTP a boolean that keeps track of whether the current transfer is for a file that is already on the FTP server or not
+    # @return [nil]
+    def transferFtpFile(input, output, fileAlreadyOnFTP)
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Moving input file #{input} to appropriate directory #{output} on FTP server")
+      # Method used to upload files to FTP (they're not yet present on FTP!)
+      unless(fileAlreadyOnFTP)
+        retVal = @ftpHelper.uploadToFtp(input, output) rescue nil
+        unless(retVal)
+          @errUserMsg = "Failed to upload file #{input} to #{output} on FTP server"
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Failed to upload file #{input} to #{output} on FTP server")
+          raise @errUserMsg
+        end
+      # Method used to move files on FTP (they're already present on FTP!)
+      else
+        # Update timestamp on input before moving it
+        touchConfirmation = @ftpHelper.touch(input)
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Touch confirmation message for #{input}: #{touchConfirmation}")
+        retVal = @ftpHelper.renameOnFtp(input, output) rescue nil
+        unless(retVal)
+          @errUserMsg = "Failed to move input file #{input} to #{output} on FTP server"
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Failed to move input file #{input} to #{output} on FTP server")
+          raise @errUserMsg
+        end
+      end
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Input file #{input} can now be found in directory #{output} on FTP server")
+      return  
     end
 
 ############ END of methods specific to this runExceRpt wrapper
@@ -841,12 +927,19 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("numThreads")
       @settings.delete("postProcDir")
       @settings.delete("indexBaseName") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
-      @settings.delete("newSpikeInLibrary") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+      unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+        @settings.delete('newSpikeInLibrary') 
+      else
+        @settings['newSpikeInLibrary'].gsub!("gbmainprod1.brl.bcmd.bcm.edu", "genboree.org")
+      end
       @settings.delete("existingLibraryName") unless(@settings['useLibrary'] =~ /useExistingLibrary/)
       @settings.delete("jobSpecificSharedScratch")
       @settings.delete("autoDetectAdapter") unless(@settings['adapterSequence'] == "other")
       @settings.delete("manualAdapter") unless(@settings['adapterSequence'] == "other" and @settings['autoDetectAdapter'] == "no")
       @settings.delete("otherDataRepo") unless(@settings['anticipatedDataRepo'] == "Other")
+      if(@settings['adapterSequence'] == "manual")
+        @settings['adapterSequence'] << " (#{@adSeqParameter})"
+      end
       @settings.delete("piID")
       @settings.delete("platform")
       @settings.delete("processingPipeline")
@@ -905,13 +998,18 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('minBaseCallQuality') if(@settings['exceRptGen'] == 'thirdGen') # We can delete minimum base-call quality if user submitted 3rd gen exceRpt job
       @settings['exogenousMapping'] = "on" if(@settings['fullExogenousMapping'])
       @settings.delete('exRNAAtlasURL')
-      @settings.delete('filePathToListOfJobIds')
+      @settings.delete('importantJobIdsDir')
       @settings.delete('postProcOutputDir')
       @settings.delete('manifestFile')
       @settings.delete('releaseStatus')
+      @settings.delete('exogenousClaves')
       @settings.delete("uploadReadCountsDocs")
       @settings.delete("exoJobId")
       @settings.delete("exogenousTaxoTreeJobIDDir")
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete("backupFtpDir")
+      @settings.delete('databaseGenomeVersion')
       @outputs.delete_at(1)
       @outputs.delete_at(1)
     end

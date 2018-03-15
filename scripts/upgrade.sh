@@ -46,9 +46,9 @@ chmod 740        ${INLINEDIR}
 
 # ---- Start daemons
 echo "Start MYSQL daemon ..."
-${DIR_TARGET}/etc/init.d/mysqld_init start
+${DIR_TARGET}/etc/init.d/mysqld_init_1 start
 echo "Start MongoDB daemon ..."
-${DIR_TARGET}/etc/init.d/mongodb_init start
+${DIR_TARGET}/etc/init.d/mongodb_init_1 start
 
 # ---- upgrade
 echo "Redmine upgrade..."
@@ -60,9 +60,9 @@ cd -
 
 # ---- stop daemons
 echo "Stop MongoDB daemon ..."
-${DIR_TARGET}/etc/init.d/mongodb_init stop
+${DIR_TARGET}/etc/init.d/mongodb_init_1 stop
 echo "Stop MYSQL daemon ..."
-${DIR_TARGET}/etc/init.d/mysqld_init stop
+${DIR_TARGET}/etc/init.d/mysqld_init_1 stop
 
 
 echo "Set ownership once more time..."

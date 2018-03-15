@@ -135,7 +135,6 @@
     }
     else if(tryLoggin) // Definitely trying to do a login.
     {
-      //      System.err.println("  => Doing tryLoggin") ;
       userInfo[0] = tryintLoginName;
       userInfo[1] = tryintLoginPassword;
       userInfo[2] = null;
@@ -157,7 +156,6 @@
         mys.setAttribute( "myself", myself );
 
         grps = GenboreeGroup.recreateteGroupList(db, myself.getUserId());
-                //GenboreeGroup.fetchAll( db, myself.getUserId() );
         if( JSPErrorHandler.checkErrors(request,response, db,mys) )
           return;
         if( grps == null )
@@ -165,18 +163,16 @@
         for( int i=0; i<grps.length; i++ )
         {
           grps[i].fetchRefseqs( db );
-          grps[i].fetchUsers( db );
+          //grps[i].fetchUsers( db );
         }
 
         if( JSPErrorHandler.checkErrors(request,response, db,mys) )
           return;
-//        mys.setAttribute( "GenboreeGroups", grps );
         rseqs = Refseq.fetchAll( db, grps );
         if( JSPErrorHandler.checkErrors(request,response, db,mys) )
           return;
         if( rseqs == null )
           rseqs = new Refseq[0];
-//        mys.setAttribute( "RefSeqs", rseqs );
 
         logged_in = true;
         //        System.err.println( "  => User " + userInfo[0] + " logged in at " + (new java.util.Date()).toString() );

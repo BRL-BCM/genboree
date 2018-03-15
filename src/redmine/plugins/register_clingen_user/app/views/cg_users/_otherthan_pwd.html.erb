@@ -1,0 +1,24 @@
+<div class="col-sm-12">
+ <%= label_tag 'first_name', 'First Name: (at least two characters, no hyphens)' %>
+</div>
+<div class="col-sm-12">
+ <%= text_field_tag 'first_name' , @user_info["first_name"] ,  { "class" => "form-control", "required" => true } %>
+</div>
+<div class="col-sm-12">
+ <%= label_tag 'last_name', 'Last Name: (at least two characters, no hyphens)' %>
+</div>
+<div class="col-sm-12">
+ <%= text_field_tag 'last_name', @user_info["last_name"] ,{ "class" => "form-control", "required" => true } %>
+</div>
+<div class="col-sm-12">
+ <%= label_tag 'email', 'Email:' %>
+</div>
+<div class="col-sm-12">
+ <%= email_field_tag 'e-mail', @user_info["e-mail"], { "class" => "form-control", "required" => true } %>
+</div>
+<div class="col-sm-12">
+ <%= label_tag 'affiliation', 'Affiliation: (optional)' %>
+</div>
+<div class="col-sm-12">
+ <%= text_field_tag 'affiliation', @user_info["affiliation"] , "class" => "form-control" %>
+</div>

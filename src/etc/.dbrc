@@ -36,9 +36,9 @@ API:localhost                                     genboree          Sz3N7d4E3Qr 
 API:127.0.0.1                                     genboree          Sz3N7d4E3Qr   dbi:Mysql:localhost   10 8 30
 
 # Redmine
-REDMINE:__GENBOREE_webserverFQDN__                admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
-REDMINE:localhost                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
-REDMINE:127.0.0.1                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 driver   10 5 30
+REDMINE:__GENBOREE_webserverFQDN__                admin             779665443f782f5f670a5e3ae69874a78607cdc0 api:redmine:host=__GENBOREE_webserverFQDN__   10 5 30
+REDMINE:localhost                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 api:redmine:host=localhost   10 5 30
+REDMINE:127.0.0.1                                 admin             779665443f782f5f670a5e3ae69874a78607cdc0 api:redmine:host=127.0.0.1   10 5 30
 
 # ----------- role-based system users
 # 2015-09-10.conclusionAndEvidenceCollCacheScripts

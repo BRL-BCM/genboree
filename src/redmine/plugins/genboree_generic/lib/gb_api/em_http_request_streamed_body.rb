@@ -20,6 +20,23 @@ module GbApi
     #   like regular each() after which you do some other code!). In some sense, this
     #   is ~required.
     attr_reader :finish
+    # @return [boolean] (Default: false) Is this EM::Deferrable going to be handed to Rack as an async response body? i.e.
+    #   because the payload can be large (or slow) and we don't want to block the WRITING of payload data to the
+    #   client? By default, this object is a request payload you're planning on reading from in your code (async) and
+    #   will not be the body handed to Rack. But if you want to hand it to Rack as a pass-through (e.g. maybe it's a
+    #   raw file download from Genboree or external site) and not block as large/slow data is written to the client
+    #   set this to true. This tells the object that we want to properly hook it up to Rack for streamed WRITE [to client]
+    #   as well.
+    #   * This will cause it to call appropriate EM::Deferrable#set_deferred_status once everything has been
+    #     sent to the client, so Rack can properly shutdown the request connection.
+    #   * When an EM::Deferrable like GbApi::EmHttpRequestStreamedBody is used as the body WRITTEN to the
+    #     client, this connection shutdown is deferred into the future rather than happening when control
+    #     returns to where Rack called body.each() the first time. When the writing is async as well, control
+    #     returns to where Rack called body.each() MULTIPLE times and it only properly finishes the request
+    #     when the body's set_deferred_status flag is set. Else it keeps the write connection open for future EM
+    #     loops to continue writing payload day just like we want. So we need something that makes sure Rack
+    #     knows when the write [to client] connection should be closed right?
+    attr_accessor :useAsRespPayload
 
     # CONSTRUCTOR.
     # @param [EM::HttpRequest] http The eventmachine http request object.
@@ -27,6 +44,7 @@ module GbApi
       @http = http
       @finish = @railsRequestId = nil
       @sawHttpFinished = false
+      @useAsRespPayload = false
     end
 
     # The callback called to notify that body streaming is done. This
@@ -36,9 +54,9 @@ module GbApi
     # @param [Proc, nil] OPTIONAL. Generally you provide a code block and do not supply an argument. If
     #   you supply an argument it's assumed to be a {Proc} object (your callback). If you provide
     #   both, that's an error, but your code block will be used as the callback. If nil is given
-    #   (and no code block obviously) then the default Rack callback is used directly.
-    #   Your callback will be provided the standard Rack triple response Array:
-    #   [ respStatusFixnum, respHeadersHash, eachableBodyObject ].
+    #   (and no code block obviously) then the default Rack callback is used directly. There are
+    #   no args to your callback; the response has gone out and been shutdown by this time; can use
+    #   this for resource cleanup or logging.
     def finish(blk=nil)
       if(block_given?)
         @finish = Proc.new # This will convert block argument to saveable, callable Proc.
@@ -57,40 +75,39 @@ module GbApi
     def each(&blk)
       # Save the code-block/Proc trying to each over.
       @chunkCallback = blk
-      #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Body each() called. We have the code that will receive the chunks: [ #{@chunkCallback.inspect} ]")
       # Initiate async streaming of chunks to that Proc via EM::HttpRequest#stream
       @http.stream { |chunk|
         begin
-          #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] HANDING OFF CHUNK of #{chunk.size} BYTES")
+          #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] HANDING OFF CHUNK of #{chunk.size} BYTES\n@http:\n#{@http.inspect}") if(@http.req.uri.host =~ /reg\.genome/)
           @chunkCallback.call(chunk)
-          # This may be last chunk (state goes from :body => :finished, but only after the current stream
-          # code block is done). Because it will only do that after this stream code block, we'll arrange
-          # to check if we're all done in the next available event loop iteration:
-          EM.next_tick {
-            begin
-              # Notify that we're all done streaming body...to make follow-up code happen etc.
-              # Of course we must only call it once, keeping in mind it's being put on the event stack
-              #   ones for each body chunk and may be run much later...at which point @http is finished for ALL of them!
-              if(!@sawHttpFinished and @http.finished?)
-                @sawHttpFinished = true
-                if(@finish.is_a?(Proc)) # Have we got a finish callback for notification/flow purposes?
-                  @finish.call()
-                end
-              end
-            rescue Exception => err
-              $stderr.debugPuts(__FILE__, __method__, 'EXCEPTION - NEXT_TICK', "[#{@railsRequestId.inspect}] Exception raised and caught (to protect web server) when each-ing over response body. CASE 2: Most likely dev's bodyFinish callback threw an error. Details:\n    - Error Class: #{err.class}\n    - Error Message: #{err.message.inspect}\n    - Error Trace:\n#{err.backtrace.join("\n")}")
-            end
-          }
         rescue Exception => err
           $stderr.debugPuts(__FILE__, __method__, 'EXCEPTION - NEXT_TICK', "[#{@railsRequestId.inspect}] Exception raised and caught (to protect web server) when each-ing over response body. CASE 1: Most likely the chunk callback handed to each() threw an error. Details:\n    - Error Class: #{err.class}\n    - Error Message: #{err.message.inspect}\n    - Error Trace:\n#{err.backtrace.join("\n")}")
+          self.fail if( @useAsRespPayload )
         end
       }
+      # Registering 'callback' is vital for the em internal variables to be updated properly. It seems that in cases where we only use stream with no callback block, the internal callback is not called before the next_tick which was defined above (inside @http.stream) 100% of the time. In such cases, the code inside next_tick does not work as http.finished? has not yet been updated properly. Explicitely registering a callback fixes this problem as the internal method hooked to this callback seems to update the http.finished? before block code is executed. This leads to the fact that we probably don't require the next_tick loop above. 
+      @http.callback { |hh|
+        #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] hh.inspct: #{hh.inspect}")
+        begin
+          if(!@sawHttpFinished and hh.finished?)
+            @sawHttpFinished = true
+            if(@finish.is_a?(Proc)) # Have we got a finish callback for notification/flow purposes?
+              @finish.call()
+            end
+            #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Calling succeed.\n*************************")  
+            self.succeed if( @useAsRespPayload )
+          end
+        rescue => err
+          $stderr.debugPuts(__FILE__, __method__, 'EXCEPTION - NEXT_TICK', "[#{@railsRequestId.inspect}] Exception raised and caught (to protect web server) when each-ing over response body. CASE 2: Most likely dev's bodyFinish callback threw an error. Details:\n    - Error Class: #{err.class}\n    - Error Message: #{err.message.inspect}\n    - Error Trace:\n#{err.backtrace.join("\n")}")
+            self.fail if( @useAsRespPayload )
+        end
+      }
+      
     end
 
     # ----------------------------------------------------------------
     # PRIVATE
     # ----------------------------------------------------------------
     private
-
   end
 end

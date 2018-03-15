@@ -110,6 +110,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
       end
       # If we've successfully found a value for @remoteFileSize, then we can proceed with the rest of the preliminary setup.
       if(@remoteFileSize)
+        $stderr.debugPuts(__FILE__, __method__, 'STATUS', "Remote FTP file size: #{@remoteFileSize.inspect}")
         # Set up full file path
         @fullPath = @ftpStorageHelper.getFullFilePath(@path)
         # We need to escape special characters in url (other than instances of /)
@@ -119,7 +120,10 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
         # Set up IO object on file
         fullFtpPath = "ftp://#{@ftpStorageHelper.updatedHost}#{@fullPath}"
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "<#{self.object_id}> Full FTP path is #{fullFtpPath}")
-        curlCommand = %Q^curl --netrc-file #{@genbConf.netrcFile} "#{fullFtpPath}" 2>/dev/null^
+        $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "")
+        #curlCommand = %Q^curl --netrc-file #{@genbConf.netrcFile} "#{fullFtpPath}" 2>/dev/null^
+        curlCommand = %Q^curl -sS --netrc-file #{@genbConf.netrcFile} "#{fullFtpPath}"^
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "curlCommand: #{curlCommand.inspect}\n\tcurl to use: #{`which curl`}\n\t#{`curl --version`}")
         begin
           @fileReader = IO.popen(curlCommand)
         rescue Exception => err
@@ -155,6 +159,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
         # Read a chunk
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "<#{self.object_id}> Reading chunk of data of size #{@chunkSize} (only prints once every 2000 chunks)") if(@offset == 0 or @offset % (@chunkSize * 2000) == 0)
         chunk = @fileReader.read(@chunkSize)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Got chunk (size #{chunk.size rescue "[nil chunk!]"} from #{@fileRead.inspect}")
         # If we successfully grabbed a chunk, then let's add its size to @offset (@offset is currently used to verify that file was completely transferred over from FTP server)
         if(chunk)
           @offset += chunk.size

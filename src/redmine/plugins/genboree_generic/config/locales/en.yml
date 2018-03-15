@@ -1,3 +1,8 @@
 # English strings go here for Rails i18n
 en:
   # my_label: "My label"
+  gb_generic_custom_email_ok: Ok Sir %{value}, mail sent.
+  gb_generic_custom_email_refuse: I don't know you. No email for you!
+
+  # Useful for all plugin-project settings partials since the setting/column must follow a naming convention anyway
+  googleAnalyticsId : Google Analytics ID ("account" ID)

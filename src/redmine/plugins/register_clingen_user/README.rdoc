@@ -1,0 +1,6 @@
+= register_clingen_user
+
+Things need to change based on deployment location:
+
+1. cg_users_controller: set_honor
+2. cg_users_helper: putRequestInit

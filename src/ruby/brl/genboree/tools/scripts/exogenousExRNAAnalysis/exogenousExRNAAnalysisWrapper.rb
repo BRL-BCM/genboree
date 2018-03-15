@@ -55,19 +55,21 @@ module BRL; module Genboree; module Tools; module Scripts
         @scratchDir = @context['scratchDir']
         @scratchDir = "." if(@scratchDir.nil? or @scratchDir.empty?)
         # Make special directory inside of scratch dir that will store species-specific data
-        `mkdir #{@scratchDir}/parseSpecies`
+        `mkdir #{@scratchDir}/readCountsBySpecies`
         # Grab group name and db name
         @groupName = @grpApiHelper.extractName(@outputs[0])
         @dbName = @dbApiHelper.extractName(@outputs[0])
         # Set up tool version variables used throughout this tool
-        @toolVersion = @settings['toolVersion']
+        @toolVersion = @toolConf.getSetting('info', 'version')
+        @settings['toolVersion'] = @toolVersion
         # Set up settings
-        @speciesDir = @toolConf.getSetting('settings', 'speciesDir')
+        @speciesDir = @toolConf.getSetting('settings', 'speciesDir') # Used if we want to write species reads to cluster shared scratch - not currently supported
         @doNotCapture = @toolConf.getSetting('settings', 'doNotCapture')
         @sampleID = @settings['sampleID']
         @localJob = @settings['localJob']
         @biosampleID = @settings['biosampleID']
         @experimentID = @settings['experimentID']
+        @analysisName = @settings['analysisName']
         # Resource path related variables for exRNA collections
         @exRNAHost = @settings['exRNAHost']
         @exRNAKbGroup = @settings['exRNAKbGroup']
@@ -196,7 +198,7 @@ module BRL; module Genboree; module Tools; module Scripts
               oldInputFile = inputFile.clone()
               inputFile = exp.uncompressedFileName
               # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
-              `rm -f #{oldInputFile}` unless(exp.compressedFileName == oldInputFile)
+              `rm -f #{Shellwords.escape(oldInputFile)}` unless(exp.compressedFileName == oldInputFile)
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
             end
           end
@@ -254,30 +256,121 @@ module BRL; module Genboree; module Tools; module Scripts
     def parseExogenousReadsForSpecies(inFile, outputDir, doNotCapture, biofluidName, exRNASource, anatomicalLocation, diseaseType, rnaIsolationKit)
       # Open exogenous read alignments file and start parsing it
       inFileHandle = File.open(inFile, 'r')
+      kingdomToSpeciesHash = {}
+      speciesToReadHash = {}
+      lineCount = 1
       inFileHandle.each_line { |currentRead|
         # Move onto the next line if the kingdom is in the @doNotCapture group (examples: Bacteria, Fungi, etc.)
         kingdomName = currentRead.split("\t")[1]
         next if(doNotCapture.include?(kingdomName))
+        # Grab species name
         speciesName = currentRead.split("\t")[2]
-        # Add sample ID to the beginning of the line and add metadata fields to end of line
-        currentRead = "#{@sampleID}\t#{currentRead.chomp!}\t#{biofluidName}\t#{exRNASource}\t#{anatomicalLocation}\t#{diseaseType}\t#{rnaIsolationKit}\n"
-        # Make species-specific directory if it doesn't already exist 
-        `mkdir -p #{@scratchDir}/parseSpecies/#{kingdomName}/#{speciesName}`
-        # Write current line (read) to sample-specific file inside species-specific directory
-        File.open("#{@scratchDir}/parseSpecies/#{kingdomName}/#{speciesName}/#{@sampleID}.txt", 'a') { |file| file.write(currentRead) }
+        # Initialize kingdom in hash if it doesn't already exist
+        unless(kingdomToSpeciesHash[kingdomName])
+          kingdomToSpeciesHash[kingdomName] = []
+        end
+        # Add kingdom / species link to hash (if it's not already present)
+        kingdomToSpeciesHash[kingdomName] << speciesName unless(kingdomToSpeciesHash[kingdomName].include?(speciesName))
+        # Generate read line - add sample ID to the beginning of the line and add metadata fields to end of line
+        currentRead = "#{@sampleID}\t#{currentRead.chomp!}\t#{biofluidName}\t#{exRNASource}\t#{anatomicalLocation}\t#{diseaseType}\t#{rnaIsolationKit}"
+        # Initialize species in hash if it doesn't already exist
+        unless(speciesToReadHash[speciesName])
+          speciesToReadHash[speciesName] = []
+        end
+        # Add species / read link to hash
+        speciesToReadHash[speciesName] << currentRead
+        # We'll flush the hashes to disk every 1,000,000 lines
+        if(lineCount % 1000000 == 0)
+          flushHashesToDisk(kingdomToSpeciesHash, speciesToReadHash)
+          # Clean up hashes since we're done with writing their contents to disk
+          kingdomToSpeciesHash = {}
+          speciesToReadHash = {}          
+        end
+        lineCount += 1
       }
+      # We'll flush the hashes to disk a final time (because reads are left over unless we landed perfectly on some multiple of 1000000 reads)
+      # Traverse all kingdoms captured
+      flushHashesToDisk(kingdomToSpeciesHash, speciesToReadHash) 
+      # Clean up hashes since we're done with writing their contents to disk
+      kingdomToSpeciesHash = {}
+      speciesToReadHash = {}
       inFileHandle.close()
-      # Copy all file contents created above to the shared cluster area
-      allKingdoms = Dir.entries("#{@scratchDir}/parseSpecies") ; nil
-      allKingdoms.delete(".")
-      allKingdoms.delete("..")
-      allKingdoms.each { |currentKingdom|
-        `rsync -a #{@scratchDir}/parseSpecies/#{currentKingdom} #{@speciesDir}`
-      }
+      # Compress results
+      `cd #{@scratchDir} ; zip -r #{@sampleID}_readCountsBySpecies.zip readCountsBySpecies`
+      readCountsBySpeciesArchive = "#{@scratchDir}/#{@sampleID}_readCountsBySpecies.zip"
+      # Upload archive to Genboree
+      transferFile(readCountsBySpeciesArchive, "readCountsBySpecies")
       return
     end
 
-############ END of methods specific to this runExceRpt wrapper
+    # Flushes species information (from kingdomToSpeciesHash and speciesToReadHash) from hash to disk
+    # @param [Hash<String, Array>] kingdomToSpeciesHash Hash that maps kingdoms to species
+    # @param [Hash<String, Array>] speciesToReadHash Hash that maps species to reads
+    def flushHashesToDisk(kingdomToSpeciesHash, speciesToReadHash)
+      # Traverse all kingdoms captured in this set of lines
+      kingdomToSpeciesHash.each_key { |currentKingdom|
+        # Grab list of species associated with current kingdom
+        currentSpeciesList = kingdomToSpeciesHash[currentKingdom]
+        # Traverse list of species
+        currentSpeciesList.each { |currentSpecies|
+          # Grab set of reads associated with current species
+          currentReads = speciesToReadHash[currentSpecies]
+          # Create output for current species
+          outputForFile = currentReads.join("\n")
+          currentSpecies = currentSpecies.makeSafeStr(:ultra)
+          # Make species-specific directory if it doesn't already exist
+          `mkdir -p #{@scratchDir}/readCountsBySpecies/#{currentKingdom}/#{Shellwords.escape(currentSpecies)}` unless(File.directory?("#{@scratchDir}/readCountsBySpecies/#{currentKingdom}/#{currentSpecies}"))
+          # Write set of reads to sample-specific file inside species-specific directory
+          File.open("#{@scratchDir}/readCountsBySpecies/#{currentKingdom}/#{currentSpecies}/#{@sampleID}_#{CGI.escape(@analysisName)}_#{currentSpecies}.txt", 'a') { |file| file.write(outputForFile) }
+        }
+      }      
+      return
+    end
+
+
+    # Transfer a source file to the user's Genboree database for a particular sample
+    # @param [String] sourceFile path to source file we're uploading
+    # @param [String] subArea analysis sub area used (readCountsBySpecies, for example)
+    # @return [nil]
+    def transferFile(sourceFile, subArea)
+      # Parse target URI for outputs
+      targetUri = URI.parse(@outputs[0])
+      # Specify full resource path
+      unless(@remoteStorageArea)
+        rsrcPath = "#{targetUri.path}/file/exogenousExRNAAnalysis_v#{@toolVersion}/{analysisName}/#{subArea}/#{CGI.escape(@sampleID)}/{outputFile}/data?" 
+      else
+        rsrcPath = "#{targetUri.path}/file/#{CGI.escape(@remoteStorageArea)}/exogenousExRNAAnalysis_v#{@toolVersion}/{analysisName}/#{subArea}/#{CGI.escape(@sampleID)}/{outputFile}/data?" 
+      end
+      rsrcPath << "gbKey=#{@dbApiHelper.extractGbKey(@outputs[0])}" if(@dbApiHelper.extractGbKey(@outputs[0]))
+      # Upload source file to user's Genboree database
+      uploadFile(targetUri.host, rsrcPath, @userId, sourceFile, {:analysisName => @analysisName, :outputFile => File.basename(sourceFile)})
+      return
+    end
+
+    # Upload a given file to Genboree server
+    # @param host [String] host that user wants to upload to
+    # @param rsrcPath [String] resource path that user wants to upload to
+    # @param userId [Fixnum] genboree user id of the user
+    # @param inputFile [String] full path of the file on the client machine where data is to be pulled
+    # @param templateHash [Hash<Symbol, String>] hash that contains (potential) arguments to fill in URI for API put command
+    # @return [nil]
+    def uploadFile(host, rsrcPath, userId, input, templateHash)
+      # Call FileApiUriHelper's uploadFile method to upload current file
+      retVal = @fileApiHelper.uploadFile(host, rsrcPath, userId, input, templateHash)
+      # Set error messages if upload fails using @fileApiHelper's uploadFailureStr variable
+      unless(retVal)
+        @errUserMsg = @fileApiHelper.uploadFailureStr
+        @errInternalMsg = @fileApiHelper.uploadFailureStr
+        @exitCode = 38
+        @err = BRL::Genboree::GenboreeError.new(:"Internal Server Error", @errUserMsg)
+        raise @err
+      else
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "#{input} uploaded successfully to server")
+      end
+      return
+    end
+
+############ END of methods specific to this exogenousExRNAAnalysis wrapper
     
 ########### Email 
 
@@ -407,6 +500,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('exogenousTaxoTreeJobIDDir')
       @settings.delete('filePathToListOfJobIds')
       @settings.delete('wbContext')
+      @settings.delete('exogenousClaves')
     end
 
     def customBuildSectionEmailSummary(section)

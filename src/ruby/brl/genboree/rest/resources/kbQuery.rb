@@ -53,6 +53,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
         @groupName  = Rack::Utils.unescape(@uriMatchData[1]).to_s.strip
         @kbName     = Rack::Utils.unescape(@uriMatchData[2]).to_s.strip
         @queryName     = Rack::Utils.unescape(@uriMatchData[3]).to_s.strip
+        @collName = BRL::Genboree::KB::Helpers::QueriesHelper::KB_CORE_COLLECTION_NAME
         initStatus = initGroupAndKb()
       end
       return initStatus
@@ -77,7 +78,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 queryCursor.rewind!
                 queryCursor.each { |doc|
                   doc = BRL::Genboree::KB::KbDoc.new( doc )
+                  queryDocId = doc['_id']
                   entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)  
+                  entity.metadata = queriesHelper.getMetadata(queryDocId, "kbQueries")
                 }
                 @statusName = configResponse(entity) 
               else
@@ -149,14 +152,24 @@ module BRL ; module REST ; module Resources                # <- resource classes
                       cursor.each {|dd|
                         qDoc = dd
                       }
+                      # Existing query document
                       if(qDoc and !qDoc.empty?)
                         queryDoc['_id'] = qDoc["_id"]
-                        queriesHelper.save(queryDoc, @gbLogin)
-                        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, queryDoc)
-                        configResponse(bodyData)
-                        @statusName = :'Moved Permanently'
-                        @statusMsg = "UPDATED_QUERY_DOC: The query document with the id: #{@queryName.inspect} was updated."
-                      else
+                        workingRevisionMatched = true
+                        if(@workingRevision)
+                          workingRevisionMatched = queriesHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, qdoc["_id"], collName)
+                        end
+                        if(workingRevisionMatched)
+                          queriesHelper.save(queryDoc, @gbLogin)
+                          bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, queryDoc)
+                          configResponse(bodyData)
+                          @statusName = :'Moved Permanently'
+                          @statusMsg = "UPDATED_QUERY_DOC: The query document with the id: #{@queryName.inspect} was updated."
+                        else
+                          @statusName = :"Conflict"
+                          @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                        end
+                      else # New query document
                         queriesHelper.save(queryDoc, @gbLogin)
                         bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, queryDoc)
                         configResponse(bodyData)
@@ -169,8 +182,13 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     end      
                   end
                 else
+                  if( validator.respond_to?(:buildErrorMsgs) )
+                    errors = validator.buildErrorMsgs()
+                  else
+                    errors = validator.validationErrors
+                  end
                   @statusName = :'Unsupported Media Type'
-                  @statusMsg = "BAD_QUERY: The query document does not follow the specification of the query model:\n\n#{validator.validationErrors}"
+                  @statusMsg = "BAD_QUERY: The query document does not follow the specification of the query model:\n\n#{errors.join("\n")}"
                 end
               rescue => err
                 @statusName = :'Internal Server Error'
@@ -208,14 +226,25 @@ module BRL ; module REST ; module Resources                # <- resource classes
               queriesCursor = queriesHelper.coll.find({ "Query.value" => @queryName})
               if(queriesCursor and queriesCursor.is_a?(Mongo::Cursor) and queriesCursor.count > 0) # Should be just one
                 queriesCursor.rewind!
+                qdocId = nil
                 queriesCursor.each { |doc|
                   doc = BRL::Genboree::KB::KbDoc.new( doc )
+                  qDocId = doc['_id']
                   entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
                 }
-                queriesHelper.coll.remove( { "Query.value" => @queryName} )
-                @statusMsg = "DELETED: The query: #{@queryName} was deleted from the database."
-                @statusName = :OK
-                configResponse(entity) 
+                workingRevisionMatched = true
+                if(@workingRevision)
+                  workingRevisionMatched = queriesHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, qDocId, collName)
+                end
+                if(workingRevisionMatched)
+                  queriesHelper.coll.remove( { "Query.value" => @queryName} )
+                  @statusMsg = "DELETED: The query: #{@queryName} was deleted from the database."
+                  @statusName = :OK
+                  configResponse(entity)
+                else
+                  @statusName = :"Conflict"
+                  @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                end
               else
                 # Check to see if query is one of the 'implicit' queries
                 if(BRL::Genboree::KB::Helpers::QueriesHelper::IMPLICIT_QUERIES_DEFS.key?(@queryName))           

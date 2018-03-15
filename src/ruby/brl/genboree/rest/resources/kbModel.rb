@@ -77,18 +77,19 @@ module BRL ; module REST ; module Resources                # <- resource classes
           modelsHelper = @mongoKbDb.modelsHelper()
           modelDoc = modelsHelper.modelForCollection(@collName)
           if(modelDoc and !modelDoc.empty?)
+            docId = modelDoc["_id"]
+            dbRef = BSON::DBRef.new('kbModels', docId)
             if(!@versionNum)
               model = ( (repFormat == :JSON or repFormat == :JSON_PRETTY) ? modelDoc.getPropVal("name.model") : modelDoc)
               bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, model)
+              bodyData.metadata = modelsHelper.getMetadata(dbRef)
               @statusName = configResponse(bodyData)
             else # Requesting a specific version
-              docId = modelDoc["_id"]
               versionsHelper = @mongoKbDb.versionsHelper('kbModels') rescue nil
               if(versionsHelper.nil?)
                 @statusName = :"Internal Server Error"
                 @statusMsg = "Failed to access versions collection for collection 'kbModels'"
               else
-                dbRef = BSON::DBRef.new('kbModels', docId)
                 # get specified version of the document
                 versionDoc = versionsHelper.getVersion(@versionNum, dbRef)
                 if(versionDoc.nil?)
@@ -99,6 +100,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                   modelDoc = BRL::Genboree::KB::KbDoc.new(modelDoc)
                   model = ( (repFormat == :JSON or repFormat == :JSON_PRETTY) ? modelDoc.getPropVal("name.model") : modelDoc)
                   bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, model)
+                  #bodyData.metadata = modelsHelper.getMetadata(dbRef)
                   @statusName = configResponse(bodyData)
                 end
               end
@@ -145,19 +147,29 @@ module BRL ; module REST ; module Resources                # <- resource classes
               payloadModelDoc = payload.doc
               if(!modelsHelper.valid?(payloadModelDoc))
                 @statusName = :"Unsupported Media Type"
-                @statusMsg = "BAD_MODEL_DOC: The model you provided does not match the GenboreeKB specifications:\n\n#{modelsHelper.lastValidatorErrors}"
+                @statusMsg = "BAD_MODEL_DOC: The model you provided does not match the GenboreeKB specifications:\n\n#{modelsHelper.lastValidatorErrors.join("\n")}"
               else
                 modelDoc = modelsHelper.modelForCollection(@collName)
                 # There is a model for this collection already
                 # For now, we do not support this since it can make all the docs of a collection invalid if the model is not properly updated
                 if(modelDoc and !modelDoc.empty?)
                   if(@unsafeForceModelUpdate)
-                    modelDoc.setPropVal('name.model', payloadModelDoc)
-                    modelsHelper.save(modelDoc, @gbLogin)
-                    bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadModelDoc)
-                    configResponse(bodyData)
-                    @statusName = :'Moved Permanently'
-                    @statusMsg = "UPDATED_MODEL_DOC: The model document for the collection: #{@collName} was updated."
+                    docId = modelDoc["_id"]
+                    workingRevisionMatched = true
+                    if(@workingRevision)
+                      workingRevisionMatched = modelsHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, docId, "kbModels")
+                    end
+                    if(workingRevisionMatched)
+                      modelDoc.setPropVal('name.model', payloadModelDoc)
+                      modelsHelper.save(modelDoc, @gbLogin)
+                      bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadModelDoc)
+                      configResponse(bodyData)
+                      @statusName = :'Moved Permanently'
+                      @statusMsg = "UPDATED_MODEL_DOC: The model document for the collection: #{@collName} was updated."
+                    else
+                      @statusName = :"Conflict"
+                      @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                    end
                   else
                     @statusName = :'Bad Request'
                     @statusMsg = "BAD_REQUEST: A model document for the collection #{@collName} already exists. Updating an exising model is currently not allowed since changing the model inappropriately can lead to all the documents in a collection becoming invalid."

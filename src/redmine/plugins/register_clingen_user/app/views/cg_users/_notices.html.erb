@@ -1,0 +1,16 @@
+<p>
+  <% begin %>
+   <% if flash.keys.include?( :success ) %>
+    <div class="alert alert-success">
+      <%= flash[:success] unless flash[:success].blank? %>
+    </div>
+   <% end %>
+
+   <% if flash.keys.include?( :error ) %>
+    <div class="alert alert-danger">
+      <%= flash[:error] unless flash[:error].blank? %>
+    </div>
+   <% end rescue ""%>
+  <% rescue %>
+  <% end %>
+</p>

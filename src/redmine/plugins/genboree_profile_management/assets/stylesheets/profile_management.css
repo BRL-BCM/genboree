@@ -1,0 +1,35 @@
+.form_container {
+  margin-left: auto ;
+  margin-right: auto ;
+  margin-top: 10px ;
+  margin-bottom: 50px ;
+  width: 90% ;
+}
+
+.form_container .form-control {
+  margin-bottom: 10px ;
+}
+
+.submit-button, .form-row {
+  padding-top: 30px;
+}
+
+.edit-btn {
+  margin-top: 20px;
+}
+
+.change-pwd-btn {
+  margin-top: 20px ;
+}
+
+.forgot-pwd {
+  margin-left: 10px ;
+}
+
+.btn-group.right-justified {
+  float: right ;
+}
+
+.footer {
+  border-top: 1px solid #bbbec0 ;
+}

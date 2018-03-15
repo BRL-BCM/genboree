@@ -55,7 +55,7 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
       @dbu.setNewDataDb(databaseName)      
  
       # create table
-      raise ArgumentError "ERROR_CREATE_TABLE: Failed to create kbDocsLink Table for the collection - #{@collName}" if(createTable().nil?)
+      raise ArgumentError, "ERROR_CREATE_TABLE: Failed to create kbDocsLink Table for the collection - #{@collName}" if(createTable().nil?)
 
       # skip the links property retrieval if interested only in creating table
       # when a fresh collection is created these steps can be skipped
@@ -142,6 +142,7 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
           if(@modelsHelper.withinItemsList(srcProp, @collName))
             psDoc = BRL::Genboree::KB::PropSelector.new(doc)
             srcDocId = psDoc.getMultiPropValues("<>").first
+            #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "srcProp #{srcProp.inspect}") 
             tgtDocUrlValues = getUrlValuesFromItemListProps(srcProp, psDoc)
             tgtDocUrlValues.each {|tgtDocUrlValue|
               tgtDocId = getIdFromUrlValue(tgtDocUrlValue, tgtColl)
@@ -175,7 +176,8 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
       }
       rowsdeleted = deleteBySrcDocIds(deletionRecs) unless(deletionRecs.empty?)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "rowsdeleted#{rowsdeleted.inspect}") 
-      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "#{upsertRows.inspect}") 
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "UpsertRows.first ------------------- #{upsertRows.first.inspect}") 
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "UpsertRows.size-----------#{upsertRows.size()}") 
       numRowsUpserted = upsertRawRows(upsertRows)
       return numRowsUpserted
     end
@@ -285,6 +287,7 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
     # @param [String] tgtColl target collection name 
     # @return [String, Boolean] retVal document ID from the URL, false if validation fails
     def getIdFromUrlValue(urlValue, tgtColl)
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "urlValue - tgtColl #{urlValue.inspect} - #{tgtColl.inspect}") 
       return BRL::Genboree::KB::Validators::DocValidator::validateObjectTypeToPropValue(urlValue, nil, @mdb, tgtColl, true)
     end
 
@@ -294,7 +297,7 @@ module BRL ; module Genboree ; module KB ; module LookupSupport
     # @return [Array<String>] tgtUrlValues property values
     def getUrlValuesFromItemListProps(srcProp, psDoc)
       tgtUrlValues = []
-      propSelPath = @modelsHelper.modelPathToPropSelPath(srcProp, @collName)      
+      propSelPath = @modelsHelper.modelPathToPropSelPath(srcProp, @model)      
       tgtUrlValues = psDoc.getMultiPropValues(propSelPath) rescue nil      
       tgtUrlValues = tgtUrlValues.nil? ? [] : tgtUrlValues.compact
       return tgtUrlValues

@@ -223,7 +223,12 @@ class AnswersHelper < AbstractHelper
         @lastContNeeded = docValidator.contentNeeded
         retVal = :CONTENT_NEEDED
       else
-        @validatorErrors = docValidator.validationErrors.dup
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( docValidator.respond_to?(:buildErrorMsgs) )
+          @validatorErrors = docValidator.buildErrorMsgs()
+        else
+          @validatorErrors = docValidator.validationErrors.dup
+        end
         retVal = false
       end
       return retVal

@@ -15,6 +15,8 @@ module BRL ; module Genboree ; module REST ; module Helpers
     attr_accessor :dbApiUriHelper
     # uploadFailureStr will hold any upload failure message for a given failed upload
     attr_accessor :uploadFailureStr
+    # uploadJobId will store the ID (localFileProcessor or ftpFileProcessor) associated with the most recent successful upload
+    attr_accessor :uploadJobId
     attr_accessor :containers2Children
     attr_accessor :sleepBase
 
@@ -23,6 +25,7 @@ module BRL ; module Genboree ; module REST ; module Helpers
     def initialize(dbu=nil, genbConf=nil, reusableComponents={})
       @dbApiUriHelper = nil
       @uploadFailureStr = ""
+      @uploadJobId = ""
       @attemptNumber = 0
       @sleepBase = 10
 
@@ -155,9 +158,15 @@ module BRL ; module Genboree ; module REST ; module Helpers
       uriObj = URI.parse(uri)
       host = uriObj.host
       rsrcPath = uriObj.path
+      zeroAttempts = 4
+      fileName = ''
+      # Set up attempt number and initial file size (of output file - used for appending?), and sleep for the appropriate amount of time (dependent upon attempt number)
+      attemptNumber = ( opts[:attemptNumber] || 0 )
+      initialFileSize = ( opts[:initialFileSize] || nil )
+      sleepFor = @sleepBase * attemptNumber**2
+      sleep(sleepFor)
       # If we're downloading from the same host that we're running the job on (prod to prod, dev to dev, etc.), then we can avoid using the API for remote-backed files.
       # If the files we want to download are located on a remote host, then we must use the API, even for remote-backed files.
-      fileName = ''
       if(host == @genbConf.machineName or host == @genbConf.machineNameAlias)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because we're downloading from the same host that we're running the job on (#{host}), we can avoid using the API for remote-backed files.")
         # Break file URI into its individual components using the @FILE_REGEXP above
@@ -179,11 +188,6 @@ module BRL ; module Genboree ; module REST ; module Helpers
       else
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because the files we want to download are located on a remote host, we must use the API, even for remote-backed files.")
       end
-      # Set up attempt number and initial file size (of output file - used for appending?), and sleep for the appropriate amount of time (dependent upon attempt number)
-      attemptNumber = ( opts[:attemptNumber] || 0 )
-      initialFileSize = ( opts[:initialFileSize] || nil )
-      sleepFor = @sleepBase * attemptNumber**2
-      sleep(sleepFor)
       begin
         # store initial size of file if it exists to check download success (esp in case of mode='a')
         prevLocalSize = 0
@@ -226,6 +230,13 @@ module BRL ; module Genboree ; module REST ; module Helpers
         end
         # Get file size after download has completed
         postLocalSize = File.size(outputFile)
+        if(postLocalSize == 0)
+          if(attemptNumber < zeroAttempts)
+            raise "Potential issue with downloading file (0 byte file). Will try to download the file again (#{zeroAttempts} attempts in total) just to make sure that the file we're trying to download is really 0 bytes (and not still being put in place)."
+          else
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Downloaded file is 0 bytes, and we already tried #{zeroAttempts} times to re-download it (to make sure that it's supposed to be 0 bytes). Since it's still 0 bytes, we're going to proceed and assume the file is supposed to be 0 bytes.")
+          end
+        end
         # Calculate size difference between after-download and before-download
         sizeDifference = postLocalSize - prevLocalSize
         #  Get the size of the file on Genboree for comparing against our size difference
@@ -238,10 +249,16 @@ module BRL ; module Genboree ; module REST ; module Helpers
             attemptNumber += 1
             $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to download file #{uri} completely after attempt number: #{attemptNumber}. Size of downloaded file: #{sizeDifference}. Size obtained via API call: #{fileSize}. Trying again...")
             ff.close() if(ff and !ff.closed?)
+            if(storageHelper and storageHelper != "Local file")
+              storageHelper.closeRemoteConnection()
+            end
             retVal = downloadFile(uri, userId, outputFile, hostAuthMap, noOfAttempts, mode, {:attemptNumber => attemptNumber, :initialFileSize => initialFileSize})
           else
             $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to download file #{uri} after trying #{noOfAttempts} time(s). Quitting.\n")
             ff.close() if(ff and !ff.closed?)
+            if(storageHelper and storageHelper != "Local file")
+              storageHelper.closeRemoteConnection()
+            end
             retVal = false
             attemptNumber = 0
             initialFileSize = nil
@@ -258,10 +275,16 @@ module BRL ; module Genboree ; module REST ; module Helpers
           attemptNumber += 1
           $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to download file #{uri} after attempt number: #{attemptNumber} . Trying again...\nError:\n#{err.message}\nBacktrace:\n\n#{err.backtrace.join("\n")}")
           ff.close() if(ff and !ff.closed?)
+          if(storageHelper and storageHelper != "Local file")
+            storageHelper.closeRemoteConnection()
+          end
           retVal = downloadFile(uri, userId, outputFile, hostAuthMap, noOfAttempts, mode, {:attemptNumber => attemptNumber, :initialFileSize => initialFileSize})
         else
           $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to download file #{uri} after trying #{noOfAttempts} time(s). Quitting.\n Error:\n#{err.message}\nBacktrace:\n\n#{err.backtrace.join("\n")}")
           ff.close() if(ff and !ff.closed?)
+          if(storageHelper and storageHelper != "Local file")
+            storageHelper.closeRemoteConnection()
+          end
           retVal = false
           initialFileSize = nil
           attemptNumber = 0
@@ -341,6 +364,8 @@ module BRL ; module Genboree ; module REST ; module Helpers
     def uploadFile(host, rsrcPath, userId, inputFile, templateHash={}, plainText=false, noOfAttempts=15)
       # Reset @uploadFailureStr before we try to upload a file (it will hold any upload failure message)
       @uploadFailureStr = ""
+      # Reset @uploadJob before we try to upload a file (it will hold any localFileProcessor or ftpFileProcessor job IDs associated with our uploads)
+      @uploadJobId = ""
       # retVal will be the boolean we return to see whether the upload was successful (true) or not (false)
       retVal = true
       # gotConn will keep track of whether we've successfully uploaded the file within our while loop
@@ -349,6 +374,22 @@ module BRL ; module Genboree ; module REST ; module Helpers
       sleepTime = 0
       # connectionAttempt will keep track of how many attempted connections we've made
       connectionAttempt = 0
+      # The rsrcPath variable above may not be fully filled in, relying on templateHash to fill in missing values for group, db, analysis name, file name, etc.
+      # Our remote storage helper (FTP, for now) doesn't support this kind of templateHash approach, so let's just fix a copy of that rsrcPath so that it has full, correct path
+      rsrcPathForStorageHelper = rsrcPath.clone()
+      templateHash.each_key { |currentKey|
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "We are replacing {#{currentKey}} with #{CGI.escape(templateHash[currentKey])}")
+        rsrcPathForStorageHelper.gsub!("{#{currentKey}}", CGI.escape(templateHash[currentKey]))
+      }
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Resource path for storage helper is: #{rsrcPathForStorageHelper}.")
+      # Break file URI into its individual components using the @FILE_REGEXP above
+      uri = "http://#{host}#{rsrcPathForStorageHelper}"
+      individualComponents = uri.match(@FILE_REGEXP)
+      groupName = CGI.unescape(individualComponents[1])
+      dbName = CGI.unescape(individualComponents[2])
+      fileName = CGI.unescape(individualComponents[3])
+      fileName.slice!("/data")
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Group name is: #{groupName} ; dbName is #{dbName} ; fileName is #{fileName}")
       # First thing we should check: does the input file actually exist? If it doesn't, then we won't try to upload it!
       unless(File.exist?(inputFile))
         $stderr.debugPuts(__FILE__, __method__, "ERROR", "Input file doesn't exist! Full file path is: #{inputFile}")
@@ -359,34 +400,6 @@ module BRL ; module Genboree ; module REST ; module Helpers
         # If we want to upload to a remote host, then we must use the API, even for remote-backed files.
         fileName = ''
         databaseMySQLName = ''
-        if(host == @genbConf.machineName or host == @genbConf.machineNameAlias)
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because we're uploading to the same host that we're running the job on (#{host}), we can avoid using the API for remote-backed files.")
-          # The rsrcPath variable above may not be fully filled in, relying on templateHash to fill in missing values for group, db, analysis name, file name, etc.
-          # Our remote storage helper (FTP, for now) doesn't support this kind of templateHash approach, so let's just fix a copy of that rsrcPath so that it has full, correct path
-          rsrcPathForStorageHelper = rsrcPath.clone()
-          templateHash.each_key { |currentKey|
-            $stderr.debugPuts(__FILE__, __method__, "STATUS", "We are replacing {#{currentKey}} with #{CGI.escape(templateHash[currentKey])}")
-            rsrcPathForStorageHelper.gsub!("{#{currentKey}}", CGI.escape(templateHash[currentKey]))
-          }
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Resource path for storage helper is: #{rsrcPathForStorageHelper}.")
-          # Break file URI into its individual components using the @FILE_REGEXP above
-          uri = "http://#{host}#{rsrcPathForStorageHelper}"
-          individualComponents = uri.match(@FILE_REGEXP)
-          groupName = CGI.unescape(individualComponents[1])
-          dbName = CGI.unescape(individualComponents[2])
-          fileName = CGI.unescape(individualComponents[3]) 
-          fileName.slice!("/data")
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Group name is: #{groupName} ; dbName is #{dbName} ; fileName is #{fileName}")
-          # Set up dbu to be associated with the user's database
-          dbuForUploads = BRL::Genboree::DBUtil.new(@superuserDbDbrc.key, nil, nil)
-          databaseMySQLName = dbuForUploads.selectRefseqByNameAndGroupName(dbName, groupName)[0]["databaseName"] rescue nil
-          dbuForUploads.setNewDataDb(databaseMySQLName)
-          # Create storage helper (local or FTP) to help us upload our file
-          storageHelper = createStorageHelperFromTopRec(fileName, groupName, dbName, userId, dbuForUploads)
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Storage helper is class #{storageHelper.class.inspect}.")
-        else
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because we want to upload our files to a remote host, we must use the API, even for remote-backed files.")
-        end
         while(connectionAttempt < noOfAttempts and !gotConn and retVal)
           # Setting up sleep time for each connection attempt (gets bigger as connection attempts go up in number)
           # We add rand(10 * connectionAttempt) to add some randomness after our first request in case of multiple requests given very closely together
@@ -396,6 +409,18 @@ module BRL ; module Genboree ; module REST ; module Helpers
           $stderr.debugPuts(__FILE__, __method__, "SLEEP", "Going to sleep for #{sleepTime.inspect} seconds") if(sleepTime > 0)
           # Sleeping for a total of sleepTime
           sleep(sleepTime)
+          if(host == @genbConf.machineName or host == @genbConf.machineNameAlias)
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because we're uploading to the same host that we're running the job on (#{host}), we can avoid using the API for remote-backed files.")
+            # Set up dbu to be associated with the user's database
+            dbuForUploads = BRL::Genboree::DBUtil.new(@superuserDbDbrc.key, nil, nil)
+            databaseMySQLName = dbuForUploads.selectRefseqByNameAndGroupName(dbName, groupName)[0]["databaseName"] rescue nil
+            dbuForUploads.setNewDataDb(databaseMySQLName)
+            # Create storage helper (local or FTP) to help us upload our file
+            storageHelper = createStorageHelperFromTopRec(fileName, groupName, dbName, userId, dbuForUploads)
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Storage helper is class #{storageHelper.class.inspect}.")
+          else
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Because we want to upload our files to a remote host, we must use the API, even for remote-backed files.")
+          end
           begin
             # If the file is going to a remote host, or the file is being uploaded locally (as a local file), then we'll do it via an API PUT call
             if(!storageHelper or storageHelper == "Local file")
@@ -421,11 +446,11 @@ module BRL ; module Genboree ; module REST ; module Helpers
               # If it isn't, then we don't want to continue - let's set @uploadCheck to 3 and end things immediately
               if(statusCode == "Not Found")
                 $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to upload file because output location no longer exists. Please ensure that output group / database are still present with the same names as when job was submitted.")
-                @uploadFailureStr = "Failed to upload file because output location no longer exists.\nPlease ensure that output group / database are still present\nwith the same names as when you submitted the job."
+                @uploadFailureStr = "Failed to upload file because output location no longer exists.\nPlease ensure that output group (\"#{groupName}\") and database (\"#{dbName}\")\nare still present with the same names as when you submitted the job."
                 retVal = false
               elsif(statusCode == "Forbidden")
                 $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to upload file because user is forbidden to upload to output location. Please ensure that user has permission to upload to output group / database.")
-                @uploadFailureStr = "We could not upload your file because you are forbidden to upload to the output location. Please ensure that you have permission to upload to the output group / database."
+                @uploadFailureStr = "We could not upload your file because you are forbidden to upload to the output location.\nPlease ensure that you have permission to upload to the output group (\"#{groupName}\") and database (\"#{dbName}\")."
                 retVal = false
               end
               # If apiCaller did not succeed, then we know the file was not uploaded successfully.
@@ -446,6 +471,9 @@ module BRL ; module Genboree ; module REST ; module Helpers
               elsif(apiCaller.succeeded?)
                 # Set gotConn to true since we successfully put the file on the Genboree server
                 gotConn = true
+                # Grab job ID associated with upload and save it in @uploadJobId
+                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "apiCaller resp body: #{apiCaller.respBody.inspect}.")
+                @uploadJobId = apiCaller.parseRespBody["status"]["relatedJobIds"][0]
               end
             else
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "We're uploading our file to a remote-backed location, and its Genboree instance is local. This means we can use the Net::FTP helper to upload the file (and avoid using the API).")
@@ -499,6 +527,10 @@ module BRL ; module Genboree ; module REST ; module Helpers
               $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to upload file after trying #{connectionAttempt} time(s). Quitting.\n Error:\n#{err.message}\nBacktrace:\n\n#{err.backtrace.join("\n")}")
               @uploadFailureStr = "Failed to upload file after trying #{connectionAttempt} time(s). Quitting."
               retVal = false
+            end
+          ensure
+            if(storageHelper and storageHelper != "Local file")
+              storageHelper.closeRemoteConnection()
             end
           end
         end

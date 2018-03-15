@@ -2,7 +2,8 @@
   {
     "text": "WGS Microbiome Pipeline",
     "tooltip": "",
-    "idStr": "wgsMicrobiomePipeline"
+    "idStr": "wgsMicrobiomePipeline",
+    "hidden": true
   },
 /*  {
     "text": "WGS Microbiome Pipeline - Sequence Import",
@@ -28,24 +29,29 @@
   {
     "text": "Taxonomic Classification (RDP)",
     "tooltip": "Run RDP’s Classifier pipeline on sample-specific FASTA data.",
-    "idStr": "rdp"
+    "idStr": "rdp",
+    "hidden": true
   },
   {
     "text": "QIIME",
     "tooltip": "Creates sample groups, generates OTU table, generates sample metadata.",
-    "idStr": "qiime"
+    "idStr": "qiime",
+    "hidden": true
   },
   {
     "text": "Alpha Diversity",
     "tooltip": "",
-    "idStr": "alphaDiversity"
+    "idStr": "alphaDiversity",
+    "hidden": true
   },
   {
-    "text" : "Machine Learning"
+    "text" : "Machine Learning",
+    "hidden": true
   },
   {
     "text": "WGS Sample Grid Viewer",
     "idStr": "microbiomeSampleGridViewer",
-    "tooltip": "Launch the specialized WGS Sample grid viewer application."
+    "tooltip": "Launch the specialized WGS Sample grid viewer application.",
+    "hidden": true
   }
 ]

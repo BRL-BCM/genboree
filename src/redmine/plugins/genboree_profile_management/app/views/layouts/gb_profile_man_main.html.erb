@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="<%= current_language %>">
+<head>
+  <meta charset="utf-8" />
+  <title><%=h html_title %></title>
+  <meta name="description" content="<%= Redmine::Info.app_name %>" />
+  <%# Have Redmine add its authorization token meta tags (and favicon meta tag) %>
+  <%= csrf_meta_tag %>
+  <%= favicon %>
+  <%# Common javascript and stylesheet assets needed by "all" pages: %>
+  <%= javascript_include_tag 'jquery-1.12.min.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'jquery-ujs-2.0.3.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'bootstrap-fa-extensive-noMedia.min.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'bootstrap-slider-altSnapTo.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'bootstrap-select.min.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'validator.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'helpers.js', :plugin => 'genboree_generic' %>
+  <%= javascript_include_tag 'application.js' %>
+  <%= stylesheet_link_tag 'font-awesome.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'bootstrap-fa-extensive-noMedia.min.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'bootstrap-slider.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'bootstrap-select.min.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'bootstrap-grid-cell-height-fix.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'font-awesome.custom.css', :plugin => 'genboree_generic', :media => 'all' %>
+  <%= stylesheet_link_tag 'profile_management.css', :plugin => 'genboree_profile_management', :media => 'all' %>
+  <%# Arrange for any <head> content from the specific View (i.e. via this: content_for :header_tags) %>
+  <%= yield :header_tags -%>
+  <%
+    @projectId = @projectId.to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe
+    @kbMount = RedmineApp::Application.routes.default_scope[:path].to_s.gsub(/'/, "\\\\'").gsub(/\n/, ' ').html_safe
+    @closeableFlashes = @closeableFlashes.nil? ? true : @closeableFlashes
+  %>
+  <script>
+    // Enable BS tooltips
+    $(window).load(function(){
+      $('[data-toggle="tooltip"]').tooltip({trigger: 'hover'});
+    }
+  </script>
+</head>
+<body>
+  <%# This will be in body %>
+  <%# Containder div for the spinner %>
+  <%# * div#content wraps all View html %>
+  <div id="content">
+    <%= render(:partial => "shared/genboree_profile_management_header") %>
+    <%= render(:partial => "gb_generic_flash/gbgeneric_flash_alert") %>
+    <%# Arrange to render and insert output of the specific View (whatever that is at the time) %>
+    <%= yield %>
+    <%= call_hook :view_layouts_base_content %>
+    <%= render(:partial => "shared/genboree_profile_management_footer") %>
+
+    <%# Cleanly end the page with an HTML "blank" line %>
+    <div style="clear:both;"></div>
+  </div>
+  <div id="spinningModal" class="modal fade " data-label="" data-body=""  tabindex="-1" role="dialog">
+    <div id="spinnerContainer" class="loader spinner-container">
+      
+    </div>
+  </div>
+</body>
+</html>
+

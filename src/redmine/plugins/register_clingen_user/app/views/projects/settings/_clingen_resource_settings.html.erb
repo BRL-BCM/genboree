@@ -1,0 +1,74 @@
+<%
+  @clingen_resource_setting = ClingenResourceSetting.find_by_project_id(@project.id)
+  @clingen_resource_setting = ClingenResourceSetting.new if @clingen_resource_setting.nil? 
+%>
+
+<%= form_for @clingen_resource_setting ,:url => { :controller => 'clingen_resource_settings', :action => 'update'} do |f| %>
+
+  <div class="field">
+    <%= f.label :gb_host , "Genboree Host (e.g. genboree.org OR 10.15.55.128. Please avoid adding http or https)"%> <br>
+    <%= f.text_field :gb_host %>
+  </div>
+
+  <div class="field">
+    <%= f.label :acmg_guideline_rest , "ACMG Guidelines REST Path (e.g. /REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/doc/{doc})" %> <br> 
+    <%= f.text_field :acmg_guideline_rest %>
+  </div>
+
+  <div class="field">
+    <%= f.label :acmg_transformation_rest, "Transformation REST Path (e.g. /REST/v1/grp/{grp}/kb/{kb}/trRulesDoc/{doc})" %> <br> 
+    <%= f.text_field :acmg_transformation_rest %>
+  </div>
+
+  <div class="field">
+    <%= f.label :acmg_allowed_tags_rest, "ACMG Allowed Tags REST Path (e.g. /REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/doc/{doc})" %>  <br> 
+    <%= f.text_field :acmg_allowed_tags_rest  %>
+  </div>
+
+  <div class="field">
+    <%= f.label :gb_public_tool_user , "Login for public tool user (e.g. gbPublicToolUser)"%> <br> 
+    <%= f.text_field :gb_public_tool_user %>
+  </div>
+
+  <div class="field"> 
+    <%= f.label :gb_cache_user , "Login for cache user (e.g. gbCacheUser)"%> <br> 
+    <%= f.text_field :gb_cache_user%>
+  </div>
+
+  <div class="field">
+    <%= f.label :registry_grp, "Group where registry access is managed (e.g. Registry)" %>  <br> 
+    <%= f.text_field :registry_grp %>
+  </div>
+
+  <div class="field">
+    <%= f.label :configuration_group, "Group where calculator configuration is stored (e.g. pcalc_resources)" %>  <br> 
+    <%= f.text_field :configuration_group %>
+  </div>
+
+  <div class="field">
+    <%= f.label :configuration_kb , "KB where calculator configuration is stored (e.g. pcalc_resources)"%>  <br> 
+    <%= f.text_field :configuration_kb %>  
+  </div>
+
+  <div class="field"> 
+    <%= f.label :cache_group , "Group where Caches are stored (e.g. pcalc_cache)" %> <br>
+    <%= f.text_field :cache_group %>
+  </div>
+
+  <div class="field">
+    <%= f.label :cache_kb, "KB where Caches are stored (e.g. pcalc_cache)" %> <br>
+    <%= f.text_field :cache_kb %>
+  </div>
+
+  <div class="field">
+    <%= f.label :privilaged_user, "The login for user who has admin access to all above resources (e.g. calculator_admin OR ronakypatel)" %> <br>
+    <%= f.text_field :privilaged_user %>
+  </div>
+
+  <%= f.hidden_field :project_id , :value => @project.id %>
+
+  <div class="actions">
+    <%= f.submit %>
+  </div>
+
+<% end %>

@@ -39,20 +39,20 @@ module BRL ; module NoSQL ; module MongoDb
           avpStr.strip!
           if(avpStr =~ /^([^=]+)=(.+)$/)
             attr, value = $1.strip, $2.strip
-            if(attr =~ /host/i)
+            if(attr =~ /^host$/i)
               raise ArgumentError, "ERROR: The DSN string provided has both a 'host' and 'socket' AVP. This is not allowed." if(value !~ /localhost/i and retVal[:connInfo].key?(:socket))
               retVal[:connInfo][:host] = value
-            elsif(attr =~ /port/i)
+            elsif(attr =~ /^port$/i)
               raise ArgumentError, "ERROR: The DSN string provided has both a 'port' and 'socket' AVP. This is not allowed." if(retVal[:connInfo].key?(:socket))
               if(value =~ /^\d+$/)
                 retVal[:connInfo][:port] = value.to_i
               else
                 raise ArgumentError, "ERROR: The DSN string provided hasa non-integer port value?? (#{value.inspect})"
               end
-            elsif(attr =~ /socket/i)
+            elsif(attr =~ /^socket$/i)
               raise ArgumentError, "ERROR: The DSN string provided has both a 'socket' and a non-localhost 'host' and/or 'port' AVP. Only a host of 'localhost' is allowed with 'socket' and even then it is optional. This is not allowed." if((retVal[:connInfo].key?(:host) and retVal[:connInfo][:host] !~ /localhost/i) or retVal[:connInfo].key?(:port))
               retVal[:connInfo][:socket] = value
-            elsif(attr =~ /database/i)
+            elsif(attr =~ /^database$/i)
               next  # skip/remove, databases are to be obtained as needed
             else # capture any others in :opts
               retVal[:opts][attr.to_sym] = value.autoCast(false)

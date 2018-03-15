@@ -1,0 +1,29 @@
+<%
+  @updatePassword = true
+%>
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+    <%= form_tag ({ :controller => :genboree_profile_management_ui_update, :action => :update_pwd } , "method" => :post, "data-toggle" => "validator") do %>
+    <h2>Update Password</h2>
+      <div class="well">
+        <div class="row">
+          <div class="form-group">
+            <div class="col-sm-12">
+              <%= label_tag 'current_password', 'Current password:' %>
+            </div>
+            <div class="col-sm-12">
+              <%= password_field_tag 'current_password', "" , { "class" => "form-control", "required" => true } %>
+              <div class="help-block with-errors"></div>  
+            </div>
+          </div>
+          <%=render :partial => "genboree_profile_management_ui_entry/password" %>
+          <div class="col-sm-12 submit-button">
+            <%= submit_tag "Change Password", "class" => "btn btn-primary" %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+ </div>

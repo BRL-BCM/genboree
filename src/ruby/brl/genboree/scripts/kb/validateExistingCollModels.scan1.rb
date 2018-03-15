@@ -73,7 +73,12 @@ mongoDbNames.each { |mongoDbName|
 
           # Is model valid?
           if(modelValidator.validationErrors and !modelValidator.validationErrors.empty?)
-            $stderr.puts "  - >>FAILED<< COLLECTION: INVALID MODEL stored for collection #{coll.inspect}; not a proper model. Validation error(s):\n\n    . #{modelValidator.validationErrors.join("\n    . ")}\n\n"
+            if( modelValidator.respond_to?(:buildErrorMsgs) )
+              errors = modelValidator.buildErrorMsgs()
+            else
+              errors = modelValidator.validationErrors
+            end
+            $stderr.puts "  - >>FAILED<< COLLECTION: INVALID MODEL stored for collection #{coll.inspect}; not a proper model. Validation error(s):\n\n#{errors.join("\n")}\n\n"
             results[mongoDbName][coll] = :ERR_INVALID_MODEL
           else
             $stderr.puts "  - OK COLLECTION: Valid model stored for #{coll.inspect}"

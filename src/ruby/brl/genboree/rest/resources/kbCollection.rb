@@ -17,9 +17,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
   class KbCollection < BRL::REST::Resources::GenboreeResource
 
     # @return [Hash{Symbol=>Object}] Map of what http methods this resource supports ( @{ :get => true, :put => false }@, etc } ).
-    HTTP_METHODS = { :get => true, :put => true }
+    HTTP_METHODS = { :get => true, :put => true, :delete => true }
     RSRC_TYPE = 'kbCollection'
-    SUPPORTED_ASPECTS = ['labels', 'singularLabel', 'pluralLabel', 'tools', 'stats']
+    SUPPORTED_ASPECTS = ['labels', 'name', 'singularLabel', 'pluralLabel', 'tools', 'stats']
     # @api RestAPI INTERFACE. CLEANUP: Inheriting classes should also implement any specific
     #   cleanup that might save memory and aid GC. Their version should call {#super}
     #   so any parent {#cleanup} will be done also.
@@ -62,6 +62,8 @@ module BRL ; module REST ; module Resources                # <- resource classes
         else
           # This function will set @groupId if it exists, return value is :OK or :'Not Found'
           initStatus = initGroupAndKb()
+          @unsafeForceCollDeletion = (@nvPairs['unsafeForceCollDeletion'].to_s =~ /^(?:yes|true)$/i ? true : false)
+          @unsafeForceCollRename = (@nvPairs['unsafeForceCollRename'].to_s =~ /^(?:yes|true)$/i ? true : false)
         end
       end
       return initStatus
@@ -113,7 +115,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
       initStatus = initOperation()
       if(initStatus == :OK)
         @groupName = Rack::Utils.unescape(@uriMatchData[1])
-        # Only admins have the authority to create/add models for now.
+        # Only admins have the authority to create/add  models and minipulate collections for now.
         if(@groupAccessStr and @groupAccessStr == 'o')
           # Get collMetadataHelper
           collMetadataHelper = @mongoKbDb.collMetadataHelper()
@@ -126,7 +128,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
               payload = parseRequestBodyForEntity('KbDocEntity')
               if(payload.nil?)
                 @statusName = :'Bad Request'
-                @statusMsg = "BAD_REQUEST: No payload provided. You need to provide a property oriented document."
+                @statusMsg = "BAD_REQUEST: No payload provided. You need to provide a property oriented document or text entity with the new collections name."
               elsif(payload == :'Unsupported Media Type')
                 @statusName = :"Unsupported Media Type"
                 @statusMsg = "BAD_PAYLOAD: The payload you provided does not seem to be a property oriented document."
@@ -177,14 +179,52 @@ module BRL ; module REST ; module Resources                # <- resource classes
                       coll['name']['properties']['tools'] = {}
                     end
                     coll['name']['properties']['tools'] = payloadDoc['tools']
+                  elsif(@aspect == 'name')
+                    # @todo implement
+                    if(@unsafeForceCollRename)
+                      if(!payloadDoc.getPropVal('text') and !payloadDoc.getPropVal('name'))
+                        @statusName = :"Unsupported Media Type"
+                        @statusMsg = "BAD_PAYLOAD: Payload must be of the structure: { 'text': { 'value': '' } } or { 'name': { 'value': '' } } "
+                      else
+                        if(payloadDoc.getPropVal('text'))
+                          newName = payloadDoc.getPropVal('text')
+                        else
+                          newName = payloadDoc.getPropVal('name')
+                        end
+
+                        if( newName != @collName )
+                          if( newName.size > 0 and newName.size <= 22 )
+                            result = self.renameCollection(newName)
+                            if(result)
+                              @statusName = :'Moved Permanently'
+                              @statusMsg = "COLL_RENAMED: The #{@collName.inspect} collection was renamed to #{newName.inspect}."
+                              bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, {} )
+                              bodyData.setStatus(@statusName, @statusMsg)
+                              configResponse(bodyData, @statusName)
+                            end
+                          else
+                            @statusName = :'Bad Request'
+                            @statusMsg = "NAME_TOO_LONG: The new collection name of #{newName.inspect} is too long. Restrictions within the underlying storage engine mean excessively long collection names are not allowed. Try to be more succinct; 22 or fewer characters ."
+                          end
+                        else
+                          @statusName = :'Bad Request'
+                          @statusMsg = "NAMES_SAME: The new collection name of #{newName.inspect} is the same as the current collection name #{@collName.inspect}. There is no renaming to do."
+                        end
+                      end
+                    else
+                      @statusName = :'Bad Request'
+                      @statusMsg = "BAD_REQUEST: Renaming a document collection is a very risky, multi-step, non-atomic, and potentially VERY LONG running operation (on large collections, especially ones with lots of historical edits). It's unwise to use the API to do this on a very large live collection, where it may block when it goes to update existing history documents for the collection. Renaming will trivially rename the collection and its history collections, but will also necessarily update the collection metadata document, the model document, and fix the namespace in ALL history records. Finally, renaming may INVALIDATE your existing document content: relative URL-domained properties that mention the old collection name in their value; you would be responsible for addressing those broken inter-doc links. Because of all this non-atomic and possibly blocking activity, and the impact on existing data & history content, additional parameters are required to perform a collection rename via the API."
+                    end
                   end
-                  if(@statusName == :OK)
+
+                  # If aspect was metadata related only, have standard response
+                  if( @statusName == :OK and ['labels', 'pluralLabel', 'singularLabel', 'tools'].include?(@aspect) )
                     collMetadataHelper.save(coll, @gbLogin)
                     coll = collMetadataHelper.metadataForCollection(@collName)
                     bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, coll)
-                    configResponse(bodyData)
                     @statusName = :'Moved Permanently'
-                    @statusMsg = "UPDATED_COLL_LABEL: The labels for the collection #{@collName} were updated."
+                    @statusMsg = "UPDATED_COLL_LABEL: The metadata for collection #{@collName.inspect} was modified. Collection metadata for the updated collection available in payload."
+                    configResponse(bodyData, :'Moved Permanently')
                   end
                 rescue => err
                   @statusName = :"Internal Server Error"
@@ -210,7 +250,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 payloadModelDoc = payload.doc
                 if(!modelsHelper.valid?(payloadModelDoc))
                   @statusName = :"Unsupported Media Type"
-                  @statusMsg = "BAD_MODEL_DOC: The model you provided does not match the GenboreeKB specifications:\n\n#{modelsHelper.lastValidatorErrors}"
+                  @statusMsg = "BAD_MODEL_DOC: The model you provided does not match the GenboreeKB specifications:\n\n#{modelsHelper.lastValidatorErrors.join("\n")}"
                 else
                   modelKbDoc = modelsHelper.docTemplate(@collName)
                   modelKbDoc.setPropVal('name.model', payloadModelDoc)
@@ -252,13 +292,95 @@ module BRL ; module REST ; module Resources                # <- resource classes
         end
       end
       # If something wasn't right, represent as error
-      @resp = representError() if(@statusName != :OK)
+
+      @resp = representError() if(@statusName != :OK or @statusName != :'Moved Permanently')
       return @resp
     end
 
     def delete()
-      # @todo No payload
-      # @todo Must have permission
+      initStatus = initOperation() # @set @mongoKbDb
+      if(initStatus == :OK)
+        if(@aspect.nil?)
+          if(@unsafeForceCollDeletion)
+            # Only admins have the authority to create/add  models and minipulate collections for now.
+            if(@groupAccessStr and @groupAccessStr == 'o')
+              begin
+                collMetadataHelper = @mongoKbDb.collMetadataHelper()
+                collMeta = collMetadataHelper.metadataForCollection(@collName)
+                if(collMeta)
+                  dataCollHelper = @mongoKbDb.dataCollectionHelper( @collName )
+                  result = dataCollHelper.dropCollection( @gbLogin )
+                  if(result)
+                    @statusName = :OK
+                    @statusMsg = "OK: Deleted collection #{@collName.inspect}"
+                    bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, collMeta)
+                    @statusName = configResponse(bodyData)
+                  else
+                    @statusName = :'Not Found'
+                    @statusMsg = "NO_COLL: The collection #{@collName.inspect} does not appear to exist or its metadata is corrupt. Cannot delete."
+                  end
+                else
+                  @statusName = :'Not Found'
+                  @statusMsg = "NO_COLL: The collection #{@collName.inspect} does not appear to exist or its metadata is corrupt. Cannot delete."
+                end
+              rescue => err
+                @statusName = :'Internal Server Error'
+                @statusMsg = "INTERNAL_SERVER_ERROR: A key operation unexpectedly failed during the proper deletion of the collection #{@collName.inspect}. Very likely that a PARTIAL deletion has occurred and that the collection is thus corrupt. The error was a #{err.class} whose message was #{err.message.inspect}. Contact adminstrators for help, including this message and exactly what group/kb you were working on, and the current date/time; futher details have been logged."
+              end
+            else
+              @statusName = :Forbidden
+              @statusMsg = "You do not have sufficient permissions to perform this operation. Because it results in complete data loss, including modification history, only group admins have the authority to destroy collections and all their contents."
+            end
+          else
+            @statusName = :'Bad Request'
+            @statusMsg = "BAD_REQUEST: Completely deleting a document collection results in complete and IRRETREIVABLE DATA LOSS, including all history information and the collection model in addition to actual document data. Are you sure you want to do this? Have you grabbed the model and other information for future reference? Because this is dangerous and irretreivable, additional parameters are required."
+          end
+        else
+          @statusName = :'Bad Request'
+          @statusMsg = "BAD_REQUEST: Delete is not supported for the #{@aspect.inspect} aspect of collections."
+          @statusMsg = "BAD_REQUEST: Delete is not supported for the #{@aspect.inspect} aspect of collections."
+        end
+      end
+      # If something wasn't right, represent as error
+      @resp = representError() unless((200..299).include?(HTTP_STATUS_NAMES[@statusName]))
+      return @resp
+    end
+
+    # ----------------------------------------------------------------
+    # Helpers
+    # ----------------------------------------------------------------
+
+    def renameCollection(newName)
+      retVal = false
+      # Check newName arg
+      if(newName and newName =~ /\S/)
+        # Attempt rename
+        begin
+          # Get collMetadata (is collection real?)
+          collMetadataHelper = @mongoKbDb.collMetadataHelper()
+          collMeta = collMetadataHelper.metadataForCollection(@collName)
+          if(collMeta)
+            dataCollHelper = @mongoKbDb.dataCollectionHelper( @collName )
+            result = dataCollHelper.renameCollection( newName, @gbLogin )
+            if(result)
+              retVal = result
+            else
+              @statusName = :'Not Found'
+              @statusMsg = "NO_COLL: The collection #{@collName.inspect} does not appear to exist or its metadata is corrupt. Cannot delete."
+            end
+          else
+            @statusName = :'Not Found'
+            @statusMsg = "NO_COLL: The collection #{@collName.inspect} does not appear to exist or its metadata is corrupt. Cannot rename."
+          end
+        rescue => err
+          @statusName = :'Internal Server Error'
+          @statusMsg = "ERROR: A key operation failed, mostly likely due to user error violating a collection name restriction: The error was a #{err.class} whose message was #{err.message.inspect}. Alternatively, a system task has unexpectedly failed and it's very likely that a PARTIAL renaming has occurred, and that the collection and its support docs are thus corrupt. Contact adminstrators for help, including this message and exactly what group/kb  you were working on, and the current date/time; futher details have been logged."
+        end
+      else
+        @statusName = :'Bad Request'
+        @statusMsg = "BAD_REQUEST: You have not supplied an appropriate payload for the 'name' aspect of the #{@collName.inspect} collection. Cannot rename"
+      end
+      return retVal
     end
   end # class KbCollection < BRL::REST::Resources::GenboreeResource
 end ; end ; end # module BRL ; module REST ; module Resources

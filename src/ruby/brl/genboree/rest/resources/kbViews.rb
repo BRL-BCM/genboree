@@ -85,10 +85,12 @@ module BRL ; module REST ; module Resources                # <- resource classes
           end
           viewsCursor = viewsHelper.coll.find(selector)
           docs = []
+          docIds = []
           if(viewsCursor and viewsCursor.is_a?(Mongo::Cursor) and viewsCursor.count > 0)
             viewsCursor.rewind!
             viewsCursor.each {|doc|
               docs << BRL::Genboree::KB::KbDoc.new(doc)
+              docIds << doc['_id']
             }
             docs.sort { |aa,bb|
               xx = aa.getPropVal('name')
@@ -106,6 +108,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
             end
             bodyData << entity
           }
+          if(!docIds.empty?)
+            bodyData.metadata = viewsHelper.getMetadata(docIds, "kbViews")
+          end
           @statusName = configResponse(bodyData)
         else
           @statusName = :Forbidden

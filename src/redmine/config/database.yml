@@ -13,6 +13,16 @@ production:
   encoding: utf8
   reconnect: true
 
+prod-rake:
+  adapter: mysql2
+  database: redmine
+  host: localhost
+  socket: /usr/local/brl/local/var/mysql.sock
+  username: genboree
+  password: genboree
+  encoding: utf8
+  reconnect: true
+
 #development:
 #  adapter: mysql2
 #  database: redmine_development

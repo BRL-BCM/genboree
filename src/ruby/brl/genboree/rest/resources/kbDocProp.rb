@@ -112,10 +112,10 @@ module BRL; module REST; module Resources
               end
             end
           end
-          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "setting md")
-          #docRef = @dataHelper.getDocRefFromDocName(@model['name'], @docName)
-          #metadata = @dataHelper.getMetadata(docRef, nil, @propPath)
-          #entity.setMetadata(metadata)
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "setting md")
+          docRef = @dataHelper.getDocRefFromDocName(@model['name'], @docName)
+          metadata = @dataHelper.getMetadata(docRef, nil, @propPath)
+          entity.setMetadata(metadata)
         rescue => err
           $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
           $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
@@ -165,26 +165,35 @@ module BRL; module REST; module Resources
                 propSel = BRL::Genboree::KB::PropSelector.new(kbDoc)
                 begin
                   paths = propSel.getMultiPropPaths(@propPath)
-                  $stderr.debugPuts(__FILE__, __method__, "DEBUG", "paths: #{paths.inspect}")
+                  $stderr.debugPuts(__FILE__, __method__, "DEBUG", "paths extracted from propSelector: #{paths.inspect}")
                   subsPropPath = nil
+                  # Path doesn't yet exist in the current document. 
                   if(paths.empty?)
-                    # Trying to put a new item using {}
+                    # Trying to put a new item using {}. Anything else is forbidden
                     raise BRL::Genboree::GenboreeError.new(:"Bad Request", "Cannot create property within an item which does not exist.") if(@propPath !~ /\}$/)
                     pathElements = @propPath.split(".")
                     subsPropPath = "#{pathElements[0..pathElements.size-4].join(".")}.[LAST]"
                     paths = propSel.getMultiPropPaths(subsPropPath)
+                  else # Path exists in the current document. 
+                    # If workingRevision is provided, match is against the current revision of the subdoc
+                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Going to match revision number since path exists in doc...")
+                    workingRevisionMatched = true
+                    workingRevisionMatched = dataHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, @doc['_id'], @collName, @propPath) if(@workingRevision)
+                    unless(workingRevisionMatched)
+                      raise BRL::Genboree::GenboreeError.new(:"Conflict", " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected.")
+                    end
                   end
                   pathElements = kbDoc.parsePath(paths[0])
                   parentProp = kbDoc.findParent(pathElements)
                 rescue => err
-                  raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
+                  if(err.is_a?(BRL::Genboree::GenboreeError))
+                    raise BRL::Genboree::GenboreeError.new(err.type.to_sym, err.message)
+                  else
+                    raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
+                  end
                 end
                 respPayload = {}
-                dv = BRL::Genboree::KB::Validators::DocValidator.new()
                 pathEls = []
-                dv.validationErrors = []
-                dv.validationMessages = []
-                dv.uniqueProps = { :scope => :collection, :props => Hash.new{|hh, kk| hh[kk] = {} }}
                 if(payloadDoc)
                   dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
                   respPayload = {}
@@ -260,8 +269,12 @@ module BRL; module REST; module Resources
                     respPayload = payloadDoc
                   end
                   # Do a fake save just for validation
+                  # @todo Wow, ugh. This ends up revalidating the WHOLE DOC, even while we change just a piece.
+                  # @todo DocValidator can validate sub-doc vs sub-doc model (i.e. the tree at and below a given propDef from the model)
+                  #   In fact, that is how DocValidator WORKS internally!
+                  #   Perhaps a few little extra checks to make sure the sub-doc--which in most cases will have relaxed root validation
+                  #   since actual sub-docs are not at the root level--but this could be implemented, and then avoid cost of revalidating everything.
                   objId = dataHelper.save(kbDoc, @gbLogin, {:save => false})
-                  #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "kbDoc:\n#{JSON.pretty_generate(kbDoc)}")
                   if(objId.is_a?(BSON::ObjectId))
                     if(@save)
                       payloadDocClone = payloadDoc.deep_clone
@@ -280,12 +293,12 @@ module BRL; module REST; module Resources
                 end
               end # if(payloadDoc)
             rescue => err
+              $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
+              $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
               if(err.is_a?(BRL::Genboree::GenboreeError))
                 @statusName = err.type
                 @statusMsg = err.message
               else
-                $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
-                $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
                 @statusName = :"Internal Server Error"
                 @statusMsg = err.message
               end
@@ -315,6 +328,7 @@ module BRL; module REST; module Resources
         dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
         kbDoc = BRL::Genboree::KB::KbDoc.new(@doc)
         propSel = BRL::Genboree::KB::PropSelector.new(kbDoc)
+        paths = nil
         begin
           paths = propSel.getMultiPropPaths(@propPath)
           elems = kbDoc.parsePath(paths[0])
@@ -323,6 +337,15 @@ module BRL; module REST; module Resources
           $stderr.debugPuts(__FILE__, __method__, "ERROR", err.message)
           $stderr.debugPuts(__FILE__, __method__, "ERROR-TRACE", err.backtrace.join("\n"))
           raise BRL::Genboree::GenboreeError.new(:"Bad Request", err.message)
+        end
+        if(paths and !paths.empty? and @workingRevision)
+          # If workingRevision is provided, match is against the current revision of the subdoc
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Going to match revision number since @workingRevision has been provided...")
+          workingRevisionMatched = true
+          workingRevisionMatched = dataHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, @doc['_id'], @collName, @propPath) 
+          unless(workingRevisionMatched)
+            raise BRL::Genboree::GenboreeError.new(:"Conflict", " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected.")
+          end
         end
         respPayload = {}
         @propDef = @mh.findPropDef(@propPath.gsub(/\.\{([^\.])*\}/, ''), @modelDoc)
@@ -386,7 +409,7 @@ module BRL; module REST; module Resources
           raise BRL::Genboree::GenboreeError.new(:"Internal Server Error", "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug.")
         end
         @statusName = :OK
-        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload, true)
+        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respPayload, true, @statusName, @statusMsg)
         configResponse(bodyData)
       rescue => err
         if(err.is_a?(BRL::Genboree::GenboreeError))

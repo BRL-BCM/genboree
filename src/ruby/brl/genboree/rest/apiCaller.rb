@@ -134,7 +134,9 @@ module REST #:nodoc:
     # The open-connection timeout specifically for HTTPS. Since we try HTTPS first, need to establish quickly whether it is supported or not.
     attr_accessor :maxOpenTimeout
     # An instance of a subclass of +HTTPResponse+ instance returned in the last completed API request.
-    attr_accessor :httpResponse
+    attr_accessor :httpResponse 
+    # Boolean to decide whether we immediately skip HTTPS (and move onto trying HTTP) or not 
+    attr_accessor :skipHttps
     # The entire response as a Ruby Object (+Hash+), following successful parsing via a call to <tt>#parseRespBody</tt>.
     attr_accessor :apiRespObj
     # The 'status' part of the response as a Ruby Object (+Hash+), following successful parsing via a call to <tt>#parseRespBody</tt>.
@@ -265,6 +267,8 @@ module REST #:nodoc:
       @sleepBase        = reattemptSettings[:sleepBase]
       @maxTimeoutRetry  = reattemptSettings[:maxTimeoutRetry]
       @maxOpenTimeout   = reattemptSettings[:maxOpenTimeout]
+      # By default, we do NOT skip HTTPS
+      @skipHttps = false
     end
 
     # CLEANUP. Important to call this if you are reading through the response in chunks
@@ -800,6 +804,9 @@ module REST #:nodoc:
           end
         end
       rescue => err
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Error rescued from parseRespBody method: #{err.inspect}")
+        errBacktrace = err.backtrace.join("\n")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Backtrace: #{errBacktrace}")
         retVal = err
       end
       @apiRespObj = retVal
@@ -919,7 +926,7 @@ module REST #:nodoc:
     def doRequest(method, varMap=nil, payload=nil, &block)
       retVal = nil
       payload = "" unless(payload)
-      skipHttps = false
+      skipHttps = @skipHttps
       # Clear out stuff related to previous request, if any
       @httpResponse = @apiRespObj = @apiStatusObj = @apiDataObj = nil
       # Check that our @rsrcPath looks appropriate
@@ -1007,7 +1014,7 @@ module REST #:nodoc:
                   @http.open_timeout = @maxOpenTimeout
                   @http.read_timeout = @httpTimeout
                   @http.ssl_timeout = @httpTimeout
-                  $stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### 1st: trying HTTPS. Final URI and timeout info used: #{httpsFullUriObj.inspect} ;    ######    open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect} ; ssl_timeout: #{@http.ssl_timeout.inspect}")
+                  #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### 1st: trying HTTPS. Final URI and timeout info used: #{httpsFullUriObj.inspect} ;    ######    open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect} ; ssl_timeout: #{@http.ssl_timeout.inspect}")
                   # To protect against a particular Ruby implementation bug when connecting via HTTPS that succeeds to a
                   #   firewall/termination point BUT for which the upstream server doesn't respond with any content (e.g. BCM firewall
                   #   with SSL certs & valid connection, but without OUR nginx actually responding to https traffic on 443...BCM firewall
@@ -1043,10 +1050,10 @@ module REST #:nodoc:
                 @http = ::Net::HTTP.new(httpFullUriObj.host, httpFullUriObj.port)
                 @http.open_timeout = @maxOpenTimeout
                 @http.read_timeout = @httpTimeout
-                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### 2nd: Trying fallback via HTTP. Final URI and timeout info used: #{httpsFullUriObj.inspect} ;    ######    open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect}")
+                #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### 2nd: Trying fallback via HTTP. Final URI and timeout info used: #{httpsFullUriObj.inspect} ;    ######    open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect}")
 
                 @http.start
-                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "     -> HTTP connection SUCCESS ; Conn 'started'? #{@http.started?.inspect}")
+                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "     -> HTTP connection SUCCESS [fallback]; Conn 'started'? #{@http.started?.inspect}")
               rescue Exception => bigError
                 $stderr.debugPuts(__FILE__, __method__, "ERROR", "UNexpected HTTP/S connection exception was: #{bigError.class.inspect} ; msg: #{bigError.message.inspect}")
               ensure # should have usable @http regardless of HTTPS or HTTP setup
@@ -1072,8 +1079,9 @@ module REST #:nodoc:
                       end
                       # body or body_stream now set; can do request
                     end
-
+                    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect} ; ssl_timeout: #{@http.ssl_timeout.inspect}")
                     @http.request(req) { |resp|
+                      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "###### open_timeout: #{@http.open_timeout.inspect} ; read_timeout: #{@http.read_timeout.inspect} ; ssl_timeout: #{@http.ssl_timeout.inspect}")
                       @httpResponse = resp
                       if(lastTimeOut.nil?) # regular http response of some kind
                         # Feedback only if we [finally] got a connection during a REATTEMPT:

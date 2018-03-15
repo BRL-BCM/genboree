@@ -303,7 +303,12 @@ module BRL ; module Genboree ; module Tools
 
           # Signature
           if(emailConf.erccTool)
-            adminEmailStr = "a DCC admin (#{genbConfig.gbDccAdminEmails.join(", ")})"
+            adminEmailStr = "a DCC admin "
+            if(genbConfig.gbDccAdminEmails.class == Array)
+              adminEmailStr << "(#{genbConfig.gbDccAdminEmails.join(", ")})"
+            else
+              adminEmailStr << "(#{genbConfig.gbDccAdminEmails})"
+            end
           else
             adminEmailStr = "the Genboree Team (#{genbConfig.gbAdminEmail})"
           end

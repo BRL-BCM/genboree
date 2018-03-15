@@ -324,7 +324,7 @@ func_run "gem install --local libxslt-ruby-1.1.0.gem --
 --with-exslt-include=${DIR_TARGET}/include/libexslt"
 rm libxslt-ruby-1.1.0*
 #ruby-prof
-func_gem "ruby-prof-0.11.3"
+func_gem "ruby-prof-0.13.1"
 #syntax
 func_gem "syntax-1.2.0"
 #open4
@@ -371,7 +371,6 @@ func_gem 'em-http-request-1.1.2'
 # missing stuff
 func_gem "diffy-3.0.7"
 
-
 # 2016-06-16.revHistoryForOutcomes - genboree_ac
 func_gem 'uri_template-0.7.0'
 func_gem 'safe_yaml-1.0.4'
@@ -379,3 +378,7 @@ func_gem 'crack-0.4.3'
 func_gem 'differ-0.1.2'
 func_gem 'escape_utils-0.3.2'
 func_gem 'rails-dbi-0.1.2'
+
+# 2017-10-05.memoize
+func_gem 'memoist-0.15.0'
+

@@ -20,6 +20,11 @@ adminEmail:         Piotr.Pawliczek@bcm.edu
 smtpHost:           localhost
 smtpPort:           25
 
+# keys for external APIs
+omimApiKey     : VKGiMHRGQwe3m18OEED1Yw
+bioPortalApiKey: e750aaca-98af-49fa-8349-82caf2ce4f5b
+
 # permormance settings for webserver
-thinApiWorkersCount : 2
+thinRedmineWorkersCount: 2
+thinApiWorkersCount    : 2
 tomcatMemorySettings: -Xms1800m -Xmx3800m -Xmn128m

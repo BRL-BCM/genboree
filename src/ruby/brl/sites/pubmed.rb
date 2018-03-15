@@ -1,5 +1,6 @@
 require 'nokogiri'
 require 'open-uri'
+require 'openssl'
 require 'brl/sites/abstractSite'
 require 'brl/sites/doi'
 
@@ -82,12 +83,19 @@ module BRL; module Sites
     MEDLINE_NEST = medline_nest
 
     # use KEYS to find out which fields are available
-    KEYS = MEDLINE_MAP.collect{|code| MEDLINE_MAP[code]}
+    KEYS = MEDLINE_MAP.collect{ |code| MEDLINE_MAP[code] }
 
     attr_reader :pmid
     attr_reader :respBody
     attr_reader :parsedBody
+    attr_reader :requestSuccess
     attr_accessor :debug
+
+    # @return [Array<Symbol>] OPTIONAL OVERRIDE. List of preferred protocol to use and any fallbacks. Currently only
+    #   'http', 'https' supported. Defaults to ['http']
+    def self.protocols()
+      [ :https, :http ].dup
+    end
 
     def pmid=(pmid)
       @pmid = pmid
@@ -97,6 +105,7 @@ module BRL; module Sites
 
     # @see parent for information on proxy caching
     def initialize(pmid, opts={})
+      @requestSuccess = false
       super(opts)
       @pmid = pmid
       @respBody = nil
@@ -186,15 +195,27 @@ module BRL; module Sites
     #   records and has an array mapped at brlSym)
     def requestRecordsByPmid(pmid=@pmid)
       retVal = nil
+      respSize = nil
       begin
         if(@parsedBody and @parsedBody[:pmid] and (@parsedBody[:pmid].to_s.strip() == @pmid))
           retVal = @parsedBody
         else
-          url = buildUrl(HOST, buildPath(pmid), DEFAULT_QUERY)
-          respSize = get(url)
+          while( !@tryProtos.empty? and respSize.nil? )
+            proto = @tryProtos.shift
+            # We have preferred and possible fallback protocol to try
+            url = buildUrl(HOST, buildPath(pmid), DEFAULT_QUERY, true, { :proto => proto })
+
+            # Rescue any problem with (just) the get(url)
+            begin
+              respSize = get(url)
+            rescue => err
+              $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Encountered error doing simple get() on #{url.inspect}. Will try fallback protocol (if available) in case it works instead.\n    Error Class: #{err.class}\n    Error Message: #{err.message}\n\n")
+            end
+          end
           retVal = parse()
         end
       rescue => err
+        @requestSuccess = false
         retVal = nil
         logError(err)
       end
@@ -205,15 +226,15 @@ module BRL; module Sites
     # @return [NilClass, String] composed string with author information or nil if no authors
     def authorListStr(authorList=@parsedBody[:authorList])
       retVal = nil
-      begin
-        authorList = [ authorList ] unless(authorList.is_a?(Array))
-        unless(authorList.nil?)
+      unless( authorList.nil? )
+        begin
+          authorList = [ authorList ] unless(authorList.is_a?(Array))
           authorNames = authorList.collect{ |hh| hh[:name] }
           retVal = authorNames.join(", ")
+        rescue => err
+          retVal = nil
+          logError(err)
         end
-      rescue => err
-        retVal = nil
-        logError(err)
       end
       return retVal
     end
@@ -232,20 +253,14 @@ module BRL; module Sites
         volume = parsedBody[:volumeNumber]
         pages = parsedBody[:pages]
         if(journal)
-          retVal = journal
-          if(date)
-            retVal += ". #{date}"
-            if(issue)
-              retVal += ";#{issue}"
-              if(volume)
-                retVal += "(#{volume})"
-                if(pages)
-                  retVal += ":#{pages}"
-                end
-              end
-            end
-          end
+          retVal = "#{journal}."
+        else
+          retVal = ''
         end
+        retVal << " #{date}" if(date)
+        retVal << ";#{volume}" if(volume)
+        retVal << "(#{issue})" if(issue)
+        retVal << ":#{pages}" if(pages)
       rescue => err
         retVal = nil
         logError(err)
@@ -304,10 +319,22 @@ module BRL; module Sites
     # @note response body is acessible through @respBody
     def get(url, headers={})
       @respBody = ''
-      url.gsub!("http://", "https://")
-      $stderr.debugPuts(__FILE__, __method__, "PUBMED", "making request at #{url}")
-      open(url, headers){|ff|
-        @respBody = ff.read()
+      #$stderr.debugPuts(__FILE__, __method__, "PUBMED", "making request at #{url}")
+      # Temp turn off SSL verification for sites with bad certs or certs being used in domains
+      #   not mentioned within cert (etc www. cert used on non-www domain as well)
+      # * Note that we avoid the dynamic constant assignment SyntaxError by employing const_set()
+      # * Note that we suppress the constant assignment warning via $VERBOSE modification.
+      # * Note that we have this in a thread-sync block since we're mucking with a global that affects ALL
+      #   open() calls.
+      self.class::MUTEX.synchronize {
+        savedVerbose, savedVerifyPeer = $VERBOSE, OpenSSL::SSL::VERIFY_PEER
+        $VERBOSE = nil
+        OpenSSL::SSL.const_set( :VERIFY_PEER, OpenSSL::SSL::VERIFY_NONE )
+        open(url, headers) { |ff|
+          @respBody = ff.read()
+        }
+        OpenSSL::SSL.const_set( :VERIFY_PEER, savedVerifyPeer )
+        $VERBOSE = savedVerbose
       }
       return @respBody.size
     end
@@ -391,19 +418,21 @@ module BRL; module Sites
       # check for errors
       # based on observation of error response body like:
       #   id: 25141396 Error occurred: The following PMID is not available: 25141396
+      @requestSuccess = true
       smallRespSize = 5
       if(medlineRecs.size <= smallRespSize)
         if(/Error occurred/.match(medlineStr))
-          raise PubmedError.new("Error reported by Pubmed: #{medlineStr}")
+          msg = "Error reported by Pubmed: #{medlineStr}"
+          @requestSuccess = false
+          raise PubmedError.new(msg)
         end
       end
-
       # @see requestRecordsByPmid for explanation of medlineRec procesing logic
       prevCode = "" # for multi-line records, code is not reprinted
       newCode = false # if a code appears multiple times, treat as separate records instead of multi-line records
       ii = 0
       nestedObjs = {}
-      medlineRecs.each{|medlineRec|
+      medlineRecs.each{ |medlineRec|
         # split on the first dash, extracting text and code
         text = nil
         code = nil
@@ -501,15 +530,19 @@ module BRL; module Sites
       rv = { :doi => nil, :pii => nil, :other => [] }
       doiRe = /(.*)\s*\[doi\]/
       piiRe = /(.*)\s*\[pii\]/ # dont know if some piis have spaces in them, leave match generic
-      aids.each { |aid|
-        if(doiRe.match(aid))
-          rv[:doi] = $1.strip
-        elsif(piiRe.match(aid))
-          rv[:pii] = $1.strip
-        else
-          rv[:other].push(aid)
-        end
-      }
+      # Older pubmed records don't have Article ID ("AID") attributes and don't have DOI or other similar.
+      # - So this can be nil
+      if(aids)
+        aids.each { |aid|
+          if(doiRe.match(aid))
+            rv[:doi] = $1.strip
+          elsif(piiRe.match(aid))
+            rv[:pii] = $1.strip
+          else
+            rv[:other].push(aid)
+          end
+        }
+      end
       return rv
     end
 

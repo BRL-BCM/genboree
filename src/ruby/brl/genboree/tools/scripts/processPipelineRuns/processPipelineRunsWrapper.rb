@@ -20,8 +20,9 @@ module BRL; module Genboree; module Tools; module Scripts
     VERSION = "4.6.3"
     COMMAND_LINE_ARGS = {}
     DESC_AND_EXAMPLES = {
-      :description  => "This is the wrapper for running the 'exceRpt small RNA-seq Post-processing' tool.
-                        This tool is intended to be called via the Genboree Workbench",
+      :description  => "This is the wrapper for running the 'Generate Summary Report for exceRpt Results' tool.
+                        This tool is intended to be called via the Genboree Workbench or the exRNA Atlas.
+                        This tool is also called when exceRpt is run on a collection of samples (either via Workbench or via FTP data submission pipeline)",
       :authors      => [ "William Thistlethwaite (thistlew@bcm.edu)" ],
       :examples     => [
         "#{File.basename(__FILE__)} --inputFile=filePath",
@@ -69,15 +70,16 @@ module BRL; module Genboree; module Tools; module Scripts
         # @batchJob is used to differentiate stand-alone PPR jobs from jobs that are part of the exceRptPipeline batch / runExceRpt series of jobs
         @batchJob = @settings['isBatchJob']
         @DESeq2Job = @settings['DESeq2Job']
+        @pcaJob = @settings['pcaJob']
         if(@batchJob)
           # If this is a batch job, then we save the @exceRptToolVersion (used in e-mail to user) and set the @scratchDir to be the special location in the cluster shared scratch area
           @scratchDir = @settings['postProcDir']
           # Add processPipelineRuns job ID to list of job IDs to display in final processing email
-          @listOfJobIds = JSON.parse(File.read(@settings['filePathToListOfJobIds']))
-          @listOfJobIds[@jobId] = "Process Pipeline Runs Job"
-          File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
+          importantJobIdsDir = @settings['importantJobIdsDir']
+          newPPREntry = {@jobId => "Process Pipeline Runs Job"}
+          File.open("#{importantJobIdsDir}/#{@jobId}.txt", 'w') { |file| file.write(JSON.pretty_generate(newPPREntry)) }
         # We only want to set up tool usage doc options if job is not run as a subjob of DESeq2 (tool usage doc will be submitted as part of the DESeq2 job, so not necessary here)
-        elsif(!@DESeq2Job)
+        elsif(!@DESeq2Job and !@pcaJob)
           # Set up anticipated data repository options
           # Cut off first two chars if anticipated data repo is 0_None - 0_ was added only for UI reasons 
           @settings['anticipatedDataRepo'] = @settings['anticipatedDataRepo'][2..-1] if(@settings['anticipatedDataRepo'] == "0_None")
@@ -147,6 +149,10 @@ module BRL; module Genboree; module Tools; module Scripts
           end
         end
         @localJob = @settings['localJob']
+        if(@settings['atlasJob'])
+          @atlasJob = @settings['atlasJob']
+          @dynamicJobsPage = @settings['dynamicJobsPage']
+        end
         # fileCount will be used to create subdirectories for each individual run within our parent directory
         @fileCount = 0
         # Set up format options coming from the UI - "Settings" variables
@@ -158,6 +164,16 @@ module BRL; module Genboree; module Tools; module Scripts
         @outputDir = "#{@scratchDir}/outputFiles"
         @settings['postProcOutputDir'] = @outputDir
         `mkdir -p #{@outputDir}`
+        # FTP-related variables (along with remote storage area, which can come from the Workbench)
+        @isFTPJob = @settings['isFTPJob']
+        @finishedFtpDir = @settings['finishedFtpDir'] if(@settings['isFTPJob'])
+        @isRemoteStorage = true if(@settings['remoteStorageArea'])
+        if(@isRemoteStorage)
+          @remoteStorageArea = @settings['remoteStorageArea']
+        end
+        @subUserId = @settings['subUserId']
+        @subUserId = @userId unless(@subUserId)
+        @failedRun = false
         # Set up inputs array if job is batch job or local job
         if(@batchJob or @localJob)
           # Grab all files that are present in the runs directory.
@@ -191,28 +207,6 @@ module BRL; module Genboree; module Tools; module Scripts
             conditionalJob = false
             # Create a reusable ApiCaller instance for launching each runExceRpt job
             apiCaller = BRL::Genboree::REST::ApiCaller.new(host, "/REST/v1/genboree/tool/{toolId}/job", user, pass)
-            # Traverse all of the jobs that already finished and add a condition hash for each to our preconditionJobs array.
-            # Note that met has been set to be true for all of these jobs (they won't be re-run)
-            @listOfJobIds.each_key { |jobId|
-              condition = {
-                "type" => "job",
-               "expires" => (Time.now + Time::WEEK_SECS * 4).to_s,
-                "met" => true,
-                "condition"=> {
-                  "dependencyJobUrl" => "http://#{host}/REST/v1/job/#{jobId}",
-                  "acceptableStatuses" =>
-                  {
-                    "killed"=>true,
-                    "failed"=>true,
-                    "completed"=>true,
-                    "partialSuccess"=>true,
-                    "canceled"=>true
-                  }
-                }
-              }
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Condition connected with runExceRpt job #{jobId} (sample name: #{@listOfJobIds[jobId]}): #{condition.inspect}")
-              preconditionJobs << condition
-            }
             # Now, we will submit a job for each of the files that needs to be re-run.
             # We will also add a condition for each job into our preconditionJobs array. Note that met will be set to false for these conditions (since the jobs haven't run yet!)
             @rerunFiles.each { |currentInput|
@@ -226,10 +220,8 @@ module BRL; module Genboree; module Tools; module Scripts
                   # We succeeded in launching at least one runExceRpt job, so we set conditionalJob to be true (so that PPR will run below)
                   conditionalJob = true
                   $stderr.debugPuts(__FILE__, __method__, "Response to submitting runExceRpt job conf for #{currentInput}", JSON.pretty_generate(apiCaller.parseRespBody))
-                  # We'll grab its job ID and save it in @listOfJobIds
+                  # We'll grab its job ID
                   runExceRptJobId = apiCaller.parseRespBody['data']['text']
-                  @listOfJobIds[runExceRptJobId] = File.basename(runExceRptJobObj['inputs'])
-                  File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
                   $stderr.debugPuts(__FILE__, __method__, "Job ID associated with #{currentInput}", runExceRptJobId)
                   # We'll make a hash for the condition associated with the current job
                   condition = {
@@ -278,11 +270,12 @@ module BRL; module Genboree; module Tools; module Scripts
         @settings['toolVersion'] = @toolVersion
         # We set toolVersionPPR for the erccfinalProcessing tool
         @settings['toolVersionPPR'] = @toolVersion
-        # Get the tool version of exceRpt
+        # Raise an error if there are no valid inputs
         if(@inputs.nil? or @inputs.empty?)
           @errUserMsg = "There are no valid inputs.\nMost likely, a batch exceRpt pipeline job was run, but there were no successful result files generated."
           raise @errUserMsg
         end
+        # Get the tool version of exceRpt
         @resultsVersion = @inputs[0].match((/v(\d\.\d\.\d)(?:.zip|.tgz)/))[1]
         @settings['exceRptResultsVersion'] = @resultsVersion
         toolConfExceRptPipeline = BRL::Genboree::Tools::ToolConf.new('exceRptPipeline', @genbConf)
@@ -295,15 +288,6 @@ module BRL; module Genboree; module Tools; module Scripts
           @settings['toolVersion'] = "3.1.0"
           @settings['toolVersionPPR'] = "3.1.0"
         end
-        # FTP-related variables (along with remote storage area, which can come from the Workbench)
-        @isFTPJob = @settings['isFTPJob']
-        @finishedFtpDir = @settings['finishedFtpDir'] if(@settings['isFTPJob'])
-        @isRemoteStorage = true if(@settings['remoteStorageArea'])
-        if(@isRemoteStorage)
-          @remoteStorageArea = @settings['remoteStorageArea']
-        end
-        @subUserId = @settings['subUserId']
-        @subUserId = @userId unless(@subUserId)
       # If we have any errors above, we will return an @exitCode of 22 and give an informative message for the user.
       rescue => err
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Error with processJobConf: #{err}")
@@ -343,25 +327,32 @@ module BRL; module Genboree; module Tools; module Scripts
         end
         # Run the tool
         foundErrorInProcessPipelineRuns = runProcessPipelineRuns()
-        # If the tool finished successfully, we'll upload the tool's output files
-        unless(foundErrorInProcessPipelineRuns)
-          allOutputFiles = Dir.entries(@outputDir)
+        # Grab all output files generated by tool
+        allOutputFiles = Dir.entries(@outputDir)
+        allOutputFiles.delete(".")
+        allOutputFiles.delete("..")
+        # Let's upload the tool's output files (if there are any) 
+        unless(allOutputFiles.empty?)
           # Add @analysisName as a prefix to all output files
           prefix = "#{CGI.escape(@analysisName)}_"
           allOutputFiles.each { |outputFile|
-            next if(outputFile == "." or outputFile == "..")
             newName = "#{prefix}#{outputFile}"
             FileUtils.mv("#{@outputDir}/#{outputFile}", "#{@outputDir}/#{newName}")
           }
           # Compress all files in a .tgz
-          pprArchive = "#{prefix}postProcessedResults_v#{@toolVersion}.tgz"
+          if(foundErrorInProcessPipelineRuns)
+            pprArchive = "#{prefix}exceRpt_PARTIAL_RESULTS_postProcessedResults_v#{@toolVersion}.tgz"
+          else
+            pprArchive = "#{prefix}exceRpt_postProcessedResults_v#{@toolVersion}.tgz"
+          end
           `cd #{@outputDir} ; tar -zcvf #{pprArchive} *`
           # Upload all relevant files
-          transferFiles()
-          @successfulRun = true
-        end # unless(foundErrorInProcessPipelineRuns)
+          transferFiles() if(!@DESeq2Job and !@pcaJob)
+        end
+        raise @errUserMsg if(foundErrorInProcessPipelineRuns)
       # If an error occurs at any point in the above, we'll return an @exitCode of 30 (if exit code hasn't already been set) and give an informative message for the user.
       rescue => err
+        @failedRun = true
         @err = err
         @errUserMsg = "ERROR: Running of exceRpt small RNA-seq Post-processing tool failed (#{err.message.inspect})." if(@errUserMsg.nil?)
         @errInternalMsg = "ERROR: Unexpected error trying to run exceRpt small RNA-seq Post-processing tool." if(@errInternalMsg.nil?)
@@ -374,7 +365,7 @@ module BRL; module Genboree; module Tools; module Scripts
           erccFinalProcessing(user, pass, host)
         else
           # Otherwise, if this is not a batch job, we'll just upload the tool usage doc (unless we're running an AUTO job or this job is a subjob of the DESeq2 job).
-          submitToolUsageDoc(user, pass) unless(@jobId[0..4] == "AUTO-" or @DESeq2Job)
+          submitToolUsageDoc(user, pass) unless(@jobId[0..4] == "AUTO-" or @DESeq2Job or @pcaJob)
         end
       end
       return @exitCode
@@ -399,9 +390,9 @@ module BRL; module Genboree; module Tools; module Scripts
       runExceRptJobConf['context']['warningsConfirmed'] = true
       # Define settings - we flag that we're using more memory (so that we request 94 GB mem/vmem for our job), and we also set Java RAM to be higher (50 GB instead of 30 GB)
       runExceRptJobConf['settings']['useMoreMemory'] = true
-      runExceRptJobConf['settings']['javaRam'] = "50G"
+      runExceRptJobConf['settings']['javaRam'] = "64G"
       # If @settings['uploadFullResults'] is true, then we'll grab the estimated file size from the file name of the input file
-      if(@settings['uploadFullResults'])
+      if(@settings['uploadFullResults'] and !@isFTPJob)
         basename = File.basename(inputFile)
         basename = basename.split("_")
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Total output file size is predicted to be #{basename[0]}")
@@ -659,7 +650,8 @@ module BRL; module Genboree; module Tools; module Scripts
       # Did we find anything?
       if(retVal)
         @errUserMsg = "exceRpt small RNA-seq Post-processing tool failed. Message from exceRpt small RNA-seq Post-processing tool:\n\n"
-        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]")
+        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]\n")
+        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
         @errInternalMsg = @errUserMsg
         @exitCode = 30
       end
@@ -759,7 +751,7 @@ module BRL; module Genboree; module Tools; module Scripts
         runItem = BRL::Genboree::KB::KbDoc.new({})
         runItem.setPropVal("Sample Name", File.basename(currentInput).chomp("?"))
         sampleStatus = ""
-        if(@successfulRun)
+        unless(@failedRun)
           sampleStatus = "Completed"
           successfulSamples += 1
         else 
@@ -813,38 +805,50 @@ module BRL; module Genboree; module Tools; module Scripts
       emailObject.settings      = @settings
       emailObject.exitStatusCode = @exitCode
       additionalInfo = ""
-      # Path always begins with Group name, then Database name, then Files
-      additionalInfo << "Your result files can be found on the Genboree Workbench.\n"
-      additionalInfo << "The Genboree Workbench is a repository of bioinformatics tools\n"
-      additionalInfo << "that will store your result files for you.\n"
-      additionalInfo << "You can find the Genboree Workbench here:\nhttp://#{@outputHost}/java-bin/workbench.jsp\n"
-      additionalInfo << "Once you're on the Workbench, follow the ASCII drawing below\nto find your result files.\n" +
-                          "|-Group: '#{@groupName}'\n" +
-                            "|--Database: '#{@dbName}'\n" +
-                              "|---Files\n"
-      # If this is a batch job, then we're uploading to exceRptPipeline tool area.
-      if(@batchJob)
-        # We'll also add the remote storage area into the path if the user is uploading to one.
-        if(@remoteStorageArea)
-          additionalInfo <<       "|----#{@remoteStorageArea}\n" + 
-                                    "|-----exceRptPipeline_v#{@toolVersion}\n" +
-                                      "|------#{@analysisName}\n" +
-                                        "|-------postProcessedResults_v#{@toolVersion}\n\n"
-        else
-          additionalInfo <<       "|----exceRptPipeline_v#{@mostRecentVersion}\n" +
-                                    "|-----#{@analysisName}\n" +
-                                      "|------postProcessedResults_v#{@toolVersion}\n\n"
-        end
-      # If this is not a batch job, then we're uploading to the regular post-processing tool area.
+      if(@atlasJob)
+        additionalInfo << "You can view the results of your analysis job on the \"My Analyses\" page on the exRNA Atlas.\n"
+        additionalInfo << "You can find the \"My Analyses\" page by first clicking \"Analysis Results\" and then clicking \"My Analysis Results\" in the Atlas navigation bar.\n"
+        additionalInfo << "You can also access the \"My Analyses\" page here: #{@dynamicJobsPage}.\n"
+        additionalInfo << "Your results will be found under the \"Generate Summary Report\" tab and will be identified by the name of your analysis and the date of submission.\n"
+        additionalInfo << "Click the \"Click to View\" link to download an archive containing a variety of summary files (plots, tables, etc.) associated with your selected samples.\n"
+        additionalInfo << "You can learn more about the summary files here: http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Small%20RNA-seq%20Pipeline#Post-processing-of-Samples.\n"
+        additionalInfo << "Please note that it may take some time for your results to become available. If you receive an error message when trying to view your results, wait a few minutes and try again."
       else
-        if(@remoteStorageArea)
-          additionalInfo <<       "|----#{@remoteStorageArea}\n" +
-                                    "|-----postProcessedResults_v#{@toolVersion}\n" +
-                                      "|------#{@analysisName}\n\n"
-        else  
-          additionalInfo <<       "|----postProcessedResults_v#{@toolVersion}\n" +
-                                    "|-----#{@analysisName}\n\n"
+        # Path always begins with Group name, then Database name, then Files
+        additionalInfo << "Your result files can be found on the Genboree Workbench.\n"
+        additionalInfo << "The Genboree Workbench is a repository of bioinformatics tools\n"
+        additionalInfo << "that will store your result files for you.\n"
+        additionalInfo << "You can find the Genboree Workbench here:\nhttp://#{@outputHost}/java-bin/workbench.jsp\n"
+        additionalInfo << "Once you're on the Workbench, follow the ASCII drawing below\nto find your result files.\n" +
+                            "|-Group: '#{@groupName}'\n" +
+                              "|--Database: '#{@dbName}'\n" +
+                                "|---Files\n"
+        # If this is a batch job, then we're uploading to exceRptPipeline tool area.
+        if(@batchJob)
+          # We'll also add the remote storage area into the path if the user is uploading to one.
+          if(@remoteStorageArea)
+            additionalInfo <<       "|----#{@remoteStorageArea}\n" + 
+                                      "|-----exceRptPipeline_v#{@toolVersion}\n" +
+                                        "|------#{@analysisName}\n" +
+                                          "|-------postProcessedResults_v#{@toolVersion}\n\n"
+          else
+            additionalInfo <<       "|----exceRptPipeline_v#{@mostRecentVersion}\n" +
+                                      "|-----#{@analysisName}\n" +
+                                        "|------postProcessedResults_v#{@toolVersion}\n\n"
+          end
+        # If this is not a batch job, then we're uploading to the regular post-processing tool area.
+        else
+          if(@remoteStorageArea)
+            additionalInfo <<       "|----#{@remoteStorageArea}\n" +
+                                      "|-----postProcessedResults_v#{@toolVersion}\n" +
+                                        "|------#{@analysisName}\n\n"
+          else  
+            additionalInfo <<       "|----postProcessedResults_v#{@toolVersion}\n" +
+                                      "|-----#{@analysisName}\n\n"
+          end
         end
+        additionalInfo << "You can learn more about your result files here: http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Small%20RNA-seq%20Pipeline#Post-processing-of-Samples\n"
+        additionalInfo << "IMPORTANT NOTE: This tool used to be called 'Post-processing exceRpt small RNA-seq Pipeline Results'."
       end
       emailObject.resultFileLocations = nil
       # Print info about jobs that we couldn't relaunch
@@ -896,7 +900,8 @@ module BRL; module Genboree; module Tools; module Scripts
           emailErrorObject.additionalInfo = additionalInfo unless(additionalInfo.empty?)
         end
       end 
-      additionalInfo << "In addition, the tool may have failed because your result files\n had very few (or no) reads mapped to endogenous libraries.\nYou can check out the .stats file associated with each run\nto see whether this might be the problem." unless(@exitCode == 15)
+      additionalInfo << "The tool may have failed because your result files\n had very few (or no) reads mapped to endogenous libraries.\nYou can check out the .stats file associated with each run\nto see whether this might be the problem.\n" unless(@exitCode == 15)
+      additionalInfo << "Finally, if any result files were generated, they have been uploaded\nto your Genboree Database. Please note that these files may be incomplete\nor even invalid, so they should be viewed with skepticism." if(@exitCode != 15 and @inputs and !@inputs.nil? and !@inputs.empty?)
       # Print info about jobs that we couldn't relaunch
       if(@failedRerunJobs)
         unless(@failedRerunJobs.empty?)
@@ -926,7 +931,11 @@ module BRL; module Genboree; module Tools; module Scripts
         @settings['endogenousLibraryOrder'].gsub!(",", " > ")
       end
       @settings.delete("indexBaseName") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
-      @settings.delete("newSpikeInLibrary") unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+      unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+        @settings.delete('newSpikeInLibrary') 
+      else
+        @settings['newSpikeInLibrary'].gsub!("gbmainprod1.brl.bcmd.bcm.edu", "genboree.org")
+      end
       @settings.delete("existingLibraryName") unless(@settings['useLibrary'] =~ /useExistingLibrary/)
       @settings.delete("jobSpecificSharedScratch")
       @settings.delete("autoDetectAdapter") unless(@settings['adapterSequence'] == "other")
@@ -945,7 +954,8 @@ module BRL; module Genboree; module Tools; module Scripts
         @settings.delete("randomBarcodeStats")
       end
       @settings.delete("toolVersionPPR")
-      @settings["priorityList"].gsub!(",", " > ") if(@settings["priorityList"])
+      # Delete misc. settings associated with endogenous library ordering
+      @settings.delete('priorityList')
       @settings.delete("adSeqParameter")
       @settings.delete("adapterSequence")
       @settings.delete("bowtieSeedLength")
@@ -999,9 +1009,15 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("uploadReadCountsDocs")
       @settings.delete('listOfExogenousTaxoTreeJobIds')
       # Delete local path to list of job IDs text file
-      @settings.delete('filePathToListOfJobIds')
+      @settings.delete('importantJobIdsDir')
       @settings.delete('filePathToListOfExogenousTaxoTreeJobIds')
       @settings.delete('exogenousTaxoTreeJobIDDir')
+      @settings.delete('exogenousClaves')
+      @settings.delete('backupFtpDir')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete('dynamicJobsPage')
+      @settings.delete('databaseGenomeVersion')
     end
 
     def customBuildSectionEmailSummary(section)

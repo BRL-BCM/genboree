@@ -197,12 +197,14 @@ module Data
     attr_accessor :msg
     # List of related job ids which may have been submitted as part of the request. This can be useful for say, conditional jobs and such.
     attr_accessor :relatedJobIds
+    # Any metadata objects related to the requested resource
+    attr_accessor :metadata
     # Constructor. Matching GENBOREE INTERFACE.
     # [+doRefs+]      [optional; default=true] Do you want the "refs" field in any representation of this entity (i.e. make connections or save size/complexity of representation?)
     # [+doWrap+]      [optional; default=true] Wrap this entity in the common Genboree wrapper (disabled for recursive/contained entities)?
     # [+statusCode+]  [optional; default=:OK] Default HTTP response status code name.
     # [+msg+]         [optional; default="OK"] Default message to use in wrapper
-    def initialize(doRefs=true, doWrap=true, statusCode=:OK, msg='OK', relatedJobIds=[])
+    def initialize(doRefs=true, doWrap=true, statusCode=:OK, msg='OK', relatedJobIds=[], metadata={})
       @refs = if(doRefs) then {} else false end      # set to false to avoid representing refs (regardless if there are any or not)
       @doWrap = doWrap
       @resourceType = self.class::RESOURCE_TYPE
@@ -218,6 +220,7 @@ module Data
           arr << instanceVarSym
         }
       end
+      self.setMetadata(metadata)
       self.setStatus(statusCode, msg, relatedJobIds)
     end
 
@@ -241,6 +244,7 @@ module Data
                 else # don't wrap
                   data
                 end
+      wrapper["metadata"] = @metadata if(@doWrap and !@metadata.empty?)
       return wrapper
     end
 
@@ -261,6 +265,18 @@ module Data
       statusHash['relatedJobIds'] = @relatedJobIds if(@relatedJobIds and !@relatedJobIds.empty?)
       return statusHash
     end
+    
+    # GENBOREE INTERFACE. Get @metadata as a Hash object.
+    # [+returns+] Gets the "metadata" +Hash+ which may contain any custom metadata fields pertaining to a resource
+    def getMetadata()
+      return @metadata
+    end
+    
+    # GENBOREE INTERFACE. Set @metadata field for response wrapper.
+    def setMetadata(metadata={})
+      @metadata = metadata
+    end
+
 
     # GENBOREE INTERFACE. Set the refs appropriately for this entity
     # [+refs+]    [optional; default=nil] Either a +Hash+ of representation types mapped to resource URIs, or +nil+ or +false+.

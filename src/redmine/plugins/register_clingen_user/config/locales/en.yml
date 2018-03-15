@@ -1,0 +1,6 @@
+# English strings go here for Rails i18n
+en:
+  # my_label: "My label"
+  # This needs change based on deployment locations
+  clingen_resource_settings_label: 'ClinGen Resource Settings'
+  permission_denied: 'You do not have sufficient privileges to access this resource'

@@ -36,9 +36,7 @@ module BRL ; module REST ; module Resources
         @version = Rack::Utils.unescape(@uriMatchData[4]).to_s.strip
         # check the version here
         # No numbers allowed - must be within PREDEFINED_VERS
-        if(PREDEFINED_VERS.include?(@version))
-          @version = @version
-        else
+        unless(PREDEFINED_VERS.include?(@version))
           @statusName = :'Bad Request'
           @statusMsg = "BAD_PARAMS: Supported version for multiple documents are either of the these - #{PREDEFINED_VERS.inspect}. The version you requested, #{@version.inspect} is not supported/implemented."
         end
@@ -54,6 +52,7 @@ module BRL ; module REST ; module Resources
         end
         initStatus = @statusName
         initStatus = initGroupAndKb() if(initStatus == :OK)
+        @versionsHelper = @mongoKbDb.versionsHelper(@collName) rescue nil
       end
       return initStatus
     end
@@ -83,7 +82,7 @@ module BRL ; module REST ; module Resources
               @statusMsg = err.message
             else
               $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
-              $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace)
+              $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
               @statusName = :"Internal Server Error"
               @statusMsg = err.message
             end
@@ -111,10 +110,10 @@ module BRL ; module REST ; module Resources
               payload = parseRequestBodyForEntity('StrArrayEntity')
                 if(payload.nil? or (payload.is_a?(BRL::Genboree::REST::Data::StrArrayEntity) and payload.array and payload.array.empty?))
                   @statusName = :'Not Implemented'
-                  @statusMsg = "EMPTY_DOC: The doument list is empty."
+                  @statusMsg = "EMPTY_DOC: The document list is empty."
                 elsif(payload == :'Unsupported Media Type')
                   @statusName = :'Unsupported Media Type'
-                  @statusMsg = "BAD_DOC: The document list in te put request does not follow the strArrayEntity representation."
+                  @statusMsg = "BAD_DOC: The document list in the put request does not follow the strArrayEntity representation."
                 else
                   bodyData = getVersionRecs(identProp, versionsHelper, payload.array)
                   $stderr.debugPuts(__FILE__, __method__, "DEBUG", " @statusName=#{@statusName.inspect}")
@@ -148,68 +147,60 @@ module BRL ; module REST ; module Resources
 
    end
 
-######################################
-#HELPER METHODS
-######################################
+    ######################################
+    #HELPER METHODS
+    ######################################
 
-   # gets the list of version docs as KbDocEntity class objects
-   # @param [String] identProp property of the document identifier
-   # @param [BRL::Genboree::KB::Helpers::VersionsHelper] versionHelper version helper instance
-   # @param [Array<String>] docIDs list of document identifiers
-   # @return [BRL::Genboree::REST::Data::KbDocEntityList] bodyData list of versionDocs
-   def getVersionRecs(identProp, versionsHelper, docIDs=nil)
-     bodyData = BRL::Genboree::REST::Data::KbDocEntityList.new(@connect)
-     # for each document requested get the version doc and add to the entity list
-     docIDs.each { |docName|
-       doc = versionsHelper.exists?(identProp, docName, @collName)
-       if(doc)
-         docId = doc.getPropVal('versionNum.content')['_id']
-         dbRef = BSON::DBRef.new(@collName, docId)
-         allVers = nil
-         versionDoc = nil
-         vDoc = nil
-         allVers = versionsHelper.allVersions(dbRef)
-         if(@version == 'HEAD' or @version == 'CURR')
-           versionDoc = allVers.last
-         else # PREV
-           if(allVers.size > 1)
-             versionDoc = allVers[allVers.size-2]
-           else
-             versionDoc = nil
-           end
-         end
-         if(versionDoc)
-           verKbDoc = BRL::Genboree::KB::KbDoc.new(versionDoc)
-           unless(@detailed)
-             # remove the document part of the version doc. need only the metadata
-             verKbDoc.delProp('versionNum.content') rescue nil
-           end
-           docWfullName = addFullNameToDoc(verKbDoc) if(@authorFullName)
-           #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "verKbDoc:\n\n#{verKbDoc.inspect}\n\n")
-           if(docWfullName)
-             vEntity = BRL::Genboree::REST::Data::KbDocVersionEntity.from_json(docWfullName)
-             vEntity.doWrap = false
-             vDoc = BRL::Genboree::KB::KbDoc.new({docName => { 'data' => vEntity } } )
-           else
-             vEntity = BRL::Genboree::REST::Data::KbDocVersionEntity.from_json(verKbDoc)
-             vEntity.doWrap = false
-             vDoc = BRL::Genboree::KB::KbDoc.new({docName => { 'data' => vEntity } } )
-           end
-         else
-           vDoc = BRL::Genboree::KB::KbDoc.new({docName => {"data" => versionDoc}})
-         end
-         #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "vDoc:\n\n#{vDoc.inspect}")
-         entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, vDoc, false)
-         bodyData << entity
-       else
-         @statusName = :'Not Found'
-         @statusMsg = "NO_DOC: there is no document with the identifier #{docName.inspect} in the #{@collName.inspect} collection in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc; also consider if it has been deleted)."
-         break
+    # gets the list of version docs as KbDocEntity class objects
+    # @param [String] identProp property of the document identifier
+    # @param [BRL::Genboree::KB::Helpers::VersionsHelper] versionHelper version helper instance
+    # @param [Array<String>] docIDs list of document identifiers
+    # @return [BRL::Genboree::REST::Data::KbDocEntityList] bodyData list of versionDocs
+    def getVersionRecs(identProp, versionsHelper, docIDs=nil)
+      bodyData = BRL::Genboree::REST::Data::KbDocEntityList.new(@connect)
+      # for each document requested get the version doc and add to the entity list
+      docIDs.each { |docName|
+        # Is there any version available? Must be a current version at least, regardless of which one we're after
+        doc = versionsHelper.getCurrVersionDoc(docName)
+        if(doc)
+          # Can we get just some fields, rather than all? Say, like, we don't want content, just the version record props only.
+          # * Not customizable by dev calling API :( See KbDocVersion and KbDocVersions for ones that implement
+          #   extensive customizing of output props.)
+          if( !@detailed )
+            fields = @versionsHelper.class::CORE_DOC_PROPS
+          else
+            fields = nil
+          end
+          # data doc DBRef
+          dbRef = doc.getPropVal('versionNum.docRef')
+          versionDoc = @versionsHelper.getVersionDoc( @version, dbRef, fields )
+          if(versionDoc)
+            verKbDoc = BRL::Genboree::KB::KbDoc.new(versionDoc)
+            docWfullName = addFullNameToDoc(verKbDoc) if(@authorFullName)
+            if(docWfullName)
+              vEntity = BRL::Genboree::REST::Data::KbDocVersionEntity.from_json(docWfullName)
+              vEntity.doWrap = false
+              vDoc = BRL::Genboree::KB::KbDoc.new({docName => { 'data' => vEntity } } )
+            else
+              vEntity = BRL::Genboree::REST::Data::KbDocVersionEntity.from_json(verKbDoc)
+              vEntity.doWrap = false
+              vDoc = BRL::Genboree::KB::KbDoc.new({docName => { 'data' => vEntity } } )
+            end
+          else
+            vDoc = BRL::Genboree::KB::KbDoc.new({docName => {"data" => versionDoc}})
+          end
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "vDoc:\n\n#{vDoc.inspect}")
+          entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, vDoc, false)
+          bodyData << entity
+        else
+          @statusName = :'Not Found'
+          @statusMsg = "NO_DOC: there is no document with the identifier #{docName.inspect} in the #{@collName.inspect} collection in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc; also consider if it has been deleted)."
+          $stderr.debugPuts(__FILE__, __method__, "ERROR", @statusMsg)
+          break
        end
      }
      return bodyData
    end   
-
 
     # returns the version record with authorFullName as a new property object 
     # @param [Hash] doc the version document to which the authorFullName prop is to be added
@@ -226,7 +217,7 @@ module BRL ; module REST ; module Resources
           firstName = userRows.first["firstName"]
           lastName = userRows.first["lastName"]
           if(@authorFullName =~ /lastfirst/i)
-            doc.setPropField('value', 'versionNum.authorFullName', "#{lastName} #{firstName}") rescue nil
+            doc.setPropField('value', 'versionNum.authorFullName', "#{lastName}, #{firstName}") rescue nil
           else
             doc.setPropField('value', 'versionNum.authorFullName', "#{firstName} #{lastName}") rescue nil
           end
@@ -235,8 +226,5 @@ module BRL ; module REST ; module Resources
       end
       return retVal
     end
-
-
-
   end
 end ; end ; end

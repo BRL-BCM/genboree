@@ -71,6 +71,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
         @type = (@nvPairs['type'] =~ /\S/) ? @nvPairs['type'].to_s.strip.downcase() : nil
         @scale = (@nvPairs['scale'] =~ /\S/) ? @nvPairs['scale'].to_s.strip.downcase() : 'linear'
         @versionNum = @nvPairs['versionNum'] ? @nvPairs['versionNum'].to_s.strip.to_f : false
+        @revisionNum = @nvPairs['revisionNum'] ? @nvPairs['revisionNum'].to_s.strip.to_f : false
         @save = (@nvPairs['save'] =~ /\S/ ? @nvPairs['save'].to_s.to_bool : true)
         @onClick = (@nvPairs['onClick'] == 'true') ? true : false
         formats = []
@@ -93,7 +94,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
       initStatus = initOperation()
       if(initStatus == :OK)
         unless(@transformationName.nil?)
-            @resp = transform()
+          @resp = transform()
         else
           @groupName = Rack::Utils.unescape(@uriMatchData[1])
           # @todo if public or subscriber, can get info
@@ -113,25 +114,26 @@ module BRL ; module REST ; module Resources                # <- resource classes
                   #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC NAME NOW: #{@docName.inspect}")
                   doc = dataHelper.getByIdentifier(@docName, { :doOutCast => true, :castToStrOK => true })
                   if(doc)
-                    if(!@versionNum)
+                    docId = doc["_id"]
+                    dbRef = BSON::DBRef.new(@collName, docId)
+                    if(!@versionNum and !@revisionNum) # Neither version nor revision specified. Get the latest
                       bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
                       bodyData.model = modelHelper.modelForCollection(@collName)
                       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "bodyData.model:\n#{bodyData.model.inspect}")
                       if(bodyData.model)
+                        bodyData.metadata = dataHelper.getMetadata(dbRef)
                         @statusName = configResponse(bodyData)
                       else
                         @statusName = :'Not Found'
                         @statusMsg  = "NO_MODEL: can't get document named #{@docName.inspect} because there does not appear to be a valid model available for data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc)."
                         $stderr.puts "ERROR: #{@statusMsg}\n    - bodyData.model:\n\n#{bodyData.model.inspect}\n\n    - modelHelper:\n\n#{modelHelper.inspect}\n\n"
                       end
-                    else # Get the specific version of the model
-                      docId = doc["_id"]
+                    elsif(@versionNum) # Get the specific version of the document
                       versionsHelper = @mongoKbDb.versionsHelper(@collName) rescue nil
                       if(versionsHelper.nil?)
                         @statusName = :"Internal Server Error"
                         @statusMsg = "Failed to access versions collection for data collection #{@collName}"
                       end
-                      dbRef = BSON::DBRef.new(@collName, docId)
                       # get specified version of the document
                       versionDoc = versionsHelper.getVersion(@versionNum, dbRef)
                       if(versionDoc.nil?)
@@ -139,6 +141,31 @@ module BRL ; module REST ; module Resources                # <- resource classes
                         @statusMsg = "Requested version #{@versionNum} for the document #{@docName} does not exist."
                       else
                         doc = versionDoc.getPropVal('versionNum.content')
+                        doc = dataHelper.transformIntoModelOrder(doc, { :doOutCast => true, :castToStrOK => true })
+                        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                        bodyData.model = modelHelper.modelForCollection(@collName)
+                        if(bodyData.model)
+                          #bodyData.metadata = dataHelper.getMetadata(dbRef)
+                          @statusName = configResponse(bodyData)
+                        else
+                          @statusName = :'Not Found'
+                          @statusMsg  = "NO_MODEL: can't get document named #{@docName.inspect} because there does not appear to be a valid model available for data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc)."
+                          $stderr.puts "ERROR: #{@statusMsg}\n    - bodyData.model:\n\n#{bodyData.model.inspect}\n\n    - modelHelper:\n\n#{modelHelper.inspect}\n\n"
+                        end
+                      end
+                    else # Get the specific revision of the document
+                      revisionsHelper = @mongoKbDb.revisionsHelper(@collName) rescue nil
+                      if(revisionsHelper.nil?)
+                        @statusName = :"Internal Server Error"
+                        @statusMsg = "Failed to access versions collection for data collection #{@collName}"
+                      end
+                      # get specified revision of the document
+                      revisionDoc = revisionsHelper.getRevision(@revisionNum, dbRef)
+                      if(revisionDoc.nil?)
+                        @statusName = :"Not Found"
+                        @statusMsg = "Requested revision #{@revisionNum} for the document #{@docName} does not exist."
+                      else
+                        doc = revisionDoc.getPropVal('revisionNum.content')
                         doc = dataHelper.transformIntoModelOrder(doc, { :doOutCast => true, :castToStrOK => true })
                         bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
                         bodyData.model = modelHelper.modelForCollection(@collName)
@@ -364,32 +391,43 @@ module BRL ; module REST ; module Resources                # <- resource classes
                           # Because _may_ be renaming as part of updating doc, we will go through the internal "_id" field:
                           # - set "_id" in the replacement doc to the "_id" from the existing doc...thus it will update
                           payloadDoc['_id'] = existingDoc['_id']
-                          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "FIND: before doing validation")
-                          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "EXISTING DOC: #{puts JSON.pretty_generate(payloadDoc)}")
-                          objId = dataHelper.save(payloadDoc, @gbLogin, :save => @save)
-                          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "FIND: after doing validation")
-                          if(objId.is_a?(BSON::ObjectId))
-                            # Doc updated successfuly - add the links to the kbDocLinks table
-                            begin
-                              kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
-                              upsertedRecs = kbDocLinks.upsertFromKbDocs( [payloadDoc] )
-                              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Inserted #{upsertedRecs} from the doc #{payloadDocName}")
-                            rescue => err
-                              $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to create kbDocLinks table - #{err}")
+                          # Make sure working revision (if provided) matches the current revision of the document
+                          workingRevisionMatched = true
+                          if(@workingRevision)
+                            workingRevisionMatched = dataHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, payloadDoc['_id'], @collName)
+                          end
+                          if(workingRevisionMatched)
+                            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "FIND: before doing validation")
+                            #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "EXISTING DOC: #{puts JSON.pretty_generate(payloadDoc)}")
+                            objId = dataHelper.save(payloadDoc, @gbLogin, :save => @save)
+                            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "FIND: after doing validation")
+                            if(objId.is_a?(BSON::ObjectId))
+                              # Doc updated successfuly - add the links to the kbDocLinks table
+                              begin
+                                kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
+                                upsertedRecs = kbDocLinks.upsertFromKbDocs( [payloadDoc] )
+                                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Inserted #{upsertedRecs} from the doc #{payloadDocName}")
+                              rescue => err
+                                $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to create kbDocLinks table - #{err}")
+                              end
+                              bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadDoc)
+                              bodyData.metadata = getDocMetadata(dataHelper)
+                              bodyData.model = modelHelper.modelForCollection(@collName)
+                              # $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Gathered data to send:\n\n#{JSON.pretty_generate(bodyData)}\n\n")
+                              configResponse(bodyData)
+                              @statusName = ( (payloadDocName and payloadDocName == @docName) ? :OK : :'Moved Permanently' )
+                              @statusMsg = "UPDATED_DOC: your existing document #{@docName.inspect} was updated #{payloadDocName == @docName ? '.' : " and was renamed to #{payloadDocName.inspect}"}."
+                            elsif(objId.is_a?(BRL::Genboree::KB::KbError))
+                              @statusName = :'Not Acceptable'
+                              @statusMsg  = "DOC_REJECTED: your document was rejected because validation failed. Validation complained that: #{objId.message}"
+                            else
+                              @statusName = :'Internal Server Error'
+                              @statusMsg = "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug."
+                              $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to save a new [default init] data doc. Saving #{@docName.inspect} in data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} returned #{objId.inspect} rather than a BSON::ObjectId. Attempted to save this doc:\n\n#{payloadDoc.inspect}\n\n")
                             end
-                            bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadDoc)
-                            bodyData.model = modelHelper.modelForCollection(@collName)
-                            # $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Gathered data to send:\n\n#{JSON.pretty_generate(bodyData)}\n\n")
-                            configResponse(bodyData)
-                            @statusName = ( (payloadDocName and payloadDocName == @docName) ? :OK : :'Moved Permanently' )
-                            @statusMsg = "UPDATED_DOC: your existing document #{@docName.inspect} was updated #{payloadDocName == @docName ? '.' : " and was renamed to #{payloadDocName.inspect}"}."
-                          elsif(objId.is_a?(BRL::Genboree::KB::KbError))
-                            @statusName = :'Not Acceptable'
-                            @statusMsg  = "DOC_REJECTED: your document was rejected because validation failed. Validation complained that: #{objId.message}"
                           else
-                            @statusName = :'Internal Server Error'
-                            @statusMsg = "SAVE_FAILED: Tried to save your document, but the save unexpectedly failed (returned #{objId.inspect} rather than what was expected). Possible configuration problem or bug."
-                            $stderr.debugPuts(__FILE__, __method__, "ERROR", "Failed to save a new [default init] data doc. Saving #{@docName.inspect} in data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} returned #{objId.inspect} rather than a BSON::ObjectId. Attempted to save this doc:\n\n#{payloadDoc.inspect}\n\n")
+                            @statusName = :"Conflict"
+                            @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
                           end
                         else # then adding new doc
                           # - doc name in path must match doc name in payload (after casting both values)
@@ -410,8 +448,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
                                 rescue => err
                                   $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to create kbDocLinks table - #{err}")
                                 end
-
+                                @docName = payloadDoc.getPropVal(idPropName)
                                 bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadDoc)
+                                bodyData.metadata = getDocMetadata(dataHelper)
                                 bodyData.model = modelHelper.modelForCollection(@collName)
                                 #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Gathered data to send:\n\n#{JSON.pretty_generate(bodyData)}\n\n")
                                 configResponse(bodyData)
@@ -493,21 +532,31 @@ module BRL ; module REST ; module Resources                # <- resource classes
               #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Doc to delete: #{reqDoc ? reqDoc['_id'].inspect : reqDoc.inspect}")
               if(reqDoc and reqDoc['_id'])
                 begin
-                  delResult = dataHelper.deleteDoc(reqDoc['_id'], @gbLogin)
-                  # Remove the respective records - all the records where the src doc id is 
-                  begin
-                    kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
-                    deletedRecs = kbDocLinks.deleteBySrcDocId(@docName)
-                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Deleted #{deletedRecs} records from the kbDocLinks Table from the doc #{@docName}")
-                  rescue => err
-                    $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to create kbDocLinks table - #{err}")
+                  # Make sure working revision (if provided) matches the current revision of the document
+                  workingRevisionMatched = true
+                  if(@workingRevision)
+                    workingRevisionMatched = dataHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, reqDoc['_id'], @collName)
                   end
-                  #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Del result: #{delResult.inspect}")
-                  bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, reqDoc)
-                  #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Gathered data to send:\n\n#{JSON.pretty_generate(bodyData)}\n\n")
-                  @statusName = :OK
-                  @statusMsg = "DELETED: The document named #{@docName.inspect} from collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} has been deleted."
-                  configResponse(bodyData)
+                  if(workingRevisionMatched)
+                    delResult = dataHelper.deleteDoc(reqDoc['_id'], @gbLogin)
+                    # Remove the respective records - all the records where the src doc id is 
+                    begin
+                      kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
+                      deletedRecs = kbDocLinks.deleteBySrcDocId(@docName)
+                      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Deleted #{deletedRecs} records from the kbDocLinks Table from the doc #{@docName}")
+                    rescue => err
+                      $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to create kbDocLinks table - #{err}")
+                    end
+                    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Del result: #{delResult.inspect}")
+                    bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, reqDoc)
+                    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Gathered data to send:\n\n#{JSON.pretty_generate(bodyData)}\n\n")
+                    @statusName = :OK
+                    @statusMsg = "DELETED: The document named #{@docName.inspect} from collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} has been deleted."
+                    configResponse(bodyData)
+                  else
+                    @statusName = :"Conflict"
+                    @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                  end
                 rescue => err
                   @statusName = :'Internal Server Error'
                   @statusMsg = "DEL_FAILED: Tried to delete the document named #{@docName.inspect} from collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} but the delete operation failed. Possible bug or collection corruption."
@@ -533,6 +582,14 @@ module BRL ; module REST ; module Resources                # <- resource classes
       # If something wasn't right, represent as error
       @resp = representError() if(@statusName != :OK)
       return @resp
+    end
+    
+    # Helper methods
+    def getDocMetadata(dataHelper)
+      doc = dataHelper.getByIdentifier(@docName, { :doOutCast => true, :castToStrOK => true })
+      docId = doc["_id"]
+      dbRef = BSON::DBRef.new(@collName, docId)
+      return dataHelper.getMetadata(dbRef)
     end
 
     # @todo - should this move to DataCollectionHelper?? Doc it have access to modelhelper etc for the collection? YES!
@@ -586,6 +643,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
       return retVal
     end
      
+    
 
     # Get the transformation rules document and the version number 
     # @return [Hash] retVal hash of transformation document and the version number

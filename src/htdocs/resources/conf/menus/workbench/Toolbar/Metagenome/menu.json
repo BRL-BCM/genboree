@@ -1,8 +1,10 @@
 [
   {
-    "text" : "Data Initialization"
+    "text" : "Data Initialization",
+    "hidden": true
   },
   {
-    "text" : "Data Analysis"
+    "text" : "Data Analysis",
+    "hidden": true
   }
 ]

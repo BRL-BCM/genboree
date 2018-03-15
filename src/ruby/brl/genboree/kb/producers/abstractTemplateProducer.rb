@@ -13,7 +13,6 @@ require 'brl/genboree/kb/validators/modelValidator'
 require 'brl/genboree/kb/validators/docValidator'
 require 'brl/genboree/kb/producers/fullPathTabbedDocProducer'
 
-
 module BRL ; module Genboree ; module KB ; module Producers
   class AbstractTemplateProducer
     module ContextExtensions
@@ -35,14 +34,26 @@ module BRL ; module Genboree ; module KB ; module Producers
       # @option opts [String] :nl What to replace any two-char newline characters in the text with. Defaults to
       #   whatever  the :twoCharNewline option is in the AbstractTemplateProducer obejct or to '<br>' if that
       #   wasn't configured when setting up the AbstractTemplateProducer.
+      # @option opts [boolean] :htmlEsc Should the prop-value (or opts[:default]!) be html escaped? Good if putting into doc
+      #   via <%= %>, bad if testing or looking for some specific value. Note that this happens BEFORE your :twoCharNewLine
+      #   replacement, if you provided that. Can be odd if providing both.
       # @return [String,nil] The value of the indicated property or the :default value (which is nil if you don't override it)
-      def pv(path, opts={:default=>nil, :nl=>(@__opts[:twoCharNewline] or '<br>')})
-        retVal = ( @__producer.pathValueMap[path] or opts[:default]  )
+      def pv(path, opts={:default=>nil, :nl=>(@__opts[:twoCharNewline] or '<br>'), :htmlEsc=>false})
+        retVal = @__kbDoc.getPropVal(path) rescue nil
+        retVal ||= opts[:default] if(retVal.nil?)
+        if( opts[:htmlEsc] )
+          retVal = Erubis::XmlHelper.escape_xml( retVal )
+        end
         if(opts[:nl])
           # Newlines in JSON strings will be 2-char sequence \\n not preceded by a \\.
           retVal = retVal.to_s.gsub(/([^\\])(?:\\n)+/) { |xx| "#{$1}#{opts[:nl]}" }
         end
         return retVal # Could use @__kbDoc.getPropVal() as well, but it will be slower b/c more work.
+      end
+
+      # Shorthand for pv() with the :htmlEsc option enabled
+      def pvh( path, opts={:default=>nil, :nl=>(@__opts[:twoCharNewline] or '<br>') } )
+        pv( path, opts.merge( { :htmlEsc=>true } ) )
       end
 
       # Get Prop Name (last item in path). Optionally as some id-safe string.
@@ -73,8 +84,14 @@ module BRL ; module Genboree ; module KB ; module Producers
       #   present in the doc, even if their values are empty or all-whitespace, set this option to true.
       # @return [boolean] Whether the property exists in the doc or not.
       def exists?(path, opts={:allowBlankVal=>false})
-        val = @__producer.pathValueMap[path]
-        return (val and (opts[:allowBlankVal] or val.to_s =~ /\S/))
+        if( opts[:allowBlankVal] ) # Just base it on value object. Prop may or may not have some value, don't care.
+          valObj = @__kbDoc.getPropValueObj(path) rescue nil
+          retVal = ( !valObj.nil? )
+        else
+          val = @__kbDoc.getPropVal(path) rescue nil
+          retVal = ( ( !val.nil? and val.to_s =~ /\S/) ? true : false )
+        end
+        return retVal
       end
       alias_method :'e?', :'exists?'
 
@@ -84,7 +101,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       #   property (a) you probably made a mistake and need to consult your model & template, (b) this will of course
       #   return 0.
       def count(path)
-        items = @__kbDoc.getPropItems(path)
+        items = @__kbDoc.getPropItems(path) rescue nil
         return (items ? items.size : 0)
       end
       alias_method :num, :count
@@ -95,7 +112,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       #   code block assumed to return true/false value just like ruby's any? or all? methods.
       # @return [boolean] Does the code block evaluate to true for any item?
       def any(path, &blk)
-        items = @__kbDoc.getPropItems(path)
+        items = @__kbDoc.getPropItems(path) rescue nil
         if(items)
           retVal = items.any? { |itm|
             blk.call( BRL::Genboree::KB::KbDoc.new(itm) )
@@ -104,6 +121,22 @@ module BRL ; module Genboree ; module KB ; module Producers
           retVal = false
         end
         return retVal
+      end
+
+      def any_matching?( pathOrRe )
+        unless( pathOrRe.is_a?(Regexp) )
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Converting model path #{pathOrRe.inspect} to a item-aware doc path Regexp")
+          propSelPath = @__producer.modelHelper.modelPathToPropSelPath( pathOrRe, @__producer.model )
+          # - Swap the [] for \[[^\]]+\] to match [{anything}] like [1] and [4] etc
+          propReStr = propSelPath.gsub(/\[\]/, "\\[[^\\]]+\\]")
+          propReStr = "^#{propReStr}$"
+         # $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Item-aware doc path Regexp string: #{propReStr.inspect}")
+          pathOrRe = Regexp.new(propReStr)
+        end
+        # - Get the matching DOC props. These contain the various values for this hinted property.
+        valueProps = @__kbDoc.getMatchingPaths(pathOrRe)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Doc props matching #{pathOrRe.source}")
+        return (valueProps and !valueProps.empty?)
       end
 
       # Render each item within an item list indicated by propPath using the indicated template.
@@ -116,7 +149,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       #   each item is rendered. For most outputs like XML/HTML this has no real effect on the display and can make the
       #   output easier to read. But in some cases, this newline is bad. Set this option to true to turn off the newline.
       # @return [String] The rendered output.
-      def render_each(propPath, template, sep='', opts={})
+      def render_each(propPath, template, sep='', opts=@__opts)
         @__producer.render_each(propPath, template, sep, opts)
       end
 
@@ -128,7 +161,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       # @param [Symbol, String] template The template to use to render the sub-doc.
       # @param [Hash<Symbol,Object>] opts Optional. Override certain default behaviors.
       # @return [String] The rendered output.
-      def subRender(propPath, template, opts={})
+      def subRender(propPath, template, opts=@__opts)
         @__producer.subRender(propPath, template, opts)
       end
 
@@ -162,35 +195,65 @@ module BRL ; module Genboree ; module KB ; module Producers
 
     attr_accessor :genbConf, :templateDir
     attr_accessor :kbDoc, :templateFile, :opts
-    attr_accessor :skipValidation # ONLY if you KNOW doc is valid vs its model. For example if dynamically retrieved model and doc at same time.
+    attr_accessor :skipValidation, :skipVariabilization # ONLY if you KNOW doc is valid vs its model. For example if dynamically retrieved model and doc at same time.
     attr_reader :templater
-    attr_reader :modelValidator, :modelHelper, :pathValueTable, :pathValueMap, :variableValueMap
+    attr_reader :model, :modelValidator, :modelHelper, :docValidator, :pathValueTable, :pathValueMap, :variableValueMap
 
     def initialize(model, kbDoc, opts={})
-      @templater = @templateFile = @templateDir = @genbConf = nil
-      @modelValidator = BRL::Genboree::KB::Validators::ModelValidator.new()
-      @modelValidator.relaxedRootValidation = (opts.key?(:relaxedRootValidation) ? opts[:relaxedRootValidation] : true)
-      raise ArgumentError, "ERROR: model provided fails validation. Not a proper, compliant model. Errors:\n#{@modelValidator.validationErrors.join("\n")}\n\n" unless(@modelValidator.validateModel(model))
-      @modelHelper = BRL::Genboree::KB::Helpers::ModelsHelper.new(@model)
+      #t1 = Time.now
+      @templater = @templateFile = @genbConf = @modelValidator = nil
       @opts = opts
+      @skipValidation = @opts[:skipValidation]
+      @skipVariabilization = @opts[:skipVariabilization]
+      @templateDir = @opts[:templateDir]
+
+      #t2 = Time.now
+      unless( @skipValidation )
+        @docValidator = BRL::Genboree::KB::Validators::DocValidator.new( nil, nil )
+        @modelValidator = BRL::Genboree::KB::Validators::ModelValidator.new()
+        @modelValidator.relaxedRootValidation = (opts.key?(:relaxedRootValidation) ? opts[:relaxedRootValidation] : true)
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( @modelValidator.respond_to?(:buildErrorMsgs) )
+          validatorErrors = @modelValidator.buildErrorMsgs()
+        else
+          validatorErrors = @modelValidator.validationErrors
+        end
+        raise ArgumentError, "ERROR: model provided fails validation. Not a proper, compliant model. Errors:\n#{validatorErrors.join("\n") rescue 'FATAL BUG: validatorErrors is missing nil. Cannot report problems validating model.'}\n\n" unless(@modelValidator.validateModel(model))
+      end
+      #$stderr.puts "  TIME: Validation #{Time.now.to_f - t2.to_f}"
+      #t3 = Time.now
+      @modelHelper = BRL::Genboree::KB::Helpers::ModelsHelper.new(@model )
       @model = model
       @kbDoc = kbDoc
+      @setupForKbDoc = nil
+      #$stderr.puts "  TIME: ModelHelper #{Time.now.to_f - t3.to_f}"
+
+      #$stderr.debugPuts(__FILE__, __method__, 'TIME', "Method time: #{Time.now.to_f - t1.to_f}")
     end
 
     def findTemplateDir(opts=@opts)
-      # Where are templates?
-      templateDir = opts[:templateDir]
-      if(templateDir.nil? or templateDir.blank?) # No template dir to use as override, get "official" one
-        @genbConf = BRL::Genboree::GenboreeConfig.load()
-        @templatedir = @genbConf.kbProducerTemplateDir
-      else
-        @templateDir = templateDir
+      #t1 = Time.now
+
+      if( !@templateDir or ( opts.object_id != @opts.object_id ) )
+        # Where are templates?
+        templateDir = opts[:templateDir]
+        if(templateDir.nil? or templateDir.blank?) # No template dir to use as override, get "official" one
+          @genbConf = BRL::Genboree::GenboreeConfig.load()
+          @templatedir = @genbConf.kbProducerTemplateDir
+        else
+          @templateDir = templateDir
+        end
+        raise "ERROR: Template dir #{@templateDir.inspect} doesn't exist, isn't readable, or isn't a directory." unless(File.readable?(@templateDir) and File.directory?(@templateDir))
       end
-      raise "ERROR: Template dir #{@templateDir.inspect} doesn't exist, isn't readable, or isn't a directory." unless(File.readable?(@templateDir) and File.directory?(@templateDir))
+
+      #$stderr.debugPuts(__FILE__, __method__, 'TIME', "Method time: #{Time.now.to_f - t1.to_f}")
+
       return @templateDir
     end
 
     def loadTemplate(template, opts=@opts)
+      #t1 = Time.now
+
       @templateDir = findTemplateDir(opts)
       if(template.is_a?(Symbol)) # Turn into template file name
         templateFileName = "#{template}.tpl"
@@ -199,10 +262,15 @@ module BRL ; module Genboree ; module KB ; module Producers
       end
       templatePath = "#{@templateDir}/#{templateFileName}"
       raise "ERROR: The template file #{templateFileName.inspect} doesn't exist within the template directory #{@templateDir.inspect}." unless(File.readable?(templatePath) and File.file?(templatePath))
+
+      #$stderr.debugPuts(__FILE__, __method__, 'TIME', "Method time (#{template.inspect}): #{Time.now.to_f - t1.to_f}")
+
       return File.read(templatePath)
     end
 
     def render(template, opts=@opts)
+      #t1 = Time.now
+
       # Don't raise error when bad path for doc, just return nil for any get*() operations
       @kbDoc.nilGetOnPathError = true
       if(template.is_a?(Symbol)) # Then Symbol indicates a template filename within @templateDir
@@ -213,13 +281,27 @@ module BRL ; module Genboree ; module KB ; module Producers
       else
         raise ArgumentError, "ERROR: template argument must be either a Symbol indicating a template within your template-dir or a String which is the template content itself. It cannot be a #{template.class}."
       end
+
+      #$stderr.puts "  TIME: templateContent #{Time.now.to_f - t1.to_f}"
+      #t2 = Time.now
       @templater = Erubis::FastEruby.new( templateContent )
+      #$stderr.puts "  TIME: FastEruby #{Time.now.to_f - t2.to_f}"
+
       # Initialize needed data structures from info extracted from doc
+      #t3 = Time.now
       initFromDoc(opts)
+      #$stderr.puts "  TIME: initFromDoc #{Time.now.to_f - t3.to_f}"
       # Render template using doc info
+      #t4 = Time.now
       contextHash = makeContext()
+      #$stderr.puts "  TIME: makeContext #{Time.now.to_f - t4.to_f}"
       #$stderr.puts "contextHash:\n\n#{contextHash.inspect}\n\n"
+      #t5 = Time.now
       retVal = @templater.evaluate(contextHash)
+      #$stderr.puts "  TIME: evaluate #{Time.now.to_f - t5.to_f}"
+
+      #$stderr.debugPuts(__FILE__, __method__, 'TIME', "Method time (#{template.inspect}): #{Time.now.to_f - t1.to_f}")
+
       return retVal
     end
 
@@ -241,7 +323,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       @modelHelper.findPropDef(propPath, model)
     end
 
-    def subRender(propPath, template, opts={})
+    def subRender(propPath, template, opts=@opts)
       # Get propDef of sub-doc under propPath
       subModel = @modelHelper.findPropDef(propPath, @model)
       # Get sub-doc itself
@@ -249,7 +331,7 @@ module BRL ; module Genboree ; module KB ; module Producers
       # Need to have a sub-doc at that path and the value object cannot be nil for it
       if(subDoc)
         # Create a templater object
-        subOpts = @opts.deep_clone
+        subOpts = opts.deep_clone
         subOpts[:relaxedRootValidation] = true # Since new doc will actually be sub-doc and thus root-validations are not all appropriate
         subTemplater = AbstractTemplateProducer.new(subModel, subDoc, subOpts)
         # We have validated whole doc at outermost level, and sub-docs extracts are likely not valid as standalone anyway.
@@ -257,16 +339,17 @@ module BRL ; module Genboree ; module KB ; module Producers
         # Render the subDoc using the template
         retVal = subTemplater.render(template, subOpts)
       else # nothing at that prop path == nothing to render!
-        retVal = ""
+        retVal = ''
         #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "CAN'T RENDER NOTHING! subDoc for #{propPath.inspect} is #{subDoc.inspect} and can't be rendered with #{template.inspect}")
       end
       return retVal
     end
 
-    def render_each(propPath, template, sep='', opts={})
+    def render_each(propPath, template, sep='', opts=@opts)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "START => Started render each item found at #{propPath.inspect}. Using template: #{template.is_a?(String) ? "\n    #{template[0,48].inspect}#{'...' if(template.size > 48)}" : template.inspect}")
       retVal = ''
-      itemSep = ( opts[:supressNewlineAfterItem] ? ' ' : "\n" )
+      itemSep = ( opts[:supressNewlineAfterItem] ? (opts[:itemPostfix] or ' ') : "\n" )
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "itemSep: #{itemSep.inspect} ; sep: #{sep.inspect} ; ( #{template.inspect} -> #{propPath.inspect} )\n  opts [#{opts.object_id}] -> #{opts.inspect}\n  @opts [#{@opts.object_id}] -> #{@opts.inspect}")
       # Get propDef of sub-doc under propPath
       subModel = @modelHelper.findPropDef(propPath, @model)
       if(subModel)
@@ -285,9 +368,9 @@ module BRL ; module Genboree ; module KB ; module Producers
                 item = items[ii]
                 itemDoc = BRL::Genboree::KB::KbDoc.new(item)
                 # Make itemTemplater using item info if we haven't already
-                unless(itemTemplater)
+                unless(itemTemplater) # only done once
                   itemOpts = @opts.deep_clone
-                  itemOpts.merge!(opts)
+                  itemOpts.merge!(opts) unless( opts == @opts )
                   itemOpts[:relaxedRootValidation] = true # Since new doc will actually be sub-doc and thus root-validations are not all appropriate
                   itemRoot = itemDoc.getRootProp()
                   itemModel = @modelHelper.findPropDef("#{propName}.#{itemRoot}", subModel)
@@ -296,6 +379,8 @@ module BRL ; module Genboree ; module KB ; module Producers
                   itemTemplater.skipValidation = true
                 end
                 # Regardless, use itemTemplater to render item
+                itemTemplater.opts[:itemIdx] = ii
+                #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "======= ii => #{ii.inspect} ; itemIdx: #{itemTemplater.opts[:itemIdx].inspect}")
                 itemTemplater.kbDoc = itemDoc # ensure we're not still on the initial one
                 renderedItem = itemTemplater.render(template)
                 isLast = (ii >= (items.size - 1))
@@ -318,41 +403,61 @@ module BRL ; module Genboree ; module KB ; module Producers
     end
 
     def initFromDoc(opts=@opts)
-      fullPathProducer = BRL::Genboree::KB::Producers::FullPathTabbedDocProducer.new(@model)
-      fullPathProducer.relaxedRootValidation = opts[:relaxedRootValidation]
-      # Validate doc
-      if(@skipValidation)
-        docValid = true
-      else
-        begin
-          docValid = fullPathProducer.validateDoc(@kbDoc)
-        rescue => err
-          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG - INTERCEPTION', "Validation threw error:\n  Error class: #{err.class}\n  Error message: #{err.message}\nThe opts are:\n    #{opts.inspect}\nThe kbDoc is:\n\n#{kbDoc.inspect}\n\n")
-          docValid = false
+      skipValidation = ( opts.key?(:skipValidation) ? opts[:skipValidation] : @skipValidation )
+      skipVariabilization = ( opts.key?( :skipVariabilization) ? opts[:skipVariabilization] : @skipVariabilization )
+      # Only do all this this once for the current/active kbDoc object
+      unless( @setupForKbDoc.object_id == @kbDoc.object_id )
+        # Validate doc unless actively skipping it
+        if( skipValidation )
+          docValid = true
+        else
+          begin
+            @docValidator = BRL::Genboree::KB::Validators::DocValidator.new( nil, nil ) unless( @docValidator )
+            docValid = @docValidator.validateDoc( @kbDoc, @model )
+
+          rescue => err
+            #$stderr.debugPuts(__FILE__, __method__, 'DEBUG - INTERCEPTION', "Validation threw error:\n  Error class: #{err.class}\n  Error message: #{err.message}\nThe opts are:\n    #{opts.inspect}\nThe kbDoc is:\n\n#{kbDoc.inspect}\n\n")
+            docValid = false
+          end
+        end
+
+        raise ArgumentError, "ERROR: the doc provided is not valid vs its model. Validation errors:\n - #{@docValidator ? @docValidator.buildErrorMsgs.join("\n  ") : '[not available; bad producer class]'}" unless(docValid)
+
+        # ONLY if still support old-style variablized-paths for use in the template, create the full
+        #   set of variablized-paths => values. The variablized-paths start here as Symbols but get
+        #   exposed to the template as very very long instance variables (the hash is the evaluate() "context").
+        #   Doing all this, especially variabilizing the paths according to heurstic, is VERY EXPENSIVE. Should
+        #   STOP USING THOSE VARIABILIZED PATHS. Use pv(), e?(), etc convenience methods in template instead!
+        @variableValueMap = {}
+        @pathValueMap = {}
+        unless( skipVariabilization )
+          # Need all full paths. Will variabilize based on full paths.
+          fullPathProducer = BRL::Genboree::KB::Producers::FullPathTabbedDocProducer.new(@model)
+          fullPathProducer.relaxedRootValidation = opts[:relaxedRootValidation]
+
+          if(docValid)
+            # Get full path version of doc
+            fullPathLines = fullPathProducer.produce(@kbDoc)
+            # Reduce lines to hash of path => value
+            @pathValueTable = fullPathLines.map { |line| line.split("\t").map { |cell| cell.strip } }
+            # Variableize keys (the paths) and map each variablized symbol to the path's value
+            @variableValueMap = {}
+            @pathValueMap = {}
+            @pathValueTable.each { |rec|
+              path, value = *rec
+              @pathValueMap[path] = value
+              varSym = makeVariableSym(path, opts)
+              if(@opts[:twoCharNewline])
+                # Newlines in JSON strings will be 2-char sequence \\n not preceded by a \\.
+                value = value.to_s.gsub(/([^\\])(?:\\n)+/) { |xx| "#{$1}#{@opts[:twoCharNewline]}" }
+              end
+              @variableValueMap[varSym] = value
+            }
+          end
         end
       end
 
-      if(docValid)
-        # Get full path version of doc
-        fullPathLines = fullPathProducer.produce(@kbDoc)
-        # Reduce lines to hash of path => value
-        @pathValueTable = fullPathLines.map { |line| line.split("\t").map { |cell| cell.strip } }
-        # Variableize keys.
-        @variableValueMap = {}
-        @pathValueMap = {}
-        @pathValueTable.each { |rec|
-          path, value = *rec
-          @pathValueMap[path] = value
-          varSym = makeVariableSym(path, opts)
-          if(@opts[:twoCharNewline])
-            # Newlines in JSON strings will be 2-char sequence \\n not preceded by a \\.
-            value = value.to_s.gsub(/([^\\])(?:\\n)+/) { |xx| "#{$1}#{@opts[:twoCharNewline]}" }
-          end
-          @variableValueMap[varSym] = value
-        }
-      else
-        raise ArgumentError, "ERROR: the doc provided is not valid vs its model. Validation errors:\n - #{fullPathProducer ? fullPathProducer.validator.validationErrors.join("\n -") : '[not available; bad producer class]'}"
-      end
+      @setupForKbDoc = @kbDoc
 
       return @variableValueMap
     end

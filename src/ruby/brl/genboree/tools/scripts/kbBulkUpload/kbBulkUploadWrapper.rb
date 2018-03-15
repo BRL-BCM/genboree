@@ -4,6 +4,7 @@ require 'brl/genboree/rest/resources/kbDocs' # for MAX_DOCS constant
 require 'brl/genboree/tools/toolWrapper'
 require 'brl/genboree/rest/data/kbDocEntity'
 require 'brl/genboree/kb/helpers/dataCollectionHelper'
+require 'brl/activeSupport/activeSupport'
 
 module BRL; module Genboree; module Tools; module Scripts
   class KbBulkUploadWrapper < BRL::Genboree::Tools::ToolWrapper
@@ -27,12 +28,6 @@ module BRL; module Genboree; module Tools; module Scripts
     def processJobConf()
       @exitCode = 0
       begin
-        # verify format setting is recognized
-        @format = @settings['format'].upcase.gsub(" ", "_").to_sym rescue nil
-        if(@format.nil? or !SUPPORTED_FORMATS.include?(@format))
-          @exitCode = 22
-          raise BRL::Genboree::GenboreeError.new(:"Unsupported Media Type", "The provided format #{@settings['format'].inspect} is not in the list of accepted formats: #{SUPPORTED_FORMATS.join(", ")}")
-        end
         # prepare report file -- a tabular format with header:
         # uri, uncomp_basename, index, message
         delim = "\t"
@@ -45,6 +40,13 @@ module BRL; module Genboree; module Tools; module Scripts
         @reporter.dbApiHelper = @dbApiHelper
         @reporter.kbApiHelper = @kbApiHelper
         @reporter.fileApiHelper = @fileApiHelper
+        # verify format setting is recognized
+        @format = @settings['format'].upcase.gsub(" ", "_").to_sym rescue nil
+        if(@format.nil? or !SUPPORTED_FORMATS.include?(@format))
+          @exitCode = 22
+          raise BRL::Genboree::GenboreeError.new(:"Unsupported Media Type", "The provided format #{@settings['format'].inspect} is not in the list of accepted formats: #{SUPPORTED_FORMATS.join(", ")}")
+        end
+        @suppressSuccessEmails = @settings['suppressSuccessEmails']
       rescue => err
         if(err.is_a?(BRL::Genboree::GenboreeError))
           @errInternalMsg = @errUserMsg = err.message
@@ -68,7 +70,7 @@ module BRL; module Genboree; module Tools; module Scripts
         uriPartition = @fileApiHelper.downloadFilesInThreads(@inputs, @userId, @scratchDir)
         localPaths = uriPartition[:success].values
         @removeFiles = localPaths
-
+        BRL::ActiveSupport.restoreJsonMethods()
         # setup data collection helper
         # @todo remove this by not requiring use of dch! use docValidator!
         gbHost = @kbApiHelper.extractHost(@outputs.first)
@@ -118,11 +120,12 @@ module BRL; module Genboree; module Tools; module Scripts
                 entities = nil
                 uncompFh = File.open(uncompPath)
                 if(File.size(uncompPath) > MAX_SIZE)
+                  raise BRL::Genboree::GenboreeError.new(:"Not Implemented", "Unfortunately, we do not support file uploads larger than #{MAX_SIZE} for non JSON formats.") if(@settings['format'] !~ /json/i)
                   # deserialize with 'json/stream' to save memory and upload
                   bjr = BRL::Util::BufferedJsonReader.new(uncompFh)
                   begin
                     # second argument's serialized limit should be sufficient to result in only 1 serialization for web server upload
-                    numEntities = bjr.each(BRL::REST::Resources::KbDocs::MAX_DOCS, BRL::REST::Resources::KbDocs::MAX_BYTES - BRL::Util::BufferedJsonReader::CHUNK_SIZE) { |objs|
+                    numEntities = bjr.each(100, BRL::REST::Resources::KbDocs::MAX_BYTES - BRL::Util::BufferedJsonReader::CHUNK_SIZE) { |objs|
                       status = uploadKbDocs(objs)
                       objs.clear()
                     }
@@ -199,7 +202,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @reporter.n_docs += docs.size
 
       # validate documents
-      docsPartition = @dch.saveDocs(docs, @userLogin, { :save => false })
+      docsPartition = @dch.saveDocs(docs, @userLogin, { :save => false, :doingMemoization => true })
 
       # count validation errors
       @reporter.recordInvalid(docsPartition[:invalid], docs.size)
@@ -248,7 +251,11 @@ module BRL; module Genboree; module Tools; module Scripts
       emailer = getEmailerConfTemplate()
       additionalInfos = [@reporter.formatReport(), @reporter.formatErrors()]
       emailer.additionalInfo = additionalInfos.join("\n")
-      return emailer
+      if(@suppressSuccessEmails)
+        return nil
+      else
+        return emailer
+      end
     end
 
     # @see BRL::Genboree::Tools::ToolWrapper
@@ -408,6 +415,9 @@ module BRL; module Genboree; module Tools; module Scripts
       # both for the file format and for the email (TSVs), \t and \n must be escaped
       raise ArgumentError.new("Why are you trying to use \\n as a column delimiter?") if(delim == "\n")
       escapedDelim = delim.inspect.gsub("\"", "")
+      # TODO: We should figure out a better way of dealing with \n chars in tokens.
+      #       Escaped \n chars are ugly in an error message. especially for the new metadata validation messages. 
+      #       It'd be better to put some kind of pipe delimiter or something.
       tokens = tokens.map{|token| token.to_s.gsub(delim, escapedDelim).gsub("\n", "\\n")}
       recordErrorInFile(fh, tokens, delim)
       recordErrorInMemory(array, tokens, maxSize)

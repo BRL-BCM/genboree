@@ -12,16 +12,24 @@
     "text": "Transcriptome"
   },
   {
-    "text": "Cistrome"
-    , "hidden": true
+    "text": "Cistrome",
+    "hidden": true
   },
   {
     "text": "Epigenome"
     , "hidden": true
   },
   {
-    "text": "Metagenome"
-    , "hidden": true
+    "text": "Metagenome",
+    "hidden": true
+  },
+  {
+    "text": "Cancer",
+    "hidden": true
+  },
+  {
+    "text": "Query/Search",
+    "hidden": true
   },
   {
     "text": "Visualization"

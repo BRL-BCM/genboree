@@ -5,7 +5,7 @@ module ProjectsControllerPatch
     base.send(:include, ProjectsInstanceMethods)
 
     base.class_eval do
-      alias_method_chain :settings, :kb_project_vars
+      alias_method_chain :settings, :project_var
     end
   end
   
@@ -14,15 +14,15 @@ module ProjectsControllerPatch
     # - in this case, we will NOT call the original method (provided automatically in settings_without_kb_project_vars)
     # - we will provide our own version, with a minor change
   
-    def settings_with_kb_project_vars()  
+    def settings_with_project_var()  
       # Call original ProjectsController#settings methods
       # - preserve original return value
-      retVal = settings_without_kb_project_vars()
+      retVal = settings_without_project_var()
      
       # Set up any plugin related models that you want for the setting tabs
       @project = Project.find(params['id'])
-      @genboreeKb = GenboreeKb.find_by_project_id(@project)
-      @genboreeAc = GenboreeAc.find_by_project_id(@project)
+#      @genboreeKb = GenboreeKb.find_by_project_id(@project)
+#      @genboreeAc = GenboreeAc.find_by_project_id(@project)
       return retVal
     end     
   end

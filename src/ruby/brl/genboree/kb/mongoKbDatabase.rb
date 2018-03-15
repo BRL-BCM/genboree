@@ -152,6 +152,8 @@ module BRL ; module Genboree ; module KB
     # @!attribute [r] coll2helper
     #   @return [Hash] of collection names to actual instances of {AbstractHelper} sub-classes
     attr_reader   :coll2helper
+    # @return Should clear() do anything? Can use this to prevent premature clean-up of resources in non-deferred modes
+    attr_accessor :doClear
 
     # This method constructs a unique MongoDB name for a MongoDB backing a GenboreeKB within a Group
     #   on a given Genboree host/instance. Very important that this name be unique, especially since
@@ -195,8 +197,10 @@ module BRL ; module Genboree ; module KB
     # @option defaultAuthInfo [String] :pass The password for the @:user@. DO NOT HARDCODE IN YOUR SCRIPTS/CODE!
     # @raise [ArgumentError] if there doesn't appear to be appropriate db-access credentials provided.
     def initialize(dbName, connStr, defaultAuthInfo=nil)
+      @doClear = true # Clear will clean up resources like caches and mongo connections etc by default.
       #$stderr.debugPuts(__FILE__, __method__, "TIME", "    START: instantiation" )
-      @conn = BRL::NoSQL::MongoDb::MongoDbConnection.getInstance(connStr, defaultAuthInfo)
+      @connStr, @defaultAuthInfo = connStr, defaultAuthInfo
+      @conn = BRL::NoSQL::MongoDb::MongoDbConnection.getInstance(@connStr, @defaultAuthInfo)
       #$stderr.debugPuts(__FILE__, __method__, "TIME", "    __after__ new MongoDbConnection" )
       raise ArgumentError, "ERROR: neither your connStr nor the defaultAuthInfo parameter seem to have provided default authentification information. This info is required and needs to be a user who--when authenticated against the special MongoDB database 'admin'--has most/all of the '*AnyDatabase' roles and the 'clusterAdmin' roles. Otherwise, KB management CANNOT be done via this class. (@conn.defaultAuthInfo: #{@conn.defaultAuthInfo.inspect}" unless(@conn.defaultAuthInfo.is_a?(Hash) and !@conn.defaultAuthInfo.empty? and @conn.defaultAuthInfo.key?(:user) and @conn.defaultAuthInfo.key?(:pass))
       @name = dbName.makeSafeStr(:ultra)
@@ -240,10 +244,15 @@ module BRL ; module Genboree ; module KB
     #   Especially important as the helper objects have circular references back to
     #   this object.
     # Be a dear, call {#clear}
-    def clear()
-      # Clear helpers
-      clearHelpers()
-      @db = @name = @conn = nil
+    def clear( opts= { :closeConn => true } )
+      if(@doClear)
+        # Clear helpers
+        clearHelpers()
+        # BUG WORKAROUND: not caching connections within MongoDbConnection any more.
+        # Using code needs to actively close the connection when done with it, via this method on MongoKbDatabase.
+        @conn.destroy() if(opts[:closeConn])
+        @db = @name = @conn = nil
+      end
     end
 
     # Return the appropriate sub class of BRL::Genboree:KB::Helpers::AbstractHelper
@@ -577,7 +586,7 @@ module BRL ; module Genboree ; module KB
         docRef = BSON::DBRef.new(docCollName, docId)
       end
       doc = @db.dereference(docRef)
-      return KbDoc.new(doc)
+      return BRL::Genboree::KB::KbDoc.new(doc)
     end
 
     def docsByRefs(docRefs, docCollName=nil)
@@ -675,7 +684,14 @@ module BRL ; module Genboree ; module KB
       modelOK = modelValidator.validateModel(modelDoc)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "modelOK: #{modelOK.inspect} ; These properties need indices:\n#{JSON.pretty_generate(modelValidator.indexedDocLevelProps)}\n\n")
       unless(modelOK)
-        raise ArgumentError, "ERROR: modelDoc does not appear to be a valid data model schema document! Errors:\n#{modelValidator.validationErrors.join("\n")}"
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( modelValidator.respond_to?(:buildErrorMsgs) )
+          validatorErrors = modelValidator.buildErrorMsgs()
+        else
+          validatorErrors = modelValidator.validationErrors
+        end
+
+        raise ArgumentError, "ERROR: modelDoc does not appear to be a valid data model schema document! Errors:\n#{validatorErrors.join("\n")}"
       else
         # Check if the collection already exists...can't create twice
         if(@db.collection_names.include?(docCollName))
@@ -793,6 +809,51 @@ module BRL ; module Genboree ; module KB
         raise KbError, "ERROR: Can't drop a database that hasn't been created yet. The database #{@name.inspect} doesn't exist and thus there is no @db object to use to drop the database. Or WORSE, it appears that @name does not match @db.name...serious bug and mismatch in infrastructure code or you managed to change one/both of these properties inappropriately (only changeable/managed by this class)."
       end
       return dropResult
+    end
+
+    def reconnectClient()
+      begin
+        @conn.client.reconnect()
+        if(@conn.client.active?)
+          @conn.client.apply_saved_authentication()
+        else
+          # Checked again after reconnect, STILL not active?? WTF? Wipe and create a new one.
+          @conn.destroy()
+          @conn = BRL::NoSQL::MongoDb::MongoDbConnection.getInstance(@connStr, @defaultAuthInfo)
+        end
+      rescue => err
+        $stderr.debugPuts(__FILE__, __method__, 'WARNING', "Mongo reconnection attempt failed.\n    Error Class: #{err.class}\n    Error Msg: #{err.message.inspect}\n    Error Trace:\n#{err.backtrace.join("\n")}")
+        raise err
+      end
+      return @conn
+    end
+
+    def attemptDirect( &callback )
+      cb = (block_given? ? Proc.new : callback)
+      # @todo Deal with reconnection better...should not be accessing db directly probably and doing retries more formally with exp sleep and in MongoKbDatabase. Noticed 1 case where this collections_info timed out.
+      # @todo These should be configurable. Opts for this class and maybe with override in this method.
+      retries = 0
+      maxRetries = 3
+      loop {
+        begin
+          cb.call()
+          break
+        rescue => err
+          if(retries < maxRetries)
+            $stderr.debugPuts(__FILE__, __method__, "WARNING", "Hacked-in code noticed timeout error trying to see if coll exists or not! Retry #{retries+1} of #{maxRetries.inspect}.")
+            retries += 1
+            begin # attempt client reconnect
+              self.reconnectClient()
+            rescue => err
+              # no-op ; reconnectClient dumped log and this will just be a retry
+            end
+          else # too many retries
+            msg = "Failed to execute direct Mongo server code on behalf of #{__caller__.inspect}. Tried #{retries.inspect} times, with reconnection attempt in between each."
+            $stderr.debugPuts(__FILE__, __method__, 'ERROR', msg)
+            raise IOError, msg
+          end
+        end
+      }
     end
 
     # ------------------------------------------------------------------

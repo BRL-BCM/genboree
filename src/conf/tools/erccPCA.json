@@ -1,0 +1,17 @@
+{
+  "info": {
+    "idStr": "erccPCA",
+    "releaseStatus": "beta",
+    "version": "1.0.0"
+  },
+  "cluster": {
+    "mem": "60gb",
+    "vmem": "60gb",
+    "walltime": "240:00:00"
+  },
+  "ui": {
+    "label": "Dimensionality Reduction Plotting Tool",
+    "shortLabel": "Dimensionality Reduction Plotting Tool",
+    "groupAccessUri": null
+  }
+}

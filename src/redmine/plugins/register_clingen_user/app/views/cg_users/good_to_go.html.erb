@@ -1,0 +1,25 @@
+<%= render :partial => "status" %>
+<p>
+  <% begin %>
+   <% if flash.keys.include?( :success ) %>
+    <div class="alert alert-success">
+      <%= flash[:success] unless flash[:success].blank? %>
+    </div>
+   <% end %>
+
+   <% if flash.keys.include?( :error ) %>
+    <div class="alert alert-danger">
+      <%= flash[:error] unless flash[:error].blank? %>
+    </div>
+   <% end rescue ""%>
+  <% rescue %>
+  <% end %>
+</p>
+
+<div>
+  <strong> Your user name : </strong> <%= @user_info["user_id"] %>
+  <br>
+  <strong> Your email-id  : </strong> <%= @user_info["e-mail"] %>
+  <h5>With this login, you will be able to use <a href="http://calculator.genome.network">ClinGen Pathogenicity Calculator</a> and register new alleles in <a href="http://reg.genome.network">ClinGen Allele Registry</h5></a>
+  <strong><h5>We have created a use case for the calculator and recommend that all new users go through it. This will provide a nice overview of various functionalities available in the calculator. The use case is available <a href="https://docs.google.com/presentation/d/1icluFBNmv2pXZZRurt3k7QnqdtUrMQC9bc8Zx2k75Co/edit#slide=id.g11f1d3f755_0_75">HERE</a></h5><strong>
+</div>

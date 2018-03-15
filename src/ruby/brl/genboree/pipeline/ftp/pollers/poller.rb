@@ -38,63 +38,72 @@ class Poller < BRL::Script::ScriptDriver
   # @todo fill these with generic poller info
   VERSION = "1.0"
   COMMAND_LINE_ARGS = {
-    "--confFile" => [:REQUIRED_ARGUMENT, "-c", "location of poller configuration file"]
+    "--confFile" => [:REQUIRED_ARGUMENT, "-c", "location of poller configuration file"],
+    "--waitTimeForPendingUploads" => [:OPTIONAL_ARGUMENT, "-w", "amount of time to wait for pending uploads"]
   }
   DESC_AND_EXAMPLES = {
     :description => "Polls FTP locations for newly deposited files to be processed",
     :authors     => [ "Aaron Baker (ab4@bcm.edu)", "Andrew R Jackson (andrewj@bcm.edu)" ],
     :examples    => [
       "#{File.basename(__FILE__)} --confFile=ftpPoller.conf",
+      "#{File.basename(__FILE__)} --waitTimeForPendingUploads=600",
       "#{File.basename(__FILE__)} --help"
     ]
   }
 
+  # Load Genboree config
   genbConf = BRL::Genboree::GenboreeConfig.load()
-  LOCK_FILE = genbConf.send(:remotePollerLockFile)
-  #raise "Missing configuration #{:remotePollerLockFile.to_s} in configuration file #{genbConf.class::DEF_CONFIG_FILE}" if(LOCK_FILE.nil?)
 
+  # Set modification time constraints for poller
+  # We assume a file is still being uploaded if it has been modified in the past hour 
+  # We assume a file group is incomplete if all files have not been modified for three days
   TIME_UPLOAD_IN_PROGRESS = 3600 # 60 second / min * 60 min / hr
-  TIME_MISSING_GROUP = 259200 # 3 days * 24 hr * 60 min * 60 sec
+  TIME_MISSING_GROUP = 259200 # 60 second / min * 60 min / hr * 24 hr / day * 3 days
 
-  # poller config keys (ftpPoller.conf)
+  # We import poller.conf as a hash into a variable named pollerConf.
+  # The variables below are keys for that hash.
   POLLER_MAX_LOCATIONS = "maxNumLocsProcessed"
   POLLER_LOC_PATTERN = "locationConfsPattern"
   POLLER_JOB_TEMPLATE_DIR = "jobTemplateDir"
 
-  # location config keys (locConf.json)
+  # We import location confs (*.locConf.json), one at a time, as hashes as we traverse all polled directories.
+  # The variables below are keys for those hashes.
   LOC_HOST = "host"  # ftp host to connect to
   LOC_TYPE = "type" # recType for dbrc
   LOC_INCOMING_DIR = "incoming.dir" # the actual location directory
   LOC_INCOMING_FILE_GROUPS = "incoming.fileGroups" # patterns to check for files in that directory
-  LOC_WORKING_DIR = "working.dir"
-  LOC_FINISHED_DIR = "finished.dir"
-  LOC_FAILED_DIR = "failed.dir"
-  LOC_OUTPUT_DIR = "output.dir"
-  LOC_JOB_SUCCESS_ID = "job.successToolId"
-  LOC_JOB_FAILURE_ID = "job.failureToolId"
-  LOC_JOB_HOST = "job.submitHost"
+  LOC_WORKING_DIR = "working.dir" # working directory where files are moved while they're being processed
+  LOC_FINISHED_DIR = "finished.dir" # finished directory where files are moved when they're done being processed (if job is successful)
+  LOC_FAILED_DIR = "failed.dir" # not used
+  LOC_OUTPUT_DIR = "output.dir" # same as finished directory (not outbox directory, which also exists - that's confusing!)
+  LOC_JOB_SUCCESS_ID = "job.successToolId" # tool ID used for submitting successful, complete file groups (FTPexceRptPipeline)
+  LOC_JOB_FAILURE_ID = "job.failureToolId" # tool ID used for submitting unsuccessful, incomplete file groups (could be different than success job, but is the same right now)
+  LOC_JOB_HOST = "job.submitHost" # FTPexceRpt job will be submitted using this host
 
-  # job config keys (jobFile.json)
+  # The variables below are keys for the jobFile.json hash
   INPUTS, OUTPUTS, SETTINGS, CONTEXT = "inputs", "outputs", "context", "settings"
-  JOB_VARIABLES = {
-    "settings.analysisName" => "{SHORT_ID}"
-  }
 
   attr_accessor :remoteHelper # helper object to perform ftp operations
   attr_accessor :context, :settings # hashes to incorporate into jobHash
   attr_accessor :contextSym, :settingsSym # how to incorporate into jobHash -- :merge or :replace 
 
+  # makeHelper method is implemented in children classes (ftpPoller and rsyncPoller)
+  # This method creates the helper that connects to the FTP server and performs all FTP-based operations
   def makeHelper(host=nil, user=nil)
     raise NotImplementedError, "BUG: The script has a bug. The author did not implement the required '#{__method__}(host, user, password)' method."
   end
 
   def initialize()
     super()
+    # Clean up various instance variables used in poller
     clean()
+    # @debug tells us whether we want to print lots of extra debug statements in case something goes wrong
     @debug = false
-    @remoteHelper = nil 
+    # @remoteHelper is set by #makeHelper to be the particular helper that connects to the FTP server and performs all FTP-based operations
+    @remoteHelper = nil
+    # @helperType keeps track of whether our helper is rsync or Net::FTP based
     @helperType = nil
-    
+    # Grab file path to lock file from GenboreeConfig - raise error if we can't find it
     lockFileConfig = 'remotePollerLockFile'
     genbConf = BRL::Genboree::GenboreeConfig.new()
     genbConf.loadConfigFile()
@@ -104,10 +113,12 @@ class Poller < BRL::Script::ScriptDriver
     end
   end
 
+  # Clears @jobTemplateDir (path to where we can find template jobFile.json for submitting FTPexceRpt jobs)
   def cleanPoller()
     @jobTemplateDir = ""
   end
   
+  # Clears all information gathered from location conf
   def cleanLocation()
     @finishedDir = @incomingDir = @patternGroups = @workingDir = nil
     @outputDir = @successToolId = @apiCaller = nil
@@ -115,6 +126,7 @@ class Poller < BRL::Script::ScriptDriver
     @completeFileGroups = @incompleteFileGroups = nil
   end
 
+  # Cleans up jobFile.json hash and all of its related instance variables. Resets @contextSym and @settingsSym
   def cleanJob()
     @jobHash = {}
     @inputs = @outputs = []
@@ -122,6 +134,7 @@ class Poller < BRL::Script::ScriptDriver
     @contextSym = @settingsSym = :merge
   end
 
+  # Cleans all information used by poller to submit a given FTPexceRpt job
   def clean()
     cleanPoller()
     cleanLocation()
@@ -138,22 +151,34 @@ class Poller < BRL::Script::ScriptDriver
   def run()
     lockFh = nil
     begin
+     # Lock pollerLockFile
       lockFh = lockFile()
+      # Grab a list of all location conf files specified by poller conf (and grab directory where job template is located)
       locations = parsePollerConf()
+      # We'll traverse each location and see if we need to submit a job
       locations.each{|location|
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "\n\nProcessing location: #{location.inspect}\n\n")
+        # Parse location conf and set up variables for processing this job
         parseLocationConf(location)
-        incoming = waitForPendingUploads(location, TIME_UPLOAD_IN_PROGRESS)
+        # Grab all files in inbox that are ready for processing (and also report files that are still being uploaded)
+        if(@optsHash['--waitTimeForPendingUploads'])
+          waitTime = @optsHash['--waitTimeForPendingUploads'].to_i
+        else
+          waitTime = TIME_UPLOAD_IN_PROGRESS
+        end
+        incoming = waitForPendingUploads(location, waitTime)
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "incoming=#{incoming.inspect}") if(@debug)
+        # Figure out which file groups are complete - those are the ones we're going to process first
         completeFileGroups = groupFiles(incoming)
         $stderr.debugPuts(__FILE__, __method__, "DEBUG", "completeFileGroups=#{completeFileGroups.inspect}") if(@debug)
-        workingMap = moveToWorking(completeFileGroups)
+        # Move each complete file group to its respective working directory
+        workingMap = moveToWorking(completeFileGroups) 
+        # Update file paths for each file (from being inside inbox to being inside working directory)
         completeFileGroups.each{|fileGroup| fileGroup.map!{|file| workingMap[file]}}
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "working=#{completeFileGroups.inspect}") if(@debug)
         jobIds = submitJobs(completeFileGroups)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Submitted jobs: #{jobIds.inspect}")
-
-        # eventually submit incomplete groups to the failureJobId
+        # After submitting working, full file groups, we'll submit failed, incomplete file groups
         incompleteFiles = @incompleteFileGroups.flatten
         mtimesMap = @remoteHelper.mtimes(incompleteFiles)
         timeNow = Time.now
@@ -162,27 +187,35 @@ class Poller < BRL::Script::ScriptDriver
           oldGroup = true
           group.each{|path|
             mtime = mtimesMap[path]
+            # If any file in a given incomplete file group has NOT been sitting around for longer than or equal to TIME_MISSING_GROUP (3 days),
+            # then we won't submit the job. This is to prevent us from spamming the user with reminder emails (you need to upload your files!).
             if((timeNow - mtime) < TIME_MISSING_GROUP)
               oldGroup = false
               break
             end
           }
+          # If all the files in the incomplete file group are old, then we push the current group onto oldGroups.
+          # These old groups will be processed
           if(oldGroup)
             oldGroups.push(group)
           end
         }
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "oldGroups=#{oldGroups.inspect}") if(@debug)
+        # Move files in old groups to their respective working directories
         oldWorkingMap = moveToWorking(oldGroups)
+        # Update file paths in these groups to be the working directory paths
         oldGroups.each{|fileGroup| fileGroup.map!{|file| oldWorkingMap[file]}}
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "oldGroups=#{oldGroups.inspect}") if(@debug)
+        # Submit these groups as failure jobs (which is really pretty much the same as normal jobs, since the tool ID is the same in both cases)
         failedJobIds = submitFailureJobs(oldGroups)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Submitted failure jobs: #{failedJobIds.inspect}")
 
         # @todo either files are submitted to success job, failure job, or we are still waiting; we have printed
         # the first 2 already, print status on the third
-
+        # Clean up instance variables associated with current location
         cleanLocation()
       }
+      # Clean up instance variables associated with poller (since we're done traversing all locations)
       cleanPoller()
     rescue => err
       prepGbError(err, __method__, 21, "An error occurred while running the job!")
@@ -211,6 +244,9 @@ class Poller < BRL::Script::ScriptDriver
   # @note modifies paths in place
   # @set @completeFileGroups, @incompleteFileGroups
   def groupFiles(paths)
+    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "paths for groupFiles method: #{paths.inspect}")
+    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@patternGroups for groupFiles method: #{@patternGroups.inspect}")
+    # We're going to split up our files into complete file groups and incomplete file groups
     @completeFileGroups = []
     @incompleteFileGroups = []
     # map path to group information:
@@ -223,6 +259,7 @@ class Poller < BRL::Script::ScriptDriver
     incompleteNum = 0
     @patternGroups.each{|groupPatterns|
       groupedHash = Poller::groupStrings(paths, groupPatterns)
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "groupedHash for groupFiles method: #{groupedHash.inspect}")
       complete, incomplete = groupedHash[:complete], groupedHash[:incomplete]
       complete.each{|fileGroup|
         completePaths = fileGroup.collect{|kk, vv| vv}
@@ -263,16 +300,16 @@ class Poller < BRL::Script::ScriptDriver
   def parsePollerConf(file=@optsHash['--confFile'])
     locations = []
     begin 
-      # parse configuration file for job template and other parameters
+      # Open poller configuration file and parse it into pollerConf (it's JSON)
       pollerConf = {}
       File.open(file){|ff|
         pollerConf = JSON.parse(ff.read())
       }
-
+      # Grab all locConf files specified by poller conf settings
       maxLocations = pollerConf[POLLER_MAX_LOCATIONS]
       locationConfPattern = pollerConf[POLLER_LOC_PATTERN]
       locations = Dir.glob(locationConfPattern)[0...maxLocations]
-
+      # Also grab job template directory specified by poller conf
       @jobTemplateDir = pollerConf[POLLER_JOB_TEMPLATE_DIR]
     rescue => err
       prepGbError(err, __method__, 27, "An error occurred while parsing the poller configuration file")
@@ -288,41 +325,45 @@ class Poller < BRL::Script::ScriptDriver
   def parseLocationConf(location)
     retVal = nil
     begin
+      # Grab location conf and save it in locationConf hash (it's JSON)
       locationConf = {}
       File.open(location){|ff|
         locationConf = JSON.parse(ff.read())
       }
-
-      # setup location paths
+      # Set up our different location paths associated with the current location
       @incomingDir = Poller.getMongoValue(locationConf, LOC_INCOMING_DIR)
       @patternGroups = Poller.getMongoValue(locationConf, LOC_INCOMING_FILE_GROUPS)
       @workingDir = Poller.getMongoValue(locationConf, LOC_WORKING_DIR)
       @finishedDir = Poller.getMongoValue(locationConf, LOC_FINISHED_DIR)
       @failedDir = Poller.getMongoValue(locationConf, LOC_FAILED_DIR)
       @outputDir =  Poller.getMongoValue(locationConf, LOC_OUTPUT_DIR)
-
-      # define location access helper
+      # Figure out what kind of remote helper we want to create (rsync or Net::FTP) via the location conf
       locationType = Poller.getMongoValue(locationConf, LOC_TYPE).to_s.downcase.to_sym
       if(locationType == :poller)
         @helperType = "RSYNC"
       elsif(locationType == :ftp)
         @helperType = "LFTP"
       end
+      # Grab host from location conf and then create our remote helper
       host = Poller.getMongoValue(locationConf, LOC_HOST)
       dbrc = BRL::DB::DBRC.new()
       dbrcRec = dbrc.getRecordByHost(host, locationType)
       @remoteHelper = makeHelper(host)
       @remoteHelper.debug = true if(@debug)
       $stderr.debugPuts(__FILE__, __method__, "DEBUG", "host is: #{host}")
-      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "user is: #{dbrcRec[:user]}")        
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "user is: #{dbrcRec[:user]}")
+      # Create @netUtil helper - only used for figuring out time on remote server with rsync helper   
       @netUtil = ::BRL::Net::NetUtil.new(host, dbrcRec[:user])
-
-      # job variables
+      # Grab tool ID for successful (complete file group) job and unsuccessful (incomplete file group) job.
+      # Right now, they're the same tool ID (ftpExceRptPipeline)
       @successToolId = Poller.getMongoValue(locationConf, LOC_JOB_SUCCESS_ID)
       @failureToolId = Poller.getMongoValue(locationConf, LOC_JOB_FAILURE_ID)
+      # Job will be submitted through jobHost
       jobHost = Poller.getMongoValue(locationConf, LOC_JOB_HOST)
+      # Create rsrcPath for submitting job
       rsrcPath = getRsrcPath(@successToolId)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "rsrcPath=#{rsrcPath.inspect}") if(@debug)
+      # Create apiCaller object to submit job
       dbrcRec = dbrc.getRecordByHost(jobHost, :api)
       @apiCaller = BRL::Genboree::REST::ApiCaller.new(jobHost, rsrcPath, dbrcRec[:user], dbrcRec[:password])
     rescue => err
@@ -436,15 +477,24 @@ class Poller < BRL::Script::ScriptDriver
   def submitJobs(workingFileGroups)
     jobIds = []
     begin
-      # prepare a job to process working files
+      # outputs will initially contain the finished dir and failed dir (full paths) 
       outputs = [@outputDir, @failedDir]
+      # Traverse each file group that has been moved to its respective working dir
       workingFileGroups.each{|fileGroup|
+        # inputs consists of the files in the current file group
         inputs = fileGroup
-        outputs.map!{|output| File.join(output, getParentDir(inputs.first) + "/")} # terminal slash for directory
-        jobConf = parseJobConf(@jobTemplateDir, @successToolId, confVars={})
+        # Our original output folders don't include any identifier for THIS particular job
+        # We will use the same identifier we used in our working directory to separate different jobs
+        outputs.map!{|output| File.join(output, getParentDir(inputs.first) + "/")}
+        # Parse job conf and save it in jobConf hash
+        jobConf = parseJobConf(@jobTemplateDir, @successToolId, confVars={}) 
+        # Load inputs and outputs into job conf
         jobHash = prepJob(inputs, outputs)
+        # Submit job conf via API as a tool job
         jobId = submitJob(jobHash, @successToolId)
+        # Add current job ID to jobIDs array
         jobIds.push(jobId)
+        # Clean up all instance variables that were set by this particular job submission
         cleanJob()
       }
     rescue => err
@@ -478,13 +528,10 @@ class Poller < BRL::Script::ScriptDriver
     return jobIds
   end
 
-  # Make note of files at each location first, check again after some time for any recently 
-  #   modified files
+  # Make note of files at each location first, check again after some time for any recently modified files
   # @param [Array<String>] locations the locations that the poller is handling
-  # @param [Fixnum] sleepTime the number of seconds (perhaps with fractional seconds) to wait
-  #   before considering files finished uploading
-  # @return [Array<String>] incoming files in the inbox 
-  #   that should have jobs launched
+  # @param [Fixnum] sleepTime the number of seconds (perhaps with fractional seconds) to wait before considering files finished uploading
+  # @return [Array<String>] incoming files in the inbox that should have jobs launched
   # @raise [BRL::Genboree::GenboreeError] if anything errors
   # @note assumes parseLocationConf has been called and the associated state variables set
   def waitForPendingUploads(location, sleepTime=TIME_UPLOAD_IN_PROGRESS)
@@ -496,45 +543,62 @@ class Poller < BRL::Script::ScriptDriver
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@remoteHelper=#{@remoteHelper.inspect}")
     end
     begin
-      # add files at location to list of files to be processed
+      # patterns is an array that will hold all patterns grabbed from the locConf
       patterns = []
       @patternGroups.each{|group|
         group.each{|pattern|
           patterns.push(pattern)
         }
       }
+      # List full paths of all files in the user's inbox that match the patterns grabbed above
       if(@helperType == "RSYNC")
         fullFtpPaths = @remoteHelper.ls(@incomingDir, patterns)
       elsif(@helperType == "LFTP")
         fullFtpPaths = @remoteHelper.ls(@incomingDir, 10, patterns)
       end
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Files at #{location}: #{fullFtpPaths.inspect}")
-      mtimes = @remoteHelper.mtimes(fullFtpPaths)  
+      # Grab modification times of all files grabbed above
+      mtimes = @remoteHelper.mtimes(fullFtpPaths)
+      # We want to figure out the current time on the FTP server
+      # If our @helperType is rsync, we can just use @netUtil to figure out the system time
+      # If our @helperType is Net::FTP, then we create a temp directory, look at its time stamp, then delete the temp directory
+      # Can't we just use @netUtil even if our @helperType is Net::FTP?
       if(@helperType == "RSYNC")
         remoteTimeNow = @netUtil.systemTime()
       elsif(@helperType == "LFTP")
-        @remoteHelper.mkdir("#{@incomingDir}/temp_dir_for_checking_current_time_aardvark")
+        @remoteHelper.mkdir("#{@incomingDir}temp_dir_for_checking_current_time_aardvark")
         modTimes = @remoteHelper.ftpObj.ls(@incomingDir)
         modTimes.each { |currentFile|
           if(currentFile.split()[-1] == "temp_dir_for_checking_current_time_aardvark")
-            remoteTimeStr = "#{currentFile.split()[5]} #{currentFile.split()[6]} #{currentFile.split()[7]}"
+            remoteTimeStr = "#{currentFile.split()[5]} #{currentFile.split()[6]} #{currentFile.split()[7]} UTC"
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "remoteTimeStr is #{Time.parse(remoteTimeStr)}")
             remoteTimeNow = Time.parse(remoteTimeStr).to_i
             break
           end
         }
-        @remoteHelper.rmdir("#{@incomingDir}/temp_dir_for_checking_current_time_aardvark")
+        @remoteHelper.rmdir("#{@incomingDir}temp_dir_for_checking_current_time_aardvark")
       end
+      # If we couldn't figure out current time on FTP server, we raise an error
       raise PollerError.new("Could not determine if file uploads were still in progress. Cowardly refusing to process any files") if(remoteTimeNow.nil?)
+      # Check each file to see whether it has been modified in the past hour (sleepTime)
+      # If it hasn't been modified, push it onto retVal (we can process it)
+      # If it has been modified, push it onto uploadInProgress (we can't process it)
       mtimes.each_key{|path|
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "mtime (before conversion to integer) is #{mtimes[path]}")
         mtime = mtimes[path].to_i
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "mtime is #{mtime} and remoteTimeNow is #{remoteTimeNow}")
-        if(remoteTimeNow - mtime > sleepTime)
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "remoteTimeNow - mtime is #{remoteTimeNow - mtime}")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "sleepTime is #{sleepTime}")
+        if(remoteTimeNow - mtime >= sleepTime)
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "We pass the test and will process the files!")
           retVal.push(path)
         else
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "File is still in progress!")
           uploadInProgress.push(path)
         end
       }
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "incomingFiles=#{retVal.inspect}") if(@debug)
+      # We don't actually save the uploadInProgress files for anything - all we do is report them here
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Waiting for the following files to finish uploading: #{uploadInProgress.join(", ")}") if(!uploadInProgress.empty?)
     rescue => err
       prepGbError(err, __method__, 29, "An error occurred while waiting for pending uploads!")
@@ -558,11 +622,13 @@ class Poller < BRL::Script::ScriptDriver
         uniqueDirname = basename[0...8] + basename.generateUniqueString.xorDigest(8)
         subDir = File.join(@workingDir, uniqueDirname)
         $stderr.debugPuts(__FILE__, __method__, "POLLER", "Subdir is currently #{subDir}")
+        # Create working directory
         subDir = @remoteHelper.mkdir(subDir)
         if(subDir.nil?)
           $stderr.debugPuts(__FILE__, __method__, "POLLER", "Unable to process incomingFiles=#{incomingFiles.inspect} because we could not safely create a uniquely named sub-working directory=#{subDir} for processing")
         else
           $stderr.debugPuts(__FILE__, __method__, "POLLER", "Created working directory #{subDir.inspect}")
+          # Move each file in group from inbox to working directory
           incomingFiles.each{|file|
             basename = File.basename(file)
             dest = File.join(subDir, basename)
@@ -570,7 +636,10 @@ class Poller < BRL::Script::ScriptDriver
             if(renamedFile.nil?)
               $stderr.debugPuts(__FILE__, __method__, "POLLER", "refusing to process file=#{file.inspect} because we could not safely move it to the working area #{subDir.inspect}")
             else
+              # Once we've moved the file, we want to touch the file so that the timestamp is updated (measures like this prevent us from submitting the same stale files every 30 minutes)
+              # UNSURE AS TO WHETHER THIS IS WORKING PERFECTLY - SEEMS MESSED UP FOR CERTAIN LAB DIRECTORIES
               @remoteHelper.touch(renamedFile)
+              # workingFiles hash will hold previous full file path as key and new full file path (in working directory) as value
               workingFiles[file] = renamedFile
             end
           }
@@ -592,6 +661,8 @@ class Poller < BRL::Script::ScriptDriver
     retVal = nil
     begin
       ff = File.open(file, 'w+')
+      # Attempts an exclusive lock and returns immediately. Returns false if
+      # an exclusive lock was not obtained.
       ff.flock(File::LOCK_NB | File::LOCK_EX)
       retVal = ff
     rescue => err
@@ -606,12 +677,14 @@ class Poller < BRL::Script::ScriptDriver
   # @return [Boolean] indication if file is closed (and unlocked) or not
   def unlockFile(fileHandle)
     retVal = nil
+    # Unlock pollerLockFile, close File object, and then return whether File was succesfully closed
     fileHandle.flock(File::LOCK_UN)
     fileHandle.close()
     retVal = fileHandle.closed?()
     return retVal
   end
-
+  
+  # Simple method to get the immediate parent directory for a given folder / file 
   def getParentDir(filepath)
     return File.basename(File.dirname(filepath))
   end
@@ -679,6 +752,7 @@ class Poller < BRL::Script::ScriptDriver
     strings = Marshal.load(Marshal.dump(strings))
     patterns.each { |patternStr| 
       pattern = Regexp.new(patternStr)
+      foundStrings = []
       strings.each { |string|
         matchData = pattern.match(string)
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "pattern=#{pattern.inspect}, string=#{string.inspect}")
@@ -686,11 +760,17 @@ class Poller < BRL::Script::ScriptDriver
         if(matchData.nil?)
         else
           group2Members[matchData[1..9]][pattern].push(string)
-          strings.delete(string)
+          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "strings=#{strings.inspect}")
+          foundStrings << string
+          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "foundStrings=#{foundStrings.inspect}")
         end
       }
+      foundStrings.each { |currentString|
+        strings.delete(currentString)
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "strings=#{strings.inspect}")
+      }
     }
-    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "group2Members=#{group2Members.inspect}")
+    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "group2Members=#{group2Members.inspect}")
 
     maxIter = 10
     group2Members.each_key { |group|

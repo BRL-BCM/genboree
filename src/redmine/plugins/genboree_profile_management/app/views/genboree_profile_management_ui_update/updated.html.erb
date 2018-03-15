@@ -1,0 +1,36 @@
+<div class="form_container container-fluid">
+  <div class="row">
+    <div class="col-lg-3">
+    </div>
+    <div class="col-lg-6 col-sm-12 col-xs-12">
+      <div class="well">
+        <div class="row form-row">
+          <div class="col-sm-12">
+           <h3>User profile</h3>
+          </div>
+          <div class="col-sm-12">
+            <br>
+            <strong>Login: </strong> <%=@user_info["user_id"]%>
+            <br>
+            <strong>e-mail: </strong><%=@user_info["email_id"]%>
+            <br>
+            <strong>First Name: </strong><%=@user_info["first_name"]%>
+            <br>
+            <strong>Last Name: </strong> <%=@user_info["last_name"]%>
+            <br>
+            <strong>Affiliation: </strong><%=@user_info["affiliation"]%>
+            <br>
+            <strong>Phone: </strong><%=@user_info["phone"]%>
+            <br>
+          </div>
+          <div class="col-sm-12 edit-btn">
+            <%= link_to 'Edit Profile', { :controller => :genboree_profile_management_ui_update, :action => :show }, { :class => "btn btn-primary" } %>
+          </div>
+          <div class="col-sm-12 change-pwd-btn">
+            <%= link_to 'Change Password', { :controller => :genboree_profile_management_ui_update, :action => :update_pwd }, { :class => "btn btn-primary" } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

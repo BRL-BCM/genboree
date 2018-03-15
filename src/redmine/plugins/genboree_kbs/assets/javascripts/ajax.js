@@ -251,6 +251,7 @@ function setWesternPanelTitles(slabel, plabel)
   [
     { recordFuncName : 'Create new Document', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create '+slabel },
     { recordFuncName : 'Create new Document with Template', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create '+slabel+" (Template)" },
+    { recordFuncName : 'Create new Document with Questionnaire', genbKbIconCls : 'genbKb-createRecord', displayStr: 'Create '+slabel+" (Questionnaire)" },
     { recordFuncName : 'Edit Document', genbKbIconCls : 'genbKb-editRecord', displayStr: 'Edit '+slabel },
     { recordFuncName : 'Delete Document', genbKbIconCls : 'genbKb-deleteRecord', displayStr: 'Delete '+slabel },
     { recordFuncName : 'History', genbKbIconCls : 'genbKb-recordHistory', displayStr: slabel+' History' }
@@ -322,7 +323,7 @@ function satisfyURLParams( docIdentifier, docModelObj )
       toggleCreateNewDocumentSelector('enable') ;
     }
     toggleViewModel('enable') ;
-    if ((docIdentifier && docIdentifier != "") || createNewDoc || createNewDocWithTemplate) {
+    if ((docIdentifier && docIdentifier != "") || createNewDoc || createNewDocWithTemplate || createNewDocWithQuestionnaire) {
       initTreeGrid() ;
       // Must create a new JsonStore to hold any search results for this collection
       // - populates the searchStoreData global
@@ -336,7 +337,7 @@ function satisfyURLParams( docIdentifier, docModelObj )
           enablePanelBtn('docHistory') ;
           currentCollection = Ext.getCmp('collectionSetCombobox').value ;
           originalDocumentIdentifier = docIdentifier ;
-          Ext.getCmp('manageDocsGrid').getView().select(4) ;
+          funcGridsBtnToggler('manageDocsGrid', 'History', 'select') ;
         }
         else
         {
@@ -345,20 +346,36 @@ function satisfyURLParams( docIdentifier, docModelObj )
         }
       }
       else if (createNewDoc) {
-        Ext.getCmp('manageDocsGrid').getView().select(0) ;
+        funcGridsBtnToggler('manageDocsGrid', 'Create new Document', 'select') ;
         createNewDoc = false ;
       }
       else if (createNewDocWithTemplate) {
-        if (templateId == '') {
-          Ext.getCmp('manageDocsGrid').getView().select(1) ;
-        }
-        else{
-          if (role && role != 'subscriber') {
-            loadTemplates() ;
+        if (role && role != 'subscriber') {
+          if (templateId == '') {
+            funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Template', 'select') ;
+          }
+          else{
+            loadTemplates() ;  
           }
         }
+        else{
+          Ext.Msg.alert("Permission Denied", "Subscribers and anonymous users are not allowed to create new documents.") ;
+        }
         createNewDocWithTemplate = false ;
-        
+      }
+      else if (createNewDocWithQuestionnaire) {
+        if (role && role != 'subscriber') {
+          if (questionnaireId == '') {
+            funcGridsBtnToggler('manageDocsGrid', 'Create new Document with Questionnaire', 'select') ;
+          }
+          else{
+            loadQuestionnaires() ;  
+          }
+        }
+        else{
+          Ext.Msg.alert("Permission Denied", "Subscribers and anonymous users are not allowed to create new documents.") ;
+        }
+        createNewDocWithQuestionnaire = false ;
       }
     }
     else // Just show the collection stats
@@ -366,21 +383,18 @@ function satisfyURLParams( docIdentifier, docModelObj )
       displayKbStats('coll') ;
       createSearchStore(docModelObj) ;
       Ext.getCmp('searchComboBox').setValue('') ;
-      
     }
   }
 }
 
 function loadInitialDocList(appendData)
 {
-  //var url = 'genboree_kbs/collection/initialDocList' ;
   var url = 'genboree_kbs/doc/search' ;
   var timeout = 900000 ;
   var method = "GET" ;
   var params = {
     "authenticity_token"  : csrf_token,
     project_id            : projectId,
-    //collectionSet         : Ext.getCmp('collectionSetCombobox').value
     coll                   : Ext.getCmp('collectionSetCombobox').value,
     limit: 25,
     searchStr: ""
@@ -413,7 +427,7 @@ function loadInitialDocList(appendData)
   genericAjaxCall(url, timeout, method, params, callback) ;
 }
 
-function loadDocument(value, setSearchBoxValueAsSelf)
+function loadDocument(value, setSearchBoxValueAsSelf, setEditMode)
 {
   maskObj.show() ;
   var url = 'genboree_kbs/doc/show' ;
@@ -437,7 +451,7 @@ function loadDocument(value, setSearchBoxValueAsSelf)
       var statusObj   = apiRespObj['status'] ;
       if(response.status >= 200 && response.status < 400 && docObj)
       {
-        loadDocumentInEditor(docObj, setSearchBoxValueAsSelf, value, false) // defined in docHelper.js
+        loadDocumentInEditor(docObj, setSearchBoxValueAsSelf, value, false, setEditMode) // defined in docHelper.js
       }
       else
       {

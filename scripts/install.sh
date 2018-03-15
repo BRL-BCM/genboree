@@ -50,7 +50,7 @@ cd -
 #func_run "${DIR_TARGET}/mysql/bin/mysql_secure_installation"
 
 echo "Start MYSQL daemon ..."
-${DIR_TARGET}/etc/init.d/mysqld_init start
+${DIR_TARGET}/etc/init.d/mysqld_init_1 start
 
 echo "Create Genboree databases..."
 mysql --defaults-file=${DIR_TARGET}/etc/my.cnf -u root < ${DIR_DATA}/mysql/scripts/create_users.sql
@@ -90,13 +90,13 @@ mysql --defaults-file=${DIR_TARGET}/etc/my.cnf -u root < ${DIR_DATA}/mysql/scrip
 mysql --defaults-file=${DIR_TARGET}/etc/my.cnf -u root < ${DIR_DATA}/mysql/scripts/redmine_set_autoincrement.sql
 
 echo "Stop MYSQL daemon ..."
-${DIR_TARGET}/etc/init.d/mysqld_init stop
+${DIR_TARGET}/etc/init.d/mysqld_init_1 stop
 
 
 echo "MongoDB initialization..."
-${DIR_TARGET}/etc/init.d/mongodb_init start
+${DIR_TARGET}/etc/init.d/mongodb_init_1 start
 mongo --port 16001 < ${DIR_DATA}/mongodb/scripts/genboree.js
-${DIR_TARGET}/etc/init.d/mongodb_init stop
+${DIR_TARGET}/etc/init.d/mongodb_init_1 stop
 
 echo "Set ownership once more time..."
 chown -R genboree:genboree  ${DIR_BRL}

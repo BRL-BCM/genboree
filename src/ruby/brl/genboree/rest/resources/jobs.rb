@@ -75,7 +75,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
     # other services should be matched for first.
     # [+returns+] The priority, from 1 to 10.
     def self.priority()
-      return 9
+      return 7
     end
 
     def initOperation()
@@ -140,10 +140,41 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 # Populate entity fields
                 if(!jobRecs.nil? and !jobRecs.empty?)
                   if(@detailed != 'summary' and @detailed != 'false' and @detailed != 'no') # For full detailed
+                    # We need to grab audit job recs for a few fields below in our full report
+                    auditJobRecs = @dbu.selectJobAuditInfosByJobIds(jobIds, @outputParams, @filters)
+                    # Set up hash for easily accessing job audit records by job ID ('name')
+                    auditJobRecsByJobId = {}
+                    auditJobRecs.each { |jobRec|
+                      auditJobRecsByJobId[jobRec['name']] = jobRec
+                    }
+                    # Now, we actually fill out the job records we'll be reporting back to user
                     jobRecs.each { |jobRec|
+                      # Grab inputs, outputs, and context from job record
                       input = (jobRec['input'] ? (JSON.parse(jobRec['input']) rescue "[ 'ERROR (corrupted)' ]") : [])
                       output = (jobRec['output'] ? (JSON.parse(jobRec['output']) rescue "[ 'ERROR (corrupted)' ]") : [])
                       context = (jobRec['context'] ? (JSON.parse(jobRec['context']) rescue "{ 'ERROR' : '(corrupted)' }") : {})
+                      # Certain information isn't in context JSON (even though a number of these fields ARE saved in context JSON for jobFile.json uploaded for users),
+                      # so let's grab them via other means and save them in context
+                      # Fields immediately available via jobRec
+                      context['name'] = jobRec['name']
+                      context['entryDate'] = jobRec['entryDate']
+                      context['submitDate'] = jobRec['submitDate']
+                      context['execStartDate'] = jobRec['execStartDate']
+                      context['execEndDate'] = jobRec['execEndDate']
+                      context['status'] = jobRec['status']
+                      # Fields available via audit record associated with job ID
+                      context['user'] = auditJobRecsByJobId[jobRec['name']]['user']
+                      context['systemHost'] = auditJobRecsByJobId[jobRec['name']]['systemHost']
+                      context['systemType'] = auditJobRecsByJobId[jobRec['name']]['systemType']
+                      context['queue'] = auditJobRecsByJobId[jobRec['name']]['queue']
+                      context['systemJobId'] = (auditJobRecsByJobId[jobRec['name']]['systemJobId'] || "none")
+                      context['toolType'] = auditJobRecsByJobId[jobRec['name']]['toolType']
+                      context['toolId'] = auditJobRecsByJobId[jobRec['name']]['toolId']
+                      context['directives'] = auditJobRecsByJobId[jobRec['name']]['directives']
+                      # Grab tool label and save it in context
+                      label = BRL::Genboree::Tools::ToolConfHelper.getUiConfigValue('label', jobRec['toolId'])
+                      context['label'] = label
+                      # Grab settings from job record and then add WorkbenchJobEntity to jobEntityList
                       settings = (jobRec['settings'] ? (JSON.parse(jobRec['settings']) rescue "{ 'ERROR' : '(corrupted)' }") : {})
                       jobEntityList << BRL::Genboree::REST::Data::WorkbenchJobEntity.new( @connect, input, output, context, settings)
                     }
@@ -253,68 +284,82 @@ module BRL ; module REST ; module Resources                # <- resource classes
     def setUpFiltersAndParams()
       status = :OK
       t1 = t2 = Time.now
-      if(@filters['users'].nil?)
-        if(@gbAudit and @isGbAuditor)  # If this is an Genboree audit, show ALL users' jobs IF login is an AUDITOR.
-          @filters['users'] = nil
-        else  # Default to regular usage: show the authenticated user's jobs.
-          @filters['users'] = @gbLogin  # Default if no user list.
-        end
-      else  # A user list was provided. Currently only Genboree auditors can see other users' jobs. May change in the future in more complex scenarios which allow Group admins to see jobs involving stuff in Groups they administer, regardless of user, etc.
-        @filters['users'] = @filters['users'].split(',')
-        if(@filters['users'].size == 1) # then must be self, unless an auditor doing an audit
-          unless(@filters['users'].first == @gbLogin or (@gbAudit and @isGbAuditor))
-            @statusName = :Forbidden
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Examine 'user' filter for /jobs/ request done by #{@gbLogin.inspect}:\n\t'users' param: #{@filters['users'].inspect}\n\tis an audit? #{@gbAudit.inspect}\n\tuser is an auditor? #{@isGbAuditor.inspect}")
+      # Is this an anonymous access? They are not allowed to do this jobs/ listing stuff.
+      if( @gbLogin.nil? )
+        status = :Forbidden
+        @statusMsg = "FORBIDDEN: You must provide authentication credentials to see job listings. You will only be able to see your own jobs, in most cases."
+      else # have a @gbLogin
+        # Has the 'users' filter parameter been provided?
+        usersFilter = @filters['users'].to_s.split(',').map { |xx| xx.strip }.uniq
+
+        # Auditors doing audits can have 0, 1, N 'users' filter values and no restrictions.
+        if( @gbAudit and @isGbAuditor )
+           # If empty, set to nil to mean "all" (for audits only)
+          usersFilter = nil if( usersFilter.empty? )
+        else # Not an auditor doing an audit. Apply restrictions.
+          if( usersFilter.empty? )
+            # No 'users' filter provided. Force it to have @gbLogin.
+            usersFilter = [ @gbLogin ]  # Default if no user list.
+            #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "No 'users' filter given. Set to: #{usersFilter.inspect}")
+          else  # A user list was provided. Must have ONLY @gbLogin in this case.
+            if( usersFilter.size > 1 or usersFilter.first != @gbLogin )
+              status = :Forbidden
+              @statusMsg = "FORBIDDEN: You are not an auditor doing an audit, so you can't see other people's jobs."
+            #else # There is correctly 1 'users' filter value and it's @gbLogin.
+            end
           end
-        else  # More than one user listed. Only auditors can do this currently.
-          unless(@gbAudit and @isGbAuditor)
-            @statusName = :Forbidden
-          end
-        end
-        # Was a multi-user list Forbidden? Set @statusMsg and retVal so rejection is passed along
-        if(@statusName == :Forbidden)
-          @statusMsg = "FORBIDDEN: You do not have auditor permissions in Genboree, so you can't see other people's jobs."
-          $stderr.debugPuts(__FILE__, __method__, "FORBIDDEN", "User #{@gbLogin.inspect} attempted an audit access of these users' jobs: #{@filters['users'].inspect} but is not a Genboree Audtior.")
-          status = @statusName
         end
       end
-      # Continue with other filters if everything ok with user list
-      if(status == :OK)
-        if(!@filters['toolIdStrs'].nil?)
-          @filters['toolIdStrs'] = @filters['toolIdStrs'].split(',')
-        end
-        if(!@filters['statuses'].nil?)
-          @filters['statuses'] = @filters['statuses'].split(',')
-        end
-        if(!@filters['toolTypes'].nil?)
-          @filters['toolTypes'] = @filters['toolTypes'].split(',')
-        end
-        if(!@filters['systemTypes'].nil?)
-          @filters['systemTypes'] = @filters['systemTypes'].split(',')
-        end
-        # Handle all date ranges
-        FILTERS.each_key { |key|
-          if(key.to_s =~ /DateRange$/ and !@filters[key].nil? and !@filters[key].empty?)
-            ##$stderr.puts("key: #{key}\n\n@filters[key]: #{@filters[key].inspect}")
-            dateRange = @filters[key]
-            startDate = dateRange.split(',', 2)[0]
-            endDate = dateRange.split(',', 2)[1]
-            if(!startDate.nil? and startDate =~ /\S/)
-              startDate = ( startDate =~ /^-?\d+(?:\.\d+)?$/ ? Time.at(startDate.to_f) : Time.parse(startDate) )
-            else
-              startDate = nil
-            end
-            if(!endDate.nil? and endDate =~ /\S/)
-              endDate = ( endDate =~ /^-?\d+(?:\.\d+)?$/ ? Time.at(endDate.to_f) : Time.parse(endDate))
-            else
-              endDate = nil
-            end
-            # Normalize order such that startDate <= endDate
-            startDate, endDate = endDate, startDate if(!startDate.nil? and !endDate.nil? and (startDate >= endDate))
-            @filters[key] = [startDate, endDate]
-            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "     Date filter: #{@filters[key].inspect}")
+
+      # Passed the user check?
+      if( status != :OK )
+        $stderr.debugPuts(__FILE__, __method__, "FORBIDDEN", "User #{@gbLogin.inspect}, who is not an auditor doing an audit, attempted an access of these users' jobs: #{@filters['users'].nil? ? '[[All users]]' : @filters['users'].inspect}")
+      else
+        @filters['users'] = usersFilter
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "User-check status: #{status.inspect} ; Final users filter: #{@filters['users'].inspect}")
+
+        # Continue with other filters if everything ok with user list.
+        if(status == :OK)
+          if(!@filters['toolIdStrs'].nil?)
+            @filters['toolIdStrs'] = @filters['toolIdStrs'].to_s.split(',').map { |xx| xx.strip }
           end
-        }
+          if(!@filters['statuses'].nil?)
+            @filters['statuses'] = @filters['statuses'].to_s.split(',').map { |xx| xx.strip }
+            @filters['statuses'].map! { |currentVal| currentVal.to_sym }
+          end
+          if(!@filters['toolTypes'].nil?)
+            @filters['toolTypes'] = @filters['toolTypes'].to_s.split(',').map { |xx| xx.strip }
+            end
+          if(!@filters['systemTypes'].nil?)
+            @filters['systemTypes'] = @filters['systemTypes'].split(',').map { |xx| xx.strip }
+            end
+          # Handle all date ranges
+          FILTERS.each_key { |key|
+            if(key.to_s =~ /DateRange$/ and !@filters[key].nil? and !@filters[key].empty?)
+              ##$stderr.puts("key: #{key}\n\n@filters[key]: #{@filters[key].inspect}")
+              dateRange = @filters[key]
+              startDate = dateRange.split(',', 2)[0]
+              endDate = dateRange.split(',', 2)[1]
+              if(!startDate.nil? and startDate =~ /\S/)
+                startDate = ( startDate =~ /^-?\d+(?:\.\d+)?$/ ? Time.at(startDate.to_f) : Time.parse(startDate) )
+              else
+                startDate = nil
+              end
+              if(!endDate.nil? and endDate =~ /\S/)
+                endDate = ( endDate =~ /^-?\d+(?:\.\d+)?$/ ? Time.at(endDate.to_f) : Time.parse(endDate))
+              else
+                endDate = nil
+              end
+              # Normalize order such that startDate <= endDate
+              startDate, endDate = endDate, startDate if(!startDate.nil? and !endDate.nil? and (startDate >= endDate))
+              @filters[key] = [startDate, endDate]
+              #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "     Date filter: #{@filters[key].inspect}")
+            end
+          }
+        end
       end
+      @statusName = status
       return status
     end
   end # class Job

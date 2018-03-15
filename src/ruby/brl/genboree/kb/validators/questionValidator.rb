@@ -8,7 +8,6 @@ require 'brl/genboree/kb/producers/fullPathTabbedDocProducer'
 module BRL ; module Genboree ; module KB ; module Validators
 class QuestionValidator < DocValidator
 
-
   # domain definition with supported subset definitions
   DOMAIN_SUBSETS = {
     'int' => {'posInt' => true, 'negInt' => true, 'intRange' => true, 'numItems' => true},

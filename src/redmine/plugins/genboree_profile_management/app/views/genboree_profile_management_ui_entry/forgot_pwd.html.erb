@@ -1,0 +1,33 @@
+<div class="form_container container-fluid">
+  <div class="row">
+    <div class="col-lg-3"></div>
+    <div class="col-lg-6 col-sm-12 col-xs-12">
+      <!-- Overloaded form: handles both reseting password and sending login info to user specified email -->
+      <%= form_tag ({ :controller => :genboree_profile_management_ui_entry, :action => :reset_pwd } , "method" => :post, "novalidate" => "true", "data-toggle" => "validator") do %>
+        <h2>Forgot Login/Password</h2>
+        <div class="well">
+          <div class="row form-row">
+            <div class="form-group">
+              <div class="col-sm-12">
+                <%= label_tag 'email_id', 'Email:' %>
+              </div>
+              <div class="col-sm-12">
+                <%= email_field_tag 'email_id', @user_info["email_id"], { "class" => "form-control", "required" => true, "placeholder" => "Enter your email to have your password reset or login sent." } %>
+                <div class="help-block with-errors"></div>
+              </div>
+            </div>
+            <div class="btn-group">
+              <div class="col-sm-6 submit-button">
+                <%= submit_tag "Send Login Info", "class" => "btn btn-primary", "name" => "send_login_info" %>
+              </div>
+              <div class="col-sm-6 submit-button">
+                <%= submit_tag "Reset Password", "class" => "btn btn-primary", "name" => "reset_password" %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div class="col-lg-3"></div>
+  </div>
+</div>

@@ -175,8 +175,13 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     end
                   end
                 else
+                  if( validator.respond_to?(:buildErrorMsgs) )
+                    errors = validator.buildErrorMsgs()
+                  else
+                    errors = validator.validationErrors
+                  end
                   @statusName = :'Unsupported Media Type'
-                  @statusMsg = "BAD_DOC: The document does not follow the specification of the kb model:\n\n#{validator.validationErrors}"
+                  @statusMsg = "BAD_DOC: The document does not follow the specification of the kb model:\n\n#{errors.join("\n")}"
                 end
               else
                 @statusName = :"Bad Request"

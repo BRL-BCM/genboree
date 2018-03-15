@@ -33,76 +33,47 @@ module BRL ; module Genboree ; module Tools
         inputs = wbJobEntity.inputs
         outputs = wbJobEntity.outputs
         @totalInputFileSize = 0
-        
-        # ------------------------------------------------------------------
-        # Check Inputs/Outputs
-        # ------------------------------------------------------------------
-        fileList = @fileApiHelper.expandFileContainers(wbJobEntity.inputs, @userId)
-        wbJobEntity.inputs = fileList
-        inputs = wbJobEntity.inputs
-        # ---------------------------------------------------------------------------------------
-        # Check 1: Make sure the genome version is currently supported by exceRpt Small RNA-seq Pipeline
-        # ---------------------------------------------------------------------------------------
-        genomesSatisfied = true
+        # Grab version of output database - we'll make that our default selected genome for the user if it makes sense
         targetDbUriObj = URI.parse(outputs[0])
         apiCaller = ApiCaller.new(targetDbUriObj.host, "#{targetDbUriObj.path}?", @hostAuthMap)
         apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
         apiCaller.get()
         resp = JSON.parse(apiCaller.respBody)['data']
         genomeVersion = resp['version'].decapitalize
-        wbJobEntity.settings['genomeVersion'] = genomeVersion
-        gbSmallRNASeqPipelineGenomesInfo = JSON.parse(File.read(@genbConf.gbSmallRNASeqPipelineGenomesInfo))
-        if(!gbSmallRNASeqPipelineGenomesInfo.key?(genomeVersion))
-          wbJobEntity.context['wbErrorMsg'] = "INVALID GENOME: The genome assembly version: #{genomeVersion} is not currently supported by exceRpt Small RNA-seq Pipeline. Supported genomes include: #{gbSmallRNASeqPipelineGenomesInfo.keys.join(',')}. Please contact DCC admins (sailakss@bcm.edu, thistlew@bcm.edu) for adding support for this genome."
-          genomesSatisfied = false
+        wbJobEntity.settings['databaseGenomeVersion'] = genomeVersion
+        # ------------------------------------------------------------------
+        # Check Inputs/Outputs
+        # ------------------------------------------------------------------
+        fileList = @fileApiHelper.expandFileContainers(wbJobEntity.inputs, @userId)
+        wbJobEntity.inputs = fileList
+        inputs = wbJobEntity.inputs
+        # If user submits empty folder / entity list, then provide error message
+        if(inputs.size < 1)
+          wbJobEntity.context['wbErrorMsg'] = "INVALID NUMBER OF INPUTS: If you submit a folder/entity list, you must give at least 1 input FASTQ/SRA file (no empty folders!)."
           rulesSatisfied = false
-        end
-        if(genomesSatisfied)  # If genome is supported, then we can proceed
-          # If user submits empty folder / entity list, then provide error message
-          if(inputs.size < 1)
-            wbJobEntity.context['wbErrorMsg'] = "INVALID NUMBER OF INPUTS: If you submit a folder/entity list, you must give at least 1 input FASTQ/SRA file (no empty folders!)."
-            rulesSatisfied = false
+        else
           # ------------------------------------------------------------------
-          # Check 2: Are all the input files (including those inside entity lists or folders) 
-          # from the same db version?
+          # Check: Make sure the right combination of inputs has been selected
           # ------------------------------------------------------------------
-          # If number of files is correct but files are from different db versions, we reject the job
-          elsif(!checkDbVersions(inputs + outputs, skipNonDbUris=true))
-            wbJobEntity.context['wbErrorMsg'] =
-              {
-                :msg => 'Some files are from a different genome assembly version than other files, or from the output database.',
-                :type => :versions,
-                :info =>
-                {
-                  :inputs =>  @trkApiHelper.dbVersionsHash(inputs),
-                  :outputs => @dbApiHelper.dbVersionsHash(outputs)
-                }
-              }
-            rulesSatisfied = false
-          else
-            # ------------------------------------------------------------------
-            # Check 3: Make sure the right combination of inputs has been selected
-            # ------------------------------------------------------------------
-            fileSizeSatisfied = true
-            fileFormatSatisfied = true
-            inputs.each { |file|
-              fileSizeSatisfied = checkFileSize(file)
-              if(fileSizeSatisfied)
-                fileFormatSatisfied = sniffCompressedFormat(file)
-                unless(fileFormatSatisfied)
-                  errorMsgArr.push("INVALID_FILE_FORMAT: Input file #{file} is not compressed. We no longer allow raw FASTQ/SRA inputs (they take up too much space). Please compress your inputs and try again. To compress your inputs on Genboree, you can use the Prepare Archive tool, which is found under Data -> Files in the tool menu.")
-                  rulesSatisfied = false
-                end
-              else
-                errorMsgArr.push("INVALID_FILE_SIZE: Input file #{file} is empty.  You cannot submit an empty file for processing.")
+          fileSizeSatisfied = true
+          fileFormatSatisfied = true
+          inputs.each { |file|
+            fileSizeSatisfied = checkFileSize(file)
+            if(fileSizeSatisfied)
+              fileFormatSatisfied = sniffCompressedFormat(file)
+              unless(fileFormatSatisfied)
+                errorMsgArr.push("INVALID_FILE_FORMAT: Input file #{file} is not compressed. We no longer allow raw FASTQ/SRA inputs (they take up too much space). Please compress your inputs and try again. To compress your inputs on Genboree, you can use the Prepare Archive tool, which is found under Data -> Files in the tool menu.")
                 rulesSatisfied = false
               end
-            }
-            unless(rulesSatisfied)
-              wbJobEntity.context['wbErrorMsg'] = errorMsgArr
-            end # unless(rulesSatisfied)
-          end # 
-        end # if(genomesSatisfied)
+            else
+              errorMsgArr.push("INVALID_FILE_SIZE: Input file #{file} is empty. You cannot submit an empty file for processing.")
+              rulesSatisfied = false
+            end
+          }
+          unless(rulesSatisfied)
+            wbJobEntity.context['wbErrorMsg'] = errorMsgArr
+          end # unless(rulesSatisfied)
+        end # 
 
         # ------------------------------------------------------------------
         # CHECK SETTINGS
@@ -149,7 +120,8 @@ module BRL ; module Genboree ; module Tools
         apiCaller = ApiCaller.new(exRNAInternalKBHost, "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProp={matchProp}&matchValues={matchVal}&matchMode=exact&detailed=true", user, pass)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
         apiCaller.get({:grp => exRNAInternalKBGroup, :kb => exRNAInternalKBName, :coll => exRNAInternalKBPICodesColl, :matchProp => submitterPropPath, :matchVal => submitterLogin})
-        if(!apiCaller.succeeded? and apiCaller.parseRespBody["status"]["statusCode"] != "Forbidden")
+        apiCaller.parseRespBody()
+        if(!apiCaller.succeeded? and apiCaller.apiStatusObj["statusCode"] != "Forbidden")
           $stderr.debugPuts(__FILE__, __method__, "ERROR", "API caller resp body for failed call to PI KB: #{apiCaller.respBody}")
           wbJobEntity.context['wbErrorMsg'] = "API call failed when trying to grab PI associated with current user. Please try again. If you continue to experience issues, contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu)."
           rulesSatisfied = false
@@ -158,18 +130,18 @@ module BRL ; module Genboree ; module Tools
           wbJobEntity.settings['grantNumbers'] = []
           wbJobEntity.settings['anticipatedDataRepos'] = []
           # If we can't find user (or we are unable to search the KB because we're not a member), then he/she is not registered as an ERCC user. We will prompt the user to contact Sai if he/she IS an ERCC user
-          if(apiCaller.parseRespBody["data"].size == 0 or apiCaller.parseRespBody["status"]["statusCode"] == "Forbidden")
+          if(apiCaller.apiDataObj.size == 0 or apiCaller.apiStatusObj["statusCode"] == "Forbidden")
             wbJobEntity.settings['piName'] = "Non-ERCC PI"
             wbJobEntity.settings['grantNumbers'] << "Non-ERCC Funded Study"
             # Currently, if user is not a member of ERCC, his/her anticipated data repository is "None". This might not make sense, though (what if user is submitting data to dbGaP but isn't ERCC?)
             wbJobEntity.settings['anticipatedDataRepos'] << "None"
           # If user is associated with more than 1 PI, a mistake has occurred and we need to fix it.
-          elsif(apiCaller.parseRespBody["data"].size > 1)
+          elsif(apiCaller.apiDataObj.size > 1)
             wbJobEntity.context['wbErrorMsg'] = "You are listed as being a submitter under two or more PIs. This is not allowed. Please contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu) to fix this issue."
             rulesSatisfied = false
           else
             # If user is associated with only one PI, then we get that PI's information and save it (PI name, organization, grant numbers and associated grant tags)
-            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.parseRespBody["data"][0])
+            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.apiDataObj[0])
             # PI ID 
             piID = piDoc.getPropVal("ERCC PI Code")
             wbJobEntity.settings['piID'] = piID
@@ -206,7 +178,8 @@ module BRL ; module Genboree ; module Tools
         apiCaller = ApiCaller.new(host, rcscUri, @hostAuthMap)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
         apiCaller.get()
-        listOfFiles = apiCaller.parseRespBody()["data"]
+        apiCaller.parseRespBody()
+        listOfFiles = apiCaller.apiDataObj
         listOfFiles.each { |currentFile|
           nameOfFile = currentFile["name"].chomp("/")
           storageType = currentFile["storageType"]
@@ -214,10 +187,17 @@ module BRL ; module Genboree ; module Tools
         }
         wbJobEntity.settings['remoteStorageAreas'] = remoteStorageAreas
       end
+      # TEMPORARY: WE ARE SETTING A LIMIT OF 5 GB ON THE TOTAL FILE SIZE (BECAUSE OF WEIRD MEMORY LEAK PROBLEM)
+      if(rulesSatisfied)
+        if(@totalInputFileSize > 10000000000)
+          wbJobEntity.context['wbErrorMsg'] = "TEMPORARY: There is a temporary file size limit of 10 GB for any given exceRpt job. Please resubmit your job with smaller files and try again."
+          rulesSatisfied = false
+        end
+      end
       # If rules are still satisfied, let's check how much storage space the user is taking up in his/her Group.
       # If we predict that the user is going to exceed the Group's limit, we will reject the job.
       # Note that we only do this if the user selected the option to upload the full results (alignment files)
-      if(rulesSatisfied and sectionsToSatisfy.include?(:settings) and wbJobEntity.settings['uploadFullResults'])
+      if(rulesSatisfied and sectionsToSatisfy.include?(:settings) and (wbJobEntity.settings['uploadFullResults'] or (wbJobEntity.settings['uploadExogenousAlignments'] and wbJobEntity.settings['exogenousMapping'] == "c_on")))
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "User chose to upload full results, so we'll check the output Group's disk usage")
         # First, are we checking remote storage space, or local space?
         # If user selected a remote storage area, then we will check remote storage space - otherwise, we'll check local space.
@@ -272,14 +252,17 @@ module BRL ; module Genboree ; module Tools
         # Next, we want to estimate how much space the user will take up with his/her current submission
         # William calculated the following multipliers for different exogenousMapping settings for exceRpt results.
         # These are ROUGH estimates!
-        # We still need to calculate the exogenousMapping="on" multiplier.
         multiplier = 1
-        if(wbJobEntity.settings['exogenousMapping'] == "a_off")
-          multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoOff').to_f
-        elsif(wbJobEntity.settings['exogenousMapping'] == "b_miRNA")
-          multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoMiRNA').to_f
-        elsif(wbJobEntity.settings['exogenousMapping'] == "c_on")
-          multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoOn').to_f 
+        if(wbJobEntity.settings['uploadFullResults'])
+          if(wbJobEntity.settings['exogenousMapping'] == "a_off")
+            multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoOff').to_f
+          elsif(wbJobEntity.settings['exogenousMapping'] == "b_miRNA")
+            multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoMiRNA').to_f
+          elsif(wbJobEntity.settings['exogenousMapping'] == "c_on")
+            multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoOn').to_f
+          end
+        elsif(wbJobEntity.settings['uploadExogenousAlignments'] and wbJobEntity.settings['exogenousMapping'] == "c_on")
+          multiplier = @toolConf.getSetting('settings', 'compressedMultiplierExoOnExoOnly').to_f
         end
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Exogenous multiplier (based on exogenous mapping setting chosen by user): #{multiplier}")
         # Multiply total input file size by multiplier (this is our predicted total output size for this job)

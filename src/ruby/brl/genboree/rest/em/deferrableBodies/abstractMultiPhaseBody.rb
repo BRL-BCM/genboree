@@ -108,7 +108,19 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
             $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Transitioning from #{@prevState.inspect} to #{@state.inspect}." )
             @prevState = @state
           end
-          chunk = self.send(@state)
+
+          # If we are engaging the throttle, arrange for nextChunk() to return special Symbol :throttleEngaged,
+          #   else call the sub-class's method (whose name matches the @state Symbol) as normal.
+          # * We cannot return nil or false, since that will tell doYield() that the sub-class has no more
+          #   data to send. So instead it will look for this special Symbol and avoid the yield call entirely this
+          #   round.
+          # * We could return an empty chunk for an empty yield, but we've seen that cause problems on some machines/implementations when
+          #   yielded. And why not avoid such things and the yield altogether?
+          if( throttle )
+            chunk = :throttleEngaged
+          else
+            chunk = self.send(@state)
+          end
         rescue Exception => err
           $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Protected vs exception within EM loop. Exception details:\n  - Class: #{err.class}\n  - Message: #{err.message}\n  - Backtrace:\n#{err.backtrace.join("\n")}")
           scheduleFinish()

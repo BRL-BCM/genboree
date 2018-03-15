@@ -1,7 +1,7 @@
 {
   "info": {
     "idStr": "processPipelineRuns",
-    "releaseStatus": "beta",
+    "releaseStatus": "release",
     "version": "4.6.3"
   },
   "cluster": {
@@ -11,7 +11,7 @@
     "queue": "gbRamHeavy"
   },
   "ui": {
-    "label": "Post-processing exceRpt small RNA-seq Pipeline Results",
+    "label": "Generate Summary Report for exceRpt Results",
     "shortLabel": "processPipelineRuns",
     "groupAccessUri": null
   }

@@ -25,7 +25,6 @@ ENV['PATH']
 require 'brl/genboree/rest/wrapperApiCaller'
 include BRL::Genboree::REST
 
-
 # Main Class
 class ArrayDataImporterWrapper
   NON_ARRAYDATAIMPORTER_SETTINGS = { 'clusterQueue' => true }
@@ -116,6 +115,7 @@ class ArrayDataImporterWrapper
         else
           cmd = "arrayDataImporter.rb  -r roi.bed -a #{file} -w wigFiles -S skippedProbes.txt -M missingProbes.txt  1> arrayDataImporter.out 2> arrayDataImporter.err"
         end
+        cutFileList << "arrayDataImporter.err"
         $stderr.puts "launching cmd: #{cmd}"
         exitStatus = system(cmd)
         if(!exitStatus)
@@ -253,6 +253,7 @@ class ArrayDataImporterWrapper
     # Upload the wig files in the 'wigFiles' dir
     fileHash = {}
     @emptyTrks = []
+    @failedTrks = []
     aliasUri = ApiCaller.applyDomainAliases(@dbUri)
     uri = URI.parse(aliasUri)
     host = uri.host

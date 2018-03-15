@@ -41,7 +41,7 @@ module GbApi
     attr_accessor :forceAction
     
     # Constructor
-    def initialize(rackEnv, targetHost, rmProject, rmUser=User.current)
+    def initialize(rackEnv, targetHost, rmProject, rmUser=rackEnv[:currRmUser])
       super(rackEnv, targetHost, rmProject, rmUser)
       @doParse = true
       @respBody = @respStatus = @respHeaders = nil

@@ -20,12 +20,20 @@
   String rsrcPathParam = request.getParameter("rsrcPath").trim() ;
   String rsrcHost = "" ;
   String rsrcPath = null ;
+  String rsrcScheme = null ;
+  Integer rsrcPort = null ;
   // If path includes host break up the path
   try
   {
     URL rsrcURL = new URL(rsrcPathParam) ;
     rsrcHost = rsrcURL.getHost() ;
     rsrcPath = rsrcURL.getFile() ;
+    rsrcScheme = rsrcURL.getProtocol() ;
+    rsrcPort =  rsrcURL.getPort() ;
+    System.err.println("rsrcPort: "+rsrcPort) ;
+    if(rsrcScheme == null){
+      rsrcScheme = "http" ;
+    }
   }
   catch(Exception e)
   {
@@ -193,6 +201,7 @@
       String apiPath = "/REST/v1/usr/" + Util.urlEncode(userInfo[0]) + "/host/" + Util.urlEncode(rsrcHost) ;
       // Do an API call to THIS host to get auth record for user at the remote host.
       String apiURL = RESTapiUtil.computeFinalURL(origHostName, apiPath, "", userInfo) ;
+      System.err.println("PROXYING --------------> apiURL to get auth info for user " + userInfo[0] + " @ host " + rsrcHost + "\n\n" + apiURL + "\n\n") ;
       HttpURLConnection apiConn = ApiCallerUtil.doApiCall(apiURL, "GET", null) ;
       int apiResultCode = apiConn.getResponseCode() ;
       if(apiResultCode == 200)
@@ -204,6 +213,7 @@
           respBody = new java.util.Scanner(apiResultStream).useDelimiter("\\A").next() ;
           apiResultStream.close() ;
           apiConn.disconnect() ;
+          System.err.println("PROXYING --------------> host info record payload:\n\n " + respBody + "\n\n") ;
           // Parse JSON.
           try
           {
@@ -218,6 +228,7 @@
                 if(dataObj.has("token"))
                 {
                   remotePass = dataObj.getString("token") ;
+                  System.err.println("PROXYING --------------> extracted from payload:" + remoteUser + " ; " + remotePass) ;
                   userInfo[0] = remoteUser ;
                   userInfo[1] = remotePass ;
                   rsrcPath = rsrcPath.replaceFirst(origUserInfo[0], remoteUser) ;
@@ -254,21 +265,31 @@
     String fullApiURL ;
     if(Util.parseInt(userInfo[2], -2) <= 0 && gbKey != null) // Public user or case where userId is not available/set, but WITH a gbKey
     {
-      //System.err.println("DEBUG: computeFinalURL info 1: " + hostName + " ; " + rsrcPath + " ; " + rsrcParams + " ; " + userInfo[0] + " ; " + userInfo[1] + " ; " + userInfo[2]) ;
-      fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, gbKey) ;
+      System.err.println("DEBUG: computeFinalURL info 1: " + hostName + " ; " + rsrcPath + " ; " + rsrcParams + " ; " + userInfo[0] + " ; " + userInfo[1] + " ; " + userInfo[2]) ;
+      if(rsrcScheme == null || rsrcPort == null) {
+        fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, gbKey) ;
+      }
+      else {
+        fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, gbKey, rsrcScheme, rsrcPort) ;
+      }
     }
     else // Either a regular user OR Public user WITHOUT a gbKey (in that case API will see if resource access is allowed for Public user or not)
     {
-      fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, userInfo) ;
+      if(rsrcScheme == null || rsrcPort == null) {
+        fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, userInfo) ;
+      }
+      else{
+        fullApiURL = RESTapiUtil.computeFinalURL(hostName, rsrcPath, rsrcParams, userInfo, rsrcScheme, rsrcPort) ;
+      }
     }
 
-    //System.err.println("DEBUG: fullApiURL = " + fullApiURL) ;
+    System.err.println("DEBUG: fullApiURL = " + fullApiURL) ;
 
     // Send the request using the appropriate method and pass back the response:
     // --------------------------------------------------------------------------
     // 1. Make URL
     URL apiUrl = new URL(fullApiURL) ;
-    //System.err.println("DEBUG: check URI apiUrl object carefully:\n  apiUrl.toString(): " + apiUrl.toString() + "\n  apiUrl.toExternalForm(): " +  apiUrl.toExternalForm() + "\n  apiUrl.getPath(): " + apiUrl.getPath() + "\n  apiUrl.toURI().toString(): " + apiUrl.toURI().toString() + "\n\n") ;
+    System.err.println("DEBUG: check URI apiUrl object carefully:\n  apiUrl.toString(): " + apiUrl.toString() + "\n  apiUrl.toExternalForm(): " +  apiUrl.toExternalForm() + "\n  apiUrl.getPath(): " + apiUrl.getPath() + "\n  apiUrl.toURI().toString(): " + apiUrl.toURI().toString() + "\n\n") ;
     // 2. Open connection to URL
     HttpURLConnection apiConn = (HttpURLConnection)apiUrl.openConnection() ;
     //System.err.println("DEBUG: verify URL from HttpURLConnection apiConn still looks good:\n  apiConn.toString(): " + apiConn.toString() + "\n  apiConn.getURL().toString(): " + apiConn.getURL().toString() + "\n  apiConn.getURL().getPath(): " + apiConn.getURL().getPath() + "\n\n") ;
@@ -296,50 +317,18 @@
       // Close the output stream so we can get the results
       apiConnWriter.close() ;
     }
-    // 3.5 Confirm we're heading off to a real host
-    boolean hostResolvable = false ;
-    try
-    {
-      InetAddress hostNameAddr = InetAddress.getByName(hostName) ;
-      String hostNameAddress = hostNameAddr.getHostAddress() ;
-      if(hostNameAddress != null && hostNameAddress.length() > 0)
-      {
-        hostResolvable = true ;
-      }
-    }
-    catch(UnknownHostException uhe)
-    {
-      System.err.println("ERROR: Unknown host '" + hostName + "'! DNS lookup failed with an UnknownHostException.") ;
-    }
-
-    int apiResultCode = 500 ;
-    int apiResultLength = 0 ;
-    String apiResultLocation = null ;
-    String apiResultContentType = null ;
-    InputStream apiResultStream = null ;
-
-    if(hostResolvable)
-    {
-      // 4. Send request to API
-      apiConn.connect() ;
-      // 5. Get api result response code
-      apiResultCode = apiConn.getResponseCode() ;
-      //System.err.println("DEBUG: apiResultCode = " + apiResultCode) ;
-      // 6. Get api result length
-      apiResultLength = apiConn.getContentLength() ;
-      // 7. Get key headers from the API result
-      apiResultLocation = apiConn.getHeaderField("Location") ;
-      apiResultContentType = apiConn.getContentType() ;
-      // 8. We need to get the correct stream...Java does this really dumb, making is non-obvious and hard.
-      apiResultStream = (apiResultCode < 400 ? apiConn.getInputStream() : apiConn.getErrorStream()) ;
-    }
-    else // not resolvable; fake state values to trigger useful response
-    {
-      apiResultCode = 500 ;
-      apiResultLength = 0 ;
-      apiResultLocation = null ;
-      apiResultContentType = null ;
-    }
+    // 4. Send request to API
+    apiConn.connect() ;
+    // 5. Get api result response code
+    int apiResultCode = apiConn.getResponseCode() ;
+    //System.err.println("DEBUG: apiResultCode = " + apiResultCode) ;
+    // 6. Get api result length
+    int apiResultLength = apiConn.getContentLength() ;
+    // 7. Get key headers from the API result
+    String apiResultLocation = apiConn.getHeaderField("Location") ;
+    String apiResultContentType = apiConn.getContentType() ;
+    // 8. We need to get the correct stream...Java does this really dumb, making is non-obvious and hard.
+    InputStream apiResultStream = (apiResultCode < 400 ? apiConn.getInputStream() : apiConn.getErrorStream()) ;
 
     // 9 Process result stream according to response code and useBinMode:
     // --------- OK: BINARY RESPONSE AND HAVE BINARY PAYLOAD FROM API--------------
@@ -433,41 +422,27 @@
       // Set up the respnse
       ApiCallerUtil.prepResponse(response, apiResultCode, apiResultLength, apiResultContentType, apiResultLocation) ;
 
-      String apiResultBody = "" ;
-      if(apiResultStream != null)
+      // Make a nice text reader out of the inputstream
+      InputStreamReader apiResultStreamReader = new InputStreamReader(apiResultStream) ;
+      BufferedReader apiResultReader = new BufferedReader(apiResultStreamReader) ;
+      // Accumlate response ; NOTE: probably better to prep response and then
+      // write out the text in a loop, not accumulate in memory first.
+      StringBuffer apiResultBuff = new StringBuffer() ;
+      String resultLine ;
+      while((resultLine = apiResultReader.readLine()) != null)
       {
-        // Make a nice text reader out of the inputstream
-        InputStreamReader apiResultStreamReader = new InputStreamReader(apiResultStream) ;
-        BufferedReader apiResultReader = new BufferedReader(apiResultStreamReader) ;
-        // Accumlate response ; NOTE: probably better to prep response and then
-        // write out the text in a loop, not accumulate in memory first.
-        StringBuffer apiResultBuff = new StringBuffer() ;
-        String resultLine ;
-        while((resultLine = apiResultReader.readLine()) != null)
-        {
-          apiResultBuff.append(resultLine) ;
-        }
-        apiResultReader.close() ;
-        // Done with the input stream and the http connection
-        apiResultStream.close() ;
-        apiConn.disconnect() ;
-        // Get buffered text as String
-        apiResultBody = apiResultBuff.toString() ;
-        // Clear buffer as best we can (free mem early if possible)
-        apiResultBuff.setLength(0) ;
-        apiResultBuff = null ;
+        apiResultBuff.append(resultLine) ;
       }
-      else
-      {
-        if(!hostResolvable)
-        {
-        	apiResultBody = "{ \"data\" : {}, \"status\" : { \"statusCode\" : \"Bad Request\", \"msg\" : \"Cannot resolve host " + hostName + "! Perhaps a typo when saving this host, or the domain has since become invalid.\"} }\n" ;
-        }
-        else
-        {
+      apiResultReader.close() ;
+      // Done with the input stream and the http connection
+      apiResultStream.close() ;
+      apiConn.disconnect() ;
+      // Get buffered text as String
+      String apiResultBody = apiResultBuff.toString() ;
+      // Clear buffer as best we can (free mem early if possible)
+      apiResultBuff.setLength(0) ;
+      apiResultBuff = null ;
 
-        }
-      }
       // 8. Write the api result content in the response
       out.write(apiResultBody) ;
       out.flush() ;

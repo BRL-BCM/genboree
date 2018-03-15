@@ -21,6 +21,7 @@ class GenboreeKbController < ApplicationController
 
   def update
     kb = GenboreeKb.find_by_project_id(params['project_id'])
+    @genboreeKb = kb
     kb.name = params['name']
     kb.description = params['description']
     kb.gbGroup = params['gbGroup']

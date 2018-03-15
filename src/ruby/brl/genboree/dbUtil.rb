@@ -561,23 +561,16 @@ class DBUtil
     # - for disconnecting, just loop over one of the two caches
     unless(@dbh2driver.nil? or @dbh2driver.empty?)
       @dbh2driver.each_key { |dbh|
-        begin
-          dbh.disconnect() if(DBUtil::alive?(dbh))
-        rescue # nothing to do if a disconnect fails
-          $stderr.debugPuts(__FILE__, __method__, "ERROR", "FAILED TO DISCONNECT a dbh (#{dbh.object_id})")
-        end
+        dbh.disconnect() rescue nil # try no matter what, although some may be auto-disconnected already due to timeouts etc
       }
     end
     # Regardless, also try to disconnect the standard trio of fixed dbhs
     # - may have been disconnected in loop above if cached
-    # - thus check via alive? first
-    begin
-      @genbDbh.disconnect() if(DBUtil::alive?(@genbDbh))
-      @dataDbh.disconnect() if(DBUtil::alive?(@dataDbh))
-      @otherDbh.disconnect() if(DBUtil::alive?(@otherDbh))
-    rescue
-      $stderr.debugPuts(__FILE__, __method__, "ERROR", "FAILED TO DISCONNECT either genbDbh or dataDbh")
-    end
+    # - thus we expect errors on any connections already disconnected...and we don't care
+    @genbDbh.disconnect() rescue nil
+    @dataDbh.disconnect() rescue nil
+    @otherDbh.disconnect() rescue nil
+    @genbDbh = @dataDbh = @otherDbh = nil # Aid GC
     # Finally, safely try to clear the two caches themselves
     # - We won't set them to nil in case this DBUtil instannce is actually used again post clearCaches(). Leave them as Hashes.
     @dbh2driver.clear() if(@dbh2driver and @dbh2driver.respond_to?(:clear))
@@ -602,11 +595,13 @@ class DBUtil
     else
       @dataDbName = dataDb
     end
+    prepDataDbConn()
     return @dataDbName
   end
 
   # Clear the current main genboree and user databases (disconnect safely, without removing from cache unless supposed to)
   def clear(doClearCaches=false)
+    #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "clear(#{doClearCaches.inspect}) call on dbu.object_id #{self.object_id} ; caller stack:\n\n#{caller(0).join("\n")}\n\n******")
     closeDbh(@genbDbh)
     closeDbh(@dataDbh)
     closeDbh(@otherDbh)
@@ -616,6 +611,20 @@ class DBUtil
     @genbDbh = @mainGenbDriver = @mainGenbDbName = nil
     # clear caches only if told to
     clearCaches() if(doClearCaches)
+    return
+  end
+
+  # Release the database connections/handles, clear the caches of handles, but keep the basic info including
+  #   any dataDbName etc, so connections _could_ be reestablished. Useful if instance may be used in deferred case
+  #   and we want systematic resource releasing, but not to lose the essential info for reconnecting once deferred
+  #   processing starts up.
+  def release()
+    # Close the handles/connections
+    closeDbh(@genbDbh)
+    closeDbh(@dataDbh)
+    closeDbh(@otherDbh)
+    # Clear the caches
+    clearCaches()
     return
   end
 
@@ -1245,6 +1254,7 @@ class DBUtil
   # [+tableType+]     A flag indicating which database handle  to use for executing the query.
   #                   One of these +Symbols+:   :userDB, :mainDB, :otherDB
   # [+tableName+]     Name of the table to select from.
+
   # [+desiredFields+] Array of fields needed in the result set.
   # [+distinct+]      Return only unique rows (common). If false, does not apply the distinct() operation (rare).
   # [+errMsg+]        Prefix to use when an error is raised and logged vis logDbError.
@@ -1453,6 +1463,9 @@ class DBUtil
       resultSet = client.query(sql, :cast_booleans => true)
       retVal = resultSet.entries
     rescue => @err
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "---------------------------------------------")
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "rescue for dbu object_id: #{self.object_id.inspect}\n  - tableType: #{tableType.inspect}\n  - client: #{client.inspect}\n  - tableName: #{tableName.inspect}\n  - fieldName: #{fieldName.inspect}\n  - fieldValues: #{JSON.pretty_print(fieldValues) rescue fieldValues.inspect}\n  - self (#{self.object_id}):\n\n#{self.inspect}\n\n")
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "---------------------------------------------")
       DBUtil.logDbError(errMsg, @err, sql)
       raise
     ensure
@@ -2824,7 +2837,7 @@ class DBUtil
         # Create inputArray for this iteration (handed to execute())
         inputData = data[ii, maxBindVarsPerIter]
         # Create sqlValuesStr for this chunk records
-        valuesSql = DBUtil.makeSqlValuesStr(inputData.size / numBindVarsPerValue, numBindVarsPerValue, reserveId)
+        valuesSql = DBUtil.makeSqlValuesStr((inputData.size / numBindVarsPerValue).to_i, numBindVarsPerValue, reserveId)
         # Create this iteration's sql
         currSql = (sql + valuesSql)
         if(dupKeyUpdateCol)
@@ -2932,7 +2945,8 @@ class DBUtil
       retVal = stmt.rows
     rescue => @err
       DBUtil.logDbError(errMsg, @err, sql)
-      raise
+      stmt.finish() unless(stmt.nil?)
+      raise @err
     ensure
       stmt.finish() unless(stmt.nil?)
     end

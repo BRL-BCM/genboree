@@ -9,10 +9,17 @@ module BRL ; module Genboree ; module KB ; module Helpers
   #   the versioning is being done for. That collection name is determined dynamically
   #   when you instantiate this class.
   class VersionsHelper < AbstractHelper
+    MEMOIZED_INSTANCE_METHODS = [
+      :getDataCollRootProp
+    ]
     # @return [String] The name of the core GenboreeKB collection the helper assists with.
     KB_CORE_COLLECTION_NAME = "{docColl}.versions"
     # @return [Array<Hash>] An array of MongoDB index config hashes; each has has key @:spec@ and @:opts@
     attr_accessor :incTimeCount
+    # @return [String] The name of the data/doc collection whose version this instance helps with. NOT
+    #   the same as @coll.name which the collection which contains the version records.
+    attr_reader :dataCollName
+
     #   the indices for the metadata documents in this collection.
     KB_CORE_INDICES =
     [
@@ -23,7 +30,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       },
       # Index each versions doc by the docRef so we can find the revision for a given doc quickly.
       {
-        :spec => [ [ 'docRef.value', Mongo::ASCENDING ], [ 'versionNum.value', Mongo::DESCENDING ] ],
+        :spec => [ [ 'versionNum.properties.docRef.value', Mongo::ASCENDING ], [ 'versionNum.value', Mongo::DESCENDING ] ],
         :opts => { :unique => true, :background => true }
       },
       # Index the timestamp of the version so we can answer queries about the use of the collection over time
@@ -34,7 +41,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       # Index the previous version so we can answer queries about the number of creations
       {
         :spec => [["versionNum.properties.prevVersion.value", Mongo::ASCENDING], ["versionNum.properties.timestamp.value", Mongo::DESCENDING]],
-        :opts => { :background => true }
+        :opts => { :background => true, :unique => true }
       },
       # Index the deletion field so we can answer queries about the number of deletions
       {
@@ -122,6 +129,9 @@ module BRL ; module Genboree ; module KB ; module Helpers
       }}
     }
 
+    PREDEFINED_VERS = [ :curr, :head, :prev ]
+    CORE_DOC_PROPS = [ 'versionNum.value', 'versionNum.properties.docRef.value', 'versionNum.properties.prevVersion.value', 'versionNum.properties.author.value', 'versionNum.properties.timestamp.value', 'versionNum.properties.deletion.value', 'versionNum.properties.label.value', 'versionNum.properties.comment.value', 'versionNum.properties.tags.value' ]
+
     # Get the model doc template for the collection this helper assists with.
     # @todo change this from returning KB_MODEL constant
     #   in the respective sub-class, but rather have them loaded from
@@ -153,17 +163,20 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @param [String] docCollName The name of the document collection that is being versioned.
     #   It will be used to determine to correct name of the versioning collection.
     def initialize(kbDatabase, docCollName)
+      tt = Time.now
       super(kbDatabase, docCollName)
+      @dataCollName = ( docCollName.is_a?(Mongo::Collection) ? docCollName.name : docCollName )
       unless(docCollName.is_a?(Mongo::Collection))
         @coll = @kbDatabase.getCollection(docCollName, :versions)
       end
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Instantiated with mongo db support from #{kbDatabase.class}:#{kbDatabase.object_id}, for coll argument #{docCollName.inspect} ; @dataCollName = #{@dataCollName.inspect} ; @coll.name = #{@coll.name.inspect rescue '[NONE!]'} ; in #{Time.now.to_f - tt.to_f} sec " )
     end
 
     # Returns the current version number from the global counter.
     # @return [Fixnum] The current version number.
     def currentVersionNum()
       globalsHelper = @kbDatabase.globalsHelper()
-      return globalsHelper.globalCounterValue("versionNum")
+      return globalsHelper.globalCounterValue('versionNum')
     end
 
     # Generates and returns the next version number from the global counter. i.e.
@@ -171,7 +184,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @return [Fixnum] The next version number.
     def nextVersionNum()
       globalsHelper = @kbDatabase.globalsHelper()
-      return globalsHelper.incGlobalCounter("versionNum")
+      return globalsHelper.incGlobalCounter('versionNum')
     end
     
     # Generates and returns the version number incermented by the specified value from the global counter. i.e.
@@ -180,7 +193,30 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @return [Fixnum] The next version number.
     def incVersionNumByN(nn)
       globalsHelper = @kbDatabase.globalsHelper()
-      return globalsHelper.incGlobalCounterByN("versionNum", nn)
+      return globalsHelper.incGlobalCounterByN('versionNum', nn)
+    end
+
+    # OVERRIDE because .versions & .revisions collections have no explicit model doc. But we can get a model
+    #   from this class via self.class.getModelTemplate.
+    def getIdentifierName( collName=@coll.name )
+      modelsHelper = getModelsHelper()
+      if( collName == @coll.name )
+        if( !@idPropName.is_a?(String) or @idPropName.empty? )
+          # Ask modelsHelper for the name of the identifier (root) property for this object's collection
+          #   (kept in @idPropName but won't be valid for other collections we might need the name from [for example
+          #   the root prop of the DATA collection which working in a version/revision helper class]).
+          @idPropName = modelsHelper.getRootProp( self.class.getModelTemplate(@dataCollName) )
+        end
+        idPropName = @idPropName
+      else # some other collection than ours ; must be a real collection that has actual model doc, not .versions or .revisions
+        idPropName = super( collName )
+      end
+      return idPropName
+    end
+    alias_method( :getRootProp, :getIdentifierName )
+
+    def getDataCollRootProp()
+      return getRootProp( @dataCollName )
     end
 
     # Gets the latest/current versioning doc for a document of interest.
@@ -198,26 +234,212 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   @param (see BSON::ObjectId.interpret)
     #   @param [String] docCollName The name of the data collection.
     # @return [KbDoc] the latest/current versioning doc for the document of interest.
-    def currentVersion(docId, docCollName=nil)
-      if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+    def currentVersion(docId, docCollName=@dataCollName, opts={})
+      # If docId is already a BSON::DBRef, we will ignore docCollName (not needed) and use directly with getCurrVersionDoc()
+      if( docId.is_a?(BSON::DBRef) )
         docRef = docId
-        docCollName = docRef.namespace
-      elsif(docId and docCollName) # need to construct a docRef
+      elsif( docId and docCollName == @dataCollName )
         docId = BSON::ObjectId.interpret(docId)
         docRef = BSON::DBRef.new(docCollName, docId)
       else
-        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+        # Must have both docId which needs to be some kind of doc _id value AND docCollName
+        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name. It's an error to use this instance--created to help with versioning of #{@dataCollName.inspect}--to get version records from some OTHER collection; use a separate VersionHelper instance for that."
       end
-      historyCollName = self.class::historyCollName(docCollName)
-      docCount = @kbDatabase.db[historyCollName].find({ 'versionNum.properties.docRef.value' => docRef }, { :sort => [ 'versionNum.value', Mongo::DESCENDING ], :limit => 1 }).count(false)
-      retVal = nil
-      if(docCount.to_i > 0)
-        historyDoc = @kbDatabase.db[historyCollName].find_one({ 'versionNum.properties.docRef.value' => docRef })
-        retVal = BRL::Genboree::KB::KbDoc.new(historyDoc)
-      end
-      return retVal
+
+      return getCurrVersionDoc( docRef, opts[:fields] )
+
+      # OLD. Now uses getCurrVersionDoc()
+      # if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+      #   docRef = docId
+      #   docCollName = docRef.namespace
+      # elsif(docId and docCollName) # need to construct a docRef
+      #   docId = BSON::ObjectId.interpret(docId)
+      #   docRef = BSON::DBRef.new(docCollName, docId)
+      # else
+      #   raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+      # end
+      # historyCollName = self.class::historyCollName(docCollName)
+      # historyDoc = @kbDatabase.db[historyCollName].find_one({ 'versionNum.properties.docRef.value' => docRef }, { :sort => [ 'versionNum.value', Mongo::DESCENDING ], :limit => 1 })
+      # return historyDoc
     end
-    
+
+    # OVERRIDDEN. Because we need to use @dataCollName not @coll.name
+    def dbRefFromRootPropVal( docName, unused=nil )
+      return super( docName, @dataCollName )
+    end
+
+    # @param [BSON:DBRef, String] docNameOrDbRef Either the unique documewnt id (root prop val) for the DATA document you want
+    #   version info about, or the DATA document's BSON::DBRef. The latter is best, of course, especially if you got it for
+    #   REUSE in multple calls.
+    # @param [Array,nil] fields List of MONGO fields--not KbDoc prop paths--that you only want from the version rec.
+    # @return [BRL::Genboree::KB::KbDoc, nil]
+    def getCurrVersionDoc( docNameOrDbRef, fields=nil )
+      # Prevent loss of full general/parent field output due to presence of a more specific field (mongo 2.x bug)
+      fields = reduceProjectionFields( fields )
+      if( docNameOrDbRef.is_a?( BSON::DBRef ) )
+        dbRef = docNameOrDbRef
+      else # is doc "name" (aka doc ID...root property value)
+        dbRef = dbRefFromRootPropVal( docNameOrDbRef )
+      end
+
+      queryDoc = {
+        'versionNum.properties.docRef.value' => dbRef
+      }
+      qopts = { :sort => ['versionNum.value', Mongo::DESCENDING], :limit => 1 }
+      qopts[:fields] = fields if( fields )
+      historyDoc = @coll.find_one( queryDoc, qopts )
+      return ( historyDoc ? BRL::Genboree::KB::KbDoc.new( historyDoc ) : historyDoc )
+    end
+
+    # @param [BSON:DBRef, String] docNameOrDbRef Either the unique documewnt id (root prop val) for the DATA document you want
+    #   version info about, or the DATA document's BSON::DBRef. The latter is best, of course, especially if you got it for
+    #   REUSE in multple calls.
+    # @return [Numeric]
+    def getCurrVersionNum( docNameOrDbRef )
+      if( docNameOrDbRef.is_a?( BSON::DBRef ) )
+        dbRef = docNameOrDbRef
+      else # is doc "name" (aka doc ID...root property value)
+        dbRef = dbRefFromRootPropVal( docNameOrDbRef )
+      end
+
+      # Make sure to use getCurrVersionDoc with just the field needed. Faster.
+      # Make sure to use getCurrVersionDoc with just the field needed. Faster.
+      # * Best practice is min # fields.
+      # * Consider that the "content" field can be a massive data doc, so even for this 1 ver record, it's smart
+      historyDoc = getCurrVersionDoc( docNameOrDbRef, 'versionNum.value' )
+
+      return ( historyDoc ? historyDoc.getRootPropVal : historyDoc )
+    end
+
+    # @todo We would LIKE to employ versionNum.prevVersion but it is NOT being correctly maintained.
+    #   When fixed, update the implementation below to get the current doc and follow prevVersion?
+    # @param [BSON:DBRef, String] docNameOrDbRef Either the unique documewnt id (root prop val) for the DATA document you want
+    #   version info about, or the DATA document's BSON::DBRef. The latter is best, of course, especially if you got it for
+    #   REUSE in multple calls.
+    # @param [Array,nil] fields List of MONGO fields--not KbDoc prop paths--that you only want from the version rec.
+    # @return [BRL::Genboree::KB::KbDoc, nil]
+    def getPrevVersionDoc( docNameOrDbRef, fields=nil )
+      # Prevent loss of full general/parent field output due to presence of a more specific field (mongo 2.x bug)
+      fields = reduceProjectionFields( fields )
+      if( docNameOrDbRef.is_a?( BSON::DBRef ) )
+        dbRef = docNameOrDbRef
+      else # is doc "name" (aka doc ID...root property value)
+        dbRef = dbRefFromRootPropVal( docNameOrDbRef )
+      end
+
+      queryDoc = {
+        'versionNum.properties.docRef.value' => dbRef
+      }
+      qopts = { :sort => ['versionNum.value', Mongo::DESCENDING], :limit => 2 }
+      qopts[:fields] = fields if( fields )
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "queryDoc: #{queryDoc.inspect} ; qopts: #{qopts.inspect}")
+      historyDocCursor = @coll.find( queryDoc, qopts )
+      retVal = nil
+      if( historyDocCursor )
+        1.times { |ii| historyDocCursor.next }
+        retVal = historyDocCursor.next
+      end
+      return ( retVal ? BRL::Genboree::KB::KbDoc.new(retVal) : nil )
+    end
+
+    # @todo We would LIKE to employ versionNum.prevVersion but it is NOT being correctly maintained.
+    #   When fixed, update the implementation below to get the current doc and simply return the prevVersion?
+    # @param [BSON:DBRef, String] docNameOrDbRef Either the unique documewnt id (root prop val) for the DATA document you want
+    #   version info about, or the DATA document's BSON::DBRef. The latter is best, of course, especially if you got it for
+    #   REUSE in multple calls.
+    # @return [Numeric, nil]
+    def getPrevVersionNum( docNameOrDbRef )
+      if( docNameOrDbRef.is_a?( BSON::DBRef ) )
+        dbRef = docNameOrDbRef
+      else # is doc "name" (aka doc ID...root property value)
+        dbRef = dbRefFromRootPropVal( docNameOrDbRef )
+      end
+
+      # Make sure to use getCurrVersionDoc with just the field needed. Faster.
+      # * Best practice is min # fields.
+      # * Consider that the "content" field can be a massive data doc, so even for this 1 ver record, it's smart
+      historyDoc = getPrevVersionDoc( docNameOrDbRef, 'versionNum.value' )
+
+      return ( historyDoc ? historyDoc.getRootPropVal : historyDoc )
+    end
+
+    # Convenience method. In addititon to numeric versions also knows about string/symbol ones like
+    #   'CURR' or 'HEAD' or :prev. Useful in API handlers and similar code.
+    # @param [Symbol, String, Numeric] version A known version Symbol, or a corresponding String, or a specific version number.
+    # @param [BSON::DBRef] dbRef The doc ref for the DATA document. Good to work with that, especially with versions. You can
+    #   get it for your DATA document via the doc's root prop value (doc ID) from this Helper class via dbRefFromRootPropVal()
+    #   and then reuse it in many methods like this one!
+    # @param [Array,nil] fields List of MONGO fields--not KbDoc prop paths--that you only want from the version rec.
+    # @return [BRL::Genboree::KB::KbDoc, nil]
+    def getVersionDoc( version, dbRef, fields=nil )
+      # Prevent loss of full general/parent field output due to presence of a more specific field (mongo 2.x bug)
+      fields = reduceProjectionFields( fields )
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "version: #{version.inspect} ; fields arg: #{fields.inspect}")
+      # Prevent loss of full general/parent field output due to presence of a more specific field (mongo 2.x bug)
+      fields = reduceProjectionFields( fields )
+      tt = Time.now
+      versionDoc = nil
+      unless( version.is_a?(Symbol) or version.is_a?(Numeric) )
+        version = version.to_s.strip.downcase
+        version = version.to_sym unless(version.empty?)
+      end
+
+      if( version.is_a?(Symbol) ) # Should be a symbol of some kind now unless problem converting
+        if( PREDEFINED_VERS.include?( version) )
+          if( version == :prev )
+            versionDoc = getPrevVersionDoc( dbRef, fields )
+          else # ( @version == 'CURR' or @version == 'HEAD' )
+            versionDoc = getCurrVersionDoc( dbRef, fields )
+          end
+        else
+          raise ArgumentError, "ERROR: version Symbol #{version.isnpect} is not one of the supported predefined version Symbols (#{PREDEFINED_VERS.inspect})."
+        end
+      else # specific version doc number, not special keyword
+        qopts = { :fields => fields }
+        $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "qopts, including fields: #{qopts.inspect} ")
+        versionDoc = getVersion( version, dbRef, nil, qopts )
+      end
+
+      $stderr.debugPuts(__FILE__, __method__, 'TIME', "got specifically #{version.inspect} versionDoc record (or only desiredFields of the record) as a #{versionDoc.class} in #{Time.now.to_f - tt.to_f} ; has these prop paths:\n\t#{versionDoc.allPaths.inspect rescue '[FAIL]'}\n\n") ; tt = Time.now
+
+      return versionDoc
+    end
+
+    # Convenience method. In addititon to numeric versions also knows about string/symbol ones like
+    #   'CURR' or 'HEAD' or :prev. Useful in API handles and similar code
+    # @param [Symbol, String, Numeric] version A known version Symbol, or a corresponding String, or
+    #   a specific version number (um, why call this method if you already have the number?)
+    # @param [BSON::DBRef] dbRef The doc ref for the DATA document. Good to work with that, especially with versions. You can
+    #   get it for your DATA document via the doc's root prop value (doc ID) from this Helper class via dbRefFromRootPropVal()
+    #   and then reuse it in many methods like this one!
+    # @return [Numeric, nil]
+    def getVersionNum( version, dbRef )
+      tt = Time.now
+      versionNum = nil
+      unless( version.is_a?(Symbol) or version.is_a?(Numeric) )
+        version = version.to_s.strip.downcase
+        version = version.to_sym unless(version.empty?)
+      end
+
+      if( version.is_a?(Symbol) ) # Should be a symbol of some kind now unless problem converting
+        if( PREDEFINED_VERS.include?( version) )
+          if( version == :prev )
+            versionNum = getPrevVersionNum( dbRef )
+          else # ( @version == 'CURR' or @version == 'HEAD' )
+            versionNum = getCurrVersionNum( dbRef )
+          end
+        else
+          raise ArgumentError, "ERROR: version Symbol #{version.inspect} is not one of the supported predefined version Symbols (#{PREDEFINED_VERS.inspect})."
+        end
+      else # specific version doc number, not special keyword...wth? why asking if you already have one?
+        versionNum = version.to_s.to_i
+      end
+
+      $stderr.debugPuts(__FILE__, __method__, 'TIME', "got specifically #{version.inspect} versionNum (or only desiredFields of the record) - #{Time.now.to_f - tt.to_f}") ; tt = Time.now
+
+      return versionNum
+    end
+
     # Filters the latest version docs for a list of docIds based on a given cutoff time
     # @param [Hash] bsonObjId2DocId Hash mapping {BSON::ObjectId} ids of documents to their document identifier values
     # @param [Time] cutoff Documents equal to OR newer will be kept in the returning list
@@ -276,7 +498,6 @@ module BRL ; module Genboree ; module KB ; module Helpers
       }
       return retVal
     end
-    
 
     # Gets a particular versioning doc for a document of interest.
     # @todo Move this to a HistoryHelper abstract parent class of VersionsHelper and RevisionsHelper. Generic.
@@ -294,50 +515,70 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   @param [Fixnum] versionNum The version number
     #   @param (see BSON::ObjectId.interpret)
     #   @param [String] docCollName The name of the data collection.
-    # @return [KbDoc] the versioning doc associated with versionNum for the document of interest.
-    def getVersion(versionNum, docId, docCollName=nil)
-      if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+    # @return [KbDoc, nil] the versioning doc associated with versionNum for the document of interest.
+    def getVersion(versionNum, docId, docCollName=@dataCollName, opts={})
+      fields = opts[:fields]
+      # Prevent loss of full general/parent field output due to presence of a more specific field (mongo 2.x bug)
+      fields = reduceProjectionFields( fields )
+      if(docId.is_a?(BSON::DBRef) and docCollName.nil?) # Already have dbRef. Get collection name out of it.
         docRef = docId
-        docCollName = docRef.namespace
-      elsif(docId and docCollName) # need to construct a docRef
+      elsif(docId and docCollName == @dataCollName ) # need to construct a docRef
         docId = BSON::ObjectId.interpret(docId)
         docRef = BSON::DBRef.new(docCollName, docId)
       else
-        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name. It's an error to use this instance--created to help with versioning of #{@dataCollName.inspect}--to get version records from some OTHER collection; use a separate VersionHelper instance for that."
       end
-      historyCollName = self.class::historyCollName(docCollName)
       queryDoc = {
         'versionNum.properties.docRef.value' => docRef,
         'versionNum.value' => versionNum
       }
-      retVal = nil
-      docCount = @kbDatabase.db[historyCollName].find(queryDoc, { :limit => 1 }).count(false)
-      if(docCount.to_i > 0)
-        historyDoc = @kbDatabase.db[historyCollName].find_one(queryDoc, { :limit => 1 })
-        retVal = BRL::Genboree::KB::KbDoc.new(historyDoc)
-      end
-      return retVal
+      # Why 2 queries?
+      qopts = { :limit => 1 }
+      qopts[:fields] = fields if( fields )
+      historyDoc = @coll.find_one(queryDoc, qopts)
+      return ( historyDoc ? BRL::Genboree::KB::KbDoc.new(historyDoc) : historyDoc )
     end
 
-    # Checks existence of a user document by the identifier value of the actual document stored in the 'content' field
-    # @Param [String]
+    # Checks existence of a user document by the identifier value of the actual document stored in the 'content' field.
+    # @todo This is stupid, why does exists?() return a DOC and not true|false like name indicates? Encourages bad dev
+    # @todo Also there is too much unneeded info provided that could be looked up fast: indentProp, docCollName
+    # @todo Probably delete this method.
+    #   practices like using this to get a version doc of interest, which we've seen some lazy devs do! The implementation
+    #   appears to be a slow version of getCurrVersionDoc().
+    # @Param [String] identProp Not needed in faster version.
     # @param [String] docName
     # @param [String] docCollName
     # @return [KbDoc] the versioning doc associated with versionNum for the document of interest.
     def exists?(identProp, docName, docCollName)
-      historyCollName = self.class::historyCollName(docCollName)
-      queryDoc = {
-        "versionNum.properties.content.value.#{identProp}.value" => docName,
-      }
-      retVal = nil
-      docCount = @kbDatabase.db[historyCollName].find(queryDoc, { :limit => 1 }).count(false)
-      if(docCount.to_i > 0)
-        historyDoc = @kbDatabase.db[historyCollName].find_one(queryDoc, { :limit => 1 })
-        retVal = BRL::Genboree::KB::KbDoc.new(historyDoc)
-      end
-      return retVal
+      raise "DEPRECATED. This method was implemented in a ridiculous way, and also was NOT returning true/false as expected by the ?, which led to developers abusing it to [very slowly, 14 secs in some cases] get the current version record. No more."
     end
 
+    # Gets the count for all version docs for a document of interest
+    #   @param (see BSON::ObjectId.interpret)
+    #   @param [String] docCollName The name of the data collection.
+    #   @param [Hash{Symbol,Object}] opts Additional options.
+    #     @option opts [Fixnum] :minDocVersion Only count version that are greater than or equal to this version.
+    # @return [Fixnum] Number of version docs for the doc
+    def versionCount(docId, docCollName=@dataCollName, opts={})
+      minDocVersion = opts[:minDocVersion]
+      if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
+        docRef = docId
+        docCollName = docRef.namespace
+      elsif(docId and docCollName == @dataCollName) # need to construct a docRef
+        docId = BSON::ObjectId.interpret(docId)
+        docRef = BSON::DBRef.new(docCollName, docId)
+      else
+        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name. It's an error to use this instance--created to help with versioning of #{@dataCollName.inspect}--to get version records from some OTHER collection; use a separate VersionHelper instance for that."
+      end
+      # Build selector
+      selector = { 'versionNum.properties.docRef.value' => docRef }
+      if(minDocVersion)
+        selector['versionNum.value'] = { '$gte' => minDocVersion.to_i }
+      end
+      docCount = @coll.find( selector ).count(false)
+      return docCount.to_i
+    end
+    
     # Gets ALL versioning docs for a document of interest.
     # @todo Move this to a HistoryHelper abstract parent class of VersionsHelper and RevisionsHelper. Generic.
     # @overload allVersions(docId)
@@ -352,30 +593,34 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #     and similar.)
     #   @param (see BSON::ObjectId.interpret)
     #   @param [String] docCollName The name of the data collection.
+    # @param [Hash] opts An optional hash containing search options such as :limit and :skip
     # @return [Array<KbDoc>] all the versioning records for doc of interest. Should automatically
     #   be from newest->oldest due to the multi-field index with the descending index on @versionNum@.
-    def allVersions(docId, docCollName=nil)
+    def allVersions(docId, docCollName=@dataCollName, opts={})
       if(docId.is_a?(BSON::DBRef) and docCollName.nil?)
         docRef = docId
         docCollName = docRef.namespace
-      elsif(docId and docCollName) # need to construct a docRef
+      elsif(docId and docCollName == @dataCollName) # need to construct a docRef
         docId = BSON::ObjectId.interpret(docId)
         docRef = BSON::DBRef.new(docCollName, docId)
       else
-        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name."
+        raise ArgumentError, "ERROR: method called incorrectly. Either provide JUST a BSON::DBRef or BOTH a docId type object + the appropriate collection name. It's an error to use this instance--created to help with versioning of #{@dataCollName.inspect}--to get version records from some OTHER collection; use a separate VersionHelper instance for that."
       end
-      historyCollName = self.class::historyCollName(docCollName)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "docRef:\n\n#{docRef.inspect}")
-      cursor = @kbDatabase.db[historyCollName].find('versionNum.properties.docRef.value' => docRef)
-      resultSet = Array.new(cursor.count)
-
-      idx = 0
+      cursor = @coll.find({'versionNum.properties.docRef.value' => docRef}, opts)
+      resultSet = []
       cursor.each { |doc|
-        resultSet[idx] = BRL::Genboree::KB::KbDoc.new(doc)
-        idx += 1
+        resultSet << BRL::Genboree::KB::KbDoc.new(doc)
       }
       cursor.close() unless(cursor.closed?)
       return resultSet
+    end
+
+    # @note No dataCollName arg since this method (all methods) should work ONLY on the specific
+    #   @dataCollName or the appropriate versions collecton. Kept in other methds for backwards compatibility.
+    def allVersionsByRootPropVal( docID, opts={} )
+      dbRef = dbRefFromRootPropVal( docID )
+      return allVersions( dbRef, @dataCollName, opts )
     end
 
     # Given a data collection name and the new version of a document, create the appropriate
@@ -400,6 +645,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
         docRef = BSON::DBRef.new(docCollName, newDoc["_id"])
         # Build the base version doc, to which we'll add the content
         versionDoc = buildBaseHistoryDoc(docCollName, docRef, author, opts)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "BASE VERSION DOC created:\n\n#{JSON.pretty_generate(versionDoc) rescue '[failed]'}")
         # Note that we very deliberately are keeping a FULL REDUNDANT COPY (SNAPSHOT)
         #   of THIS VERSION of the DOCUMENT. A DBRef to the head revision would be VERY WRONG here.
         versionDoc.setPropVal('versionNum.content', newDoc)
@@ -441,6 +687,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       versionsCollName = VersionsHelper.historyCollName(docCollName)
       # Build the base version doc, to which we'll add the content
       versionDoc = buildBaseHistoryDoc(docCollName, docRef, author, opts)
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "BASE VERSION DOC created:\n\n#{JSON.pretty_generate(versionDoc) rescue '[failed]'}")
       # Note that this is a deletion, so content is nil.
       versionDoc.setPropVal('versionNum.content', {})
       retVal = @kbDatabase.db[versionsCollName].save( versionDoc.to_serializable() )
@@ -467,10 +714,13 @@ module BRL ; module Genboree ; module KB ; module Helpers
       if(docCollMetadata)
         if(docCollMetadata.getPropVal( "name.versions" ))
           #   a. Get current version document, if any, or make new from template
-          versionDoc = ( currentVersion(docRef) or docTemplate() )
+          $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "curr version num for docRef #{docRef.inspect}: #{getCurrVersionNum(docRef).inspect}")
+          versionDoc = ( getCurrVersionDoc(docRef) or docTemplate() )
           #   b. Increment and get version counter, use in new version document
           newVersionNum = nextVersionNum()
-          prevVersionNum = versionDoc.getPropVal("versionNum")
+          # @todo Is this working correctly? Each new history doc should be linked to the prior one.
+          prevVersionNum = versionDoc.getPropVal('versionNum')
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "newVersionNum will be #{newVersionNum.inspect} ; prev version num based on retreived/constructed versionDoc: #{prevVersionNum.inspect}")
           #   c. Fill in rest of template with prev version info and whatnot
           versionDoc.delete("_id")
           versionDoc.setPropVal("versionNum", newVersionNum)
@@ -530,7 +780,9 @@ module BRL ; module Genboree ; module KB ; module Helpers
     def prepareDocForBulkOperation(docRef, doc, author, docRefToCurrVerMap, opts={})
       raise "opts Hash does not have :count key. Cannot add versionNum." if(!opts.key?(:count))
       versionDoc = docTemplate()
-      currNum = docRefToCurrVerMap[docRef]
+      # Possibly bug resulting in wrong prevVersionNum? dunno. Let's get it dynamically, it's pretty fast now for a DBRef.
+      #currNum = docRefToCurrVerMap[docRef]
+      currNum = getCurrVersionNum( docRef )
       if(!currNum.nil?)
         versionDoc.setPropVal("versionNum.prevVersion", currNum)
       end
@@ -548,7 +800,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return versionDoc
     end
     
-    def getDocRefsToCurrVersionMap(docRefs, collName)
+    def getDocRefsToCurrVersionMap(docRefs, collName=@coll.name)
       docRefsToVer = {}
       docObjIdsToDocRefs = {}
       docRefs.each {|docRef|
@@ -564,5 +816,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
     end
 
     # @todo Method to put new {data}.versions document in kbModels (just a copy)
+
+    # ----------------------------------------------------------------
+    # MEMOIZE now-defined methods
+    # . We override some of the parent methods here, so seems like have to re-memoize.
+    # . We do this by adding our memoized methods to the list from AbstractHelper
+    # ----------------------------------------------------------------
+    (self::MEMOIZED_INSTANCE_METHODS + BRL::Genboree::KB::Helpers::AbstractHelper::MEMOIZED_INSTANCE_METHODS).each { |meth| memoize meth }
   end # class VersionsHelper
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Helpers

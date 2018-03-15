@@ -11,6 +11,16 @@ end
 
 module RedmineApp
   class Application < Rails::Application
+    # Implement the Rails 4 Rails::Application#initialized? method to the
+    #   Redmine Application class. This lets us check whether we're running
+    #   in an initialized application or not, which of interest to automation
+    #   rake tasks that run outside of the Redmine web process but wish to behave
+    #   much like a Controller. Specifically much like a Plugin Controller with
+    #   all the productivity conveniences (before_filters) and other reusables.
+    def initialized?()
+      return @initialized
+    end
+
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
@@ -39,14 +49,27 @@ module RedmineApp
     # Configure sensitive parameters which will be filtered from the log file.
     config.filter_parameters += [:password]
 
-    # BRL
-    config.asset_path = "/redmine%s"
+    # BRL - TEMP OFF
+    #config.asset_path = "/genboreeKB_dev%s"
 
     # Enable the asset pipeline
     config.assets.enabled = false
+    # BRL
+    # - turn on asset pipeline
+    #config.assets.enabled = true
+    # - don't compress (web server will do on fly, probably nginx)
+    #config.assets.compress = false
+    # - use digests in name
+    #config.assets.digest = true
+    # - expands lines that load assets
+    #config.assets.debug = true
+    # - don't fall back to assets pipeline if miss precompiled asset
+    #config.assets.compile = true
 
     # Version of your assets, change this if you want to expire all your assets
-    config.assets.version = '1.0'
+    config.assets.version = '1.2'
+    
+    #config.assets.cache_store = :null_store
 
     config.action_mailer.perform_deliveries = false
 

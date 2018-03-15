@@ -839,6 +839,9 @@ module BRL ; module Genboree ; module Abstract ; module Resources
       gc = BRL::Genboree::GenboreeConfig.load()
       dbu = BRL::Genboree::DBUtil.new(gc.dbrcKey, nil, nil)
       userRec = dbu.selectUserById(@userId).first
+      unless(userRec)
+        raise "Error: no user record exists for user ID #{@userId} - are you trying to upload a file as gbSuperUser? This is not allowed!"
+      end
       settings = {}
       if(!fileUpdateArray.empty?)
         settings = {

@@ -36,6 +36,7 @@ require 'brl/genboree/rest/wrapperApiCaller'
 require 'brl/genboree/helpers/sniffer'
 require 'brl/genboree/abstract/resources/user'
 require 'brl/genboree/kb/kbDoc'
+require 'brl/genboree/kb/helpers/dataCollectionHelper'
 include BRL::Genboree::REST
 
 module BRL; module Genboree; module Tools; module Scripts
@@ -47,7 +48,7 @@ module BRL; module Genboree; module Tools; module Scripts
                         This tool is intended to be called when jobs are submitted by the FTP Pipeline for exceRpt.
                         This wrapper checks the validity of the submitted manifest / metadata archive / data archive
                         and then submits all data samples for processing.",
-      :authors      => [ "Sai Lakshmi Subramanian (sailakss@bcm.edu) and William Thistlethwaite (thistlew@bcm.edu)" ],
+      :authors      => [ "William Thistlethwaite (thistlew@bcm.edu) and Sai Lakshmi Subramanian (sailakss@bcm.edu)" ],
       :examples     => [
         "#{File.basename(__FILE__)} --inputFile=filePath",
         "#{File.basename(__FILE__)} -j filePath",
@@ -136,6 +137,10 @@ module BRL; module Genboree; module Tools; module Scripts
           `mkdir -p #{@calibratorDir}`
           # Directory to store mappings between archives and unextracted files - temporary!
           `mkdir -p #{@jobSpecificSharedScratch}/samples/unextractedToExtractedMappings`
+          # Create importantJobIdsDir (will store all important job IDs - IDs reported to user in final email, IDs used to determine which samples passed/failed)
+          importantJobIdsDir = "#{@jobSpecificSharedScratch}/importantJobIds"
+          `mkdir -p #{importantJobIdsDir}`
+          @settings['importantJobIdsDir'] = importantJobIdsDir
         else
           @errUserMsg = "ERROR: Shared scratch dir #{@clusterSharedScratchDir} is not available."
           raise @errUserMsg
@@ -169,6 +174,8 @@ module BRL; module Genboree; module Tools; module Scripts
         }
         # Save path to user's inbox (so we can easily put files back in it in case of job failure)
         @inboxFtpDir = @failedFtpDir.slice(0...@failedFtpDir.index("failed")) << "inbox/"
+        @backupFtpDir = @failedFtpDir.gsub("/failed/", "/backup/")
+        @settings['backupFtpDir'] = @backupFtpDir
         # Grab PI ID to use later in metadata document names
         @piID = @inboxFtpDir.scan(/exrna-[A-Za-z0-9]+/)[0][6..-1].upcase
         # Grab exRNA-specific host / group / KB associated with submitted job (for metadata submission)
@@ -177,6 +184,15 @@ module BRL; module Genboree; module Tools; module Scripts
         @exRNAKb = @settings['exRNAKb']
         @exRNAKbProject = @settings['exRNAKbProject']
         @genboreeKbArea = @settings['genboreeKbArea']
+        # Set up data collection helper so we can validate docs
+        dbu = BRL::Genboree::DBUtil.new("DB:#{@exRNAHost}", nil, nil)
+        kbRecs = dbu.selectKbByNameAndGroupName(@exRNAKb, @exRNAKbGroup)
+        if(kbRecs.nil?)
+          raise BRL::Genboree::GenboreeError.new(:"Not Found", "Could not retrieve KB information for host: #{@exRNAHost}, group:#{@exRNAKbGroup}, and kb:#{@exRNAKb}")
+        end
+        mdbName = kbRecs.first['databaseName']
+        mongoDbrcRec = @suDbDbrc.getRecordByHost(@genbConf.machineName, :nosql)
+        @mdb = BRL::Genboree::KB::MongoKbDatabase.new(mdbName, mongoDbrcRec[:driver], { :user => mongoDbrcRec[:user], :pass => mongoDbrcRec[:password] })
         # Grab internal exRNA host / group / KB (for PI / Submitter info)
         @exRNAInternalKBHost = @genbConf.exRNAInternalKBHost
         @exRNAInternalKBGroup = @genbConf.exRNAInternalKBGroup
@@ -201,8 +217,10 @@ module BRL; module Genboree; module Tools; module Scripts
         @workingFiles = []
         # Variable to keep track of which original input files (manifest / metadata archive / data archive) are broken (for reporting to user in error e-mail)
         @brokenFiles = []
+        # @failedJobs is a hash that will keep track of which runExceRpt jobs fail - this hash will store the respective error messages for each failed sample.
+        @failedJobs = {}
       rescue => err
-        @errUserMsg = "ERROR: Could not set up required variables for running job."
+        @errUserMsg = "ERROR: Could not load initial settings for running the FTP exceRpt pipeline."
         @errInternalMsg = err
         $stderr.debugPuts(__FILE__, __method__, "STATUS", err.message.inspect)
         errBacktrace = err.backtrace.join("\n")
@@ -217,10 +235,6 @@ module BRL; module Genboree; module Tools; module Scripts
     def run()
       begin
         #### PRELIMINARY SETUP ####
-        # Define .out and .err files for output
-        @outFile = @errFile = ""
-        @outFile = "#{@scratchDir}/FTPsmRNAPipeline.out"
-        @errFile = "#{@scratchDir}/FTPsmRNAPipeline.err"
         # Hash that will contain input file names and associated output files (for uploading and proper clean up)
         # Each inputFile key will be linked to a hash that contains the following values:
         #   :originalFileName => name of original file associated with a given sample / input file (before decompression)
@@ -228,6 +242,7 @@ module BRL; module Genboree; module Tools; module Scripts
         #   :failedRun => boolean flag telling us whether pipeline job succeeded or failed (false = succeeded, true = failed)
         #   :md5 => md5 string for that particular file (used in filling out Run document)
         #   :biosampleMetadataFileName => name of biosample metadata document associated with input file
+        #   :adapterSequence => adapter sequence for a particular sample (if it's given)
         @inputFiles = {}
         # Array that holds all metadata files. This array is used for easy iterative validation and upload of all metadata documents.
         @metadataFiles = []
@@ -254,16 +269,14 @@ module BRL; module Genboree; module Tools; module Scripts
         @submissionMetadataFile = {}
         # Array that holds errors found in metadata files - used during metadata validation stage
         @metadataErrors = []
-        # Hash that holds a read-in copy of the submitted manifest file
+        # Path to downloaded manifest file
         @manifestFile = nil
         # Create converter and producer for use throughout - we don't need model for any reason so set producer's model to nil
         @converter = BRL::Genboree::KB::Converters::NestedTabbedDocConverter.new()
         @producer = BRL::Genboree::KB::Producers::NestedTabbedDocProducer.new(nil)
-        # Create validator for checking metadata documents
-        @validator = BRL::Genboree::KB::Validators::DocValidator.new()
         # Set up sniffer
         @sniffer = BRL::Genboree::Helpers::Sniffer.new()
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "BEGIN FTP version of exceRpt small RNA-seq Pipeline")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "BEGIN FTP version of exceRpt small RNA-seq Pipeline (version 4.6.2)")
         #### DOWNLOADING AND CHECKING MANIFEST FILE ####
         # There are three different possibilities when dealing with an incomplete submission.
         # 1. The manifest file is not present. In this case, we have to send an e-mail to the admin (since we do not have the user's information) and will move any existing files from /working to /inbox
@@ -307,9 +320,27 @@ module BRL; module Genboree; module Tools; module Scripts
         checkError(2)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Metadata archive is valid")
         # If the user supplied a multi-column tabbed biosamples file, we will split that file up into individual biosample files (one for each sample)
-        if(@multiColumn)
+        if(@multiColumnBiosample)
           # Convert multi-column tabbed biosamples into individual biosample files
           @exitCode = convertMultiColumnBiosamples()
+        end
+        checkError(2)
+        # If the user supplied a general donor metadata file above the individual samples, then we need to figure out what to do with that file.
+        # That file could either a) be a single doc that applies to all samples that don't have an explicit donor associated with them in the manifest file, or
+        #                        b) be a multi-column doc that covers all samples.
+        # We will investigate that below.
+        if(@foundDonorDoc)
+          @multiDonorDoc = false
+          @exitCode = checkAndConvertMultiColumnDonors()
+        end
+        checkError(2)
+        # If the user supplied a general experiment metadata file above the individual samples, then we need to figure out what to do with that file.
+        # That file could either a) be a single doc that applies to all samples that don't have an explicit experiment associated with them in the manifest file, or
+        #                        b) be a multi-column doc that covers all samples.
+        # We will investigate that below.
+        if(@foundExperimentDoc)
+          @multiExperimentDoc = false
+          @exitCode = checkAndConvertMultiColumnExperiments()
         end
         checkError(2)
         # Load all metadata files into their KbDoc format for easier editing (won't have to open and close files repeatedly!)
@@ -337,7 +368,10 @@ module BRL; module Genboree; module Tools; module Scripts
         }
         # If there are any metadata errors, user will need to re-submit with fixed metadata files
         unless(@metadataErrors.empty?)
-          @errUserMsg = "There were errors in your metadata file(s). Please see the following list and fix all errors before resubmitting:\n\n#{@metadataErrors.join("\n\n")}\n"
+          @errUserMsg = "There were errors in your metadata file(s). Please see the following list and fix all errors before resubmitting:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << @metadataErrors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
           @exitCode = 33
         end
         checkError(2)
@@ -357,6 +391,9 @@ module BRL; module Genboree; module Tools; module Scripts
           @manifest.each { |currentSample|
             if(currentSample["dataFileName"] == originalFileName)
               @inputFiles[currentFile][:biosampleMetadataFileName] = currentSample["biosampleMetadataFileName"]
+              if(currentSample["adapterSequence"])
+                @inputFiles[currentFile][:adapterSequence] = currentSample["adapterSequence"]
+              end
             end
           }
           # If we can't find a link between the current @inputFiles key and a biosample doc, then we raise an error.
@@ -375,6 +412,8 @@ module BRL; module Genboree; module Tools; module Scripts
         #### RUNNING EXCERPT SMALL RNA-SEQ PIPELINE ON SAMPLES ####
         # Create /finished directory for original files (they'll be placed there if at least one sample in submission is processed correctly)
         @ftpHelper.mkdir(@finishedFtpDir)
+        @ftpHelper.mkdir(@backupFtpDir)
+        @ftpHelper.mkdir("#{@backupFtpDir}/data")
         # Submit runExceRpt jobs
         submitJobs()
         checkError(1)
@@ -388,9 +427,11 @@ module BRL; module Genboree; module Tools; module Scripts
             File.open("#{currentDir}/#{File.basename(currentFileName)}", 'w') { |file| file.write(JSON.pretty_generate(currentDocs[currentFileName])) }
           }
         }
+        # Write updated manifest to disk
+        File.open(@manifestFile, 'w') { |file| file.write(JSON.pretty_generate(@fileData)) }
         # We'll also write our @inputFiles hash to disk so we can use that in erccFinalProcessing
         File.open("#{@jobSpecificSharedScratch}/inputFilesHash.txt", 'w') { |file| file.write(JSON.pretty_generate(@inputFiles)) } 
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "DONE with batch submission of exceRpt Pipeline (version #{@toolVersion}) jobs. END.") 
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "DONE with batch submission of exceRpt Pipeline (version #{@toolVersion}) jobs. END.")
         # DONE FTPexceRptPipeline batch submission
       rescue => err
         # Generic "catch-all" error message for exceRpt small RNA-seq pipeline error
@@ -434,10 +475,10 @@ module BRL; module Genboree; module Tools; module Scripts
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file downloaded successfully to #{tmpFile}")
         # Convert to unix format
         convObj = BRL::Util::ConvertText.new(tmpFile, true)
-        convObj.convertText() 
+        convObj.convertText()
         # Count number of lines in the input file
         numLines = `wc -l #{tmpFile}`
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in manifest file #{File.basename(tmpFile)}: #{numLines}")         
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in manifest file #{File.basename(tmpFile)}: #{numLines.split(" ")[0]}")
         # Save the manifest file in @manifestFile
         @manifestFile = tmpFile.clone
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "File #{@manifestFile} is a manifest file")
@@ -516,7 +557,40 @@ module BRL; module Genboree; module Tools; module Scripts
         end
         @errInputs = {:emptyFiles => [], :badFormat => [], :badArchives => []}
         checkForInputs(tmpFile, true)
+        foundError = false
+        @errInputs.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          @errUserMsg = "We encountered some errors when processing your archives from Genboree.\n"
+          @errUserMsg << "Individual error messages are printed below:"
+          @errInputs.each_key { |category|
+            unless(@errInputs[category].empty?)
+              msg = ""
+              if(category == :emptyFiles)
+                msg = "\n\nAt least some of the files you submitted are empty.\nWe cannot process empty files.\nA list of empty files can be found below:\n"
+              elsif(category == :badFormat)
+                msg = "\n\nAt least some of the files you submitted were not recognized as FASTQ, SRA, or archive format.\nYour submitted archives should only contain these types of files.\nA list of problematic files can be found below:\n"
+              elsif(category == :badArchives)
+                msg = "\n\nAt least some of your submitted archives could not be extracted.\nIt is possible that the archives are empty or corrupt.\nPlease check the validity of the archives and try again.\nA list of problematic archives can be found below:\n"
+              end
+              unless(msg.empty?)
+                @errUserMsg << "#{msg}\n#{@errInputs[category].join("\n\n")}"
+              end
+            end
+          }
+        end
         raise @errUserMsg unless(@errUserMsg.nil?)
+        # Make sure that all data files mentioned in manifest are present in the (unzipped) data archive
+        extractedDataFiles = []
+        missingManifestDataFiles = []
+        @inputFiles.each_key { |currentFileRec| extractedDataFiles << @inputFiles[currentFileRec][:originalFileName] }
+        @fileData["manifest"].each { |currentSampleRec|
+          currentDataFile = currentSampleRec["dataFileName"]
+          missingManifestDataFiles << currentDataFile unless(extractedDataFiles.include?(currentDataFile))
+        }
+        unless(missingManifestDataFiles.empty?)
+          @errUserMsg = "At least some of the data files mentioned in your manifest\ncould not be found in your data archive.\nA list of these files can be seen below:\n\n#{missingManifestDataFiles.join("\n")}"
+          raise @errUserMsg
+        end
       rescue => err
         # Generic error message if somehow an error pops up that wasn't handled effectively by the above checks (shouldn't happen)
         @errUserMsg = "ERROR: There was an error downloading / decompressing / checking your data archive." if(@errUserMsg.nil?)
@@ -544,19 +618,30 @@ module BRL; module Genboree; module Tools; module Scripts
         # First, check to see if inputFile is a directory. If it's not, we'll just extract it.
         unless(File.directory?(inputFile))
           if(continueExtraction)
+            # Create Expander object on current file and try to extract current file.
+            # If Expander has an error while attempting to extract the archive, then we will set expError to be true and save the name of the archive in :badArchives 
             exp = BRL::Util::Expander.new(inputFile)
             begin
               exp.extract()
             rescue => err
               expError = true
-              @errInputs[:badArchives] << File.basename(inputFile)     
+              @errInputs[:badArchives] << File.basename(inputFile)
             end
+            # If our Expander object didn't error out while extracting the file, we should still check exp.stderrStr to see if any non-fatal errors occurred
             unless(expError)
-              oldInputFile = inputFile.clone()
-              inputFile = exp.uncompressedFileName
-              # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
-              `rm -f #{oldInputFile}` unless(exp.compressedFileName == oldInputFile)
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
+              expanderErrors = exp.stderrStr
+              # If there is any content in stderrStr, then the archive is still bad and we need to report that
+              unless(expanderErrors.empty?)
+                expError = true
+                @errInputs[:badArchives] << File.basename(inputFile)
+              end
+              unless(expError)
+                oldInputFile = inputFile.clone()
+                inputFile = exp.uncompressedFileName
+                # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
+                `rm -f #{oldInputFile}` unless(exp.compressedFileName == exp.uncompressedFileName)
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
+              end
             end
           end
         end
@@ -581,7 +666,7 @@ module BRL; module Genboree; module Tools; module Scripts
             `mv #{Shellwords.escape(inputFile)} #{fixedInputFile}`
             # Check to see if file is empty. We have to do this again because it might have been inside of a (non-empty) archive earlier!
             if(File.zero?(fixedInputFile))
-              @errInputs[:emptyFiles] << File.basename(inputFile)   
+              @errInputs[:emptyFiles] << File.basename(inputFile)
             else
               # Sniff file and see whether it's FASTQ, SRA, FASTA, or one of our supported compression formats
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Sniffing file type of #{fixedInputFile}")
@@ -597,7 +682,7 @@ module BRL; module Genboree; module Tools; module Scripts
                 convObj.convertText()
                 # Count number of lines in the input file
                 numLines = `wc -l #{fixedInputFile}`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in file #{fixedInputFile} ::: #{numLines}")
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in file #{fixedInputFile} ::: #{numLines.split(" ")[0]}")
                 # Set up spike-in file for creation of bowtie2 index by moving it to calibrator directory
                 spikeInFileBaseName = File.basename(fixedInputFile)
                 @spikeInName = spikeInFileBaseName.makeSafeStr(:ultra)
@@ -607,7 +692,10 @@ module BRL; module Genboree; module Tools; module Scripts
                 @spikeInFile = "#{@calibratorDir}/#{spikeInFileBaseName}"
                 $stderr.debugPuts(__FILE__, __method__, "STATUS", "Spike-in file #{@spikeInFile} is available in calibrator dir #{@calibratorDir}/.")
               else
-                @errInputs[:badFormat] << File.basename(inputFile)
+                # Ignore the junk ._ files that Mac archiver puts into archives - we'll assume those are just extraneous files and NOT stop the submission pipeline if we find them
+                unless(File.basename(fixedInputFile)[0..1] == "._")
+                  @errInputs[:badFormat] << File.basename(inputFile)
+                end
               end
             end
           end
@@ -634,10 +722,10 @@ module BRL; module Genboree; module Tools; module Scripts
         retVal = @fileApiHelper.downloadFile(newOligoFile, @subUserId, tmpFile)
         # If there's an error downloading the spike-in file, report that to the user    
         unless(retVal)
-          @errUserMsg = "Failed to download spike-in file: #{fileBase} from server after many attempts.\nIs it possible that you put the wrong file name?\nPlease try again later."
+          @errUserMsg = "Failed to download spike-in file #{fileBase} from Genboree.\nIs it possible that you put the wrong file name?\nIf the file name is correct, please contact a DCC admin."
           raise @errUserMsg
         end
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "File downloaded successfully to #{tmpFile}")   
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "File downloaded successfully to #{tmpFile}")
         # Expand the file if it is compressed
         exp = BRL::Genboree::Helpers::Expander.new(tmpFile)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Extracting spike-in file #{tmpFile}")
@@ -645,9 +733,8 @@ module BRL; module Genboree; module Tools; module Scripts
         # Delete __MACOSX directory if it exists 
         `rm -rf #{exp.tmpDir}/__MACOSX` if(File.exist?("#{exp.tmpDir}/__MACOSX"))
         allExtractedFiles = Dir.entries(exp.tmpDir) rescue nil # If this fails, it means that exp.tmpDir wasn't created because the original file was uncompressed!
-        # Check to make sure that archive only contains one file (uncompressed FASTQ / SRA) - if it contains other files (excluding __MACOSX directory),
-        # then we add the archive name to our :extraFiles array in our dataFileErrors hash
-        if(allExtractedFiles) 
+        # Check to make sure that archive only contains one file (uncompressed FASTQ / SRA)
+        if(allExtractedFiles)
           allExtractedFiles.delete(".")
           allExtractedFiles.delete("..")
           if(allExtractedFiles.size != 1)
@@ -677,7 +764,7 @@ module BRL; module Genboree; module Tools; module Scripts
         convObj.convertText() 
         # Count number of lines in the input file
         numLines = `wc -l #{inputFile}`
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in spike-in file #{inputFile}: #{numLines}")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in spike-in file #{inputFile}: #{numLines.split(" ")[0]}")
         spikeInFileBasename = File.basename(inputFile)
         # Move spike-in file to calibrator directory and set up @spikeInFile variable
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Moving spike-in file #{inputFile} to calibrator dir #{@calibratorDir}/.")
@@ -707,7 +794,7 @@ module BRL; module Genboree; module Tools; module Scripts
         convObj.convertText()
         # Count number of lines in the manifest file
         numLines = `wc -l #{manifestFile}`
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in manifest file #{manifestFile} ::: #{numLines}")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in manifest file #{manifestFile} ::: #{numLines.split(" ")[0]}")
         # Read in manifest file and see whether it's in proper JSON
         @fileData = JSON.parse(File.read(manifestFile)) rescue nil
         # errors array will keep track of all errors that occur as we check our manifest file
@@ -807,12 +894,14 @@ module BRL; module Genboree; module Tools; module Scripts
         # Note - db name for results is set in job conf now - user doesn't provide it!
         @dbName = CGI.escape(@settings['outputDb'])
         @outputDb.gsub!(/\{DB_NAME\}/, @dbName)
-        # Note - remote storage area is set in job conf now - user doesn't provide it!
         # Grab user-submitted settings (given in manifest) and merge them with default options
         if(!@fileData.key?("settings") or @fileData["settings"].nil? or @fileData["settings"].empty?)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not have user-submitted settings. We will use default settings for pipeline jobs.")
         else
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Merging user-submitted settings with default options (will override defaults)")
+          # We do NOT allow user to edit exogenous mapping setting for FTP pipeline - by default, it will always be on, but if we need to use a different setting,
+          # that setting can be updated in the default tool job conf used by the relevant polling area
+          @fileData["settings"].delete('exogenousMapping')
           @settings.merge!(@fileData["settings"])
         end
         unless(@settings['remoteStorageArea'])
@@ -820,7 +909,7 @@ module BRL; module Genboree; module Tools; module Scripts
           errors << "The DCC Admins have not properly set up a remote storage area (virtual FTP area) for your submission. Please contact a DCC admin to fix this issue."  
         end
         #### ANALYSIS DOC ####
-        # Check if Analysis metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, auto-generate analysis doc for user (we will fill it in after pipeline runs are finished).
+        # Check if Analysis metadata doc is available. Otherwise, auto-generate analysis doc for user (we will fill it in after pipeline runs are finished).
         if(!@fileData.key?("analysisMetadataFileName") or @fileData["analysisMetadataFileName"].nil? or @fileData["analysisMetadataFileName"].empty?)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not contain analysis metadata file name. Creating analysis metadata document.")
           # Create new analysisDoc that contains most basic, required information, and then save it as compact tabbed file
@@ -842,108 +931,93 @@ module BRL; module Genboree; module Tools; module Scripts
         end
         #### MULTI-COLUMN BIOSAMPLE DOC ####
         # See if user has included a multi-column tabbed file for his/her biosamples. If so, we will not require biosample names for individual samples.
-        # In fact, they're not allowed at all since the multi-column tabbed file must contain all biosamples if it exists.
+        @multiColumnBiosample = false
         if(!@fileData.key?("biosampleMetadataFileName") or @fileData["biosampleMetadataFileName"].nil? or @fileData["biosampleMetadataFileName"].empty?)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not have multi-column tabbed file for biosamples. It is possible that biosample metadata is submitted for each biosample.")
         else
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file has multi-column tabbed file for biosamples. We will set flag for processing multi-column tabbed file.")
-          # @multiColumn will keep track of whether multi-column file was found
-          @multiColumn = true
+          @multiColumnBiosample = true
         end
-        #### MAIN DONOR DOC ####
-        # Check if Donor metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, keep going (since user could have submitted donor metadata doc for each biosample).
-        foundDonorDoc = false
+        #### MAIN/MULTI-COLUMN DONOR DOC ####
+        # Check if Donor metadata doc is available. This file could be a multi-column donor file or it could just contain a single general doc. If this file isn't available, then no error (since user could have submitted donor metadata doc for each biosample).
+        @foundDonorDoc = false
         if(!@fileData.key?("donorMetadataFileName") or @fileData["donorMetadataFileName"].nil? or @fileData["donorMetadataFileName"].empty?)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not contain general donor metadata file name. It is possible that donor metadata is submitted for each biosample.")
         else
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file contains general donor metadata file name. This name is used for any samples that do not have a donor metadata file name.")
-          # foundDonorDoc will keep track of whether we found a general donor doc (applies to all samples without specific donor docs)
-          foundDonorDoc = true
+          # @foundDonorDoc will keep track of whether we found a general donor doc (applies to all samples without specific donor docs)
+          @foundDonorDoc = true
         end
-        #### MAIN EXPERIMENT DOC ####
-        # Check if Experiment metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, keep going (since user could have submitted Experiment metadata doc for each biosample).
-        foundExperimentDoc = false   
+        #### MAIN/MULTI-COLUMN EXPERIMENT DOC ####
+        # Check if Experiment metadata doc is available. This file could be a multi-column experiment file or it could just contain a single general doc. If this file isn't available, then no error (since user could have submitted experiment metadata doc for each biosample).
+        @foundExperimentDoc = false   
         if(!@fileData.key?("experimentMetadataFileName") or @fileData["experimentMetadataFileName"].nil? or @fileData["experimentMetadataFileName"].empty?)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not contain experiment metadata file name. It is possible that experiment metadata is submitted for each biosample.")
         else
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file contains general experiment metadata file name. This name is used for any samples that do not have an experiment metadata file name.")
-          # foundExperimentDoc will keep track of whether we found a general experiment doc (applies to all samples without specific experiment docs)
-          foundExperimentDoc = true
+          # @foundExperimentDoc will keep track of whether we found a general experiment doc (applies to all samples without specific experiment docs)
+          @foundExperimentDoc = true
         end
         #### RUN DOC ####
-        # Check if name of Run metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, give error (no Run document is not acceptable).
+        # Check if name of Run metadata doc is available. Otherwise, give error (no Run document is not acceptable).
         if(!@fileData.key?("runMetadataFileName") or @fileData["runMetadataFileName"].nil? or @fileData["runMetadataFileName"].empty?)
           errors << "Manifest file does not contain run metadata file name.\nThe \"runMetadataFileName\" field is required.\nPlease put a valid run metadata file name and resubmit your job."
         end
         #### STUDY DOC ####
-        # Check if Study metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, give error (no Study document is not acceptable).
+        # Check if Study metadata doc is available. Otherwise, give error (no Study document is not acceptable).
         if(!@fileData.key?("studyMetadataFileName") or @fileData["studyMetadataFileName"].nil? or @fileData["studyMetadataFileName"].empty?)
           errors << "Manifest file does not contain study metadata file name.\nThe \"studyMetadataFileName\" field is required.\nPlease put a valid study metadata file name and resubmit your job."
         end
         #### SUBMISSION DOC ####
-        # Check if Submission metadata doc is available - if it is, add it to @metadataFiles.  Otherwise, give error (no Submission document is not acceptable).
+        # Check if Submission metadata doc is available. Otherwise, give error (no Submission document is not acceptable).
         if(!@fileData.key?("submissionMetadataFileName") or @fileData["submissionMetadataFileName"].nil? or @fileData["submissionMetadataFileName"].empty?)
           errors << "Manifest file does not contain submission metadata file name.\nThe \"submissionMetadataFileName\" field is required.\nPlease put a valid submission metadata file name and resubmit your job."
         end
-        #### GENOME MAPPING DOC ####
-        # This is currently commented out because we're not filling out this information yet!
-=begin
-        # Add Genome Mappings doc (will not be created by user)
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Manifest file does not have genome mapping metadata filename. Creating genome mapping metadata document.")
-        # Create new genomeMappingsDoc that contains most basic, required information, and then save it as compact tabbed file
-        genomeMappingsDoc = BRL::Genboree::KB::KbDoc.new({})
-        # Auto-generate new ID
-        rsrcPath = "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model/prop/{prop}/autoID"
-        apiCaller = WrapperApiCaller.new(@exRNAHost, rsrcPath, @subUserId)
-        apiCaller.get({:prop => "Genome Mappings", :coll => "Genome Mappings", :kb => @exRNAKb, :grp => @exRNAKbGroup})
-        # Set up basic attributes of genome mapping document
-        genomeMappingsDoc.setPropVal("Genome Mappings", apiCaller.parseRespBody["data"]["text"])
-        genomeMappingsDoc.setPropVal("Genome Mappings.Status", "Add")
-        # Save doc with filename "genomeMappings.compact.metadata.tsv"
-        updatedGenomeMappingsDoc = @producer.produce(genomeMappingsDoc).join("\n")
-        @genomeMappingsMetadataFileName = "genomeMappingsDoc.compact.metadata.tsv"
-        File.open("#{@metadataDir}/#{@genomeMappingsMetadataFileName}", 'w') { |file| file.write(updatedGenomeMappingsDoc) }
-        # Save new genome mappings metadata filename to manifest
-        @fileData["genomeMappingsMetadataFileName"] = "genomeMappingsDoc.compact.metadata.tsv"
-        @metadataFiles << @genomeMappingsMetadataFileName
-=end
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Data from the manifest file #{manifestFile}: #{@fileData.inspect}")
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Output database: #{@outputDb}")
         # Grab sample-specific portion of manifest file - this should be proper JSON if entire manifest file was read in correctly earlier
         @manifest = @fileData["manifest"]
         #### CHECKING INDIVIDUAL SAMPLES ####
         count = 0
+        sampleErrors = {:sampleName => [], :adapterSeq => [], :biosample => [], :donor => [], :experiment => [], :dataFile => []}
         @manifest.each { |eachSampleHash|
           count += 1
           #### CHECKING SAMPLE NAME ####
           # Check if sample name is provided for sample - if not, we raise an error (it's required!).
           # Note that this sample name must match the "Biosample.Name" field for the associated biosample.
           if(!eachSampleHash.key?("sampleName") or eachSampleHash["sampleName"].nil? or eachSampleHash["sampleName"].empty?)
-            errors << "Manifest file is missing a \"sampleName\" value for sample ##{count} in your \"manifest\" hash array.\nPlease check that each sample has a \"sampleName\" value."
+            sample = "##{count} in your \"manifest\" hash array (no sample name given)"
+            sampleErrors[:sampleName] << sample
           else
             sample = eachSampleHash["sampleName"]
           end
-          sample = "##{count} in your \"manifest\" hash array" unless(sample)
+          ### CHECKING FOR SAMPLE-SPECIFIC ADAPTER SEQ ####
+          # Check if adapter sequence is provided for sample - if not, no issue (is probably handled by settings).
+          if(!eachSampleHash.key?("adapterSequence") or eachSampleHash["adapterSequence"].nil? or eachSampleHash["adapterSequence"].empty?)
+          else
+            # OK, so there's an adapter sequence listed.
+            # Now, let's verify that it looks OK. We WILL raise an error if there is something bogus written for a sample's adapter sequence.
+            # Note that we'll actually connect input files with their respective adapter sequences later on.
+            if(eachSampleHash["adapterSequence"] != "autoDetect" and eachSampleHash["adapterSequence"] != "none" and eachSampleHash["adapterSequence"] !~ /^[ATGCNatgcn]+$/)
+              sampleErrors[:adapterSeq] << sample
+            end
+          end          
           #### CHECKING BIOSAMPLE ASSOCIATED WITH SAMPLE ####
           # Check if biosample metadata file name is provided.
-          # If there is no biosample metadata file name provided, then a multi-column tabbed biosample doc must be provided (@multiColumn must be true). 
+          # If there is no biosample metadata file name provided, then a multi-column tabbed biosample doc must be provided (@multiColumnBiosample must be true). 
           # If not, we raise an error.
-          unless(@multiColumn)
+          unless(@multiColumnBiosample)
             if(!eachSampleHash.key?("biosampleMetadataFileName") or eachSampleHash["biosampleMetadataFileName"].nil? or eachSampleHash["biosampleMetadataFileName"].empty?)
-              errors << "Manifest file is missing a \"biosampleMetadataFileName\" value for sample #{sample}.\nPlease check that each sample has a \"biosampleMetadataFileName\" value."
+              sampleErrors[:biosample] << sample
             end
-          end
-          # If @multiColumn is true AND a biosample metadata file name is provided, we also raise an error (you can't have both).
-          if(@multiColumn and eachSampleHash.key?("biosampleMetadataFileName"))
-            errors << "You have included a multi-column biosample metadata file,\nbut you have also included a value for an individual sample's \"biosampleMetadataFileName\".\nThe multi-column file must supply all biosample metadata.\nPlease delete all individual sample \"biosampleMetadataFileName\" fields and try again."
           end
           #### CHECKING DONOR ASSOCIATED WITH SAMPLE ####
           # Check if donor metadata file name is provided.
           # If there is no donor metadata file name provided, then a general donor doc must be provided (generalDonorDoc must be true). 
           # If not, we raise an error.
           if(!eachSampleHash.key?("donorMetadataFileName") or eachSampleHash["donorMetadataFileName"].nil? or eachSampleHash["donorMetadataFileName"].empty?)
-            unless(foundDonorDoc)
-              errors << "Manifest file is missing a \"donorMetadataFileName\" value for sample #{sample}.\nBecause you did not supply a more general \"donorMetadataFileName\" value that can apply to all samples,\nyour manifest file is invalid."
+            unless(@foundDonorDoc)
+              sampleErrors[:donor] << sample
             end
           end            
           #### CHECKING EXPERIMENT ASSOCIATED WITH SAMPLE ####
@@ -951,16 +1025,41 @@ module BRL; module Genboree; module Tools; module Scripts
           # If there is no experiment metadata file name provided, then a general experiment doc must be provided (generalExperimentDoc must be true). 
           # If not, we raise an error.
           if(!eachSampleHash.key?("experimentMetadataFileName") or eachSampleHash["experimentMetadataFileName"].nil? or eachSampleHash["experimentMetadataFileName"].empty?)
-            unless(foundExperimentDoc)
-              errors << "Manifest file is missing a \"experimentMetadataFileName\" value for sample #{sample}.\nBecause you did not supply a more general \"experimentMetadataFileName\" value that can apply to all samples,\nyour manifest file is invalid."
+            unless(@foundExperimentDoc)
+              sampleErrors[:experiment] << sample
             end
           end
           #### CHECKING DATA FILE NAME ASSOCIATED WITH SAMPLE ####
           # Check if data file name is provided - if not, we raise an error (it's required!).
           if(!eachSampleHash.key?("dataFileName") or eachSampleHash["dataFileName"].nil? or eachSampleHash["dataFileName"].empty?)
-            errors << "Manifest file is missing a \"dataFileName\" value for sample #{sample}.\nPlease check that each sample has a \"dataFileName\" value."
+            sampleErrors[:dataFile] << sample
           end
         }
+        foundSampleError = false
+        sampleErrors.each_value { |categoryValue| foundSampleError = true unless(categoryValue.empty?) }
+        if(foundSampleError)
+          sampleErrors.each_key { |category|
+            unless(sampleErrors[category].empty?)
+              msg = ""
+              if(category == :sampleName)
+                msg = "Manifest file is missing a \"sampleName\" value\nfor the following samples:"
+              elsif(category == :adapterSeq)
+                msg = "Manifest file has invalid adapter sequences\nfor the following samples:"
+              elsif(category == :biosample)
+                msg = "Manifest file is missing a \"biosampleMetadataFileName\" value\n for the following samples:"
+              elsif(category == :donor)
+                msg = "Manifest file is missing a \"donorMetadataFileName\" value\nfor the following samples (and no general \"donorMetadataFileName\" is given above the list of samples):"
+              elsif(category == :experiment)
+                msg = "Manifest file is missing an \"experimentMetadataFileName\" value\nfor the following samples (and no general \"experimentMetadataFileName\" is given above the list of samples):"
+              elsif(category == :dataFile)
+                msg = "Manifest file is missing a \"dataFileName\" value\nfor the following samples:"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{sampleErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
         unless(errors.empty?)
           @errUserMsg = "Some errors occurred while traversing your manifest file.\n\n======================LIST OF ISSUES==============================\n"
           @errUserMsg << errors.join("\n=================================================================\n")
@@ -995,11 +1094,12 @@ module BRL; module Genboree; module Tools; module Scripts
         user = dbrc.user
         pass = dbrc.password
         errors = []
-        # Set up spike-in options
-        @analysisName = @settings['analysisName'] if(@settings['analysisName'])
-        @settings['analysisName'] = @analysisName
-        ### ANTICIPATED DATA REPOSITORY SETTINGS ### - now grabbed from Study doc
-        ### GRANT NUMBER SETTINGS ### - now grabbed from Submission doc
+        # We require analysis name to be given in the manifest file - if it's not given, we raise an error
+        unless(@settings['analysisName'])
+          errors << "You did not provide a value for the analysisName setting.\nPlease provide an informative analysis name like \"AMILO1-GastCancVsControls-2017-09-12\"\nin your manifest file."
+        else
+          @analysisName = @settings['analysisName']
+        end
         # Check to make sure that adapterSequence setting is valid - default of "autoDetect" (which makes adSeqParameter "guessKnown" for exceRpt)
         @settings['adapterSequence'] = "autoDetect" unless(@settings['adapterSequence'])
         # If adapter sequence is "autoDetect", then the user wants to auto-detect the adapter sequence
@@ -1016,8 +1116,8 @@ module BRL; module Genboree; module Tools; module Scripts
         if(@settings['exogenousMapping'] != "off" and @settings['exogenousMapping'] != "miRNA" and @settings['exogenousMapping'] != "on")
           errors << "Your value for exogenousMapping is invalid.\nYou can write \"off\" for endogenous-only mapping, \"miRNA\" to map to exogenous miRNAs in miRBase,\nor \"on\" for full exogenous mapping (the genomes of all sequenced species in Ensembl/NCBI)."
         end
-        # We will always use 30 GB of Java RAM and 8 threads (current version of exceRpt is more memory intensive than the older versions)
-        @settings['javaRam'] = "30G"
+        # We will always use 36 GB of Java RAM and 8 threads (current version of exceRpt is more memory intensive than the older versions)
+        @settings['javaRam'] = "36G"
         @settings['numThreads'] = 8
         # If exogenous mapping is set to 'on' (full exogenous mapping to all exogenous genomes), then we will set up exogenous mapping options
         if(@settings['exogenousMapping'] =~ /on/)
@@ -1046,8 +1146,10 @@ module BRL; module Genboree; module Tools; module Scripts
           `mkdir -p #{@exogenousMappingInputDir}`
           exogenousTaxoTreeJobIDDir = "#{@jobSpecificSharedScratch}/subJobsScratch/exogenousTaxoTreeIDsDir"
           `mkdir -p #{exogenousTaxoTreeJobIDDir}`
+          exogenousRerunDir = "#{@jobSpecificSharedScratch}/exogenousRerunDir"
           @settings['exogenousMappingInputDir'] = @exogenousMappingInputDir
           @settings['exogenousTaxoTreeJobIDDir'] = exogenousTaxoTreeJobIDDir
+          @settings['exogenousRerunDir'] = exogenousRerunDir
         end
         # Check to make sure that priorityList setting is valid - default of miRNA > tRNA > piRNA > Gencode > circRNA
         @settings['priorityList'] = "miRNA > tRNA > piRNA > Gencode > circRNA" unless(@settings['priorityList'])
@@ -1160,7 +1262,7 @@ module BRL; module Genboree; module Tools; module Scripts
           apiCaller.get()
           # If we can't grab any info, then we'll add that issue to our errors array
           unless(apiCaller.succeeded?)
-            errors << "Could not grab information about output Group (#{@settings['outputGroup']}) and/or output Database (#{@settings['outputDb']}).\nYou may not have access to these resources.\nPlease contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")}) in order to be given access."
+            errors << "Could not grab information about output Group (#{@settings['outputGroup']}) and/or output Database (#{@settings['outputDb']}).\nYou may not have access to these resources.\nPlease contact a DCC admin (listed below) in order to be given access."
             $stderr.debugPuts(__FILE__, __method__, "STATUS", "ApiCaller failed for grabbing genome version: #{apiCaller.respBody.inspect}")
           else
             # Now, we've hopefully grabbed info about the database. Let's grab the genome version of the database
@@ -1175,7 +1277,7 @@ module BRL; module Genboree; module Tools; module Scripts
               @genomeBuild = gbSmallRNASeqPipelineGenomesInfo[@genomeVersionOfDb]['genomeBuild']
               # If indexBaseName is nil, that means we're not currently supporting this genome version for exceRpt.  
               if(indexBaseName.nil?)
-                errors << "Your output database on Genboree has genome version #{@genomeVersionOfDb}.\nThis genome version is not currently supported.\nSupported genomes include: #{gbSmallRNASeqPipelineGenomesInfo.keys.join(',')}.\nPlease contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")}) for potentially adding support for this genome."
+                errors << "Your output database on Genboree has genome version #{@genomeVersionOfDb}.\nThis genome version is not currently supported.\nSupported genomes include: #{gbSmallRNASeqPipelineGenomesInfo.keys.join(',')}.\nPlease contact a DCC admin (listed below) for potentially adding support for this genome."
               else
                 # Our final check is to make sure that the genome version supplied by user matches the version of the output Database.
                 # If no genome version is supplied by user, then we're just checking that hg19 matches the default output Database (it should!).
@@ -1223,7 +1325,7 @@ module BRL; module Genboree; module Tools; module Scripts
       return @exitCode
     end
 
-    # Initial checks to make sure that some basic requirements are met for metadata files (validation checks will occur during upload of metadata docs to KB)
+    # Initial checks to make sure that some basic requirements are met for metadata files (validation checks will occur in validateMetadataDocs method)
     # @return [Fixnum] exit code that indicates whether error occurred during metadata file check (0 if no error, 25 if error)
     def checkMetadataFiles()
       begin
@@ -1234,6 +1336,13 @@ module BRL; module Genboree; module Tools; module Scripts
         allMetadataFiles.delete("..")
         allMetadataFiles.delete("__MACOSX")
         allMetadataFiles.delete(@autoGeneratedAnalysisMetadataFileName)
+        junkMacFiles = []
+        allMetadataFiles.each { |currentFile|
+          junkMacFiles << currentFile if(currentFile[0..1] == "._")
+        }
+        junkMacFiles.each { |currentJunkFile|
+          allMetadataFiles.delete(currentJunkFile)
+        }
         errors = []
         # Handle situation where file list is a single directory (that will then, hopefully, contain all metadata result files)
         allMetadataFiles.each { |inputFile|
@@ -1247,47 +1356,73 @@ module BRL; module Genboree; module Tools; module Scripts
         allMetadataFiles.push(@autoGeneratedAnalysisMetadataFileName).uniq! if(@autoGeneratedAnalysisMetadataFileName)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "list of metadata files: #{allMetadataFiles.inspect}")
         # Check to make sure that metadata archive contains ONLY non-empty .metadata.tsv or .compact.tsv files and no directories!
+        metadataErrors = {:directory => [], :zeroFile => [], :incorrectExtension => []}
         allMetadataFiles.each { |currentMetadataFile|
-          next if(currentMetadataFile == "." or currentMetadataFile == ".." or currentMetadataFile == "__MACOSX")
+          next if(currentMetadataFile == "." or currentMetadataFile == ".." or currentMetadataFile == "__MACOSX" or currentMetadataFile[0..1] == "._")
           # If file is directory, then we do not need to check for its file extension below (for example, don't want to report error that directory named "Test" doesn't end in .metadata.tsv or .compact.tsv).
           foundDirectory = false 
           if(File.directory?("#{@metadataDir}/#{currentMetadataFile}"))
-            errors << "File #{currentMetadataFile} is a directory.\nMetadata files in an archive should not be inside a sub-directory.\nPlease re-upload your archive without any sub-directories."
+            metadataErrors[:directory] << currentMetadataFile
             foundDirectory = true
           end
           if(File.zero?("#{@metadataDir}/#{currentMetadataFile}"))
-            errors << "File #{currentMetadataFile} is empty.\nPlease make sure that all submitted files are non-empty and submit your job again."
+            metadataErrors[:zeroFile] << currentMetadataFile
           end
-          unless(currentMetadataFile =~ /.metadata.tsv$/ or currentMetadataFile =~ /.compact.tsv$/)
-            errors << "File #{currentMetadataFile} was found inside metadata archive but does not end in .metadata.tsv or .compact.tsv.\nPlease ensure that all of your files end in .metadata.tsv or .compact.tsv and are metadata files." unless(foundDirectory)
+          unless(foundDirectory)
+            unless(currentMetadataFile =~ /.metadata.tsv$/ or currentMetadataFile =~ /.compact.tsv$/)
+              metadataErrors[:incorrectExtension] << currentMetadataFile
+            end
           end
         }
+        foundMetadataError = false
+        metadataErrors.each_value { |categoryValue| foundMetadataError = true unless(categoryValue.empty?) }
+        if(foundMetadataError)
+          metadataErrors.each_key { |category|
+            unless(metadataErrors[category].empty?)
+              msg = ""
+              if(category == :directory)
+                msg = "The following extra directories should be deleted\n(and any metadata files inside of them should be placed\ndirectly into the archive - no subdirectories!):"
+              elsif(category == :zeroFile)
+                msg = "The following files are empty (0 bytes):"
+              elsif(category == :incorrectExtension)
+                msg = "The following files don't end in the proper extension\n(.compact.tsv or .metadata.tsv):"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{metadataErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
         # Next, we'll check that the metadata files mentioned in the manifest file are present
+        missingMetadataFiles = []
         if(errors.empty?)
-          errors << "Analysis metadata file #{@fileData["analysisMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["analysisMetadataFileName"]))
+          missingMetadataFiles << @fileData["analysisMetadataFileName"] unless(allMetadataFiles.include?(@fileData["analysisMetadataFileName"]))
           if(@fileData["experimentMetadataFileName"])
-            errors << "Experiment metadata file #{@fileData["experimentMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["experimentMetadataFileName"]))
+            missingMetadataFiles << @fileData["experimentMetadataFileName"] unless(allMetadataFiles.include?(@fileData["experimentMetadataFileName"]))
           end
-          errors << "Run metadata file #{@fileData["runMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["runMetadataFileName"]))
-          errors << "Study metadata file #{@fileData["studyMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["studyMetadataFileName"]))
-          errors << "Submission metadata file #{@fileData["submissionMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["submissionMetadataFileName"]))
-          if(@fileData["DonorMetadataFileName"])
-            errors << "Donor metadata file #{@fileData["donorMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["donorMetadataFileName"]))
+          missingMetadataFiles << @fileData["runMetadataFileName"] unless(allMetadataFiles.include?(@fileData["runMetadataFileName"]))
+          missingMetadataFiles << @fileData["studyMetadataFileName"] unless(allMetadataFiles.include?(@fileData["studyMetadataFileName"]))
+          missingMetadataFiles << @fileData["submissionMetadataFileName"] unless(allMetadataFiles.include?(@fileData["submissionMetadataFileName"]))
+          if(@fileData["donorMetadataFileName"])
+            missingMetadataFiles << @fileData["donorMetadataFileName"] unless(allMetadataFiles.include?(@fileData["donorMetadataFileName"]))
           end
           if(@fileData["biosampleMetadataFileName"])
-            errors << "Biosample multi-column metadata file #{@fileData["biosampleMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(@fileData["biosampleMetadataFileName"]))
+            missingMetadataFiles << @fileData["biosampleMetadataFileName"] unless(allMetadataFiles.include?(@fileData["biosampleMetadataFileName"]))
           end
           @manifest.each { |eachSampleHash|
             if(eachSampleHash["biosampleMetadataFileName"])
-              errors << "Biosample metadata file #{eachSampleHash["biosampleMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(eachSampleHash["biosampleMetadataFileName"]))
+              missingMetadataFiles << eachSampleHash["biosampleMetadataFileName"] unless(allMetadataFiles.include?(eachSampleHash["biosampleMetadataFileName"]))
             end 
             if(eachSampleHash["experimentMetadataFileName"])
-              errors << "Experiment metadata file #{eachSampleHash["experimentMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(eachSampleHash["experimentMetadataFileName"]))
+              missingMetadataFiles << eachSampleHash["experimentMetadataFileName"] unless(allMetadataFiles.include?(eachSampleHash["experimentMetadataFileName"]))
             end
             if(eachSampleHash["donorMetadataFileName"])
-              errors << "Donor metadata file #{eachSampleHash["donorMetadataFileName"]} could not be found in your metadata archive, but is mentioned in your manifest." unless(allMetadataFiles.include?(eachSampleHash["donorMetadataFileName"]))
+              missingMetadataFiles << eachSampleHash["donorMetadataFileName"] unless(allMetadataFiles.include?(eachSampleHash["donorMetadataFileName"]))
             end
           }
+        end
+        unless(missingMetadataFiles.empty?)
+          errors << "The following metadata files were mentioned in your manifest,\nbut they could not be found in your metadata archive:\n\n#{missingMetadataFiles.join("\n")}"
         end
         # Finally, let's convert each metadata document to unix format
         allMetadataFiles.each { |inputFile|
@@ -1295,8 +1430,8 @@ module BRL; module Genboree; module Tools; module Scripts
           convObj = BRL::Util::ConvertText.new("#{@metadataDir}/#{inputFile}", true)
           convObj.convertText()
           # Count number of lines in the input file
-          numLines = `wc -l #{inputFile}`
-          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in metadata file #{File.basename(inputFile)}: #{numLines}")          
+          numLines = `wc -l #{@metadataDir}/#{inputFile}`
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Number of lines in metadata file #{File.basename(inputFile)}: #{numLines.split(" ")[0]}")
         }
         # We raise an error unless we didn't find any errors above
         unless(errors.empty?)
@@ -1320,8 +1455,11 @@ module BRL; module Genboree; module Tools; module Scripts
     def convertMultiColumnBiosamples()
       begin
         # Use converter to parse and convert multi-column tabbed file into an array of single biosamples
-        biosamplesFile = File.open("#{@metadataDir}/#{@fileData["biosampleMetadataFileName"]}", 'r')
-        convertedBiosamples = @converter.parse(biosamplesFile, true)
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "BIOSAMPLE LOCATION: #{@metadataDir}/#{@fileData["biosampleMetadataFileName"]}")
+        currBiosampleContents = File.read("#{@metadataDir}/#{@fileData["biosampleMetadataFileName"]}")
+        currBiosampleContents.gsub!("\r\n", "\n")
+        currBiosampleContents.gsub!("\r", "\n")
+        convertedBiosamples = @converter.parse(currBiosampleContents, true)
         unless(@converter.errors.empty?)
           @errUserMsg = "There was an error in importing your multi-column biosample doc named #{@fileData["biosampleMetadataFileName"]}.\nAre you sure that you followed the required model for biosample documents?\nDid you forget to add the \"domain\" column to your multi-column tabbed document? Please use the following resources to fix your multi-column tabbed document:\nhttp://genboree.org/genboreeKB/projects/genboreekb-introduction/wiki/Tab_Separated_Value_Formats#Multi-column\nhttp://genboree.org/theCommons/attachments/5028/Biosamples.model.compact.tsv\n\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
           raise @errUserMsg
@@ -1331,16 +1469,25 @@ module BRL; module Genboree; module Tools; module Scripts
         docNo = 0
         # We traverse each biosample, one at a time
         errors = []
+        foundIds = []
+        multiColumnBiosampleErrors = {:biosampleAlreadyPresent => [], :multiSample => [], :missingNameInManifest => [], :missingNameOrIdInMetadataDoc => [], :duplicateId => []}
         convertedBiosamples.each { |currentBiosample|
           docNo += 1
           # We will create a new KbDoc with the current biosample so we can use KbDoc methods
           currentBiosample = BRL::Genboree::KB::KbDoc.new(currentBiosample)
+          # We grab the "Biosample" value from the current biosample
+          currentId = currentBiosample.getRootPropVal() rescue nil
           # We grab the "Biosample.Name" value from the current biosample
           currentSampleName = currentBiosample.getPropVal("Biosample.Name") rescue nil
           # foundSample will be used to see whether we've found a matching sample in the manifest for the file grabbed above
           foundSample = false
-          # If the current biosample has a "Biosample.Name" value, then we proceed, Otherwise, we raise an error.
-          if(currentSampleName)
+          # If the current biosample has a "Biosample" value and "Biosample.Name" value, then we proceed, Otherwise, we raise an error.
+          if(currentId and !currentId.empty? and currentSampleName and !currentSampleName.empty?)
+            if(foundIds.include?(currentId))
+              multiColumnBiosampleErrors[:duplicateId] << currentId unless(multiColumnBiosampleErrors[:duplicateId].include?(currentId))
+            else
+              foundIds << currentId
+            end
             # We traverse each sample in the manifest.
             @fileData["manifest"].each { |currentSampleInManifest|
               # If the "sampleName" field for a particular sample matches the name given in the biosample metadata file, then we've found a match
@@ -1348,31 +1495,65 @@ module BRL; module Genboree; module Tools; module Scripts
                 # However, you're only allowed to have 1-to-1 match. Thus, if you have the same sample name matching multiple samples, then we raise an error.
                 # Otherwise, we proceed.
                 unless(foundSample)
-                  # We convert the current biosample into nested tabbed format
-                  individualBiosample = @producer.produce(currentBiosample).join("\n")
-                  # We give the current biosample a name and then save it as a .tsv file
-                  individualBiosampleName = "biosample_#{currentSampleName}.metadata.tsv"
-                  File.open("#{@metadataDir}/#{individualBiosampleName}", 'w') { |file| file.write(individualBiosample) }
-                  # We set the current sample's "biosampleMetadataFileName" field to be this .tsv file and then add it to our array of metadata files
-                  currentSampleInManifest["biosampleMetadataFileName"] = individualBiosampleName
-                  # Finally, we set foundSample to be true (since we found a matching sample)
-                  foundSample = true
+                  # It is not permitted for a biosample metadata doc to be linked in both the multi-column file and on a sample-by-sample basis within the manifest file
+                  biosampleAlreadyPresent = false
+                  if(currentSampleInManifest["biosampleMetadataFileName"])
+                    multiColumnBiosampleErrors[:biosampleAlreadyPresent] << currentSampleName unless(multiColumnBiosampleErrors[:biosampleAlreadyPresent].include?(currentSampleName))
+                    biosampleAlreadyPresent = true
+                    foundSample = true
+                  end
+                  unless(biosampleAlreadyPresent)
+                    # We convert the current biosample into nested tabbed format
+                    individualBiosample = @producer.produce(currentBiosample).join("\n")
+                    # We give the current biosample a name and then save it as a .tsv file
+                    individualBiosampleName = "#{currentId}.metadata.tsv"
+                    File.open("#{@metadataDir}/#{individualBiosampleName}", 'w') { |file| file.write(individualBiosample) }
+                    # We set the current sample's "biosampleMetadataFileName" field to be this .tsv file - we'll parse the manifest later to load up our metadata files
+                    currentSampleInManifest["biosampleMetadataFileName"] = individualBiosampleName
+                    # Finally, we set foundSample to be true (since we found a matching sample)
+                    foundSample = true
+                  end
                 else
-                  errors << "The sample name given in your biosample metadata document (#{currentSampleName})\nmapped to multiple samples in your manifest file.\nThis is not allowed - please ensure a 1-to-1 correspondence\nbetween your biosample metadata document and a sample in your manifest file."
+                  multiColumnBiosampleErrors[:multiSample] << currentSampleName unless(multiColumnBiosampleErrors[:multiSample].include?(currentSampleName))
                 end
               end
             }
             # If we didn't find a matching sample for the file name given in the metadata file, we raise an error
             unless(foundSample)
-              errors << "The sample name given in your biosample metadata document (#{currentSampleName})\nunder \"Biosample.Name\" could not be found in your manifest file."
+              multiColumnBiosampleErrors[:missingNameInManifest] << currentSampleName unless(multiColumnBiosampleErrors[:missingNameInManifest].include?(currentSampleName))
             end
           else
-            errors << "We could not find a sample name in at least one of your biosample metadata documents\nThis document is, in order of value column, number #{docNo}.\nPlease ensure that you have correctly filled out the field \"- Name\"."
+            multiColumnBiosampleErrors[:missingNameOrIdInMetadataDoc] << docNo
           end
-        } 
+        }
+        foundError = false
+        multiColumnBiosampleErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          multiColumnBiosampleErrors.each_key { |category|
+            unless(multiColumnBiosampleErrors[category].empty?)
+              msg = ""
+              if(category == :biosampleAlreadyPresent)
+                msg = "The following sample names\n(collected from your biosample metadata docs)\nmapped to samples in your manifest file\nthat already had a \"biosampleMetadataFileName\" property filled out.\nThis is not allowed - any biosamples in your multi-column file\nshould not be linked in your manifest file.\nIt is also possible that you used the same sample name\nin multiple biosample docs:"
+              elsif(category == :multiSample)
+                msg = "The following sample names\n(collected from your biosample metadata docs)\nmapped to multiple samples in your manifest file.\nThis is not allowed (we require 1-to-1 correspondence):"
+              elsif(category == :missingNameInManifest)
+                msg = "The following sample names\n(collected from your biosample metadata docs)\ncould not be found in your manifest file:"
+              elsif(category == :missingNameOrIdInMetadataDoc)
+                msg = "We could not find a sample name or accession ID\nin at least one of your biosample metadata docs.\nBoth are required for a multi-column biosample.\nThese docs are listed below\n(identified by order of value column):"
+              elsif(category == :duplicateId) 
+                msg = "The following document IDs\n(collected from your biosample metadata docs)\nwere used multiple times.\nEach document ID can only be used once.\nProblematic IDs can be found below:"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{multiColumnBiosampleErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
         unless(errors.empty?)
-          @errUserMsg = "There were some errors in parsing your multi-column biosample doc.\nA detailed list of errors can be found below:\n\n"
-          @errUserMsg << errors.join("\n")
+          @errUserMsg = "There were some errors in parsing your multi-column biosample doc.\nA detailed list of errors can be found below:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << errors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
           raise @errUserMsg
         end
       rescue => err
@@ -1383,6 +1564,296 @@ module BRL; module Genboree; module Tools; module Scripts
         errBacktrace = err.backtrace.join("\n")
         $stderr.debugPuts(__FILE__, __method__, "STATUS", errBacktrace)
         @exitCode = 26
+      end
+      return @exitCode
+    end
+
+    # First, checks whether donor file is a) a single doc that applies to all samples that don't have an explicit donor associated with them in the manifest file, or
+    #                                     b) be a multi-column doc that covers multiple samples.
+    # Second, depending on whether donor file is a) or b), take measures to set up successful loading of donor docs.
+    # @return [Fixnum] exit code indicating whether conversion succeeded (0) or failed (39)
+    def checkAndConvertMultiColumnDonors()
+      begin
+        # Open donors file
+        currDonorContents = File.read("#{@metadataDir}/#{@fileData["donorMetadataFileName"]}")
+        currDonorContents.gsub!("\r\n", "\n")
+        currDonorContents.gsub!("\r", "\n")
+        # First, let's assume that the donors file is a single doc (mentioned in a) above). We will attempt to convert that doc into a KB doc
+        convertedDonor = @converter.parse(currDonorContents)
+        errors = []
+        foundIds = []
+        multiColumnDonorErrors = {:donorAlreadyPresent => [], :missingDonorIDFromBiosample => [], :failedBiosampleConversion => [], :missingLinkBetweenDonorAndBiosample => [], :missingDonorIDFromDonor => [], :duplicateId => []}
+        # If any errors occurred, then we need to figure out what kind of error occurred.
+        if(!@converter.errors.empty?)
+          # Did the error occur because of the file being multi-column or for another reason?
+          # If appropriate error is detected, then we will attempt to convert the file into multiple donor docs.
+          # Otherwise, we'll raise the error to the user because it's likely that their doc is messed up.
+          @multiDonorDoc = true if(@converter.errorSummaryStr.include?("Duplicate/ambiguous column name \"value\"."))
+          if(@multiDonorDoc)
+            # In this branch, we assume that the donors file is a multi-column doc that covers multiple samples.
+            # We will attempt to convert that file into multiple docs.
+            convertedDonors = @converter.parse(currDonorContents, true)
+            # If conversion was successful, we proceed - otherwise, we raise an error for user.
+            if(@converter.errors.empty?)
+              # OK, we now officially have a multi-column donor doc.
+              # We will now fill out each sample in the manifest with information about its respective donor
+              # docNo will be used to inform the user which document column to look at if they are missing a value for the "Donor" property for a particular document.
+              docNo = 0
+              convertedDonors.each { |currentDonor|
+                docNo += 1
+                # Check to see if current donor doc has a donor ID. If it doesn't, then we can't link it to a sample in our manifest.
+                currentDonor = BRL::Genboree::KB::KbDoc.new(currentDonor)
+                currentDonorID = currentDonor.getPropVal("Donor") rescue nil
+                if(currentDonorID and !currentDonorID.empty?)
+                  if(foundIds.include?(currentDonorID))
+                    multiColumnDonorErrors[:duplicateId] << currentDonorID unless(multiColumnDonorErrors[:duplicateId].include?(currentDonorID))
+                  else
+                    foundIds << currentDonorID
+                  end
+                  # OK, now we need to match up the current donor doc with the appropriate sample in the manifest.
+                  # Let's traverse all biosample docs and try to find a match!
+                  foundSample = false
+                  @fileData["manifest"].each { |currentSampleInManifest|
+                    # Grab current biosample doc and convert it into KbDoc
+                    currBiosampleContents = File.read("#{@metadataDir}/#{currentSampleInManifest["biosampleMetadataFileName"]}")
+                    currBiosampleContents.gsub!("\r\n", "\n")
+                    currBiosampleContents.gsub!("\r", "\n")
+                    currentBiosampleDoc = BRL::Genboree::KB::KbDoc.new(@converter.parse(currBiosampleContents))
+                    # If no errors occurred while converting the biosample doc, we proceed
+                    if(@converter.errors.empty?)
+                      biosampleDonorID = currentBiosampleDoc.getPropVal("Biosample.Donor ID") rescue nil
+                      if(!biosampleDonorID.nil? and !biosampleDonorID.empty?)
+                        if(currentDonorID == biosampleDonorID)
+                          # We set foundSample to be true (since we found a matching sample)
+                          foundSample = true
+                          unless(currentSampleInManifest["donorMetadataFileName"])
+                            # We convert the current biosample into nested tabbed format
+                            individualDonor = @producer.produce(currentDonor).join("\n")
+                            # We give the current biosample a name and then save it as a .tsv file
+                            individualDonorName = "#{currentDonorID}.metadata.tsv"
+                            File.open("#{@metadataDir}/#{individualDonorName}", 'w') { |file| file.write(individualDonor) }
+                            # We set the current sample's "donorMetadataFileName" field to be this .tsv file - we'll parse the manifest later to load up our metadata files
+                            currentSampleInManifest["donorMetadataFileName"] = individualDonorName unless(multiColumnDonorErrors[:duplicateId].include?(currentDonorID))
+                          else
+                            multiColumnDonorErrors[:donorAlreadyPresent] << "Donor ID: #{currentDonorID}\nBiosample metadata file name: #{currentSampleInManifest["biosampleMetadataFileName"]}\nSample name: #{currentSampleInManifest["sampleName"]}" unless(multiColumnDonorErrors[:duplicateId].include?(currentDonorID))
+                          end
+                        end
+                      else
+                        multiColumnDonorErrors[:missingDonorIDFromBiosample] << currentSampleInManifest["biosampleMetadataFileName"] unless(multiColumnDonorErrors[:missingDonorIDFromBiosample].include?(currentSampleInManifest["biosampleMetadataFileName"]))
+                      end
+                    else
+                      multiColumnDonorErrors[:failedBiosampleConversion] << "Biosample metadata file name: #{currentSampleInManifest["biosampleMetadataFileName"]}\nImport errors:\n#{@converter.errorSummaryStr}" unless(multiColumnDonorErrors[:failedBiosampleConversion].include?("Biosample metadata file name:#{currentSampleInManifest["biosampleMetadataFileName"]}\nImport errors:\n#{@converter.errorSummaryStr}"))
+                    end
+                  }
+                  unless(foundSample)
+                    multiColumnDonorErrors[:missingLinkBetweenDonorAndBiosample] << currentDonorID unless(multiColumnDonorErrors[:missingLinkBetweenDonorAndBiosample].include?(currentDonorID))
+                  end
+                else
+                  multiColumnDonorErrors[:missingDonorIDFromDonor] << docNo
+                end
+              }
+            else
+              @errUserMsg = "There was an error in importing your donor file named #{@fileData["donorMetadataFileName"]}.\nBecause your file included multiple value columns, we are assuming that this donor file contains multiple docs.\nPlease use the following resources to fix your multi-column file:\nhttp://genboree.org/genboreeKB/projects/genboreekb-introduction/wiki/Tab_Separated_Value_Formats#Multi-column\n\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+              raise @errUserMsg            
+            end
+          else
+            @errUserMsg = "There was an error in importing your donor file named #{@fileData["donorMetadataFileName"]}.\nBecause your file didn't include multiple value columns, we are assuming that this donor file is a single doc.\nIf your donor file is supposed to be a multi-column file containing multiple docs,\nplease use the following resources to fix your multi-column file:\nhttp://genboree.org/genboreeKB/projects/genboreekb-introduction/wiki/Tab_Separated_Value_Formats#Multi-column\n\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+            raise @errUserMsg
+          end
+        else
+          # If we reach this branch, it means that our converter didn't report any errors in converting a single tabbed-delimited doc to a KB doc
+          # That means we don't need to do anything else here - it'll be handled by the loadMetadataFiles method
+        end
+        foundError = false
+        multiColumnDonorErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          multiColumnDonorErrors.each_key { |category|
+            unless(multiColumnDonorErrors[category].empty?)
+              msg = ""
+              if(category == :donorAlreadyPresent)
+                msg = "The following donor IDs\n(collected from your multi-column donor doc)\nmatched up with a biosample\nthat already had a donor doc listed in the manifest.\nThis is not allowed - please ensure that you only link\ndonor docs to biosample docs once.\nRelevant donor IDs, biosample file names,\nand sample names are listed below:"
+              elsif(category == :missingDonorIDFromBiosample)
+                msg = "The following biosample metadata files\nwere missing a donor ID (for \"Biosample.Donor ID\" property).\nThis ID is required for mapping:"
+              elsif(category == :failedBiosampleConversion)
+                msg = "The following biosample metadata files\ncould not be imported successfully\nfrom nested tabbed format.\nError logs can be seen below as well:"
+              elsif(category == :missingLinkBetweenDonorAndBiosample)
+                msg = "The following donor IDs could not be matched\nto the \"Biosample.Donor ID\" property\nfor any biosample metadata docs\nmentioned in your manifest file:"
+              elsif(category == :missingDonorIDFromDonor)
+                msg = "In order to use a multi-column donor file,\neach donor doc must have its own doc ID.\nThe following docs do not have a donor ID\nso they could not be parsed.\nThese docs are listed in order of value column:"
+              elsif(category == :duplicateId)
+                msg = "The following document IDs\n(collected from your donor metadata docs)\nwere used multiple times.\nEach document ID can only be used once.\nProblematic IDs can be found below:"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{multiColumnDonorErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
+        unless(errors.empty?)
+          @errUserMsg = "There were some errors in parsing your multi-column donor doc.\nA detailed list of errors can be found below:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << errors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
+          raise @errUserMsg
+        end
+      rescue => err
+        # Generic error message if somehow an error pops up that wasn't handled effectively by the above checks (shouldn't happen)
+        @errUserMsg = "ERROR: There was an issue with checking your general donor file (or converting your multi-column donor file into individual donor files." if(@errUserMsg.nil?)
+        @errInternalMsg = err
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", err.message.inspect)
+        errBacktrace = err.backtrace.join("\n")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", errBacktrace)
+        @exitCode = 39
+      end
+      return @exitCode
+    end
+
+    # First, checks whether experiment file is a) a single doc that applies to all samples that don't have an explicit experiment associated with them in the manifest file, or
+    #                                     b) be a multi-column doc that covers multiple samples.
+    # Second, depending on whether experiment file is a) or b), take measures to set up successful loading of experiment docs.
+    # @return [Fixnum] exit code indicating whether conversion succeeded (0) or failed (40)
+    def checkAndConvertMultiColumnExperiments()
+       begin
+        # Open experiment file
+        currExperimentContents = File.read("#{@metadataDir}/#{@fileData["experimentMetadataFileName"]}")
+        currExperimentContents.gsub!("\r\n", "\n")
+        currExperimentContents.gsub!("\r", "\n")
+        # First, let's assume that the experiment file is a single doc (mentioned in a) above). We will attempt to convert that doc into a KB doc
+        convertedExperiment = @converter.parse(currExperimentContents)
+        errors = []
+        foundIds = []
+        multiColumnExperimentErrors = {:experimentAlreadyPresent => [], :missingExperimentIDFromBiosample => [], :failedBiosampleConversion => [], :missingLinkBetweenExperimentAndBiosample => [], :missingExperimentIDFromExperiment => [], :duplicateId => []}
+        # If any errors occurred, then we need to figure out what kind of error occurred.
+        if(!@converter.errors.empty?)
+          # Now, let's figure out if the error occurred because of the file being multi-column or because of another reason.
+          @multiExperimentDoc = true if(@converter.errorSummaryStr.include?("Duplicate/ambiguous column name \"value\"."))
+          if(@multiExperimentDoc)
+            # Now, we assume that the donors file is a multi-column doc that covers all samples.
+            # We will attempt to convert that file into multiple docs.
+            convertedExperiments = @converter.parse(currExperimentContents, true)
+            # If conversion was successful, we proceed - otherwise, we raise an error for user.
+            if(@converter.errors.empty?)
+              # We will now fill out each sample in the manifest with information about its respective experiment
+              # docNo will be used to inform the user which document column to look at if they are missing a value for the "Experiment" property for a particular document.
+              docNo = 0
+              convertedExperiments.each { |currentExperiment|
+                docNo += 1
+                # Check to see if current experiment doc has a experiment ID. If it doesn't, then we can't link it to a sample in our manifest.
+                currentExperiment = BRL::Genboree::KB::KbDoc.new(currentExperiment)
+                currentExperimentID = currentExperiment.getPropVal("Experiment") rescue nil
+                if(currentExperimentID and !currentExperimentID.empty?)
+                  if(foundIds.include?(currentExperimentID))
+                    multiColumnExperimentErrors[:duplicateId] << currentExperimentID unless(multiColumnExperimentErrors[:duplicateId].include?(currentExperimentID))
+                  else
+                    foundIds << currentExperimentID
+                  end
+                  # OK, now we need to match up the current experiment doc with the appropriate sample in the manifest.
+                  # Let's traverse all biosample docs and try to find a match!
+                  foundSample = false
+                  @fileData["manifest"].each { |currentSampleInManifest|
+                    # Grab current biosample doc and convert it into KbDoc
+                    currBiosampleContents = File.read("#{@metadataDir}/#{currentSampleInManifest["biosampleMetadataFileName"]}")
+                    currBiosampleContents.gsub!("\r\n", "\n")
+                    currBiosampleContents.gsub!("\r", "\n")
+                    currentBiosampleDoc = BRL::Genboree::KB::KbDoc.new(@converter.parse(currBiosampleContents))
+                    # If no errors occurred while converting the biosample doc, we proceed
+                    if(@converter.errors.empty?)
+                      experimentIDs = currentBiosampleDoc.getPropItems("Biosample.Related Experiments") rescue nil
+                      validItems = []
+                      if(experimentIDs)
+                        # First, let's remove any bogus empty entries from doc
+                        experimentIDs.each { |currentRelExp|
+                          validItems << currentRelExp unless(currentRelExp["Related Experiment"]["value"].empty?)
+                        }
+                        currentBiosampleDoc.setPropItems("Biosample.Related Experiments", validItems)
+                        experimentIDs = validItems
+                      end
+                      if(!experimentIDs.nil? and !experimentIDs.empty?)
+                        experimentIDs.each { |currentExperimentRec|
+                          currentExperimentRec = BRL::Genboree::KB::KbDoc.new(currentExperimentRec)
+                          biosampleExperimentID = currentExperimentRec.getPropVal("Related Experiment")
+                          if(currentExperimentID == biosampleExperimentID)
+                            # We set foundSample to be true (since we found a matching sample)
+                            foundSample = true
+                            unless(currentSampleInManifest["experimentMetadataFileName"])
+                              # We convert the current experiment into nested tabbed format
+                              individualExperiment = @producer.produce(currentExperiment).join("\n")
+                              # We give the current experiment a name and then save it as a .tsv file
+                              individualExperimentName = "#{currentExperimentID}.metadata.tsv"
+                              File.open("#{@metadataDir}/#{individualExperimentName}", 'w') { |file| file.write(individualExperiment) }
+                              # We set the current sample's "experimentMetadataFileName" field to be this .tsv file - we'll parse the manifest later to load up our metadata files
+                              currentSampleInManifest["experimentMetadataFileName"] = individualExperimentName unless(multiColumnExperimentErrors[:duplicateId].include?(currentExperimentID))
+                            else
+                              multiColumnExperimentErrors[:experimentAlreadyPresent] << "Experiment ID: #{currentExperimentID}\nBiosample metadata file name: #{currentSampleInManifest["biosampleMetadataFileName"]}\nSample name: #{currentSampleInManifest["sampleName"]}" unless(multiColumnExperimentErrors[:duplicateId].include?(currentExperimentID))
+                            end
+                          end
+                        }
+                      else
+                        multiColumnExperimentErrors[:missingExperimentIDFromBiosample] << currentSampleInManifest["biosampleMetadataFileName"] unless(multiColumnExperimentErrors[:missingExperimentIDFromBiosample].include?(currentSampleInManifest["biosampleMetadataFileName"]))
+                      end
+                    else
+                      multiColumnExperimentErrors[:failedBiosampleConversion] << "Biosample metadata file name: #{currentSampleInManifest["biosampleMetadataFileName"]}\nImport errors:\n#{@converter.errorSummaryStr}" unless(multiColumnExperimentErrors[:failedBiosampleConversion].include?("Biosample metadata file name:#{currentSampleInManifest["biosampleMetadataFileName"]}\nImport errors:\n#{@converter.errorSummaryStr}"))
+                    end
+                  }
+                  unless(foundSample)
+                    multiColumnExperimentErrors[:missingLinkBetweenExperimentAndBiosample] << currentExperimentID unless(multiColumnExperimentErrors[:missingLinkBetweenExperimentAndBiosample].include?(currentExperimentID))
+                  end
+                else
+                  multiColumnExperimentErrors[:missingExperimentIDFromExperiment] << docNo
+                end
+              }
+            else
+              @errUserMsg = "There was an error in importing your experiment file named #{@fileData["experimentMetadataFileName"]}.\nBecause your file included multiple value columns, we are assuming that this experiment file contains multiple docs.\nPlease use the following resources to fix your multi-column file:\nhttp://genboree.org/genboreeKB/projects/genboreekb-introduction/wiki/Tab_Separated_Value_Formats#Multi-column\n\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+              raise @errUserMsg
+            end
+          else
+            @errUserMsg = "There was an error in importing your experiment file named #{@fileData["experimentMetadataFileName"]}.\nBecause your file didn't include multiple value columns, we are assuming that this experiment file is a single doc.\nIf your experiment file is supposed to be a multi-column file containing multiple docs,\nplease use the following resources to fix your multi-column file:\nhttp://genboree.org/genboreeKB/projects/genboreekb-introduction/wiki/Tab_Separated_Value_Formats#Multi-column\n\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+            raise @errUserMsg
+          end
+        else
+          # If we reach this branch, it means that our converter didn't report any errors in converting a single tabbed-delimited doc to a KB doc
+          # That means we don't need to do anything else here - it'll be handled by the loadMetadataFiles method
+        end
+        foundError = false
+        multiColumnExperimentErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          multiColumnExperimentErrors.each_key { |category|
+            unless(multiColumnExperimentErrors[category].empty?)
+              msg = ""
+              if(category == :experimentAlreadyPresent)
+                msg = "The following experiment IDs\n(collected from your multi-column experiment doc)\nmatched up with a biosample\nthat already had an experiment doc listed in the manifest.\nThis is not allowed - please ensure that you only link\nexperiment docs to biosample docs once.\nRelevant experiment IDs, biosample file names,\nand sample names are listed below:"
+              elsif(category == :missingExperimentIDFromBiosample)
+                msg = "The following biosample metadata files\nwere missing one or more experiment IDs\n(in the \"Biosample.Related Experiments\" item list).\nThese IDs are required for mapping.\nIt is also possible that you left some blank values\nfor \"*- Related Experiment\" properties in your doc."
+              elsif(category == :failedBiosampleConversion)
+                msg = "The following biosample metadata files\ncould not be imported successfully\nfrom nested tabbed format.\nError logs can be seen below as well:"
+              elsif(category == :missingLinkBetweenExperimentAndBiosample)
+                msg = "The following experiment IDs could not be matched\nto any IDs in the \"Biosample.Related Experiments\" item list\nfor any biosample metadata docs\nmentioned in your manifest file:"
+              elsif(category == :missingExperimentIDFromExperiment)
+                msg = "In order to use a multi-column experiment file,\neach experiment doc must have its own doc ID.\nThe following docs do not have a experiment ID\nso they could not be parsed.\nThese docs are listed in order of value column:"
+              elsif(category == :duplicateId)
+                msg = "The following document IDs\n(collected from your experiment metadata docs)\nwere used multiple times.\nEach document ID can only be used once.\nProblematic IDs can be found below:"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{multiColumnExperimentErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
+        unless(errors.empty?)
+          @errUserMsg = "There were some errors in parsing your multi-column experiment doc.\nA detailed list of errors can be found below:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << errors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
+          raise @errUserMsg
+        end
+      rescue => err
+        # Generic error message if somehow an error pops up that wasn't handled effectively by the above checks (shouldn't happen)
+        @errUserMsg = "ERROR: There was an issue with checking your general experiment file (or converting your multi-column experiment file into individual experiment files." if(@errUserMsg.nil?)
+        @errInternalMsg = err
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", err.message.inspect)
+        errBacktrace = err.backtrace.join("\n")
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", errBacktrace)
+        @exitCode = 40
       end
       return @exitCode
     end
@@ -1423,17 +1894,21 @@ module BRL; module Genboree; module Tools; module Scripts
     def loadMetadataFiles()
       begin
         # The errors array will keep track of any errors that pop up when loading metadata files / generating IDs for each metadata file
-        errors = [] 
+        errors = []
+        loadingMetadataErrors = {:failedConversion => [], :missingRootProp => [], :wrongFileName => [], :duplicateId => []}
         #### ANALYSIS DOCUMENT ####
-        # Create hash for analysis metadata file: file name => KB doc of file 
-        @analysisMetadataFile = {@fileData["analysisMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["analysisMetadataFileName"]}", 'r')))}
+        # Create hash for analysis metadata file: file name => KB doc of file
+        currAnalysisContents = File.read("#{@metadataDir}/#{@fileData["analysisMetadataFileName"]}")
+        currAnalysisContents.gsub!("\r\n", "\n")
+        currAnalysisContents.gsub!("\r", "\n")
+        @analysisMetadataFile = {@fileData["analysisMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currAnalysisContents))}
         # Report if any errors occurred during conversion of file to KB doc
         unless(@converter.errors.empty?)
-          errors << "There was an error in importing your analysis doc named #{@fileData["analysisMetadataFileName"]}.\nAre you sure that you followed the required model for analysis documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5039/Analyses.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+          loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["analysisMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
         else
           # Report if root property of document is NOT "Analysis" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Analysis" root property
           unless(@analysisMetadataFile.values[0].getRootProp() == "Analysis")
-            errors << "Your analysis document named #{@fileData["analysisMetadataFileName"]} does not have the required root property of Analysis.\nPlease make sure that your analysis document contains this root property, and then resubmit your files."
+            loadingMetadataErrors[:missingRootProp] << "#{@fileData["analysisMetadataFileName"]} (missing Analysis root property)"
           else
             currentID = @analysisMetadataFile.values[0].getRootPropVal()
             # If user didn't supply an ID for analysis doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1451,18 +1926,28 @@ module BRL; module Genboree; module Tools; module Scripts
             end
             # Save final ID in @analysisID
             @analysisID = @analysisMetadataFile.values[0].getPropVal("Analysis")
+            # If file name doesn't follow required formatting (analysis ID followed by .metadata.tsv), let's rename it for the user in all the necessary contexts
+            if("#{@analysisID}.metadata.tsv" != @fileData["analysisMetadataFileName"])
+              `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["analysisMetadataFileName"]}")} #{@metadataDir}/#{@analysisID}.metadata.tsv`
+              @analysisMetadataFile["#{@analysisID}.metadata.tsv"] = @analysisMetadataFile.delete(@fileData["analysisMetadataFileName"])
+              @fileData["analysisMetadataFileName"] = "#{@analysisID}.metadata.tsv"
+              #loadingMetadataErrors[:wrongFileName] << "Document ID: #{@analysisID}\nFile Name: #{@fileData["analysisMetadataFileName"]}"
+            end
           end
         end
         #### RUN DOCUMENT ####
         # Create hash for run metadata file
-        @runMetadataFile = {@fileData["runMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["runMetadataFileName"]}", 'r')))}
+        currRunContents = File.read("#{@metadataDir}/#{@fileData["runMetadataFileName"]}")
+        currRunContents.gsub!("\r\n", "\n")
+        currRunContents.gsub!("\r", "\n")
+        @runMetadataFile = {@fileData["runMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currRunContents))}
         # Report if any errors occurred during conversion of file to KB doc
         unless(@converter.errors.empty?)
-          errors << "There was an error in importing your run doc named #{@fileData["runMetadataFileName"]}.\nAre you sure that you followed the required model for run documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5041/Runs.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+          loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["runMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
         else
           # Report if root property of document is NOT "Run" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Run" root property
           unless(@runMetadataFile.values[0].getRootProp() == "Run")
-            errors << "Your run document named #{@fileData["runMetadataFileName"]} does not have the required root property of Run.\nPlease make sure that your run document contains this root property, and then resubmit your files."        
+            loadingMetadataErrors[:missingRootProp] << "#{@fileData["runMetadataFileName"]} (missing Run root property)"      
           else
             currentID = @runMetadataFile.values[0].getRootPropVal()
             # If user didn't supply an ID for run doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1480,18 +1965,27 @@ module BRL; module Genboree; module Tools; module Scripts
             end
             # Save final ID in @runID
             @runID = @runMetadataFile.values[0].getPropVal("Run")
+            if("#{@runID}.metadata.tsv" != @fileData["runMetadataFileName"])
+              `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["runMetadataFileName"]}")} #{@metadataDir}/#{@runID}.metadata.tsv`
+              @runMetadataFile["#{@runID}.metadata.tsv"] = @runMetadataFile.delete(@fileData["runMetadataFileName"])
+              @fileData["runMetadataFileName"] = "#{@runID}.metadata.tsv"
+              #loadingMetadataErrors[:wrongFileName] << "Document ID: #{@runID}\nFile Name: #{@fileData["runMetadataFileName"]}"
+            end
           end
         end
         #### STUDY DOCUMENT ####
         # Create hash for study metadata file: file name => KB doc of file 
-        @studyMetadataFile = {@fileData["studyMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["studyMetadataFileName"]}", 'r')))}
+        currStudyContents = File.read("#{@metadataDir}/#{@fileData["studyMetadataFileName"]}")
+        currStudyContents.gsub!("\r\n", "\n")
+        currStudyContents.gsub!("\r", "\n")
+        @studyMetadataFile = {@fileData["studyMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currStudyContents))}
         # Report if any errors occurred during conversion from file to KB doc
         unless(@converter.errors.empty?)
-          errors << "There was an error in importing your study doc named #{@fileData["studyMetadataFileName"]}.\nAre you sure that you followed the required model for study documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5037/Studies.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+          loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["studyMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
         else
           # Report if root property of document is NOT "Study" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Study" root property
           unless(@studyMetadataFile.values[0].getRootProp() == "Study")
-            errors << "Your study document named #{@fileData["studyMetadataFileName"]} does not have the required root property of Study.\nPlease make sure that your study document contains this root property, and then resubmit your files."        
+            loadingMetadataErrors[:missingRootProp] << "#{@fileData["studyMetadataFileName"]} (missing Study root property)"  
           else
             currentID = @studyMetadataFile.values[0].getRootPropVal()
             # If user didn't supply an ID for study doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1509,18 +2003,27 @@ module BRL; module Genboree; module Tools; module Scripts
             end
             # Save final ID in @studyID
             @studyID = @studyMetadataFile.values[0].getPropVal("Study")
+            if("#{@studyID}.metadata.tsv" != @fileData["studyMetadataFileName"])
+              `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["studyMetadataFileName"]}")} #{@metadataDir}/#{@studyID}.metadata.tsv`
+              @studyMetadataFile["#{@studyID}.metadata.tsv"] = @studyMetadataFile.delete(@fileData["studyMetadataFileName"])
+              @fileData["studyMetadataFileName"] = "#{@studyID}.metadata.tsv"
+              #loadingMetadataErrors[:wrongFileName] << "Document ID: #{@studyID}\nFile Name: #{@fileData["studyMetadataFileName"]}"
+            end
           end
         end
         #### SUBMISSION DOCUMENT ####
-        # Create hash for submission metadata file: file name => KB doc of file 
-        @submissionMetadataFile = {@fileData["submissionMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["submissionMetadataFileName"]}", 'r')))}
+        # Create hash for submission metadata file: file name => KB doc of file
+        currSubmissionContents = File.read("#{@metadataDir}/#{@fileData["submissionMetadataFileName"]}")
+        currSubmissionContents.gsub!("\r\n", "\n")
+        currSubmissionContents.gsub!("\r", "\n")
+        @submissionMetadataFile = {@fileData["submissionMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currSubmissionContents))}
         # Report if any errors occurred during conversion
         unless(@converter.errors.empty?)
-          errors << "There was an error in importing your submission doc named #{@fileData["submissionMetadataFileName"]}.\nAre you sure that you followed the required model for submission documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5040/Submissions.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+          loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["submissionMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
         else
           # Report if root property of document is NOT "Submission" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Submission" root property
           unless(@submissionMetadataFile.values[0].getRootProp() == "Submission")
-            errors << "Your submission document named #{@fileData["submissionMetadataFileName"]} does not have the required root property of Submission.\nPlease make sure that your submission document contains this root property, and then resubmit your files."        
+            loadingMetadataErrors[:missingRootProp] << "#{@fileData["submissionMetadataFileName"]} (missing Submission root property)"  
           else
             currentID = @submissionMetadataFile.values[0].getRootPropVal()
             # If user didn't supply an ID for submission doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1538,19 +2041,28 @@ module BRL; module Genboree; module Tools; module Scripts
             end
             # Save final ID in @submissionID
             @submissionID = @submissionMetadataFile.values[0].getPropVal("Submission")
+            if("#{@submissionID}.metadata.tsv" != @fileData["submissionMetadataFileName"])
+              `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["submissionMetadataFileName"]}")} #{@metadataDir}/#{@submissionID}.metadata.tsv`
+              @submissionMetadataFile["#{@submissionID}.metadata.tsv"] = @submissionMetadataFile.delete(@fileData["submissionMetadataFileName"])
+              @fileData["submissionMetadataFileName"] = "#{@submissionID}.metadata.tsv"
+              #loadingMetadataErrors[:wrongFileName] << "Document ID: #{@submissionID}\nFile Name: #{@fileData["submissionMetadataFileName"]}"
+            end
           end
         end
         #### DONOR DOCUMENT (GENERAL) ####
-        # Add more general donor document (above individual samples) to @donorMetadataFiles and @donorIDs if it exists
-        if(@fileData["donorMetadataFileName"])
-          currentDonorMetadataFile = {@fileData["donorMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["donorMetadataFileName"]}", 'r')))}
+        # Add more general donor document (above individual samples) to @donorMetadataFiles and @donorIDs if it exists (ignore if it's a multi-column doc)
+        if(@fileData["donorMetadataFileName"] and !@multiDonorDoc)
+          currDonorContents = File.read("#{@metadataDir}/#{@fileData["donorMetadataFileName"]}")
+          currDonorContents.gsub!("\r\n", "\n")
+          currDonorContents.gsub!("\r", "\n")
+          currentDonorMetadataFile = {@fileData["donorMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currDonorContents))}
           # Report if any errors occurred during conversion
           unless(@converter.errors.empty?)
-            errors << "There was an error in importing your donor doc named #{@fileData["donorMetadataFileName"]}.\nAre you sure that you followed the required model for donor documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5036/Donors.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+            loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["donorMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
           else
             # Report if root property of document is NOT "Donor" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Donor" root property          
             unless(currentDonorMetadataFile.values[0].getRootProp() == "Donor")
-              errors << "Your donor document named #{@fileData["donorMetadataFileName"]} does not have the required root property of Donor.\nPlease make sure that your donor document contains this root property, and then resubmit your files."        
+              loadingMetadataErrors[:missingRootProp] << "#{@fileData["donorMetadataFileName"]} (missing Donor root property)"       
             else
               currentID = currentDonorMetadataFile.values[0].getRootPropVal()
               # If user didn't supply an ID for donor doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1566,23 +2078,32 @@ module BRL; module Genboree; module Tools; module Scripts
                   currentDonorMetadataFile.values[0].setPropVal("Donor", currentID)
                 end
               end
-              @donorMetadataFiles.merge!(currentDonorMetadataFile)
               currentDonorID = currentDonorMetadataFile.values[0].getPropVal("Donor")
               @donorIDs << currentDonorID
+              if("#{currentDonorID}.metadata.tsv" != @fileData["donorMetadataFileName"])
+                `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["donorMetadataFileName"]}")} #{@metadataDir}/#{currentDonorID}.metadata.tsv`
+                currentDonorMetadataFile["#{currentDonorID}.metadata.tsv"] = currentDonorMetadataFile.delete(@fileData["donorMetadataFileName"])
+                @fileData["donorMetadataFileName"] = "#{currentDonorID}.metadata.tsv"
+                #loadingMetadataErrors[:wrongFileName] << "Document ID: #{currentDonorID}\nFile Name: #{@fileData["donorMetadataFileName"]}"
+              end
+              @donorMetadataFiles.merge!(currentDonorMetadataFile)
             end
           end
         end
         #### EXPERIMENT DOCUMENT (GENERAL) ####
-        # Add more general experiment document (above individual samples) to @experimentMetadataFiles and @experimentIDs if it exists
-        if(@fileData["experimentMetadataFileName"])
-          currentExperimentMetadataFile = {@fileData["experimentMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{@fileData["experimentMetadataFileName"]}", 'r')))}
+        # Add more general experiment document (above individual samples) to @experimentMetadataFiles and @experimentIDs if it exists (ignore if it's a multi-column doc)
+        if(@fileData["experimentMetadataFileName"] and !@multiExperimentDoc)
+          currExperimentContents = File.read("#{@metadataDir}/#{@fileData["experimentMetadataFileName"]}")
+          currExperimentContents.gsub!("\r\n", "\n")
+          currExperimentContents.gsub!("\r", "\n")
+          currentExperimentMetadataFile = {@fileData["experimentMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currExperimentContents))}
           # Report if any errors occurred during conversion
           unless(@converter.errors.empty?)
-            errors << "There was an error in importing your experiment doc named #{@fileData["experimentMetadataFileName"]}.\nAre you sure that you followed the required model for experiment documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5043/Experiments.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+            loadingMetadataErrors[:failedConversion] << "Document name: #{@fileData["experimentMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
           else 
             # Report if root property of document is NOT "Experiment" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Experiment" root property
             unless(currentExperimentMetadataFile.values[0].getRootProp() == "Experiment")
-              errors << "Your experiment document named #{@fileData["experimentMetadataFileName"]} does not have the required root property of Experiment.\nPlease make sure that your experiment document contains this root property, and then resubmit your files.\n"        
+              loadingMetadataErrors[:missingRootProp] << "#{@fileData["experimentMetadataFileName"]} (missing Experiment root property)"  
             else
               currentID = currentExperimentMetadataFile.values[0].getRootPropVal()
               # If user didn't supply an ID for experiment doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1598,85 +2119,133 @@ module BRL; module Genboree; module Tools; module Scripts
                   currentExperimentMetadataFile.values[0].setPropVal("Experiment", currentID)
                 end
               end
-              @experimentMetadataFiles.merge!(currentExperimentMetadataFile)
               currentExperimentID = currentExperimentMetadataFile.values[0].getPropVal("Experiment")
               @experimentIDs << currentExperimentID
+              if("#{currentExperimentID}.metadata.tsv" != @fileData["experimentMetadataFileName"])
+                `mv #{Shellwords.escape("#{@metadataDir}/#{@fileData["experimentMetadataFileName"]}")} #{@metadataDir}/#{currentExperimentID}.metadata.tsv`
+                currentExperimentMetadataFile["#{currentExperimentID}.metadata.tsv"] = currentExperimentMetadataFile.delete(@fileData["experimentMetadataFileName"])
+                @fileData["experimentMetadataFileName"] = "#{currentExperimentID}.metadata.tsv"
+                #loadingMetadataErrors[:wrongFileName] << "Document ID: #{currentExperimentID}\nFile Name: #{@fileData["experimentMetadataFileName"]}"
+              end
+              @experimentMetadataFiles.merge!(currentExperimentMetadataFile)
             end
           end
         end
         # Traverse each sample and load biosample / donor / experiment metadata docs
+        oldToNewDonorNames = {}
+        oldToNewExperimentNames = {}
+        importedDonorNames = []
+        importedExperimentNames = []
         @manifest.each { |eachSample|
           #### DONOR DOCUMENT (SAMPLE-SPECIFIC) ####
           if(eachSample["donorMetadataFileName"])
-            currentDonorMetadataFile = {eachSample["donorMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{eachSample["donorMetadataFileName"]}", 'r')))}
-            # Report if any errors occurred during conversion
-            unless(@converter.errors.empty?)
-              errors << "There was an error in importing your donor doc named #{eachSample["donorMetadataFileName"]}.\nAre you sure that you followed the required model for donor documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5036/Donors.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
-            else
-              # Report if root property of document is NOT "Donor" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Donor" root property          
-              unless(currentDonorMetadataFile.values[0].getRootProp() == "Donor")
-                errors << "Your donor document named #{eachSample["donorMetadataFileName"]} does not have the required root property of Donor.\nPlease make sure that your donor document contains this root property, and then resubmit your files.\n"        
+            if(oldToNewDonorNames[eachSample["donorMetadataFileName"]])
+              eachSample["donorMetadataFileName"] = oldToNewDonorNames[eachSample["donorMetadataFileName"]]
+            end
+            unless(importedDonorNames.include?(eachSample["donorMetadataFileName"]))
+              currDonorContents = File.read("#{@metadataDir}/#{eachSample["donorMetadataFileName"]}")
+              currDonorContents.gsub!("\r\n", "\n")
+              currDonorContents.gsub!("\r", "\n")
+              currentDonorMetadataFile = {eachSample["donorMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currDonorContents))}
+              # Report if any errors occurred during conversion
+              unless(@converter.errors.empty?)
+                loadingMetadataErrors[:failedConversion] << "Document name: #{eachSample["donorMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
               else
-                currentID = currentDonorMetadataFile.values[0].getRootPropVal()
-                # If user didn't supply an ID for donor doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
-                if(currentID.nil? or currentID.empty?)
-                  currentID = grabAutoID("Donor", @donorCollection)
-                  raise @errUserMsg unless(@exitCode == 0)
-                  currentID.insert(4, @piID)
-                  currentDonorMetadataFile.values[0].setPropVal("Donor", currentID)
+                # Report if root property of document is NOT "Donor" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Donor" root property          
+                unless(currentDonorMetadataFile.values[0].getRootProp() == "Donor")
+                  loadingMetadataErrors[:missingRootProp] << "#{eachSample["donorMetadataFileName"]} (missing Donor root property)"  
                 else
-                  # User supplied ID for donor doc - add PI's ID to doc ID if doc ID doesn't already contain it
-                  unless(currentID[4, @piID.length] == @piID and currentID.length > 4)
+                  currentID = currentDonorMetadataFile.values[0].getRootPropVal()
+                  # If user didn't supply an ID for donor doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
+                  if(currentID.nil? or currentID.empty?)
+                    currentID = grabAutoID("Donor", @donorCollection)
+                    raise @errUserMsg unless(@exitCode == 0)
                     currentID.insert(4, @piID)
                     currentDonorMetadataFile.values[0].setPropVal("Donor", currentID)
+                  else
+                    # User supplied ID for donor doc - add PI's ID to doc ID if doc ID doesn't already contain it
+                    unless(currentID[4, @piID.length] == @piID and currentID.length > 4)
+                      currentID.insert(4, @piID)
+                      currentDonorMetadataFile.values[0].setPropVal("Donor", currentID)
+                    end
                   end
+                  currentDonorID = currentDonorMetadataFile.values[0].getPropVal("Donor")
+                  unless(@donorIDs.include?(currentDonorID))
+                    @donorIDs << currentDonorID
+                  end
+                  if("#{currentDonorID}.metadata.tsv" != eachSample["donorMetadataFileName"])
+                    `mv #{Shellwords.escape("#{@metadataDir}/#{eachSample["donorMetadataFileName"]}")} #{@metadataDir}/#{currentDonorID}.metadata.tsv`
+                    currentDonorMetadataFile["#{currentDonorID}.metadata.tsv"] = currentDonorMetadataFile.delete(eachSample["donorMetadataFileName"])
+                    oldToNewDonorNames[eachSample["donorMetadataFileName"]] = "#{currentDonorID}.metadata.tsv"
+                    eachSample["donorMetadataFileName"] = "#{currentDonorID}.metadata.tsv"
+                  end
+                  importedDonorNames << "#{currentDonorID}.metadata.tsv"
+                  @donorMetadataFiles.merge!(currentDonorMetadataFile)
                 end
-                @donorMetadataFiles.merge!(currentDonorMetadataFile)
-                currentDonorID = currentDonorMetadataFile.values[0].getPropVal("Donor")
-                @donorIDs << currentDonorID
               end
             end
           end
           #### EXPERIMENT DOCUMENT (SAMPLE-SPECIFIC) ####
           if(eachSample["experimentMetadataFileName"])
-            currentExperimentMetadataFile = {eachSample["experimentMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{eachSample["experimentMetadataFileName"]}", 'r')))}
-            # Report if any errors occurred during conversion
-            unless(@converter.errors.empty?)
-              errors << "There was an error in importing your experiment doc named #{eachSample["experimentMetadataFileName"]}.\nAre you sure that you followed the required model for experiment documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5043/Experiments.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
-            else
-              # Report if root property of document is NOT "Experiment" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Experiment" root property
-              unless(currentExperimentMetadataFile.values[0].getRootProp() == "Experiment")
-                errors << "Your experiment document named #{eachSample["experimentMetadataFileName"]} does not have the required root property of Experiment.\nPlease make sure that your experiment document contains this root property, and then resubmit your files.\n"        
+            if(oldToNewExperimentNames[eachSample["experimentMetadataFileName"]])
+              eachSample["experimentMetadataFileName"] = oldToNewExperimentNames[eachSample["experimentMetadataFileName"]]
+            end
+            unless(importedExperimentNames.include?(eachSample["experimentMetadataFileName"]))
+              currExperimentContents = File.read("#{@metadataDir}/#{eachSample["experimentMetadataFileName"]}")
+              currExperimentContents.gsub!("\r\n", "\n")
+              currExperimentContents.gsub!("\r", "\n")
+              currentExperimentMetadataFile = {eachSample["experimentMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currExperimentContents))}
+              # Report if any errors occurred during conversion
+              unless(@converter.errors.empty?)
+                loadingMetadataErrors[:failedConversion] << "Document name: #{eachSample["experimentMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
               else
-                currentID = currentExperimentMetadataFile.values[0].getRootPropVal()
-                # If user didn't supply an ID for experiment doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
-                if(currentID.nil? or currentID.empty?)
-                  currentID = grabAutoID("Experiment", @experimentCollection)
-                  raise @errUserMsg unless(@exitCode == 0)
-                  currentID.insert(4, @piID)
-                  currentExperimentMetadataFile.values[0].setPropVal("Experiment", currentID)
+                # Report if root property of document is NOT "Experiment" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Experiment" root property
+                unless(currentExperimentMetadataFile.values[0].getRootProp() == "Experiment")
+                  loadingMetadataErrors[:missingRootProp] << "#{eachSample["experimentMetadataFileName"]} (missing Experiment root property)"  
                 else
-                  # User supplied ID for experiment doc - add PI's ID to doc ID if doc ID doesn't already contain it
-                  unless(currentID[4, @piID.length] == @piID and currentID.length > 4)
+                  currentID = currentExperimentMetadataFile.values[0].getRootPropVal()
+                  # If user didn't supply an ID for experiment doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
+                  if(currentID.nil? or currentID.empty?)
+                    currentID = grabAutoID("Experiment", @experimentCollection)
+                    raise @errUserMsg unless(@exitCode == 0)
                     currentID.insert(4, @piID)
                     currentExperimentMetadataFile.values[0].setPropVal("Experiment", currentID)
+                  else
+                    # User supplied ID for experiment doc - add PI's ID to doc ID if doc ID doesn't already contain it
+                    unless(currentID[4, @piID.length] == @piID and currentID.length > 4)
+                      currentID.insert(4, @piID)
+                      currentExperimentMetadataFile.values[0].setPropVal("Experiment", currentID)
+                    end
                   end
+                  currentExperimentID = currentExperimentMetadataFile.values[0].getPropVal("Experiment")
+                  unless(@experimentIDs.include?(currentExperimentID))
+                    @experimentIDs << currentExperimentID
+                  end
+                  if("#{currentExperimentID}.metadata.tsv" != eachSample["experimentMetadataFileName"])
+                    `mv #{Shellwords.escape("#{@metadataDir}/#{eachSample["experimentMetadataFileName"]}")} #{@metadataDir}/#{currentExperimentID}.metadata.tsv`
+                    currentExperimentMetadataFile["#{currentExperimentID}.metadata.tsv"] = currentExperimentMetadataFile.delete(eachSample["experimentMetadataFileName"])
+                    oldToNewExperimentNames[eachSample["experimentMetadataFileName"]] = "#{currentExperimentID}.metadata.tsv"
+                    eachSample["experimentMetadataFileName"] = "#{currentExperimentID}.metadata.tsv"
+                    # loadingMetadataErrors[:wrongFileName] << "Document ID: #{currentExperimentID}\nFile Name: #{eachSample["experimentMetadataFileName"]}"
+                  end
+                  importedExperimentNames << "#{currentExperimentID}.metadata.tsv"
+                  @experimentMetadataFiles.merge!(currentExperimentMetadataFile)
                 end
-                @experimentMetadataFiles.merge!(currentExperimentMetadataFile)
-                currentExperimentID = currentExperimentMetadataFile.values[0].getPropVal("Experiment")
-                @experimentIDs << currentExperimentID
               end
             end
           end
           #### BIOSAMPLE DOCUMENT ####
-          currentBiosampleMetadataFile = {eachSample["biosampleMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(File.open("#{@metadataDir}/#{eachSample["biosampleMetadataFileName"]}", 'r')))}
+          currBiosampleContents = File.read("#{@metadataDir}/#{eachSample["biosampleMetadataFileName"]}")
+          currBiosampleContents.gsub!("\r\n", "\n")
+          currBiosampleContents.gsub!("\r", "\n")
+          currentBiosampleMetadataFile = {eachSample["biosampleMetadataFileName"] => BRL::Genboree::KB::KbDoc.new(@converter.parse(currBiosampleContents))}
           # Report if any errors occurred during conversion
           unless(@converter.errors.empty?)
-            errors << "There was an error in importing your biosample doc named #{eachSample["biosampleMetadataFileName"]}.\nAre you sure that you followed the required model for biosample documents?\nPlease double check using the template found here:\nhttp://genboree.org/theCommons/attachments/5035/Biosamples.template.tsv\nA list of errors can be found below:\n\n#{@converter.errorSummaryStr}"
+            loadingMetadataErrors[:failedConversion] << "Document name: #{eachSample["biosampleMetadataFileName"]}\nImport errors:\n\n#{@converter.errorSummaryStr}"
           else
             # Report if root property of document is NOT "Biosample" - we don't want to continue filling out document ID / introducing new issues if document doesn't even have "Biosample" root property
             unless(currentBiosampleMetadataFile.values[0].getRootProp() == "Biosample")
-              errors << "Your biosample document named #{eachSample["biosampleMetadataFileName"]} does not have the required root property of Biosample.\nPlease make sure that your biosample document contains this root property, and then resubmit your files.\n"        
+              loadingMetadataErrors[:missingRootProp] << "#{eachSample["biosampleMetadataFileName"]} (missing Biosample root property)"    
             else
               currentID = currentBiosampleMetadataFile.values[0].getRootPropVal()
               # If user didn't supply an ID for biosample doc, generate one. We will also insert the PI's ID into the doc ID (after EXR-).
@@ -1692,14 +2261,48 @@ module BRL; module Genboree; module Tools; module Scripts
                   currentBiosampleMetadataFile.values[0].setPropVal("Biosample", currentID)
                 end
               end
-              @biosampleMetadataFiles.merge!(currentBiosampleMetadataFile)
               currentBiosampleID = currentBiosampleMetadataFile.values[0].getPropVal("Biosample")
-              @biosampleIDs << currentBiosampleID
+              unless(@biosampleIDs.include?(currentBiosampleID))
+                @biosampleIDs << currentBiosampleID
+              else
+                loadingMetadataErrors[:duplicateId] << currentBiosampleID
+              end
+              if("#{currentBiosampleID}.metadata.tsv" != eachSample["biosampleMetadataFileName"])
+                `mv #{Shellwords.escape("#{@metadataDir}/#{eachSample["biosampleMetadataFileName"]}")} #{@metadataDir}/#{currentBiosampleID}.metadata.tsv`
+                currentBiosampleMetadataFile["#{currentBiosampleID}.metadata.tsv"] = currentBiosampleMetadataFile.delete(eachSample["biosampleMetadataFileName"])
+                eachSample["biosampleMetadataFileName"] = "#{currentBiosampleID}.metadata.tsv"
+                # loadingMetadataErrors[:wrongFileName] << "Document ID: #{currentBiosampleID}\nFile Name: #{eachSample["biosampleMetadataFileName"]}"
+              end
+              @biosampleMetadataFiles.merge!(currentBiosampleMetadataFile)
             end
           end
         }
+        foundError = false
+        loadingMetadataErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          loadingMetadataErrors.each_key { |category|
+            unless(loadingMetadataErrors[category].empty?)
+              msg = ""
+              if(category == :failedConversion)
+                msg = "The following metadata files could not be imported successfully\nfrom nested tabbed format. This is not a problem with metadata validation\nbut rather some fundamental issue with the formatting of your doc(s).\nYou can see examples of properly formatted docs here:\n\nhttp://genboree.org/theCommons/projects/exrna-mads/wiki/Prepare_Your_Metadata_Archive#Download-Metadata-Models-Document-Templates-and-Example-Metadata-Documents\n\nError logs can be seen below as well:"
+              elsif(category == :missingRootProp)
+                msg = "The following metadata files were missing their required root property:"
+              elsif(category == :wrongFileName)
+                msg = "The names of the following metadata files did not match with their IDs.\nEach metadata file must be named after its ID.\nFor example, if your ID is EXR-AMILO1TEST00-BS,\nyour metadata file should be named EXR-AMILO1TEST00-BS.metadata.tsv.\nIt is possible that your file names no longer match your IDs because we added your required PI code (#{@piId}) to your IDs.\nProblematic files can be found below:"
+              elsif(category == :duplicateId)
+                msg = "The following document IDs were used more than once.\nThis is not allowed, as each document ID must be unique.\nProblematic IDs can be seen below:"
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{loadingMetadataErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
         unless(errors.empty?)
-          @errUserMsg = "There were some errors with importing your documents.\nSpecific error messages can be found below:\n\n#{errors.join("\n")}"
+          @errUserMsg = "There were some errors with importing your documents.\nSpecific error messages can be found below:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << errors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
           raise @errUserMsg
         end
         # Add all metadata documents to @metadataFiles
@@ -1742,7 +2345,15 @@ module BRL; module Genboree; module Tools; module Scripts
           # If it is already listed, then we will not add it again!
           foundExperiment = false
           currentItems = currentBioKbDoc.getPropItems("Biosample.Related Experiments")
+          validItems = []
           if(currentItems)
+            # First, let's remove any bogus empty entries from doc
+            currentItems.each { |currentRelExp|
+              validItems << currentRelExp unless(currentRelExp["Related Experiment"]["value"].empty?)
+            }
+            currentBioKbDoc.setPropItems("Biosample.Related Experiments", validItems)
+            currentItems = validItems
+            # Now, let's check out the experiment docs already listed
             currentItems.each { |currentRelExp|
               # Add PI prefix to each item if it's not already there (to fix IDs inserted by user)
               currentRelExp["Related Experiment"]["value"].insert(4, @piID) unless(currentRelExp["Related Experiment"]["value"][4, @piID.length] == @piID and currentRelExp["Related Experiment"]["value"].length > 4)
@@ -1778,7 +2389,7 @@ module BRL; module Genboree; module Tools; module Scripts
             end
           elsif(releaseStatus == "releaseNone")
             currentBioKbDoc.setPropVal("Biosample.Status", "Protect")
-          end 
+          end
         }
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Done adding experiment and donor information to biosample metadata documents")
       rescue => err 
@@ -1807,41 +2418,72 @@ module BRL; module Genboree; module Tools; module Scripts
         runKbDoc.setPropVal("Run.Type.small RNA-Seq.Raw Data Files", noSamples)
         # Clear out user-submitted data files (we only care about successful samples from THIS pipeline run)
         runKbDoc.delPropItems("Run.Type.small RNA-Seq.Raw Data Files")
-        errorMessages = ""
+        errors = []
+        runMetadataErrors = {:multiSample => [], :missingNameInManifest => [], :missingNameInBiosample => []}
+        foundError = false
         # We will add information about each successful sample as an item
         @biosampleMetadataFiles.each_value { |currentBioKbDoc|
           biosampleID = currentBioKbDoc.getPropVal("Biosample")
-          sampleName = currentBioKbDoc.getPropVal("Biosample.Name")
+          sampleName = currentBioKbDoc.getPropVal("Biosample.Name") rescue nil
           fileName = ""
-          foundSample = false
-          @manifest.each { |currentSampleInManifest|
-            if(currentSampleInManifest["sampleName"] == sampleName)
-              unless(foundSample)
-                foundSample = true
-                fileName = currentSampleInManifest["dataFileName"]
-              else
-                errorMessages << "Multiple samples in your manifest file matched the sample name #{sampleName}\nfound under the \"Biosample.Name\" property for #{File.basename(@biosampleMetadataFiles.index(currentBioKbDoc))}.\nSample names must be unique within a given submission!\n\n"
+          if(sampleName and !sampleName.empty?)
+            foundSample = false
+            @manifest.each { |currentSampleInManifest|
+              if(currentSampleInManifest["sampleName"] == sampleName)
+                unless(foundSample)
+                  foundSample = true
+                  fileName = currentSampleInManifest["dataFileName"]
+                else
+                  runMetadataErrors[:multiSample] << "Sample name: #{sampleName}\nBiosample ID: #{biosampleID}" unless(runMetadataErrors[:multiSample].include?("Sample name: #{sampleName}\nBiosample ID: #{biosampleID}"))
+                end
               end
-            end
-          }
-          if(fileName.empty?)
-            errorMessages << "Each biosample metadata document you submit must have a value for its \"Biosample.Name\" property,\nand that value must match the \"sampleName\" field for some sample in the manifest file.\nHowever, we could not find a match for #{File.basename(@biosampleMetadataFiles.index(currentBioKbDoc))}.\n\n"
+            }
+          else
+            runMetadataErrors[:missingNameInBiosample] << biosampleID unless(runMetadataErrors[:missingNameInBiosample].include?(biosampleID))
           end
-          next unless(errorMessages.empty?)
+          if(fileName.empty? and (sampleName and !sampleName.empty?))
+            runMetadataErrors[:missingNameInManifest] << "Sample name: #{sampleName}\nBiosample ID: #{biosampleID}" unless(runMetadataErrors[:missingNameInManifest].include?("Sample name: #{sampleName}\nBiosample ID: #{biosampleID}"))
+          end
+          # See if we've come across an error. We'll only check if we haven't found an error yet, though.
+          unless(foundError)
+            runMetadataErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+          end
+          # We won't add any additional info to our run doc if we found an error
+          next if(foundError)
           # Create a new doc that will be inserted into "Run.Type.small RNA-Seq.Raw Data Files" as an item. We will fill in various bits of information about the sample before we add it.
           currentSampleInRun = BRL::Genboree::KB::KbDoc.new({})
           currentSampleInRun.setPropVal("Biosample ID", biosampleID)
           currentSampleInRun.setPropVal("Biosample ID.File Name", fileName)
           currentSampleInRun.setPropVal("Biosample ID.DocURL", "coll/#{CGI.escape(@biosampleCollection)}/doc/#{biosampleID}")
           # The file type below is a dummy value. We cannot fill out this info accurately the first time we run this method because it is run before the data archive is downloaded.
-          # We will fill out this info accurately after the data archive is downloaded by using the fillInFileTypeForRunDoc method.
+          # We will fill out this info accurately later in the ERCC Final Processing wrapper by using the fillInFileTypeForRunDoc method.
           currentSampleInRun.setPropVal("Biosample ID.Type", "FASTQ")
           # Finally, we add the biosample as an item in the "Run.Type.small RNA-Seq.Raw Data Files" item list
           runKbDoc.addPropItem("Run.Type.small RNA-Seq.Raw Data Files", currentSampleInRun)
         }
-        unless(errorMessages.empty?)
-          errorMessages.insert(0, "There were some errors when connecting your biosample metadata documents to the manifest file.\nSpecific messages can be found below:\n\n")
-          @errUserMsg = errorMessages
+        runMetadataErrors.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
+        if(foundError)
+          runMetadataErrors.each_key { |category|
+            unless(runMetadataErrors[category].empty?)
+              msg = ""
+              if(category == :multiSample)
+                msg = "The following sample names (collected from your biosample metadata docs)\nmapped to multiple samples in your manifest file.\nThis is not allowed (we require 1-to-1 correspondence):"
+              elsif(category == :missingNameInManifest)
+                msg = "The following sample names (collected from your biosample metadata docs)\ncould not be found in your manifest file:"
+              elsif(category == :missingNameInBiosample)
+                msg = "The following biosample IDs are missing a value for their \"Biosample.Name\" property.\nEach biosample doc must have a value for this property (and it must link\nto a \"sampleName\" field in your manifest file)."
+              end
+              unless(msg.empty?)
+                errors << "#{msg}\n\n#{runMetadataErrors[category].join("\n")}"
+              end
+            end
+          }
+        end
+        unless(errors.empty?)
+          @errUserMsg = "There were some errors with connecting your biosample metadata documents to the manifest file.\nSpecific messages can be found below:\n"
+          @errUserMsg << "\n=================================================================\n"
+          @errUserMsg << errors.join("\n=================================================================\n")
+          @errUserMsg << "\n=================================================================\n"
           raise @errUserMsg
         end
         # We will add a link to the submitted study document in the "Related Studies" item list (if it's not already there)
@@ -1851,7 +2493,13 @@ module BRL; module Genboree; module Tools; module Scripts
         runKbDoc.setPropVal("Run.Related Studies", "")
         foundStudy = false
         currentStudies = runKbDoc.getPropItems("Run.Related Studies")
+        validItems = []
         if(currentStudies)
+          # First, let's remove any bogus empty entries from doc
+          currentStudies.each { |currentRelStudy|
+            validItems << currentRelStudy unless(currentRelStudy["Related Study"]["value"].empty?)
+          }
+          runKbDoc.setPropItems("Run.Related Studies", validItems)
           currentStudies.each { |currentStudy|
             currentStudy["Related Study"]["value"].insert(4, @piID) unless(currentStudy["Related Study"]["value"][4, @piID.length] == @piID and currentStudy["Related Study"]["value"].length > 4)
             if(currentStudy["Related Study"]["properties"])
@@ -1876,78 +2524,6 @@ module BRL; module Genboree; module Tools; module Scripts
       return @exitCode
     end
 
-    # Fills in the file type for each biosample in the run document
-    # This process has to be done AFTER the data archive is downloaded, so that's why it's a separate method
-    # @return [Fixnum] exit code indicating whether filling in file type for run doc succeeded (0) or failed (51)
-    def fillInFileTypeForRunDoc()
-      begin
-        # errorMessages will hold all of the different samples for which we had issues finding the file type
-        errorMessages = ""
-        # Traverse all biosample KB docs
-        @biosampleMetadataFiles.each_value { |currentBioKbDoc|
-          # Grab biosample ID as well as sample name
-          biosampleID = currentBioKbDoc.getPropVal("Biosample")
-          sampleName = currentBioKbDoc.getPropVal("Biosample.Name")
-          fileName = ""
-          fileType = ""
-          # Traverse each sample in our manifest
-          @manifest.each { |currentSampleInManifest|
-            # If we find a match between the biosample kb doc's sample name and the manifest's sample name, then we proceed
-            if(currentSampleInManifest["sampleName"] == sampleName)
-              # fileName will hold the data file name associated with that sample in the manifest
-              fileName = currentSampleInManifest["dataFileName"]
-              # We traverse all the input files and figure out which one has the same name (compressed or uncompressed) as fileName
-              # If we find a match, then we look at :fileType for that input file to find the sniffed file type
-              newName = ""
-              md5 = "" 
-              @inputFiles.each_key { |currentInputFile|
-                # Temporarily (?) not supporting users putting unarchived sample name in manifest file (if sample file came in an archive to begin with)
-                if(fileName == @inputFiles[currentInputFile][:originalFileName])
-                  fileType = @inputFiles[currentInputFile][:fileType]
-                  newName = File.basename(currentInputFile)
-                  md5 = @inputFiles[currentInputFile][:md5]
-                end 
-              }
-              # If fileType is still empty, then we failed to find a match and we must raise an error
-              if(fileType.empty?)
-                errorMessages << "We could not find the file type of the input file #{fileName}.\nAre you sure that you wrote the right name for your sample in the \"dataFileName\" field?\n\n"
-                next 
-              end
-              # We figure out which entry in "Run.Type.small RNA-Seq.Raw Data Files" matches our current file name and then update the file type associated with that entry
-              allSamplesInRunDoc = @runMetadataFile.values[0].getPropItems("Run.Type.small RNA-Seq.Raw Data Files")
-              allSamplesInRunDoc.each { |currentItem|
-                currentItem = BRL::Genboree::KB::KbDoc.new(currentItem)
-                if(currentItem.getPropVal("Biosample ID.File Name") == fileName)
-                  currentItem.setPropVal("Biosample ID.File Name", newName)
-                  if(fileType == "FASTQ")
-                    currentItem.setPropVal("Biosample ID.Type", fileType)
-                  else
-                    currentItem.setPropVal("Biosample ID.Type", "FASTQ-like format")
-                    currentItem.setPropVal("Biosample ID.Type.Other", fileType)
-                  end
-                  currentItem.setPropVal("Biosample ID.MD5 Checksum", md5)
-                end
-              }
-              @runMetadataFile.values[0].setPropItems("Run.Type.small RNA-Seq.Raw Data Files", allSamplesInRunDoc)
-            end
-          }
-        }
-        # We raise an error if we found any errors above
-        unless(errorMessages.empty?)
-          @errUserMsg = errorMessages
-          raise @errUserMsg
-        end
-      rescue => err
-        @errUserMsg = "ERROR: There was an issue with finding the file type(s) of your submitted data documents." if(@errUserMsg.nil?)
-        @errInternalMsg = err
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", err.message.inspect)
-        errBacktrace = err.backtrace.join("\n")
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", errBacktrace)
-        @exitCode = 51
-      end
-      return @exitCode
-    end 
-
     # Fills in study doc with info about related submission
     # @return [Fixnum] exit code indicating whether filling in study doc succeeded (0) or failed (30)
     def fillInStudyDoc()
@@ -1966,6 +2542,19 @@ module BRL; module Genboree; module Tools; module Scripts
             end
           }
         end
+        # We will also upload the raw files if the Study doc has "GEO" or "Other" for the "Study.Anticipated Data Repository" property.
+        anticipatedDataRepo = studyKbDoc.getPropVal("Study.Anticipated Data Repository") rescue nil
+        @settings['uploadRawFiles'] = true if(anticipatedDataRepo == "GEO" or anticipatedDataRepo == "Other")
+        # Set embargo properties
+        timeObj = DateTime.now
+        endingTimeObj = timeObj >> 12
+        timeObj = timeObj.to_time
+        endingTimeObj = endingTimeObj.to_time
+        currentDate = "#{timeObj.year}-#{timeObj.month}-#{timeObj.day}"
+        @settings['dateOfSubmission'] = currentDate
+        endingDate = "#{endingTimeObj.year}-#{endingTimeObj.month}-#{endingTimeObj.day}"
+        studyKbDoc.setPropVal("Study.Original Submission Date", currentDate)
+        studyKbDoc.setPropVal("Study.Embargo End Date", endingDate)
         # We will add a link to the submission doc in the "Related Submissions" item list (if it's not already there)
         studyKbDoc.setPropVal("Study.Related Submissions", "")
         relatedSubmission = BRL::Genboree::KB::KbDoc.new({})
@@ -1973,7 +2562,13 @@ module BRL; module Genboree; module Tools; module Scripts
         relatedSubmission.setPropVal("Related Submission.DocURL", "coll/#{CGI.escape(@submissionCollection)}/doc/#{@submissionID}")
         foundSubmission = false
         currentSubmissions = studyKbDoc.getPropItems("Study.Related Submissions")
+        validItems = []
         if(currentSubmissions)
+          # First, let's remove any bogus empty entries from doc
+          currentSubmissions.each { |currentRelSubmission|
+            validItems << currentRelSubmission unless(currentRelSubmission["Related Submission"]["value"].empty?)
+          }
+          studyKbDoc.setPropItems("Study.Related Submissions", validItems)
           currentSubmissions.each { |currentSubmission|
             currentSubmission["Related Submission"]["value"].insert(4, @piID) unless(currentSubmission["Related Submission"]["value"][4, @piID.length] == @piID and currentSubmission["Related Submission"]["value"].length > 4)
               if(currentSubmission["Related Submission"]["properties"])
@@ -2030,16 +2625,16 @@ module BRL; module Genboree; module Tools; module Scripts
           apiCaller.get({:grp => @exRNAInternalKBGroup, :kb => @exRNAInternalKBName, :coll => @piCollection, :matchProp => submitterPropPath, :matchVal => @subUserLogin})
           unless(apiCaller.succeeded?)
             $stderr.debugPuts(__FILE__, __method__, "ERROR", "API caller resp body for failed call to PI KB: #{apiCaller.respBody}")
-            @errUserMsg = "API call failed when trying to grab PI associated with current user.\nPlease try again. If you continue to experience issues, contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")})."
+            @errUserMsg = "API call failed when trying to grab PI associated with current user.\nPlease try again."
             raise @errUserMsg
           else
             # If we can't find a PI associated with submitter, then we raise an error. We also raise an error if we find more than one PI associated with submitter.
             # If we find only ONE PI associated with submitter, then we proceed.
             if(apiCaller.parseRespBody["data"].size == 0)
-              @errUserMsg = "Your user login, #{@subUserLogin},\nis not listed as a valid user under any PI in our database.\nPlease contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")}) and he/she will fix this issue."
+              @errUserMsg = "Your user login, #{@subUserLogin},\nis not listed as a valid user under any PI in our database."
               raise @errUserMsg
             elsif(apiCaller.parseRespBody["data"].size > 1)
-              @errUserMsg = "Your user login, #{@subUserLogin},\nis listed as a user under multiple PIs in our database.\nPlease contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")}) and he/she will fix this issue."
+              @errUserMsg = "Your user login, #{@subUserLogin},\nis listed as a user under multiple PIs in our database."
               raise @errUserMsg
             else
               # grantNumbers will hold all grant numbers associated with current PI (to provide to user in error e-mail if he/she did not put a valid grant number)
@@ -2065,7 +2660,7 @@ module BRL; module Genboree; module Tools; module Scripts
                 foundGrant = true if(@settings['grantNumber'] == currentGrantNumber)
               }
               unless(foundGrant or @settings['grantNumber'] == "Non-ERCC Funded Study")
-                @errUserMsg = "Your grant number #{@settings['grantNumber']} could not be found in our database.\nHere are the valid grant numbers we found: #{grantNumbers.join(", ")}.\nIf your grant number is not listed and you think we've made a mistake, please contact a DCC admin (#{@genbConf.gbDccAdminEmails.join(", ")})."
+                @errUserMsg = "Your grant number #{@settings['grantNumber']} could not be found in our database.\nHere are the valid grant numbers we found: #{grantNumbers.join(", ")}.\nIf your grant number is not listed and you think we've made a mistake, please contact a DCC admin (listed below)."
                 raise @errUserMsg
               end
             end 
@@ -2108,37 +2703,36 @@ module BRL; module Genboree; module Tools; module Scripts
     def validateMetadataDocs(currentMetadataFileNames)
       begin
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Validating #{currentMetadataFileNames.keys.inspect}")
+        # Flag to tell whether validation error occurred (just for debug statement)
+        validationError = false
         # Figure out what collection the documents belong to
-        currentRootProp = currentMetadataFileNames.values[0].getRootProp
+        currentRootProp = currentMetadataFileNames.values[0].getRootProp()
         coll = @collections[currentRootProp]
-        # Set up the API to validate the docs
-        rsrcPath = "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?detailed=true&save=false"
-        apiCaller = WrapperApiCaller.new(@exRNAHost, rsrcPath, @subUserId)
-        # Divide payload into sets of 10 docs so that normal put calls work - will not need to use this once we are using kbBulkUpload
+        # Create data collection helper to validate docs
+        dch = @mdb.dataCollectionHelper(coll)
+        # The docs we're going to validate are already in JSON format in currentMetadataFileNames.values, so we'll just use that as our payload
         payload = currentMetadataFileNames.values
-        payload = payload.each_slice(10).to_a
-        payload.each { |currentPayload|
-          apiCaller.put({:coll => coll, :kb => @exRNAKb, :grp => @exRNAKbGroup}, currentPayload.to_json)
+        payload.each { |currentDoc|
+          # We need to reset lastValidatorErrors each time so that we don't report duplicate errors for OK docs
+          dch.lastValidatorErrors = nil
+          # Check whether current doc is valid
+          dch.valid?(currentDoc)
+          validationErrors = dch.lastValidatorErrors
           # If any docs are invalid, then we will report those errors to the user
-          unless(apiCaller.parseRespBody["data"]["docs"]["properties"]["invalid"]["items"].empty?)
-            # Grab each invalid doc
-            apiCaller.parseRespBody["data"]["docs"]["properties"]["invalid"]["items"].each { |currentItem|
-              # Grab the document ID (root property value) associated with current doc 
-              currentID = currentItem["id"]["properties"]["doc"]["properties"][currentRootProp]["value"]
-              # Figure out which file name has that document ID (we want to report this information to user)
-              currentFileName = ""
-              currentMetadataFileNames.each_key { |currentDoc|
-                currentFileName = File.basename(currentDoc) if(currentID == currentMetadataFileNames[currentDoc].getRootPropVal())
-              }
-              # Grab error associated with current doc 
-              docError = apiCaller.parseRespBody["data"]["docs"]["properties"]["invalid"]["items"][0]["id"]["properties"]["msg"]["value"]
-              # Add file name and associated error to @metadataErrors
-              @metadataErrors << "#{currentFileName}: #{docError}"
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "The doc #{currentFileName} has errors")
+          if(validationErrors and !validationErrors.empty?)
+            validationError = true
+            currentID = currentDoc.getRootPropVal()
+            # Figure out which file name has that document ID (we want to report this information to user)
+            currentFileName = ""
+            currentMetadataFileNames.each_key { |fileName|
+              currentFileName = File.basename(fileName) if(currentID == currentMetadataFileNames[fileName].getRootPropVal())
             }
+            # Add file name and associated error to @metadataErrors
+            @metadataErrors << "#{currentFileName} (#{currentID}):\n\n#{validationErrors}"
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "The doc #{currentFileName} (#{currentID}) has errors")
           end
         }
-        if(@metadataErrors.empty?)
+        unless(validationError)
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "the docs submitted to collection #{coll} do not have any errors")
         end
       rescue => err
@@ -2218,12 +2812,12 @@ module BRL; module Genboree; module Tools; module Scripts
     def makeOligoBowtieIndex(spikeInFile)
       begin 
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Using #{spikeInFile} to make bowtie2 index.")
-        @outFile = "#{@scratchDir}/indexBowtie.out"
-        @errFile = "#{@scratchDir}/indexBowtie.err"
+        outFile = "#{@scratchDir}/indexBowtie.out"
+        errFile = "#{@scratchDir}/indexBowtie.err"
         # Build Bowtie 2 index
         @oligoBowtie2BaseName = "#{@calibratorDir}/#{CGI.escape(@spikeInName)}"
         command = "bowtie2-build #{spikeInFile} #{@oligoBowtie2BaseName}"
-        command << " > #{@outFile} 2> #{@errFile}"  
+        command << " > #{outFile} 2> #{errFile}"  
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching command: #{command}")
         exitStatus = system(command)
         # Raise error if Bowtie 2 command is unsuccessful
@@ -2284,12 +2878,10 @@ module BRL; module Genboree; module Tools; module Scripts
         apiCaller = BRL::Genboree::REST::ApiCaller.new(host, "/REST/v1/genboree/tool/{toolId}/job", user, pass)
         # @preConditionJobs will be used for launching the conditional PPR job - PPR will only launch once all precondition jobs are done
         @preConditionJobs = []
-        # @failedJobs is a hash that will keep track of which runExceRpt jobs fail - this hash will store the respective error messages for each failed sample.
-        @failedJobs = {}
         # Traverse all inputs
         @inputFileNames = []
         # Add file:// prefix to all input file paths for submission as runExceRpt worker jobs
-        @inputFiles.each_key { |currentInput| 
+        @inputFiles.each_key { |currentInput|
           @inputFileNames << "file://#{currentInput}"
         }
         # If we're doing full exogenous mapping, let's figure out number of samples we're going to process per node (for exogenousSTARMapping part of pipeline)
@@ -2358,9 +2950,15 @@ module BRL; module Genboree; module Tools; module Scripts
             @failedJobs[currentInput] = err.message.inspect
           end
         }
-        # Write @listOfJobIds to a text file, saving path to text file in @settings
-        @settings['filePathToListOfJobIds'] = "#{@jobSpecificSharedScratch}/listOfJobIds.txt"
-        File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
+        # If fullExogenousMapping is enabled, then we want to save the list of exogenous jobs in its own file (used for re-running jobs due to memory issues)
+        if(@settings['fullExogenousMapping'])
+          @exogenousJobIdsHash = {}
+          @exogenousJobIds.each { |currentId|
+            @exogenousJobIdsHash[currentId] = "Exogenous STAR Mapping Job"
+          }
+          @settings['filePathToListOfExogenousJobIds'] = "#{@jobSpecificSharedScratch}/listOfExogenousJobIds.txt"
+          File.open(@settings['filePathToListOfExogenousJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@exogenousJobIdsHash)) }
+        end
         # If any runExceRpt jobs were launched above, we'll run a conditional job below
         if(conditionalJob)
           # If fullExogenousMapping=false, then we'll submit a processPipelineRuns conditional job
@@ -2430,7 +3028,10 @@ module BRL; module Genboree; module Tools; module Scripts
       # We will keep the same output database
       # Define settings
       runExceRptJobConf['settings']['exoJobId'] = @currentExoIndex if(@settings['fullExogenousMapping'])
-      # Define context 
+      originalInput = inputFile.clone()
+      originalInput.slice!("file://")
+      runExceRptJobConf['settings']['adSeqParameter'] = @inputFiles[originalInput][:adapterSequence] if(@inputFiles[originalInput][:adapterSequence])
+      # Define context
       runExceRptJobConf['context']['toolIdStr'] = @exceRptToolId
       runExceRptJobConf['context']['warningsConfirmed'] = true
       runExceRptJobConf['context']['userLastName'] = @subUserLastName
@@ -2797,6 +3398,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("exRNAKbGroup")
       @settings.delete("exRNAKbProject")
       @settings.delete("failedFtpDir")
+      @settings.delete("backupFtpDir")
       @settings.delete("finalizedMetadataDir")
       @settings.delete("finishedFtpDir")
       @settings.delete("dataArchiveLocation")
@@ -2820,10 +3422,13 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('anticipatedDataRepo') if(@settings['anticipatedDataRepo'] == nil)
       @settings.delete('otherDataRepo') if(@settings['otherDataRepo'] == nil)
       @settings.delete('exogenousTaxoTreeJobIDDir')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete('importantJobIdsDir')
       # Email object
       emailObject               = BRL::Genboree::Tools::WrapperEmailer.new(@toolTitle,@subUserEmail,@jobId)
-      emailObject.userFirst     = @userFirstName
-      emailObject.userLast      = @userLastName
+      emailObject.userFirst      = @subUserFirstName
+      emailObject.userLast       = @subUserLastName
       emailObject.analysisName  = @analysisName
       emailObject.inputsText    = nil
       emailObject.outputsText   = nil
@@ -2831,11 +3436,9 @@ module BRL; module Genboree; module Tools; module Scripts
       emailObject.exitStatusCode = @exitCode
       runExceRptJobIds = @listOfJobIds.keys
       numJobsSubmitted = runExceRptJobIds.length
-      foundError = false
-      @errInputs.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
       additionalInfo = ""
       additionalInfo << "\n==================================================================\n" +
-                         "NOTE 1:\n#{(@failedJobs.empty? and !foundError) ? "All" : "Some"} of your small RNA-seq samples have been submitted\nfor processing through the exceRpt analysis pipeline."
+                         "NOTE 1:\n#{(@failedJobs.empty?) ? "All" : "Some"} of your small RNA-seq samples have been submitted\nfor processing through the exceRpt analysis pipeline."
       unless(@settings['suppressRunExceRptEmails'])
         additionalInfo << "\nYou will receive an email when each job finishes\n(3 emails for 3 submitted samples, for example)."
       end
@@ -2850,7 +3453,7 @@ module BRL; module Genboree; module Tools; module Scripts
                         "NOTE #{currentNoteNumber}:\nThen, all of your samples will be run through the exceRpt Post-processing tool.\nThis will condense your results into an easy-to-read report.\nYou will receive a single email from this tool\nwhen all samples have been processed." +
                         "\n==================================================================\n" +
                         "NOTE #{finalNoteNumber}:\nFinally, you will receive a single email from the ERCC Final Processing tool.\nThis email will tell you the final status of the jobs above\nand will inform you of any failures."
-      if(!@failedJobs.empty? or foundError)
+      if(!@failedJobs.empty?)
         additionalInfo << "\n==================================================================\n" +
                           "Please note that AT LEAST SOME OF YOUR FILES WERE NOT SUCCESSFULLY SUBMITTED!\nYou can find more information below."
       end
@@ -2867,26 +3470,6 @@ module BRL; module Genboree; module Tools; module Scripts
         @failedJobs.each_key { |currentSample|
           additionalInfo << "\n\nCurrent sample: #{currentSample}\n" +
                             "Error message: #{@failedJobs[currentSample]}"
-        }
-      end
-      if(foundError)
-        additionalInfo << "\n==================================================================\n"
-        additionalInfo << "We #{@failedJobs.empty? ? "" : "also "}encountered some errors when processing your archives from Genboree.\n\n"
-        additionalInfo << "Individual error messages are printed below:"
-        @errInputs.each_key { |category|
-          unless(@errInputs[category].empty?)
-            msg = ""
-            if(category == :emptyFiles)
-              msg = "\n\nAt least some of the files you submitted are empty.\nWe cannot process empty files.\nA list of empty files can be found below:\n"
-            elsif(category == :badFormat)
-              msg = "\n\nAt least some of the files you submitted were not recognized as FASTQ, SRA, or archive format.\nYour submitted archives should only contain these types of files.\nA list of problematic files can be found below:\n"
-            elsif(category == :badArchives)
-              msg = "\n\nAt least some of your submitted archives could not be extracted.\nIt is possible that the archives are empty or corrupt.\nPlease check the validity of the archives and try again.\nA list of problematic archives can be found below:\n"
-            end
-            unless(msg.empty?)
-              additionalInfo << "#{msg}\n#{@errInputs[category].join("\n\n")}"
-            end
-          end
         }
       end
       additionalInfo << "\n==================================================================\n"
@@ -2944,6 +3527,7 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("exRNAKbGroup")
       @settings.delete("exRNAKbProject")
       @settings.delete("failedFtpDir")
+      @settings.delete("backupFtpDir")
       @settings.delete("finalizedMetadataDir")
       @settings.delete("finishedFtpDir")
       @settings.delete("dataArchiveLocation")
@@ -2959,8 +3543,11 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("subUserId")
       @settings['exogenousMapping'] = "on" if(@settings['fullExogenousMapping'])
       @settings.delete("exogenousMappingInputDir")
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
       @settings.delete("fullExogenousMapping")
-      @settings.delete("filePathToListOfJobIds")
+      # Delete local path to important job IDs dir
+      @settings.delete('importantJobIdsDir')
       @settings.delete('exRNAAtlasURL')
       @settings.delete("uploadReadCountsDocs")
       @settings.delete('dbGaP') if(@settings['dbGaP'] == nil)
@@ -3004,31 +3591,7 @@ module BRL; module Genboree; module Tools; module Scripts
           }
         end
       end
-      foundError = false
-      if(@errInputs)
-        @errInputs.each_value { |categoryValue| foundError = true unless(categoryValue.empty?) }
-        if(foundError)
-          additionalInfo << "\n==================================================================\n"
-          additionalInfo << "We #{@failedJobs.empty? ? "" : "also "}encountered some errors when processing your archives from Genboree.\n"
-          additionalInfo << "Individual error messages are printed below:"
-          @errInputs.each_key { |category|
-            unless(@errInputs[category].empty?)
-              msg = ""
-              if(category == :emptyFiles)
-                msg = "\n\nAt least some of the files you submitted are empty.\nWe cannot process empty files.\nA list of empty files can be found below:\n"
-              elsif(category == :badFormat)
-                msg = "\n\nAt least some of the files you submitted were not recognized as FASTQ, SRA, or archive format.\nYour submitted archives should only contain these types of files.\nA list of problematic files can be found below:\n"
-              elsif(category == :badArchives)
-                msg = "\n\nAt least some of your submitted archives could not be extracted.\nIt is possible that the archives are empty or corrupt.\nPlease check the validity of the archives and try again.\nA list of problematic archives can be found below:\n"
-              end
-              unless(msg.empty?)
-                additionalInfo << "#{msg}\n#{@errInputs[category].join("\n\n")}"
-              end
-            end
-          }
-        end
-      end
-      additionalInfo << "\n==================================================================\n" if((@failedJobs and !@failedJobs.empty?) or foundError)
+      additionalInfo << "\n==================================================================\n" if(@failedJobs and !@failedJobs.empty?)
       emailErrorObject.additionalInfo = additionalInfo
       emailErrorObject.erccTool = true
       if(@suppressEmail)

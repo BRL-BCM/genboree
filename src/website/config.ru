@@ -37,13 +37,13 @@ CONFIG = {
   :context => "/site",
   # +:registerUrl+
   #   The URL for POST requests to the Genboree register form (new user form)
-  :registerUrl => "http://__GENBOREE_webserverFQDN__/java-bin/regform.jsp",
+  :registerUrl => "http://__GENBOREE_webserverFQDN__/projects/genboree_profile_management/genboree_profile_management/profile/new",
   # +:loginUrl+
   #   The URL for POST requests to the Genboree login form
   :loginUrl => "http://__GENBOREE_webserverFQDN__/java-bin/login.jsp",
   # +:lostPasswordUrl+
   #   The URL for POST requests to the Genboree lost password form
-  :lostPasswordUrl => "http://__GENBOREE_webserverFQDN__/java-bin/forgotten.jsp",
+  :lostPasswordUrl => "http://__GENBOREE_webserverFQDN__/projects/genboree_profile_management/genboree_profile_management/profile/forgot_pwd",
 
   :redmineUrl => "http://localhost/redmine",
   :redmineProject => "genboree_website_content",

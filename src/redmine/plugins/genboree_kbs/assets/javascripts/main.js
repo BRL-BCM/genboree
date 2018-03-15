@@ -16,6 +16,20 @@ Ext.onReady(function() {
       me.getEditor().insertColumnEditor(column);
     }
   });
+  (function(H) { 
+    var each = H.each;
+    H.wrap(H.seriesTypes.column.prototype, 'drawPoints', function(proceed) {
+        var series = this;
+        if(series.data.length > 0 ){
+            var width = series.barW > 30 ? 30 : series.barW;
+            each(this.data, function(point) {
+                point.shapeArgs.x += (point.shapeArgs.width - width) / 2;
+                point.shapeArgs.width = width;
+            });
+        }
+        proceed.call(this);
+    })
+  })(Highcharts) ;
   Ext.tip.QuickTipManager.init();
   Ext.tip.QuickTipManager.getQuickTip().addCls('genbKb-tooltip-wordwrap') ;
   // Prepare the collection list store
@@ -62,7 +76,7 @@ Ext.onReady(function() {
    * This will contain all the grid/tables etc.
    */
   initContainerPanelToolbar() ;
-  var westPanelWidth = panelWidth - 715 ;
+  var westPanelWidth = panelWidth - 720 ;
   Ext.create('Ext.panel.Panel', {
     width: panelWidth,
     height: panelHeight, // Add pixels for tool bar
@@ -70,6 +84,7 @@ Ext.onReady(function() {
     tbar: Ext.getCmp('containerPanelToolbar'),
     //header: true,
     layout: 'border',
+    cls: 'genbKb-mainPanelAlign',
     items:
     [
       {

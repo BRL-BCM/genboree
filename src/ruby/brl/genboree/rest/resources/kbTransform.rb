@@ -53,6 +53,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
         @groupName              = Rack::Utils.unescape(@uriMatchData[1]).to_s.strip
         @kbName                 = Rack::Utils.unescape(@uriMatchData[2]).to_s.strip
         @transformationName     = Rack::Utils.unescape(@uriMatchData[3]).to_s.strip
+        @collName = BRL::Genboree::KB::Helpers::TransformsHelper::KB_CORE_COLLECTION_NAME
         initStatus = initGroupAndKb()
       end
       return initStatus
@@ -76,7 +77,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 if(mgCursor.count == 1) # should always be one
                   mgCursor.rewind! # resets the cursor to its unevaluated state
                   doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
+                  transDocId = doc['_id']
                   entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                  entity.metadata = transformsHelper.getMetadata(transDocId, collName)
                   @statusName = configResponse(entity)
                 else # cursor size should be zero
                   @statusName = :'Not Found'
@@ -145,11 +148,20 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     }
                     if(transformDoc and !transformDoc.empty?)
                       transformationDoc['_id'] = transformDoc["_id"]
-                      transformsHelper.save(transformationDoc, @gbLogin)
-                      bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, transformationDoc)
-                      configResponse(bodyData)
-                      @statusName = :'Moved Permanently'
-                      @statusMsg = "UPDATED_TRANSFORMATION_DOC: The transformation document with the id: #{@transformationName.inspect}  was updated."
+                      workingRevisionMatched = true
+                      if(@workingRevision)
+                        workingRevisionMatched = transformsHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, transformDoc["_id"], collName)
+                      end
+                      if(workingRevisionMatched)
+                        transformsHelper.save(transformationDoc, @gbLogin)
+                        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, transformationDoc)
+                        configResponse(bodyData)
+                        @statusName = :'Moved Permanently'
+                        @statusMsg = "UPDATED_TRANSFORMATION_DOC: The transformation document with the id: #{@transformationName.inspect}  was updated."
+                      else
+                        @statusName = :"Conflict"
+                        @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
+                      end
                     else
                       transformsHelper.save(transformationDoc, @gbLogin)
                       bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, transformationDoc)
@@ -159,8 +171,13 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     end
                   end
                 else
+                  if( validator.respond_to?(:buildErrorMsgs) )
+                    errors = validator.buildErrorMsgs()
+                  else
+                    errors = validator.validationErrors
+                  end
                   @statusName = :'Unsupported Media Type'
-                  @statusMsg = "BAD_TRASFORMATION_DOC: The transformation document does not follow the specification of the transformation model:\n\n#{validator.validationErrors}"
+                  @statusMsg = "BAD_TRASFORMATION_DOC: The transformation document does not follow the specification of the transformation model:\n\n#{errors.join("\n")}"
                 end
               rescue => err
                 @statusName = :'Internal Server Error'
@@ -199,12 +216,22 @@ module BRL ; module REST ; module Resources                # <- resource classes
               if(mgCursor and mgCursor.is_a?(Mongo::Cursor))
                 if(mgCursor.count == 1)
                   mgCursor.rewind!
-                  doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
-                  entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
-                  transformsHelper.coll.remove( { "Transformation.value" => @transformationName } )
-                  @statusMsg = "DELETED: The transformation document: #{@transformationName} was deleted from the database."
-                  @statusName = :OK
-                  configResponse(entity)
+                  origDoc = mgCursor.first
+                  doc = BRL::Genboree::KB::KbDoc.new(origDoc.deep_clone)
+                  workingRevisionMatched = true
+                  if(@workingRevision)
+                    workingRevisionMatched = transformsHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, origDoc["_id"], collName)
+                  end
+                  if(workingRevisionMatched)
+                    entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                    transformsHelper.coll.remove( { "Transformation.value" => @transformationName } )
+                    @statusMsg = "DELETED: The transformation document: #{@transformationName} was deleted from the database."
+                    @statusName = :OK
+                    configResponse(entity)
+                  else
+                    @statusName = :"Conflict"
+                    @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
+                  end
                 else
                   @statusName = :'Not Found'
                   @statusMsg = "NO_TRANSFORMATION_DOCUMENT: There is no transformation document #{@transformationName.inspect} under #{@kbName} KB."

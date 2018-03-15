@@ -136,7 +136,7 @@ module BRL; module Genboree; module KB; module Transformers
                    end
                  }
                }
-             $stderr.debugPuts(__FILE__, __method__, "DEBUG", "source to sublinks retreived: #{tmp.inspect}")
+             #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "source to sublinks retreived: #{tmp.inspect}")
              end
              sourceDocTosubDocLinks = tmp
              subjectsToPartitions = subjectsToPartitionsTmp

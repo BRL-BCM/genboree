@@ -80,6 +80,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
             cursor = templatesHelper.coll.find( {  } )
             bodyData = BRL::Genboree::REST::Data::KbDocEntityList.new(@connect)
             docFound = false
+            docIds = []
             cursor.each {|dd|
               kbDoc = BRL::Genboree::KB::KbDoc.new(dd)
               next if(kbDoc.getPropVal('id.coll') != @collName)
@@ -87,6 +88,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 rootProp = kbDoc.getPropVal('id.root')
                 next if(rootProp.split(".").size > 1)
               end
+              docIds << dd['_id']
               if(@detailed)
                 bodyData << BRL::Genboree::REST::Data::KbDocEntity.new(@connect, kbDoc)
               else
@@ -95,6 +97,10 @@ module BRL ; module REST ; module Resources                # <- resource classes
               docFound = true
             }
             if(docFound)
+              if(!docIds.empty?)
+                metadata = templatesHelper.getMetadata(docIds, 'kbTemplates')
+                bodyData.metadata = metadata
+              end
               @statusName = configResponse(bodyData)
             else
               @statusName = :'Not Found'

@@ -35,6 +35,59 @@ class KbAnswer < GenboreeResource
     end
     return initStatus
   end
+  
+  # Process a GET operation on this resource.
+  # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
+  #   or containing correct error information.
+  def get()
+    initStatus = initOperation()
+    if(initStatus == :OK)
+      answerCollName = BRL::Genboree::KB::Helpers::AnswersHelper::KB_CORE_COLLECTION_NAME
+      unless(@mongoAn.coll.nil?)
+        if(READ_ALLOWED_ROLES[@groupAccessStr])
+          dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
+          if(dataHelper)
+            entity = nil
+            qtCursor = @mongoQh.coll.find({ "Questionnaire.value" =>  @questId })
+            if(qtCursor and qtCursor.is_a?(Mongo::Cursor) and qtCursor.count == 1)
+              mgCursor = @mongoAn.coll.find({ "Answer.value" =>  @answerId })
+              if(mgCursor and mgCursor.is_a?(Mongo::Cursor) and mgCursor.count == 1)
+                mgCursor.rewind! # resets the cursor to its unevaluated state
+                origDoc = mgCursor.first 
+                doc = BRL::Genboree::KB::KbDoc.new(origDoc.deep_clone)
+                if(doc.getPropVal('Answer.Questionnaire') == @questId)
+                  entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                  entity.metadata = @mongoAn.getMetadata(origDoc['_id'], answerCollName)
+                  @statusName = configResponse(entity)
+                else
+                  @statusName = :'Not Found'
+                  @statusMsg = "NO_ANSWER_DOCUMENT: There is no answer document - #{@answerId} for the questionnaire, #{@questId.inspect} for the collection - #{@collName} under #{@kbName} KB."
+                end
+              else 
+                @statusName = :'Not Found'
+                @statusMsg = "NO_ANSWER_DOCUMENT: There is no answer document - #{@answerId} for the questionnaire, #{@questId.inspect} for the collection - #{@collName} under #{@kbName} KB."
+              end
+            else
+              @statusName = :'Not Found'
+              @statusMsg = "NO_QUESTIONNAIRE_DOCUMENT: There is no questionnaire - #{@questId} for the collection - #{@collName} under #{@kbName} KB."
+            end
+          else
+            @statusName = :'Not Found'
+            @statusMsg = "NO_COLL: can't get answer document named #{@answerId.inspect} because appears to be no data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc)."
+          end
+        else
+          @statusName = :Forbidden
+          @statusMsg = "You do not have sufficient permissions to perform this operation."
+        end
+      else
+        @statusName = :'Not Found'
+        @statusMsg = "NO_QUESTIONNAIRE_COLL: can not get questionnaire document named #{@answerId.inspect} because appears to be no internal collection #{answerCollName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} . #{answerCollName} is a GenboreeKB internal collection and absence of this collection means that the #{@kbName.inspect} is an outdated GenboreeKB."
+      end
+    end
+     # If something wasn't right, represent as error
+    @resp = representError() if(@statusName != :OK)
+    return @resp
+  end
 
   # Process a PUT operation on this resource.
   # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
@@ -77,6 +130,7 @@ class KbAnswer < GenboreeResource
                         newDataDoc = questNAnsToDoc.getDocFromAnswers()
                         $stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC NAME ::::::: #{newDataDoc.inspect}")
                         if(newDataDoc)
+                          
                           # Passed all the validation and the document saved in the user collection    
                           #  Save the answer document
                           cursor = @mongoAn.coll.find({ 'Answer.value' => @answerId })
@@ -84,22 +138,31 @@ class KbAnswer < GenboreeResource
                           cursor.each {|dd|
                             anDoc = dd
                           }
-                          if(anDoc and !anDoc.empty?)
-                            answerDoc['_id'] = anDoc["_id"]
-                            @mongoAn.save(answerDoc, @gbLogin)
-                          else
-                            @mongoAn.save(answerDoc, @gbLogin)
+                          workingRevisionMatched = true
+                          if(@workingRevision and anDoc and !anDoc.empty?)
+                            workingRevisionMatched = @mongoAn.matchWorkingRevisionWithCurrentRevision(@workingRevision, anDoc["_id"], answerCollName)
                           end
-                         
-                          # save the new document generated
-                          kbDataDoc = BRL::Genboree::KB::KbDoc.new(newDataDoc)
-                          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC KB ::::::: #{kbDataDoc.inspect}")
-                          if(@detailed)
-                            entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, kbDataDoc)
+                          if(workingRevisionMatched)
+                            if(anDoc and !anDoc.empty?)
+                              answerDoc['_id'] = anDoc["_id"]
+                              @mongoAn.save(answerDoc, @gbLogin)
+                            else
+                              @mongoAn.save(answerDoc, @gbLogin)
+                            end
+                           
+                            # save the new document generated
+                            kbDataDoc = BRL::Genboree::KB::KbDoc.new(newDataDoc)
+                            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC KB ::::::: #{kbDataDoc.inspect}")
+                            if(@detailed)
+                              entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, kbDataDoc)
+                            else
+                              entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "text" => { "value" => kbDataDoc.getPropVal(identifier)} })
+                            end
+                            @statusName = configResponse(entity)
                           else
-                            entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "text" => { "value" => kbDataDoc.getPropVal(identifier)} })
+                            @statusName = :"Conflict"
+                            @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
                           end
-                          @statusName = configResponse(entity)
                         else
                           @statusName = :"Bad Request"
                           @statusMsg = "DOC_BUILD_ERROR: Failed to build data document for the collection #{@collName} using the answer document #{@answerId}. Check: #{questNAnsToDoc.questAndAnsErrors}"
@@ -145,58 +208,6 @@ class KbAnswer < GenboreeResource
   end
 
 
-  # Process a GET operation on this resource.
-  # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
-  #   or containing correct error information.
-  def get()
-    initStatus = initOperation()
-    if(initStatus == :OK)
-      answerCollName = BRL::Genboree::KB::Helpers::AnswersHelper::KB_CORE_COLLECTION_NAME
-      unless(@mongoAn.coll.nil?)
-        if(READ_ALLOWED_ROLES[@groupAccessStr])
-          dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
-          if(dataHelper)
-            entity = nil
-            qtCursor = @mongoQh.coll.find({ "Questionnaire.value" =>  @questId })
-            if(qtCursor and qtCursor.is_a?(Mongo::Cursor) and qtCursor.count == 1)
-              mgCursor = @mongoAn.coll.find({ "Answer.value" =>  @answerId })
-              if(mgCursor and mgCursor.is_a?(Mongo::Cursor) and mgCursor.count == 1)
-                mgCursor.rewind! # resets the cursor to its unevaluated state
-                doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
-                if(doc.getPropVal('Answer.Questionnaire') == @questId)
-                  entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
-                  @statusName = configResponse(entity)
-                else
-                  @statusName = :'Not Found'
-                  @statusMsg = "NO_ANSWER_DOCUMENT: There is no answer document - #{@answerId} for the questionnaire, #{@questId.inspect} for the collection - #{@collName} under #{@kbName} KB."
-                end
-              else 
-                @statusName = :'Not Found'
-                @statusMsg = "NO_ANSWER_DOCUMENT: There is no answer document - #{@answerId} for the questionnaire, #{@questId.inspect} for the collection - #{@collName} under #{@kbName} KB."
-              end
-            else
-              @statusName = :'Not Found'
-              @statusMsg = "NO_QUESTIONNAIRE_DOCUMENT: There is no questionnaire - #{@questId} for the collection - #{@collName} under #{@kbName} KB."
-            end
-          else
-            @statusName = :'Not Found'
-            @statusMsg = "NO_COLL: can't get answer document named #{@answerId.inspect} because appears to be no data collection #{@collName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} (check spelling/case, etc)."
-          end
-        else
-          @statusName = :Forbidden
-          @statusMsg = "You do not have sufficient permissions to perform this operation."
-        end
-      else
-        @statusName = :'Not Found'
-        @statusMsg = "NO_QUESTIONNAIRE_COLL: can not get questionnaire document named #{@answerId.inspect} because appears to be no internal collection #{answerCollName.inspect} in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect} . #{answerCollName} is a GenboreeKB internal collection and absence of this collection means that the #{@kbName.inspect} is an outdated GenboreeKB."
-      end
-    end
-     # If something wasn't right, represent as error
-    @resp = representError() if(@statusName != :OK)
-    return @resp
-  end
-
-
   # Process a DELETE operation on this resource.
   # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
   #   or containing correct error information.
@@ -218,11 +229,20 @@ class KbAnswer < GenboreeResource
                     mgCursor.rewind!
                     doc = BRL::Genboree::KB::KbDoc.new(mgCursor.first)
                     if(doc.getPropVal('Answer.Questionnaire') == @questId)
-                      entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
-                      @mongoAn.coll.remove( { "Answer.value" => @answerId } )
-                      @statusMsg = "DELETED: The answer document: #{@answerId} was deleted from the database."
-                      @statusName = :OK
-                      configResponse(entity)
+                      workingRevisionMatched = true
+                      if(@workingRevision)
+                        workingRevisionMatched = @mongoAn.matchWorkingRevisionWithCurrentRevision(@workingRevision, doc["_id"], answerCollName)
+                      end
+                      if(workingRevisionMatched)
+                        entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
+                        @mongoAn.coll.remove( { "Answer.value" => @answerId } )
+                        @statusMsg = "DELETED: The answer document: #{@answerId} was deleted from the database."
+                        @statusName = :OK
+                        configResponse(entity)
+                      else
+                        @statusName = :"Conflict"
+                        @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."                        
+                      end
                     else
                       @statusName = :'Not Found'
                       @statusMsg = "NO_ANSWER_DOCUMENT: There is no answer document, #{@answerId.inspect} for the questionnaire #{@questId}in the collection - #{@collName} under #{@kbName} KB."

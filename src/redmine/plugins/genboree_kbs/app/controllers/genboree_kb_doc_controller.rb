@@ -2,7 +2,9 @@ require 'yaml'
 require 'json'
 require 'uri'
 require 'plugins/genboree_kbs/app/helpers/genboreeKb_helper'
+require 'plugins/genboree_kbs/app/helpers/async_bioportal_helper'
 require 'brl/sites/bioOntology'
+require 'brl/sites/emBioOntology'
 require 'brl/rest/apiCaller'
 require 'brl/util/util'
 include BRL::REST
@@ -24,8 +26,9 @@ class GenboreeKbDocController < ApplicationController
     docVersion = params['docVersion']
     fieldMap  = { :coll => collName, :doc => docId } # :grp & :kb auto-filled for us if we don't supply them
     if(!docVersion.empty?) # get the specific version of the document if required
-      rsrcPath << "/ver/{ver}?"
+      rsrcPath << "/ver/{ver}?detailed=true&contentFields={cf}"
       fieldMap[:ver] = docVersion
+      fieldMap[:cf] = ['.']
     end
     apiResult  = apiGet(rsrcPath, fieldMap)
     resp = {}
@@ -105,7 +108,7 @@ class GenboreeKbDocController < ApplicationController
     else
       bioOnt = BRL::Sites::BioOntology.fromUrl(domainInfoStr, { :proxyHost => ENV['PROXY_HOST'], :proxyPort => ENV['PROXY_PORT'] })
       bioOnt.debug = true
-      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Starting bioontology query.")
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Starting bioontology query with URL: #{domainInfoStr.inspect}.")
       begin
         if(domainInfoStr =~ /subtree_root/)
           respObj = bioOnt.requestTermsByNameViaSubtree(searchStr, true, limit)
@@ -151,8 +154,7 @@ class GenboreeKbDocController < ApplicationController
     domainInfoStr = params['url']
     limit = params['limit'].to_i
     searchStr = params['searchStr'].to_s.strip
-    # Get an instance of the BioOntology class
-    respObj = nil
+    queryType = :singleOntology
     if(domainInfoStr =~ /\(/)
       $stderr.debugPuts(__FILE__, __method__, "DEBUG", "domainInfo param: #{domainInfoStr.inspect}\n    limit param: #{limit.inspect}\n    searchStr param: #{searchStr.inspect}")
       ontArr = []
@@ -162,52 +164,18 @@ class GenboreeKbDocController < ApplicationController
         subTreeArr.push(pairArray.last)
       }
       $stderr.debugPuts(__FILE__, __method__, "DEBUG", "After parsing 'url' parameter, have:\n  termArr:\n    #{ontArr.join("\n    ")}\n  urlArr:\n    #{subTreeArr.join("\n    ")}")
-      bioOnt = BRL::Sites::BioOntology.new(ontArr, subTreeArr, nil)
-      #bioOnt.debug = true
-      respObj = bioOnt.requestTermsByNameViaSubtree(searchStr, false, limit)
+      bioOntHelper = AsyncBioportalHelper.new(ontArr, subTreeArr, searchStr, true, limit)
+      queryType = :multipleOntologies
     else
-      bioOnt = BRL::Sites::BioOntology.fromUrl(domainInfoStr, { :proxyHost => ENV['PROXY_HOST'], :proxyPort => ENV['PROXY_PORT'] })
-      #bioOnt.debug = true
+      bioOntHelper = AsyncBioportalHelper.new(nil, nil, searchStr, true, limit)
+      bioOntHelper.domainInfoStr = domainInfoStr
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Starting bioontology query.")
-      begin
-        if(domainInfoStr =~ /subtree_root/)
-          respObj = bioOnt.requestTermsByNameViaSubtree(searchStr, false, limit)
-        else
-          respObj = bioOnt.requestTermsByName(searchStr, false, limit)
-        end
-      rescue => err
-        $stderr.debugPuts(__FILE__, __method__, "ERROR", err)
-        respObj = nil
-      end
     end
-    $stderr.debugPuts(__FILE__, __method__, "STATUS", "Bioontology query done.")
-    status = 200
-    resp = []
-    if(respObj.nil?)
-      resp = {}
-      status = 404
-    else
-      ii = 0
-      respObj.each { |obj|
-        ii += 1
-        id = obj['@id'] ? obj['@id'] : ""
-        type = obj['@type'] ? obj['@type']  : ""
-        synonym = "[NONE]"
-        if(obj['synonym'] and obj['synonym'].is_a?(Array))
-          synonym = obj['synonym'].join(",")
-        end
-        definition = "[NONE]"
-        if(obj['definition'] and obj['definition'].is_a?(Array))
-          definition = obj['definition'].join("</br>")
-        end
-        prefLabel = obj['prefLabel']
-        resp.push( { 'prefLabel' => prefLabel, 'id' => id, 'type' => type, 'definition' => definition, 'synonym' => synonym, 'divId' => Time.now.to_f} )
-        break if(ii == limit)
-      }
-      respJson = resp.to_json
-      resp = JSON.parse(respJson)
-    end
-    respond_with(resp, :status => status)
+    bioOntHelper.env = env
+    EM.next_tick {
+      bioOntHelper.start(queryType)
+    }
+    throw :async
   end
 
   # Controller method used for getting an initial list of identifiers when a collection is selected in the UI
@@ -254,6 +222,16 @@ class GenboreeKbDocController < ApplicationController
       asyncResp.start()
     end
     throw :async
+  end
+  
+  def checkFile()
+    url = params['fileUrl']
+    urlObj = URI.parse(url)
+    rsrcPath = urlObj.path
+    gbHost = urlObj.host
+    fileName = rsrcPath.split("/").last
+    apiResult = apiGet( rsrcPath, {}, true, gbHost )
+    respond_with(apiResult[:respObj], :status => apiResult[:status])
   end
 
   # Controller method for supporting file uploads for properties with 'fileUrl' domain

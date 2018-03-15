@@ -25,7 +25,8 @@ module GbApi
     # @return [String] The raw response payload as a String
     attr_reader :rawRespBody
 
-    def initialize(rackEnv, targetHost, rmProject, rmUser=User.current)
+    def initialize(rackEnv, targetHost, rmProject, rmUser=rackEnv[:currRmUser] )
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Did we get an rmUser out of the rackEnv param?\n\nrmUser: #{rmUser.inspect}\n\nrackEnv[:currRmuser]: #{rackEnv[:currRmUser].inspect}\n\n")
       super(rackEnv, targetHost, rmProject, rmUser)
       @doParse = true
       @respBody = @respStatus = @respHeaders = nil
@@ -92,7 +93,7 @@ module GbApi
         # Accumulate resp body in string
         if(array[2].respond_to?(:each))
           array[2].each { |chunk|
-            @rawRespBody += chunk
+            @rawRespBody << chunk
           }
         else
           $stderr.debugPuts(__FILE__, __method__, 'ERROR', "[#{@railsRequestId.inspect}] Unexpected: 3rd element of Rack-type response array didn't contain an each-able object. Contained a #{array[2].class} .")

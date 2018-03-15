@@ -9,6 +9,7 @@ function initTreeGridToolbar()
   var treeGridToolbar = new Ext.Toolbar({
     width:'auto',
     id: 'mainTreeGridToolbar',
+    height: 40,
     cls: 'genbKb-toolbarcombobox',
     items:
     [
@@ -257,10 +258,10 @@ function initTreeGridToolbar()
           { text: 'Get URL', handler: function(){
             Ext.create('Ext.window.Window', {
               title: 'Document URL',
-              height: 120,
+              height: 150,
               width: 600,
               autoScroll: true,
-              html: "You can copy the following URL to your clipboard:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&coll='+escape(currentCollection)+'&doc='+escape(newdocObj[docModel.name].value)+"&docVersion="+escape(docVersion)+"</p></div>"
+              html: "<b>You can copy the following URL to your clipboard</b>:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&coll='+escape(currentCollection)+'&doc='+escape(newdocObj[docModel.name].value)+"&docVersion="+escape(docVersion)+"</p></div>"
             }).show() ;
           }},
           { text: 'Get URL with state', disabled: true, hidden: true, tooltip: { text: 'This functionality is still being developed and is not yet available.' } }
@@ -307,9 +308,9 @@ function initTreeGridToolbar()
         id          : 'searchComboBox',
         // store : NO, BOUND AT RUNTIME AS MODEL CHANGES WHEN COLLECTION CHOSEN
         disabled    : true, // enable()'D AT RUNTIME AS MODEL CHANGES WHEN COLLECTION CHOSEN
-        width       : 200, // Please sync this with the minWidth of listConfig
-        maxHeight   : 22,
-        height      : 22,
+        width       : 250, // Please sync this with the minWidth of listConfig
+        maxHeight   : 23,
+        height      : 23,
         minChars    : 1,
         // blankText   : '',
         // allowBlank  : false,
@@ -336,7 +337,7 @@ function initTreeGridToolbar()
           loadingText : '( Searching )',
           border      : 1,
           loadMask: true,
-          minWidth    : 200  // Please sync this with the search box's width
+          minWidth    : 250  // Please sync this with the search box's width
         },
         tpl         : '<tpl for="."><div class=" x-boundlist-item {[xindex %2 == 0 ? "even" : "odd" ]} "> {value} </div></tpl>',
         valueNotFoundText : '(No matching docs)',
@@ -376,6 +377,30 @@ function initTreeGridToolbar()
       }
     ]
   }) ;
+}
+
+function initQuestionnaireToolbar()
+{
+  var qtoolbar  = new Ext.Toolbar({
+    width:'auto',
+    id: 'questionnaireToolbar',
+    items:
+    [
+      {
+        icon: 'plugin_assets/genboree_kbs/images/save.png',
+        itemId: 'saveQDoc',
+        disabled: false,
+        tooltip: {
+          title: 'Save',
+          text: 'Save the questionnaire document to generate a new document in the collection.'
+        },
+        handler: function(){
+          saveQuestionnaire() ; // defined in questionnaire.js
+        }
+      }
+    ]
+  }) ;
+  return qtoolbar ;
 }
 
 // Initializes tool bar for the model view
@@ -444,10 +469,10 @@ function initModelTreeToolbar()
           { text: 'Get URL', handler: function(){
             Ext.create('Ext.window.Window', {
               title: 'Document URL',
-              height: 120,
+              height: 150,
               width: 600,
               autoScroll: true,
-              html: "You can copy the following URL to your clipboard:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showModelTree=true&coll='+escape(Ext.getCmp('collectionSetCombobox').value)+"&modelVersion="+escape(modelVersion)+"</p></div>"
+              html: "<b>You can copy the following URL to your clipboard</b>:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showModelTree=true&coll='+escape(Ext.getCmp('collectionSetCombobox').value)+"&modelVersion="+escape(modelVersion)+"</p></div>"
             }).show() ;
           }},
           { text: 'Get URL with state', disabled: true, hidden: true, tooltip: { text: 'This functionality is still being developed and is not yet available.' } }
@@ -517,10 +542,10 @@ function initViewGridToolbar(formEls)
           { text: 'Get URL', handler: function(){
             Ext.create('Ext.window.Window', {
               title: 'View URL',
-              height: 120,
+              height: 150,
               width: 600,
               autoScroll: true,
-              html: "You can copy the following URL to your clipboard:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showViewGrid=true&coll='+escape(Ext.getCmp('collectionSetCombobox').value)+'&matchQuery='+escape(formEls[0])+'&matchMode='+escape(formEls[1])+'&matchView='+escape(formEls[2])+'&matchValue='+escape(formEls[3])+"</p></div>"
+              html: "<b>You can copy the following URL to your clipboard</b>:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showViewGrid=true&coll='+escape(Ext.getCmp('collectionSetCombobox').value)+'&matchQuery='+escape(formEls[0])+'&matchMode='+escape(formEls[1])+'&matchView='+escape(formEls[2])+'&matchValue='+escape(formEls[3])+"</p></div>"
             }).show() ;
           }},
           { text: 'Get URL with state', disabled: true, hidden: true, tooltip: { text: 'This functionality is still being developed and is not yet available.' } }
@@ -611,10 +636,10 @@ function initDocsVersionsGridToolbar()
           { text: 'Get URL', handler: function(){
             Ext.create('Ext.window.Window', {
               title: 'View URL',
-              height: 120,
+              height: 150,
               width: 600,
               autoScroll: true,
-              html: "You can copy the following URL to your clipboard:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showDocsVersionsGrid=true&coll='+escape(currentCollection)+'&doc='+escape(originalDocumentIdentifier)+"</p></div>"
+              html: "<b>You can copy the following URL to your clipboard</b>:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showDocsVersionsGrid=true&coll='+escape(currentCollection)+'&doc='+escape(originalDocumentIdentifier)+"</p></div>"
             }).show() ;
           }},
           { text: 'Get URL with state', disabled: true, hidden: true, tooltip: { text: 'This functionality is still being developed and is not yet available.' } }
@@ -694,7 +719,7 @@ function initModelVersionsGridToolbar()
           { text: 'Get URL', handler: function(){
             Ext.create('Ext.window.Window', {
               title: 'View URL',
-              height: 120,
+              height: 150,
               width: 600,
               autoScroll: true,
               html: "You can copy the following URL to your clipboard:</br><div style=\"width:auto; height:auto; background-color: white; padding-left:3px; padding-right:3px;\"><p>"+"http://"+location.host+kbMount+'/genboree_kbs?project_id='+projectIdentifier+'&showModelVersionsGrid=true&coll='+escape(Ext.getCmp('collectionSetCombobox').value)+"</p></div>"
@@ -708,12 +733,105 @@ function initModelVersionsGridToolbar()
   }) ;
 }
 
+function initStatsPanelToolbar()
+{
+  var statsPanelToolbar = new Ext.Toolbar({
+    width:'auto',
+    height: 40,
+    cls: 'genbKb-toolbarcombobox',
+    id: 'statsPanelToolbar',
+    items:
+    [
+      {
+        xtype: 'tbfill'
+      },
+      {
+        xtype: 'tbtext',
+        text: "<div class=\"genbKb-menubar-iconText genbKb-menubar-searchText\"></div>"
+      },
+      {
+        xtype       : 'combo',
+        id          : 'searchComboBox',
+        // store : NO, BOUND AT RUNTIME AS MODEL CHANGES WHEN COLLECTION CHOSEN
+        disabled    : true, // enable()'D AT RUNTIME AS MODEL CHANGES WHEN COLLECTION CHOSEN
+        width       : 250, // Please sync this with the minWidth of listConfig
+        maxHeight   : 23,
+        height      : 23,
+        minChars    : 1,
+        // blankText   : '',
+        // allowBlank  : false,
+        autoScroll  : true,
+        autoSelect  : false,
+        checkChangeBuffer : 250,
+        queryDelay  : 500,
+        //hideTrigger : true,
+        matchFieldWidth : false,
+        emptyText: 'Type to search...',
+        pickerAlign : 'tl-bl?',
+        typeAhead   : false,
+        queryMode   : 'remote',
+        queryParam  : 'searchStr',
+        //onListSelectionChange:function(){
+        //  //this.picker.getSelectionModel().selectAll();
+        //  var aa ;
+        //},
+        displayField : 'value',
+        valueField  : 'value',
+        listConfig  :
+        {
+          emptyText   : 'Search by doc name...',
+          loadingText : '( Searching )',
+          border      : 1,
+          loadMask: true,
+          minWidth    : 250  // Please sync this with the search box's width
+        },
+        tpl         : '<tpl for="."><div class=" x-boundlist-item {[xindex %2 == 0 ? "even" : "odd" ]} "> {value} </div></tpl>',
+        valueNotFoundText : '(No matching docs)',
+        //pageSize    : searchPageSize, // MAY BE USEFUL TO PROVIDE THIS WHEN API QUERY ALSO SUPPORTS PAGING/INDEXES
+        listeners   :
+        {
+          'select': function(item) {
+            docVersion = "" // loading a new doc via the doc search box, reset the docVersion
+            //initTreeGrid() ;
+            Ext.getCmp('browseDocsGrid').getView().select(0) ;
+            loadDocument(item.value, true) ; // defined in ajax.js
+          },
+          'specialkey': function(field, e, eOpts){
+            if(e.getKey() == e.ENTER) {
+              if(field.rawValue != "") {
+                var val = field.rawValue ;
+                this.doQuery(val, false, true) ;
+              }
+            }
+          },
+          'beforequery': function(queryPlan, eOpts) {
+            if ( queryPlan.query != "") {
+              // BUG FIX: Without this, the search can show WRONG RESULTS. i.e. show results for the older,
+              //   first search(es) that use only a few letters (because they return last!) and not those that
+              //   are longer and return faster. i.e. Successive queries can return FASTER than older ones because
+              //   (a) the search is more specific (more letters!), (b) relevant disk pages likely
+              //   to be in memory on server now.
+              Ext.Ajax.abort() ; // aborts last Ajax call.
+              // May need to get medieval and cancel all, for safety:
+              // Ext.Ajax.abortAll() ;
+              this.store.removeAll() ;
+            }
+            else{
+              queryPlan.cancel = true ;
+              queryPlan.combo.expand() ;
+            }
+          }
+        }
+      }
+    ]
+  }) ;
+}
 function initContainerPanelToolbar()
 {
   // Initialize the tool bar for the main wrapping panel
   var containerPanelToolbar = new Ext.Toolbar({
     width:'auto',
-    height: 29,
+    height: 40,
     cls: 'genbKb-toolbarcombobox',
     id: 'containerPanelToolbar',
     items:
@@ -728,7 +846,7 @@ function initContainerPanelToolbar()
         valueField: 'value',
         id: 'collectionSetCombobox',
         width: 200,
-        height: 22,
+        height: 23,
         queryMode: 'local',
         emptyText: 'Select data set',
         
@@ -913,6 +1031,9 @@ function initContainerPanelToolbar()
         itemId: 'helpInfo',
         //text: 'Remove',
         icon: 'plugin_assets/genboree_kbs/images/silk/help.png',
+        style: {
+          marginRight: '10px'
+        },
         tooltip: {
           title: 'Help',
           text: 'To browse documents, select a collection from the <b>Collection</b> drop-down. Next, start typing in the search text box on the grid tool bar to see available documents. Select a document to visualize/edit it.'
@@ -1148,8 +1269,8 @@ function displayDocsUploadDialog()
 {
   Ext.create('Ext.window.Window', {
     title: 'Upload Documents',
-    height: 145,
-    width: 355,
+    height: 170,
+    width: 400,
     id: 'uploadDocsDisplayWindow',
     modal: true,
     autoScroll: true,
@@ -1167,6 +1288,12 @@ function displayDocsUploadDialog()
           allowBlank: false,
           msgTarget: 'side',
           anchor: '100%',
+          style: {
+            marginTop: '10px',
+            marginRight: '3px',
+            marginLeft: '3px'
+            
+          },
           buttonText: 'Select File...'
         },
         {
@@ -1176,6 +1303,11 @@ function displayDocsUploadDialog()
           store: ['JSON', 'TABBED - Compact Property Names', 'Tabbed (Multi) - Compact Property Names'],
           value: 'JSON',
           width: 330,
+          style: {
+            marginRight: '3px',
+            marginLeft: '3px'
+            
+          },
           id: 'format'
         }
       ],

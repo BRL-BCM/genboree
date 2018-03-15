@@ -3,13 +3,13 @@
   <td class="shadow"></td>
 </tr>
 <tr>
-  <td colspan="3" align="left">
+  <td colspan="3" align="center">
     <p>
     &nbsp;
     <p>
     &nbsp;
     <br>
-    <!-- hr width="90%" -->
+    <hr width="90%">
     <table width="100%" border="0" cellpadding="0">
 		<tr>
       <!--
@@ -24,15 +24,12 @@
           Genboree is built &amp; maintained by the <a href="http://www.genboree.org/site/bioinformatics_research_laboratory">Bioinformatics&nbsp;Research&nbsp;Laboratory</a><br>
           at <a href="http://www.bcm.edu">Baylor&nbsp;College&nbsp;of&nbsp;Medicine</a>.
         </div -->
-        <!-- div id="ackText" style="text-align: left; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
-          Genboree is a hosted service. Code is available
-        </div -->
         <div id="ackText" class="col-sm-12" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 20px ; padding-top: 2px ; padding-bottom: 10px ; ">
-          Powered by <a href="http://genboree.org">Genboree __GENBOREE_VERSION__</a>
+          Powered by <a href="http://genboree.org">Genboree</a>
         </div>
         <!-- VERSION -->
-        <!-- div id="ackText" style="text-align: left; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
-          Genboree version: 2.01.01
+        <div id="ackText" style="text-align: center; font-size: 0.8em ; clear: both ; width: 100% ; margin-top: 0px ; padding-top: 2px ; padding-bottom: 10px ; ">
+          Genboree version: __GENBOREE_VERSION__
         </div>
       </td>
       <td width="113" align="right">
@@ -117,3 +114,5 @@
     }
   }
 %>
+
+

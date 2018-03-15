@@ -10,11 +10,19 @@ require 'brl/util/util'
 require 'brl/genboree/genboreeUtil'
 require 'brl/genboree/dbUtil'
 require 'brl/genboree/prequeue/precondition'
+require 'brl/genboree/rest/apiCaller'
+require 'brl/genboree/rest/data/textEntity'
 
 module BRL ; module Genboree ; module Prequeue
   # @api BRL Ruby - prequeue
   # @api BRL RUby - preconditions
   class PreconditionSet
+
+    # ----------------------------------------------------------------
+    # CONSTANTS
+    # ----------------------------------------------------------------
+    JOB_STATUS_API_PATH = "/REST/v1/jobs/status?format=json_pretty"
+
     # ------------------------------------------------------------------
     # ACCESSORS
     # ------------------------------------------------------------------
@@ -34,8 +42,12 @@ module BRL ; module Genboree ; module Prequeue
     # @return [String] JSON text containiing the specific precondition object specifications
     attr_accessor :preconditionsSpec
     # @return [Array<BRL::Genboree::Prequeue::Precondition>] containing specific precondtition objects.
-    #  Created via initPreconditionObjects() usually, and only on demand (lazily)
+    #   Created via initPreconditionObjects() usually, and only on demand (lazily)
     attr_accessor :preconditions
+    # @return [Array<URI>] containing URI objects corresponding to jobs upon which this job is dependent (if any). This can be used
+    #   to pre-fetch or do other preparation work prior to evaluating each [possibly-dependency-job-related] condition's
+    #   status.
+    attr_accessor :dependencyJobUrls
 
     # ------------------------------------------------------------------
     # CLASS METHODS
@@ -117,6 +129,7 @@ module BRL ; module Genboree ; module Prequeue
     def initialize(job, preconditionsSpec, willNeverMatch=false, someExpired=false, numMet=0)
       @job = job
       @preconditions = @dbRecId = @row = nil
+      @dependencyJobUrls = []
       @willNeverMatch, @someExpired, @numMet = willNeverMatch, someExpired, numMet
       if(preconditionsSpec.nil?)
         @preconditionsSpec = []
@@ -127,6 +140,7 @@ module BRL ; module Genboree ; module Prequeue
       else
         raise ArgumentError, "ERROR: the preconditionsSpec must be either an Array of precondition Hash specs or a JSON encoding such. Instead it is a: #{preconditionsSpec.class}"
       end
+
       # Set the job's preconditions property to this instance of PreconditionSet
       @job.setPreconditions(self) if(@job)
     end
@@ -229,9 +243,13 @@ module BRL ; module Genboree ; module Prequeue
       else
         # First must initialize the Array of Precondition objects if it hasn't been yet
         initPreconditionObjects() unless(@preconditions.is_a?(Array))
+        # Next, can we do any pre-check work, like pre-fetching etc?
+        @preCheckInfo = preCheck()
         # Now can check each Precondition object
         numMet = 0
         @preconditions.each { |precondition|
+          # Give Precondition access to any preCheckInfo we've gathered via batch pre-fetching etc.
+          precondition.preCheckInfo = @preCheckInfo
           numMet += 1 if(precondition.check())
           @someExpired = true if(precondition.expired)
         }
@@ -239,6 +257,75 @@ module BRL ; module Genboree ; module Prequeue
         retVal = (!@someExpired and (@numMet == self.count()))
       end
       return retVal
+    end
+
+    def preCheck()
+      @preCheckInfo = {}
+      # One preCheck that could be done is to pre-fetch any dependency jobs' statuses.
+      preFetchJobStatuses()
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Done all pre-checks. @preCheckInfo:\n\n#{@preCheckInfo.inspect}\n\n")
+      return @preCheckInfo
+    end
+
+    def preFetchJobStatuses()
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Beginning pre-fetch of dependency job statuses. There are #{@dependencyJobUrls.size} dependency jobs. with these urls:\n\n#{@dependencyJobUrls.inspect}\n\n")
+      @preCheckInfo[:jobStatusMap] = {}
+      if( @dependencyJobUrls and !@dependencyJobUrls.empty? )
+        jobNamesByHost = Hash.new { |hh, kk| hh[kk] = [] }
+        # Collect the job names
+        @dependencyJobUrls.each { |jobUri|
+          jobName = @job.class.jobInfoFromUrl( jobUri.path, :jobName )
+          jobHost = jobUri.host
+          if(jobHost and jobName and jobHost.to_s =~ /\S/ and jobName.to_s =~ /\S/)
+            jobNamesByHost[jobHost] << jobName.to_s.strip
+          end
+        }
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Gathered dependency jobs by host. The hosts involved are: #{jobNamesByHost.keys.join(',')}.")
+        # If have 1+, we'll pre-fetch their status (and possibly other info, later) via a batch request
+        jobNamesByHost.each_key { |host|
+          jobNames = jobNamesByHost[host]
+          $stderr.debugPuts(__FILE__, __method__, 'STATUS', "For #{job.name.inspect rescue 'ERR<No job.name>'}, host #{host.inspect} has #{jobNames.nil? ? 'NULL' : jobNames.size} dependency jobs.")
+          unless( jobNames.nil? or jobNames.empty? )
+            # Prep a TextEntityList payload for the jobs of interest at host
+            jobNamesTextEntityList = BRL::Genboree::REST::Data::TextEntityList.new(
+              false,
+              jobNames.map { |jobName| BRL::Genboree::REST::Data::TextEntity.new( false, jobName ) }
+            )
+            jobNamesTextEntityList.serialize( :JSON_PRETTY )
+            # Pre-fetch statuses of these jobs
+            #  - Do a single batch request on behalf of user
+            # - need user and host authmap job which is dependent upon the one in @dependencyJobUrl
+            userName = @job.user
+            userRows = @job.dbu.getUserByName(userName)
+            userId = userRows.first['userId']
+            hostAuthMap = Abstraction::User.getHostAuthMapForUserId(@dbu, userId)
+            # - use host auth map to get status of job at @dependencyJobUrl
+            apiCaller = BRL::Genboree::REST::ApiCaller.new(host, JOB_STATUS_API_PATH, hostAuthMap)
+            #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Request payload will be:\n\n#{jobNamesTextEntityList.serialized}\n\n")
+            httpResp = apiCaller.get( {}, jobNamesTextEntityList.serialized )
+            #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "The API call DID#{' NOT' unless(apiCaller.succeeded?)} succeed ; fullApiUri was:\n\n#{apiCaller.fullApiUri.inspect}\n\n-- resp body was:\n\n#{apiCaller.respBody}\n\n")
+            if(apiCaller.succeeded?)
+              # parse data and get request status
+              apiCaller.parseRespBody()
+              # Add the status of these jobs to the jobStatusMap.
+              if( apiCaller.apiDataObj and apiCaller.apiDataObj['hash'] )
+                respHash = apiCaller.apiDataObj['hash']
+                respHash.each_key { |jobName|
+                  jobStatus = respHash[jobName]
+                  # We'll save the job status unless it's something weird. Weird statuses should end up getting
+                  #   individually checked in the specific Precondition#check() implementation.
+                  @preCheckInfo[:jobStatusMap][jobName] = jobStatus unless(jobStatus == 'JOB NOT FOUND' or jobStatus == 'STATUS MISSING')
+                }
+              end
+            else # call failed
+              # Record response in logs, but don't fail. Hopefully individual per-job requests will all work!
+              $stderr.debugPuts(__FILE__, __method__, 'API REQUEST FAILED', "FAILED: A pre-check request to batch-retrieve the status of jobs mentioned in individual conditions did not return a successful response.\n--- The HTTP response code was #{httpResp.code.inspect}. The request payload was to be this TextEntityList:\n\n#{jobNamesTextEntityList.serialized}\n\n--- The HTTPResponse object was:\n\n#{httpResp}\n\n")
+            end # if(apiCaller.succeeded?)
+          end
+        }
+      end
+
+      return true
     end
 
     # Store the current state of this PreconditionSet (including all preconditions) back into
@@ -364,6 +451,12 @@ module BRL ; module Genboree ; module Prequeue
                 if(subclass)
                   preconditionObj = subclass.new(@job, precondType, condition, expires, met, feedback)
                   @preconditions << preconditionObj
+                  # Is there dependency job info we should collect for any pre-fetch work etc?
+                  if( preconditionObj.respond_to?(:dependencyJobUrl) and preconditionObj.dependencyJobUrl.to_s =~ /\S/ )
+                    #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Adding this dependencyJobUrl to list: #{preconditionObj.dependencyJobUrl.inspect}")
+                    # We'll want to note this dependency job, unless the attached condition has expired of course.
+                    @dependencyJobUrls << preconditionObj.dependencyJobUrl unless(preconditionObj.expired)
+                  end
                 else
                   @preconditions = nil
                   raise ArgumentError, "ERROR: the precondition hash spec does not have a known value for the 'type' key. #{precondType.inspect} is not a known precondition type."
@@ -384,6 +477,7 @@ module BRL ; module Genboree ; module Prequeue
       else # already init and not being asked to replace
         retVal = @preconditions
       end
+#      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "After init, retVal is #{retVal.inspect}\n--- @dependencyJobUrls is:\n        #{@dependencyJobUrls.inspect}\n--- And @preconditions is:\n\n#{@preconditions.inspect}\n\n")
       return retVal
     end
 

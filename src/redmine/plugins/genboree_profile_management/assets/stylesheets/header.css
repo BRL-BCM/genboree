@@ -1,0 +1,20 @@
+.top.profile-management-navbar {
+  background-color: #32739d;
+}
+
+.profile-management-navbar .navbar-header .navbar-brand {
+  font-weight: bold ;
+  font-size: 30px ;
+}
+
+.profile-management-navbar .home-link {
+  font-size: 38px ;
+}
+
+.profile-management-navbar a {
+  color: #fff !important
+}
+
+.profile-management-navbar .fa.fa-power-off {
+  font-size: 35px ;
+}

@@ -92,6 +92,8 @@ module REST #:nodoc:
     HTTP_STATUS_NAMES = {}
     # A map of each number to an official human readable name:
     HTTP_STATUS_CODES.each { |kk, vv| HTTP_STATUS_NAMES[vv.to_sym] = kk }
+    # Map of HTTP Response code categories to whether they indicate a "success" or not
+    HTTP_RESP_CODE_TYPE_SUCCESSES = { :Informational => true, :Success => true, :Redirection => true, :'Client Error' => false, :'Server Error' => false }
 
     # Maximum size of an unchunked body. Sizes over this (if size is available)
     # will trigger chunked transfer encoding for uploads.
@@ -122,7 +124,54 @@ module REST #:nodoc:
         :maxTimeoutRetry  => 5
       }
     }
-    
+
+    # Indicates the category/type for a given HTTP response code provided by name or number.
+    #   HTTP response codes fall into categories: "Informational", "Success", "Redirection", "Client Error", "Server Error"
+    # @param [Fixnum, Symbol, String] httpCode The HTTP response code for which to get the category. Either the
+    #   numeric @Fixnum@ or the response code name, correctly capitalized, as a @Symbol@ or @String@.
+    # @return [Symbol, nil] The category, which will be one of these @Symbols@: @:Informational@, @:Success@, @:Redirection@, @:'Client Error'@,
+    #   @:'Server Error'@. If the response is not a known, supported HTTP standard response or is in a form that can't be used to
+    #   determine the category, the return value is @nil@.
+    def self.httpCodeType(httpCode)
+      httpCode = httpCode.to_s.to_sym unless( httpCode.is_a?(Numeric) or httpCode.is_a?(Symbol) )
+      retVal = nil
+      if( httpCode.is_a?(Numeric) )
+        numCode = httpCode.to_i
+      else # must be symbol
+        numCode = HTTP_STATUS_NAMES[httpCode]
+      end
+
+      unless(numCode.nil?)
+        if( numCode >= 100 and numCode < 200 )
+          retVal = :Informational
+        elsif( numCode >= 200 and numCode < 300 )
+          retVal = :Success
+        elsif( numCode >= 300 and numCode < 400 )
+          retVal = :Redirection
+        elsif( numCode >= 400 and numCode < 500 )
+          retVal = :'Client Error'
+        elsif( numCode >= 500 and numCode < 600)
+          retVal = :'Server Error'
+        else
+          retVal = nil
+        end
+      end
+
+      return retVal
+    end
+
+    # Is the HTTP response code a "success" type response code? (If not, then it is some kind of "error").
+    #   Any Informational, Success, or Redirection type code is considered a "success".
+    # @param [Fixnum, Symbol, String] httpCode The HTTP response code to examine. Either the
+    #   numeric @Fixnum@ or the response code name, correctly capitalized, as a @Symbol@ or @String@.
+    # @return [Boolean] True if the code is a 'success' type code, false otherwise.
+    def self.successCode?(httpCode)
+      codeType = self.httpCodeType(httpCode)
+      retVal = HTTP_RESP_CODE_TYPE_SUCCESSES[codeType]
+      return retVal
+    end
+
+    # CONSTRUCTOR
     def initialize(host, rsrcPath, login=nil, pass=nil)
       @host = @origHost = @http = @rsrcPath = @apiUri = @fullApiUrl = nil
       @scheme = DEFAULT_SCHEME

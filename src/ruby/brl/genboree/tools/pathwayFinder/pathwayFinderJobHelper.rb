@@ -162,7 +162,7 @@ module BRL ; module Genboree ; module Tools
             # Figure out if error occurred
             failedRun = findError(exitStatus)
             if(failedRun)
-              errorMsg = "We were unable to complete the pathway finder on your input file, as we encountered an error.\nAre you sure that your input text file is in the proper format?\nYour first column in your text file should be a list of miRNA identifiers.\nIf you are still having issues after examining your input file, feel free to contact a DCC admin (<a href=\"mailto:sailakss@bcm.edu\">sailakss@bcm.edu</a> or <a href=\"mailto:thistlew@bcm.edu\">thistlew@bcm.edu</a>) for help.\n\nSee more information about your error below:\n\n"
+              errorMsg = "We were unable to complete the pathway finder on your input file, as we encountered an error.\nAre you sure that your input text file is in the proper format?\nYour first column in your text file should be a list of human miRNA identifiers.\nIt is also possible that your miRNA(s) were not associated with any pathways present in the miRTarBase 2016 database.\n\nSee more information about your error below:\n\n"
               unless(File.zero?(@errFile))
                 errorMsg << File.read(@errFile)
               else 

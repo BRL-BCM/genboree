@@ -6,8 +6,10 @@ require 'brl/genboree/kb/propSelector'
 module BRL ; module Genboree ; module KB ; module Helpers
   # This class assists with the document queries for the various collections.
   class QueriesHelper < AbstractHelper
+    MEMOIZED_INSTANCE_METHODS = [ ] # In addition to those from parent class, which we'll rememoize, especially since we override 1+ of the parent methods!!
+
     # @return [String] The name of the core GenboreeKB collection the helper assists with.
-    KB_CORE_COLLECTION_NAME = "kbQueries"
+    KB_CORE_COLLECTION_NAME = 'kbQueries'
     # @return [Array<Hash>] An array of MongoDB index config hashes; each has has key @:spec@ and @:opts@
     #   the indices for the query documents in the views collection.
     KB_CORE_INDICES =
@@ -117,7 +119,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # Create new instance of this helper.
     # @param [MongoKbDatabase] kbDatabase The KB database object this helper is assisting.
     # @param [String] collName The name of the document collection this helper uses.
-    def initialize(kbDatabase, collName="kbQueries")
+    def initialize(kbDatabase, collName=self.class::KB_CORE_COLLECTION_NAME)
       super(kbDatabase, collName)
       unless(collName.is_a?(Mongo::Collection))
         @coll = @kbDatabase.queriesCollection() rescue nil
@@ -155,6 +157,25 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return self::KB_MODEL
     end
 
+    # OVERRIDE because .versions & .revisions collections have no explicit model doc, can't properly look it up. But we can get a model
+    #   from this class via self.class.getModelTemplate.
+    def getIdentifierName( collName=@coll.name )
+      modelsHelper = getModelsHelper()
+      if( collName == @coll.name )
+        if( !@idPropName.is_a?(String) or @idPropName.empty? )
+          # Ask modelsHelper for the name of the identifier (root) property for this object's collection
+          #   (kept in @idPropName but won't be valid for other collections we might need the name from [for example
+          #   the root prop of the DATA collection which working in a version/revision helper class]).
+          @idPropName = modelsHelper.getRootProp( self.class.getModelTemplate(nil) )
+        end
+        idPropName = @idPropName
+      else # some other collection than ours ; must be a real collection that has actual model doc, not .versions or .revisions
+        idPropName = super( collName )
+      end
+      return idPropName
+    end
+    alias_method( :getRootProp, :getIdentifierName )
+
     # Get a document template suitable for the collection this helper asists with.
     # @note The template should be filled in with sensible and convenient default
     #   values, but the calling code will have to fill in appropriate values to
@@ -173,96 +194,78 @@ module BRL ; module Genboree ; module KB ; module Helpers
       }
       return retVal
     end
-   
 
-  
-  # Returns the query document with a new values for a given a list of property paths and property values.
-  # Property paths and the property values must be of the same size
-  # @param [Hash] queryDoc values of this query document are replaced
-  # @param [Array<String>] propertyPaths list of property paths, values of these paths are to be replaced
-  # @param [Array<String>] propertyValues list of property values that are to be added
-  # @return [Hash] newQueryDoc the new query document with the replaced values
-  # @raise [ArgumentError] if @propertyPaths@ and @propertyValues@ are not {Array} and also if their sizes are not equal
-  def makeNewQueryDoc(queryDoc, propertyPaths, propertyValues)
-    # get the propertyPaths and propertyValues into a hash structure
-    # Check that both the arguments are of the same size. This is
-    # checked already in API, but check if this method is to be used
-    # independant of API
-    newQueryDoc = nil
-    if(propertyPaths.is_a?(Array) and propertyValues.is_a?(Array))
-      if(propertyPaths.size == propertyValues.size)
-        ind = 0;
-        tmphash = Hash.new{|hh, kk| hh[kk] = []}
-        operandTypes = {:propPath => 'propPath', :literal => 'literal', :'Query Config' => 'Query Config'}
-        pathsTobeChanged = propertyPaths.inject(tmphash){|hh, kk| 
-          # must be a string to be inserted to a queryDoc 'literal' field
-          hh[kk] << propertyValues[ind].to_s; 
-          ind += 1; 
-          hh;
-        }
-        newQueryDoc = Marshal.load(Marshal.dump(queryDoc))
-        # $stderr.puts "PathsToBeChanged: #{pathsTobeChanged.inspect}"
-        # Get the query items
-        ps = BRL::Genboree::KB::PropSelector.new(newQueryDoc)
-        queryItems = ps.getMultiPropItems("<>.Query Configurations") rescue nil
-        # Query items are not empty, if empty will be prompted before at the validation stage. see preValidate()
-        queryItems.each{|qitem|
-           leftOpType = qitem['Query Config']['properties']['Left Operand']['value']
-           rightOpType = qitem['Query Config']['properties']['Right Operand']['value']
-           leftOpValue = qitem['Query Config']['properties']['Left Operand']['properties']['Value']['value'] rescue nil
-           rightOpValue = qitem['Query Config']['properties']['Right Operand']['properties']['Value']['value'] rescue nil
-           if(leftOpType == operandTypes[:propPath] and rightOpType == operandTypes[:literal])
-             if(pathsTobeChanged.key?(leftOpValue) and !pathsTobeChanged[leftOpValue].empty?)
-               qitem['Query Config']['properties']['Right Operand']['properties']['Value']['value'] = pathsTobeChanged[leftOpValue].first
-               #remove the value from the hash to match the index
-               pathsTobeChanged[leftOpValue].shift
+    # Returns the query document with a new values for a given a list of property paths and property values.
+    # Property paths and the property values must be of the same size
+    # @param [Hash] queryDoc values of this query document are replaced
+    # @param [Array<String>] propertyPaths list of property paths, values of these paths are to be replaced
+    # @param [Array<String>] propertyValues list of property values that are to be added
+    # @return [Hash] newQueryDoc the new query document with the replaced values
+    # @raise [ArgumentError] if @propertyPaths@ and @propertyValues@ are not {Array} and also if their sizes are not equal
+    def makeNewQueryDoc(queryDoc, propertyPaths, propertyValues)
+      # get the propertyPaths and propertyValues into a hash structure
+      # Check that both the arguments are of the same size. This is
+      # checked already in API, but check if this method is to be used
+      # independant of API
+      newQueryDoc = nil
+      if(propertyPaths.is_a?(Array) and propertyValues.is_a?(Array))
+        if(propertyPaths.size == propertyValues.size)
+          ind = 0;
+          tmphash = Hash.new{|hh, kk| hh[kk] = []}
+          operandTypes = {:propPath => 'propPath', :literal => 'literal', :'Query Config' => 'Query Config'}
+          pathsTobeChanged = propertyPaths.inject(tmphash){|hh, kk|
+            # must be a string to be inserted to a queryDoc 'literal' field
+            hh[kk] << propertyValues[ind].to_s;
+            ind += 1;
+            hh;
+          }
+          newQueryDoc = Marshal.load(Marshal.dump(queryDoc))
+          # $stderr.puts "PathsToBeChanged: #{pathsTobeChanged.inspect}"
+          # Get the query items
+          ps = BRL::Genboree::KB::PropSelector.new(newQueryDoc)
+          queryItems = ps.getMultiPropItems("<>.Query Configurations") rescue nil
+          # Query items are not empty, if empty will be prompted before at the validation stage. see preValidate()
+          queryItems.each{|qitem|
+             leftOpType = qitem['Query Config']['properties']['Left Operand']['value']
+             rightOpType = qitem['Query Config']['properties']['Right Operand']['value']
+             leftOpValue = qitem['Query Config']['properties']['Left Operand']['properties']['Value']['value'] rescue nil
+             rightOpValue = qitem['Query Config']['properties']['Right Operand']['properties']['Value']['value'] rescue nil
+             if(leftOpType == operandTypes[:propPath] and rightOpType == operandTypes[:literal])
+               if(pathsTobeChanged.key?(leftOpValue) and !pathsTobeChanged[leftOpValue].empty?)
+                 qitem['Query Config']['properties']['Right Operand']['properties']['Value']['value'] = pathsTobeChanged[leftOpValue].first
+                 #remove the value from the hash to match the index
+                 pathsTobeChanged[leftOpValue].shift
+               end
              end
-           end
-        }
+          }
+        else
+          raise ArgumentError, "Arguments propertyPaths and propValues are not of the same size: #{propertyPaths.size}  #{propertyValues.size}"
+        end
       else
-        raise ArgumentError, "Arguments propertyPaths and propValues are not of the same size: #{propertyPaths.size}  #{propertyValues.size}"
+        raise ArgumentError, "Arguments propertyPaths and propValues are not arrays: #{propertyPaths.class},  #{propertyValues.class} respectively.."
       end
-    else
-      raise ArgumentError, "Arguments propertyPaths and propValues are not arrays: #{propertyPaths.class},  #{propertyValues.class} respectively.."
+      return newQueryDoc
     end
-    return newQueryDoc
-  end
 
-
-  # Get the version of a document from version collection this helper class assists with
-  # @param [String] docID document identifier 
-  # @param [String] ver version of interested PREV|HEAD|CURR 
-  # @return [Fixnum] version of the document
-  # @raise [ArgumentError] if @docID@ is not found in the collection
-  def getDocVersion(docID, ver="HEAD")
-    version = nil
-    dbRef = nil
-    versionList  = []
-    versionDoc = nil
-    identProp = KB_MODEL['name']['properties']['model']['value']['name']
-    vh = @kbDatabase.versionsHelper(KB_CORE_COLLECTION_NAME)
-    doc = vh.exists?(identProp, docID, KB_CORE_COLLECTION_NAME)
-    unless(doc)
-      raise ArgumentError, "DOC_NOT_FOUND: No document with the identifier #{docID} in the collection #{KB_CORE_COLLECTION_NAME}"
+    # Get the version of a document from version collection this helper class assists with
+    # @param [String] docID document identifier (from root property; aka unique doc name)
+    # @param [String] ver version of interest - HEAD|CURR|PREV.
+    # @return [Fixnum] version of the document
+    # @raise [ArgumentError] if @docID@ is not found in the collection
+    def getDocVersion(docID, ver=:head)
+      dbRef = dbRefFromRootPropVal( docID ) # various AbstractHelpers have this ; for VersionHelper and RevisionHelper is is focused on the DbRef of the DATA DOCUMENT not the version record ; fast
+      # @note: MUST use a proper BSON::DBRef with VersionsHelper for versioning of UNMODELED collections
+      #   (such as internal collections like kbTransforms etc)
+      vh = @kbDatabase.versionsHelper(KB_CORE_COLLECTION_NAME)
+      versionDoc = vh.getVersionDoc( ver, dbRef, fields=nil )
+      return versionDoc
     end
-    docIdObj = doc.getPropVal('versionNum.content')['_id']
-    dbRef = BSON::DBRef.new(KB_CORE_COLLECTION_NAME, docIdObj)
-    versionList = vh.allVersions(dbRef)
-    if(ver == "HEAD" or ver == "CURR")
-      versionDoc = versionList.last
-    elsif (ver == "PREV")
-      if(versionList.size > 1)
-        versionDoc = versionList[versionList.size-2]
-      else
-        raise "No previous record found for the document - #{docID}"
-      end
-    else
-      ver = ver.to_f
-      versionDoc = vh.getVersion(ver, dbRef)
-    end
-    return versionDoc
-  end
 
- 
+    # ----------------------------------------------------------------
+    # MEMOIZE now-defined methods
+    # . We override some of the parent methods here, so seems like have to re-memoize.
+    # . We do this by adding our memoized methods to the list from AbstractHelper
+    # ----------------------------------------------------------------
+    (self::MEMOIZED_INSTANCE_METHODS + BRL::Genboree::KB::Helpers::AbstractHelper::MEMOIZED_INSTANCE_METHODS).each { |meth| memoize meth }
   end # class QueriesHelper
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Helpers

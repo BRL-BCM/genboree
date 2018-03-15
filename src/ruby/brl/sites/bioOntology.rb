@@ -65,6 +65,23 @@ module BRL; module Sites
     STATUS_KEY = "status"
     ERRORS_KEY = "errors"
 
+    MEMOIZED_INSTANCE_METHODS = ( BRL::Sites::AbstractSite::MEMOIZED_INSTANCE_METHODS + [
+      :'termInOntology?',
+      :getPrefLabelForTerm # ,
+      # :requestTermsByNameViaSubtree,
+      # :requestExactTermsViaSubtree,
+      # :searchCollectionForTerm,
+      # :buildSubtreeUrls,
+      # :splitUrl,
+      # :'ontologiesOnline?',
+      # :requestExactTerm,
+      # :requestTermsByName,
+      # :requestLabelsByName,
+      # :getOntologyRoots,
+      #:getCacheHeaders, # Uses Parallel. This causes problems with memoization. @todo don't Parallel if memoizing ; most significant effect if can memoize URL calls
+      #:requestWrapper # Uses Parallel. This causes problems with memoization.   @todo don't Parallel if memoizing ; most significant effect if can memoize URL calls
+    ] )
+
     attr_accessor :debug, :lastError, :prefLabelForTerm
     attr_reader :ontologies, :subtree, :subtrees, :apiKey, :timeData, :errors, :collectErrors
 
@@ -88,6 +105,7 @@ module BRL; module Sites
     #   multiple ontologies will be split on a comma
     # @return [Array<String>]
     def setOntologies(ontologies)
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "ontologies param: #{ontologies.inspect}")
       if(ontologies.nil?)
         @ontologies = ontologies
       elsif(ontologies.is_a?(String))
@@ -208,6 +226,11 @@ module BRL; module Sites
       return obj
     end
 
+    def numThreads()
+      return ( @doingMemoization ? 3 : 3 ) # May be able to do more memoized calls if only 1 thread, but tests don't look good for that solving things
+      #return ( @doingMemoization ? 1 : 1 ) # May be able to do more memoized calls if only 1 thread, but tests don't look good for that solving things
+    end
+
     # Search for a term in the object's given ontologies
     # @param term [String] term to search for
     # @param [Boolean] prefix use term for prefix search? (otherwise tokenize term and return results with any matching tokens)
@@ -232,7 +255,7 @@ module BRL; module Sites
 
       # handle optional named parameters
       # supportedOpts contains defaults for the options
-      supportedOpts = {:termViaSynonym => true, :threads => 6, :timeout => 300, :mode => :token}
+      supportedOpts = {:termViaSynonym => true, :threads => numThreads(), :timeout => 300, :mode => :token}
       opts = supportedOpts.merge(opts)
       if(prefix)
         opts.merge!(:mode => :prefix)
@@ -306,7 +329,7 @@ module BRL; module Sites
 
       # handle optional named parameters
       # supportedOpts contains defaults for the options
-      supportedOpts = {:threads => 6, :timeout => 300}
+      supportedOpts = {:threads => numThreads(), :timeout => 300}
       opts = supportedOpts.merge(opts)
 
       query = {
@@ -344,7 +367,7 @@ module BRL; module Sites
 
         # use predefined host and query for the request
         url = buildUrl(HOST, path, query)
-
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Looking for #{term.inspect} starting with first page of ontology #{ontology.inspect} subtree #{subtree.inspect} via url:\n\n#{url.inspect}\n\n")
         headers = getCacheHeaders(url)
         first2Headers[url] = headers
 
@@ -374,6 +397,7 @@ module BRL; module Sites
           end
         end
 
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Determined #{pageLinks.size rescue '[ERROR|leaf-only-subtree]'} pages for ontology #{ontology.inspect} subtree #{subtree.inspect}. The non-first pages are indexed by the url for the first page.")
         if(pageLinks.nil? or respIsError)
           if(respIsError)
             $stderr.debugPuts(__FILE__, __method__, "BIOONTOLOGY", "unable to get first page results for the #{ontology.inspect} ontology with subtree #{subtree.inspect}; final url: #{url.inspect}")
@@ -387,6 +411,7 @@ module BRL; module Sites
       tt3 = Time.now
       diff = tt3 - tt2
       @timeData[:"first page requests"] = diff
+
 
       # collect links based on the first page, associate them with the ontology
       # subtree roots have to be done separate because they are not the same type of object
@@ -450,6 +475,7 @@ module BRL; module Sites
       ::Parallel.map(pageLinks, :in_threads => opts[:threads]){ |pageLink|
         headers = pageUrl2Headers[pageLink]
         headers = {} if headers.nil?
+        headers = getCacheHeaders(pageLink)
         parsedResp = requestWrapper(pageLink, headers, opts) rescue nil
         respIsError = errorResp?(parsedResp)
         if(respIsError)
@@ -515,7 +541,7 @@ module BRL; module Sites
       matches = []
       if(opts[:mode] == :prefix)
         # then perform prefix search
-        pattern = /^#{term}/i
+        pattern = /^#{Regexp.escape term}/i
         collection.each{|item|
           if(item['prefLabel'] =~ pattern)
             matches.push(item)
@@ -554,8 +580,8 @@ module BRL; module Sites
         }
       else
         # then perform token search
-        termTokens = term.split(/\s+/)
-        termRegexpString = termTokens.join("|")
+        termRegexpString = Regexp::union(term.split(/\s+/))
+        #termRegexpString = termTokens.join("|")
         pattern = /#{termRegexpString}/i
         collection.each{|item|
           tokenMatch = false
@@ -614,6 +640,7 @@ module BRL; module Sites
       # supportedOpts contains defaults for the options
       supportedOpts = {:timeout => 300, :depth => 0}
       opts = supportedOpts.merge(opts)
+      http = nil
 
       begin
         # establish connection at url, get contents
@@ -697,6 +724,7 @@ module BRL; module Sites
       requestTimeDatum[:"error checking"] = Time.now - tt4
       requestTimeDatum[:full] = Time.now - tt1
       @requestTimeData << requestTimeDatum if(@debug)
+      closeConnection(http)
       return parsedResp
     end
 
@@ -722,9 +750,10 @@ module BRL; module Sites
     # @note this proceedure is separate than that of the "ViaSubtree" method because that one requires memory
     #   savings during the processing by searching the results as we go; here the search has been done
     #   by a remote server
+    #   by a remote server
     def parallelSearches(urls, opts={})
       defaultOpts = {
-        :threads => 6,
+        :threads => numThreads(),
         :maxSize => MAX_PAGE_SIZE*MAX_PAGES,
         :timeout => 300,
         :depth => 0,
@@ -776,7 +805,7 @@ module BRL; module Sites
       end
 
       # @todo worst case running :threads ^ 2
-      supportedOpts = {:threads => 6, :timeout => 300}
+      supportedOpts = {:threads => numThreads(), :timeout => 300}
       opts = supportedOpts.merge(opts)
 
       page = query[PAGE_PARAM].first.to_i
@@ -952,7 +981,6 @@ module BRL; module Sites
       end
       return retVal
     end
-
    
     # Request an exact match for a term
     # @param [String] term the term to match
@@ -1135,14 +1163,37 @@ module BRL; module Sites
           label = item[PREF_LABEL_KEY]
           if(label and (label.downcase() == term.downcase()))
             retVal = true
-            @prefLabelForTerm = label
+            setPrefLabelForTerm( term, label )
             break
+          else
+            synonyms = item[SYNONYM_KEY]
+            if(!synonyms.nil? and synonyms.respond_to?(:each))
+              synonyms.each{|synonym|
+                if(synonym.downcase() == term.downcase())
+                  retVal = true
+                  setPrefLabelForTerm( term, label )
+                  break
+                end
+              }
+            end
           end
         }
       end
       return retVal
     end
     alias :termInOntolgies? :termInOntology?
+
+    # Need memoizable method whose return is based on what the _argument_ is.
+    #   Dev took the approach of this being a SIDE-EFFECT of calling termInOntology? by setting an accessor,
+    #   which can't be properly memoized because the side-effect variable is fixed, not based on arguments=>value
+    #   mapping.
+    def getPrefLabelForTerm(term)
+      return @prefLabelForTerm
+    end
+
+    def setPrefLabelForTerm( term, label )
+      @prefLabelForTerm = label
+    end
 
     # Compile COLLECTION_KEY objects from parsedResp -- responses from HOST are paginated;
     #   top level JSON data defined pagination of results including PAGE_KEY, PAGE_COUNT
@@ -1211,7 +1262,7 @@ module BRL; module Sites
     # @param [String] url the url to check headers for
     # @return [Hash] headers to use for subsequent request (to update/not update cache)
     def getCacheHeaders(url)
-      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "getting cache headers") 
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "getting cache headers for 'url':\n    #{url}\n\n")
       retVal = {}
       # check if we should update cache (or if we are using a proxy cache at all)
       updateStatus = updateCache?(url)
@@ -1219,7 +1270,7 @@ module BRL; module Sites
       if(updateStatus)
         # then we take care to not discard our existing cache contents if we see a false 
         # positive 200 OK
-        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating status") 
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating status")
         headers = {}
         headers[PROXY_BYPASS_CACHE] = true.to_s
         headers[PROXY_DONT_CACHE] = true.to_s
@@ -1228,12 +1279,12 @@ module BRL; module Sites
           falsePosStatus = falsePositiveResp?(parsedResp)
         else
           begin
-            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Problems encountered while querying bioportal. See if we can find something in our own cache")
+            #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Problems encountered while querying bioportal. See if we can find something in our own cache")
             headers = {}
             parsedResp = requestWrapper(url, headers)
             unless(parsedResp.nil?)
               # Looks like we got something from our cache. Don't update cache
-              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Cache query returned successfull!")
+              #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Cache query returned successfull!")
               updateStatus = false
             end
           rescue => err
@@ -1253,7 +1304,6 @@ module BRL; module Sites
         $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Updating cache because existing cache entry has expired and test request to #{HOST.inspect} has not shown false positives")
         retVal[PROXY_BYPASS_CACHE] = true.to_s
       end
-
       return retVal
     end
 
@@ -1263,6 +1313,7 @@ module BRL; module Sites
     #   where we are at risk of a "false positive" 200 OK
     # @todo should this function transform urls hosted at bioportal to those at @proxyHost?
     def updateCache?(url, opts={})
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "UUUUUUUUU Enter for url:\n\n#{url.inspect}\n\n")
       retVal = false
       supportedOpts = {:timeout => 300}
       opts = supportedOpts.merge(opts)
@@ -1272,6 +1323,7 @@ module BRL; module Sites
         proxy = false
       end
 
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Proxying? #{proxy.inspect}")
       if(proxy)
         # perform head request
         uriObj = URI.parse(url)
@@ -1281,14 +1333,26 @@ module BRL; module Sites
         respHeaders = resp.to_hash
 
         # check cache hit and that cache has expired
+        
         cacheStatus = respHeaders[PROXY_CACHE_STATUS].respond_to?(:first) ? respHeaders[PROXY_CACHE_STATUS].first : nil
         cacheTimeStr = respHeaders[DATE_RESP_HEADER].respond_to?(:first) ? respHeaders[DATE_RESP_HEADER].first : nil
         cacheTimeObj = Time.parse(cacheTimeStr) rescue nil
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "cacheStatus: #{cacheStatus.inspect} #{"!! MISS !!" unless(cacheStatus == PROXY_CACHE_HIT)} \n cacheTimeStr: #{cacheTimeStr.inspect} \n cacheTimeObj: #{cacheTimeObj.inspect}\n PROXY_CACHE_HIT: #{PROXY_CACHE_HIT.inspect} \n PROXY_CACHE_LIFE: #{PROXY_CACHE_LIFE.inspect}\n is hit? #{cacheStatus == PROXY_CACHE_HIT} \n Life: #{Time.now - cacheTimeObj} \n EOL? #{Time.now - cacheTimeObj > PROXY_CACHE_LIFE} \n UPDATE? #{(cacheStatus == PROXY_CACHE_HIT and Time.now - cacheTimeObj > PROXY_CACHE_LIFE)}")
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "respHeaders:\n\n#{JSON.pretty_generate(respHeaders) rescue respHeader.inspect}")
         if(cacheStatus == PROXY_CACHE_HIT and Time.now - cacheTimeObj > PROXY_CACHE_LIFE)
           retVal = true
         end
+        closeConnection(http)
       end
       return retVal
+    end
+    
+    # Close HTTP connection to avoid a DOS attacj on our servers
+    def closeConnection(httpObj)
+      if(httpObj)
+        httpObj.finish rescue nil
+      end
+      httpObj = nil
     end
 
     # Check if result from requestWrapper is an explicit error or a false positive success

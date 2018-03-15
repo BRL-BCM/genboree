@@ -10,11 +10,12 @@ module GbApi
   #   that inherit from {SimpleAsyncApiRequester}, is appropriate. Using this class
   #   directly is not.
   class EmAsyncHttpRequester
+    include GbMixin::AsyncRenderHelper
+
     DEFAULT_RESP_HEADERS = {
       'Content-Type' => 'text/plain'
     }
 
-    attr_reader :rackEnv, :rackClose, :rackCallback
     # @return [Proc] The response callback registered for this object. Set via {#respCallback}.
     #   By default this is the same as {#rackCallback} which is the direct response callback Rack
     #   provides in the 'async.callback' key of the Rack env hash. The code will be handed a Rack-type
@@ -38,9 +39,7 @@ module GbApi
     #   request. Generally not needed except for special cases.
     def initialize(rackEnv, fullApiUrl=nil, reqHeaders={})
       # Save key Rack callbacks, info, etc
-      @rackEnv           = rackEnv
-      @rackCallback      = rackEnv['async.callback']
-      @rackClose         = rackEnv['async.close']
+      initRackEnv( rackEnv )
       # Request
       @reqHeaders        = reqHeaders
       @fullApiUrl        = fullApiUrl
@@ -96,7 +95,6 @@ module GbApi
       @emHttpRequestWrapper.url      = @fullApiUrl
       @emHttpRequestWrapper.reqHeaders  = @reqHeaders
       @emHttpRequestWrapper.respCallback(@respCallback)
-
     end
 
     # Begin the actual request, via the EM request wrapper.

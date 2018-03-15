@@ -2,6 +2,7 @@
 require 'uri'
 require 'rack'
 require 'brl/util/util'
+require 'brl/rest/apiCaller'
 require 'brl/genboree/genboreeUtil'
 
 module BRL  #:nodoc:
@@ -71,7 +72,6 @@ module REST #:nodoc:
     # so any parent cleanup() will be done also.
     # [+returns+] +nil+
     def cleanup()
-      @req = @resp = @uriMatchData = @reqMethod = @rackEnv = nil
     end
 
     # INTERFACE. List supported operations.
@@ -94,6 +94,8 @@ module REST #:nodoc:
       # BRL::Genboree::GenboreeUtil.logError("Class Processing: #{self.class} (#{@reqMethod}) [ for: #{@req.path_info} ]", nil)
       if(supports?(@reqMethod))
         retVal = self.send(@reqMethod)  # Call an instance method matching the reqMethod
+        # With retVal in hand, cleanup resource (sub-classes will implement this cleanup method, adding their own clean up before calling super())
+        self.cleanup()
       else
         retVal = notImplemented()
       end
@@ -144,6 +146,37 @@ module REST #:nodoc:
     HTTP_STATUS_NAMES = {}
     # A map of each number to an official human readable name:
     HTTP_STATUS_CODES.each { |kk, vv| HTTP_STATUS_NAMES[vv.to_sym] = kk }
+    # Map of HTTP Response code categories to whether they indicate a "success" or not
+    HTTP_RESP_CODE_TYPE_SUCCESSES = { :Informational => true, :Success => true, :Redirection => true, :'Client Error' => false, :'Server Error' => false }
+
+    # Indicates the category/type for a given HTTP response code provided by name or number.
+    #   HTTP response codes fall into categories: "Informational", "Success", "Redirection", "Client Error", "Server Error"
+    # @param [Fixnum, Symbol, String] httpCode The HTTP response code for which to get the category. Either the
+    #   numeric @Fixnum@ or the response code name, correctly capitalized, as a @Symbol@ or @String@.
+    # @return [Symbol, nil] The category, which will be one of these @Symbols@: @:Informational@, @:Success@, @:Redirection@, @:'Client Error'@,
+    #   @:'Server Error'@. If the response is not a known, supported HTTP standard response or is in a form that can't be used to
+    #   determine the category, the return value is @nil@.
+    def self.httpCodeType(httpCode)
+    end
+
+    # @see {Resource.httpCodeType}
+    def httpCodeType(httpCode)
+      return self.class.httpCodeType(httpCode)
+    end
+
+    # Is the HTTP response code a "success" type response code? (If not, then it is some kind of "error").
+    #   Any Informational, Success, or Redirection type code is considered a "success".
+    # @param [Fixnum, Symbol, String] httpCode The HTTP response code to examine. Either the
+    #   numeric @Fixnum@ or the response code name, correctly capitalized, as a @Symbol@ or @String@.
+    # @return [Boolean] True if the code is a 'success' type code, false otherwise.
+    def self.successCode?(httpCode)
+      return BRL::REST::ApiCaller.successCode?(httpCode)
+    end
+
+    # @see {Reource.successCode?}
+    def successCode?(httpCode)
+      return self.class.successCode?(httpCode)
+    end
 
     # Extract HTTP method from <tt>Rack::Request</tt> method...look for "_method" param or X-HTTP-Method Override if POST
     # [+returns+] HTTP method as downcased symbol

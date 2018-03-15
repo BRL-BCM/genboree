@@ -1,7 +1,7 @@
 {
   "info": {
     "idStr": "exceRptPipeline",
-    "releaseStatus": "beta",
+    "releaseStatus": "release",
     "version": "4.6.2"
   },
   "cluster": {
@@ -18,8 +18,16 @@
   },
   "groupDiskSpace": {
     "william_thistle_group": {
-      "local": "200 GB",
-      "remote": "200 GB"
+      "local": "500 GB",
+      "remote": "500 GB"
+    },
+    "MH-GRID Blood miRNA": {
+      "local": "500 GB",
+      "remote": "300 GB"
+    },
+    "paulagodoy_group": {
+      "local": "500 GB",
+      "remote": "500 GB"
     }
   },
   "settings": {
@@ -27,10 +35,12 @@
     "compressedMultiplierExoOff": 3.4,
     "compressedMultiplierExoMiRNA": 6.5,
     "compressedMultiplierExoOn": 9.7,
+    "compressedMultiplierExoOnExoOnly": 2.9,
     "uncompressedMultiplierExoOff": 0.8,
     "uncompressedMultiplierExoMiRNA": 1.8,
     "uncompressedMultiplierExoOn": 2.4,
-    "exogenousNodes": 3,
+    "uncompressedMultiplierExoOnExoOnly": 0.7,
+    "exogenousNodes": 8,
     "maxSamplesPerExoJob": 50
   }
 }

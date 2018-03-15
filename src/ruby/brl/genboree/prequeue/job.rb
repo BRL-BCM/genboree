@@ -14,6 +14,7 @@ require 'brl/genboree/prequeue/batchSystemInfo'
 require 'brl/genboree/prequeue/systems/manager'
 require 'brl/genboree/prequeue/systems/submitter'
 require 'brl/genboree/prequeue/preconditionSet'
+require 'brl/genboree/rest/resources/job' # for pattern()
 
 module BRL ; module Genboree ; module Prequeue
   # Job class
@@ -33,6 +34,8 @@ module BRL ; module Genboree ; module Prequeue
     #------------------------------------------------------------------
     # CONSTANTS
     #------------------------------------------------------------------
+
+    JOB_PATH_RE = BRL::REST::Resources::Job.pattern()
     JOB_STATUSES = BRL::Genboree::DBUtil::JOB_STATUSES
     JOB_TYPES = BRL::Genboree::DBUtil::JOB_TYPES
     JOB_DEFAULT_TIME_STR = BRL::Genboree::DBUtil::JOB_DEFAULT_TIME_STR
@@ -834,6 +837,21 @@ module BRL ; module Genboree ; module Prequeue
       @namePrefix = namePrefix
       @name = self.class.generateJobName(namePrefix)
       return @name
+    end
+
+    # Class method to extract info from a job API url
+    def self.jobInfoFromUrl(jobUrlStr, info=:jobName)
+      retVal = nil
+      jobUrl = URI.parse( jobUrlStr ) rescue nil
+      unless(jobUrl.nil?)
+        if(info == :jobName)
+          jobUrl.path =~ JOB_PATH_RE
+          retVal = $1
+        elsif(info == :host)
+          retVal = jobUrl.host
+        end
+      end
+      return retVal
     end
 
     # Class method for getting a new Job object using a detailed

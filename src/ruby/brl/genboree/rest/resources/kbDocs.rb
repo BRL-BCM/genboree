@@ -74,6 +74,8 @@ module BRL ; module REST ; module Resources                # <- resource classes
         # This function will set @groupId if it exists, return value is :OK or :'Not Found'
         initStatus = initGroupAndKb(checkAccess=false) # access is checked explicitly in http methods
         if(initStatus == :OK)
+          # Exclude metadata for now. The current approach for adding metadata is inefficient and does not scale with large doc responses. 
+          @excludeMetadata = true
           # This gets initialized if there is a get payload - HashEntity
           @payloadParams = nil
           # Look for doc limits
@@ -214,11 +216,15 @@ module BRL ; module REST ; module Resources                # <- resource classes
     end
 
     # Process a GET operation on this resource.
+    # @todo Pagination via "skip" and "limit" only work when using matchProp/matchVals and related type requests.
+    #   Should work on just about ANY, but especially
     # @return [Rack::Response] instance configured and containing correct status code, message, and wrapped data;
     #   or containing correct error information.
     def get()
       #$stderr.debugPuts(__FILE__, __method__, "TIME", "BEGIN - get()")
+      tt = Time.now
       initStatus = initOperation()
+      $stderr.debugPuts(__FILE__, __method__, "TIME", "initOperation: #{Time.now - tt} secs")
       failedMultiTab = false
       if(initStatus == :OK)
         @groupName = Rack::Utils.unescape(@uriMatchData[1])
@@ -349,8 +355,19 @@ module BRL ; module REST ; module Resources                # <- resource classes
                       end
                       if(docsCursor.is_a?(Mongo::Cursor))
                         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Have a docsCursor resulting from our match* props." )
-                        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "docsCursor reports #{docsCursor.count.inspect} entries found." )
-                        docsCursor.rewind!
+                        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "docsCursor.count reports #{docsCursor.count.inspect} entries found." )
+                        # @todo make the process of adding metadata info for large amount of docs be efficient.
+                        metadata = nil
+                        if(@excludeMetadata == false)
+                        # Get the maximum revision for the docs
+                          docIds = []
+                          docsCursor.each { |dd|
+                            docIds << dd['_id']
+                          }
+                          metadata = dataHelper.getMetadata(docIds, @collName)
+                          docsCursor.rewind!
+                          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "metadata:\n#{metadata.inspect}" )
+                        end
                         # Set up an object for streaming the data. Cannot send back response as one large payload since it could be massive depending on number of docs in KB.
                         # Also set up some of the attributes in the deferrable body class
                         #     for getting back data as a 'view' if requested.
@@ -358,9 +375,12 @@ module BRL ; module REST ; module Resources                # <- resource classes
                         #     or as one of the defined views, if given suitable info
                         # Note that we do NOT stream multi-tabbed prop nesting - we will deliver the documents as one large chunk
                         @resp.body = ''
+                        
                         @resp.status = HTTP_STATUS_NAMES[:OK]
                         @resp['Content-Type'] = 'text/plain'
                         unless(@repFormat == :TABBED_MULTI_PROP_NESTING)
+                          # Prevent the clearing of @mongoKbDb, that will be done when deferred streaming is finished
+                          @mongoKbDb.doClear = false
                           # These opts are also available as accessors if you prefer
                           deferrableBody = BRL::Genboree::REST::EM::DeferrableBodies::DeferrableKbDocsBody.new(
                             :docsCursor => docsCursor,
@@ -373,6 +393,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                             :model      => modelsHelper.modelForCollection(@collName),
                             :viewsHelper  => @mongoKbDb.viewsHelper,
                             :dataHelper => dataHelper,
+                            :revision => (metadata ? metadata['revision'] : nil),
                             :format     => @repFormat,
                             :yield => true # REMOVE THIS WHEN SWITCH TO EM version
                           ) 
@@ -380,15 +401,18 @@ module BRL ; module REST ; module Resources                # <- resource classes
                           #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Deferrable body object has been set up. Handed off to @resp.body" )
                           @resp.body.addListener(:postData, Proc.new { |event, body|
                             if(body.cacheContent)
-                               #insert into the cache record
-                               begin
-                                 apiCacheHelper.putapiCache(body.cacheContent, srcCollLastEditTime, secNvPairs)
-                               rescue =>  err
-                                 $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_PUT_ERROR - #{err.message}")
-                                 $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_PUT_ERROR - #{err.backtrace}")
-                               end
+                              #insert into the cache record
+                              begin
+                                ttcache = Time.now
+                                apiCacheHelper.putapiCache(body.cacheContent, srcCollLastEditTime, secNvPairs)
+                                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Time to insert into cache: #{Time.now - ttcache} secs" )
+                              rescue =>  err
+                                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_PUT_ERROR - #{err.message}")
+                                $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_PUT_ERROR - #{err.backtrace}")
+                              end
                             end
                           })
+                          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Time from starting get to handing off deferrable class: #{Time.now - tt} secs" )
                         else
                           unless(docsCursor.count > MAX_DOCS_MULTI_TABBED_GET)
                             @resp.body = multiTabbedProcessing(docsCursor, modelsHelper.modelForCollection(@collName))
@@ -548,7 +572,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                         # then validation/content generation failed
                         # then objectId is actually a KbError, and dataHelper has set its @lastValidatorErrors
                         @statusName = :'Unsupported Media Type'
-                        @statusMsg = "BAD_DOC: the GenboreeKB doc at position/index ##{docCount} you provided in the payload does not match the document model for the #{@collName.inspect} collection in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect}. Non-conforming documents are not permitted. Validator complained that:\n  - #{dataHelper.lastValidatorErrors.join("\n  - ")}"
+                        @statusMsg = "BAD_DOC: the GenboreeKB doc at position/index ##{docCount} you provided in the payload does not match the document model for the #{@collName.inspect} collection in the #{@kbName.inspect} GenboreeKB within group #{@groupName.inspect}. Non-conforming documents are not permitted. Validator complained that:\n  - #{dataHelper.lastValidatorErrors.join("\n")}"
                         raise BRL::Genboree::GenboreeError.new(@statusName, @statusMsg)
                       end
                     end
@@ -587,10 +611,17 @@ module BRL ; module REST ; module Resources                # <- resource classes
                   id = index2id[index]
                   id2index[id] = index
                 }
-
+                # If a workingRevision is provided, match it against the maximum working revision of the existing docs
+                workingRevisionMatched = true
+                if(@workingRevision)
+                  workingRevisionMatched = matchAgainstMaxRevisionForDocs(modelsHelper, dataHelper, payloadDocNames.keys)
+                end
                 if(payloadDocNames.empty?)
                   @statusName = :"Bad Request"
                   @statusMsg = "BAD_DOCS: All of the documents in your payload failed validation. See data.invalid for an explanation of each document's error"
+                elsif(!workingRevisionMatched)
+                  @statusName = :"Conflict"
+                  @statusMsg = " WORKING_COPIES_OUT_OF_DATE: Your working copies of new documents are out-of-date. The documents have been changed since you last retrieved them. To prevent loss of new content or the saving of deleted content, your document changes have been rejected."
                 else
                   # set @statusName/@statusMsg based on @save and badDocs
                   # modify badDocs, payloadDocNames if mongo save operation fails
@@ -640,62 +671,64 @@ module BRL ; module REST ; module Resources                # <- resource classes
                   end
                 end
                 $stderr.debugPuts(__FILE__, __method__, "TIME", "  START - construct response body")
+                
                 # begin constructing response
                 respDoc = getItemWrapper()
-                # fill valid document components
-                validDocs = []
-                payloadDocNames.each_key { |docId|
-                  validDoc = getValidItem(@detailed)
-                  idx0 = id2index[docId]
-                  validDoc.setPropVal("id", docId)
-                  validDoc.setPropVal("id.payloadIndex", idx0)
-                  if(@detailed)
-                    payloadDoc = payloadDocNames[docId]
-                    validDoc.setPropProperties("id.doc", payloadDoc)
+                if(@statusName != :"Conflict")
+                  # fill valid document components
+                  validDocs = []
+                  payloadDocNames.each_key { |docId|
+                    validDoc = getValidItem(@detailed)
+                    idx0 = id2index[docId]
+                    validDoc.setPropVal("id", docId)
+                    validDoc.setPropVal("id.payloadIndex", idx0)
+                    if(@detailed)
+                      payloadDoc = payloadDocNames[docId]
+                      validDoc.setPropProperties("id.doc", payloadDoc)
+                    end
+                    validDocs.push(validDoc)
+                  }
+                  respDoc.setPropItems("docs.valid", validDocs)
+                  # Add kbDoclinks to the table for the valid docs.
+                  begin
+                    kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
+                    upsertedRecs = kbDocLinks.upsertFromKbDocs(payloadDocNames.values)
+                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Inserted #{upsertedRecs} for the collection - #{@collName}")
+                  rescue => err
+                    $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to add recs to the kbDocLinks table - #{err}")
                   end
-                  validDocs.push(validDoc)
-                }
-                respDoc.setPropItems("docs.valid", validDocs)
-                # Add kbDoclinks to the table for the valid docs.
-                begin
-                  kbDocLinks = BRL::Genboree::KB::LookupSupport::KbDocLinks.new(@collName, @mongoKbDb)
-                  upsertedRecs = kbDocLinks.upsertFromKbDocs(payloadDocNames.values)
-                  $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Inserted #{upsertedRecs} for the collection - #{@collName}")
-                rescue => err
-                  $stderr.debugPuts(__FILE__, __method__, "KbDocLinksTable_CREATE_ERROR", "Failed to add recs to the kbDocLinks table - #{err}")
-                end
-
-                # fill invalid document components
-                invalidDocs = []
-                badDocs.each_key { |idx0|
-                  invalidDoc = getInvalidItem(@detailed)
-                  id = index2id[idx0]
-                  err = badDocs[idx0]
-                  invalidDoc['id']['value'] = id # must circumvent setPropVal because id's can be nil (say provided doc doesnt have one)
-                  invalidDoc.setPropVal("id.payloadIndex", idx0)
-                  invalidDoc.setPropVal("id.msg", err.message)
-                  if(@detailed)
-                    payloadDoc = payload.array[idx0]
-                    invalidDoc.setPropProperties("id.doc", payloadDoc.toStructuredData(wrap=false))
+                  # fill invalid document components
+                  invalidDocs = []
+                  badDocs.each_key { |idx0|
+                    invalidDoc = getInvalidItem(@detailed)
+                    id = index2id[idx0]
+                    err = badDocs[idx0]
+                    invalidDoc['id']['value'] = id # must circumvent setPropVal because id's can be nil (say provided doc doesnt have one)
+                    invalidDoc.setPropVal("id.payloadIndex", idx0)
+                    invalidDoc.setPropVal("id.msg", err.message)
+                    if(@detailed)
+                      payloadDoc = payload.array[idx0]
+                      invalidDoc.setPropProperties("id.doc", payloadDoc.toStructuredData(wrap=false))
+                    end
+                    invalidDocs.push(invalidDoc)
+                  }
+                  # Write original payload docs (parsed to Ruby) to a temp area for debugging/investigation
+                  if(@save)
+                    logDocs(origDocs)
                   end
-                  invalidDocs.push(invalidDoc)
-                }
-
-                # Write original payload docs (parsed to Ruby) to a temp area for debugging/investigation
-                if(@save)
-                  logDocs(origDocs)
+                  respDoc.setPropItems("docs.invalid", invalidDocs)
                 end
-
-                respDoc.setPropItems("docs.invalid", invalidDocs)
                 respEntity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, respDoc)
                 respEntity.model = modelsHelper.modelForCollection(@collName)
                 # Set appropriate status
-                if(validDocs.empty?)
-                  @statusName = :"Bad Request"
-                  @statusMsg = "BAD_DOCS: All of the documents in your payload failed to upload. See data.invalid for an explanation of each document's error."
-                elsif(!invalidDocs.empty?)
-                  @statusName = :"Partial Content"
-                  @statusMsg = "PARTIAL_SUCCESS: Unfortunately, some of the documents could not be updated/inserted. See data.invalid for an explanation of each document's error"
+                if(@statusName != :"Conflict")
+                  if(validDocs.empty?)
+                    @statusName = :"Bad Request"
+                    @statusMsg = "BAD_DOCS: All of the documents in your payload failed to upload. See data.invalid for an explanation of each document's error."
+                  elsif(!invalidDocs.empty?)
+                    @statusName = :"Partial Content"
+                    @statusMsg = "PARTIAL_SUCCESS: Unfortunately, some of the documents could not be updated/inserted. See data.invalid for an explanation of each document's error"
+                  end
                 end
                 respEntity.setStatus(@statusName, @statusMsg)
                 configResponse(respEntity, @statusName) # set @resp
@@ -740,15 +773,82 @@ module BRL ; module REST ; module Resources                # <- resource classes
       status = dataHelper.bulkUpsert(identProp, payloadDocNames, @gbLogin, { :maxDoc => MAX_DOCS })
       return status
     end
+    
+    def matchAgainstMaxRevisionForDocs(modelsHelper, dataHelper, docIds)
+      retVal = false
+      modelDoc = modelsHelper.modelForCollection(@collName)
+      model = modelDoc.getPropVal('name.model')
+      idPropName = dataHelper.getIdentifierName()
+      idValuePath = modelsHelper.modelPath2DocPath(idPropName, @collName)
+      propDef = modelsHelper.findPropDef(idPropName, model)
+      propDomain = ( propDef ? (propDef['domain'] or 'string') : 'string' )
+      matchProps = { idValuePath => propDomain }
+      criteriaInfo = {}
+      criteriaInfo[:prop] = matchProps
+      criteriaInfo[:vals] = docIds
+      cursor = dataHelper.cursorBySimplePropValsMatch(criteriaInfo)
+      mDocIds = []
+      if(cursor and cursor.is_a?(Mongo::Cursor))
+        cursor.each { |doc|
+          mDocIds << doc['_id']
+        }
+      end
+      # All docs are new and do not exist in the database yet
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "mDocIds.size: #{mDocIds.size.inspect}")
+      if(mDocIds.empty?)
+        retVal = true
+      else
+        md = dataHelper.getMetadata(mDocIds, @collName)
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "md: #{md.inspect}")
+        if(@workingRevision == md['revision'].to_i)
+          retVal = true
+        end
+      end
+      return retVal
+    end
 
     def findDocsCursor(dataHelper, modelsHelper)
       docCursor = nil
+      # Common info, regardles of mode (in theory)
+      # * actual path to the root value, in mongo terms
+      idValuePath = modelsHelper.modelPath2DocPath(@idPropName, @collName)
+      # * use projection if just getting list of docIds
+      if(@detailed)
+        outputProps = nil
+        if(@nvPairs.key?("viewFields"))
+          viewFields = @nvPairs["viewFields"].split(",")
+          outputProps =[]
+          viewFields.each { |vf|
+            outputProps << modelsHelper.modelPath2DocPath(vf, @collName)  
+          }
+        end
+      else # just names/ids
+        outputProps = [ idValuePath ]
+      end
+      # * extraOpts, like :limit?
+      extraOpts = {}
+      if(@limit)
+        extraOpts[:limit] = @limit
+      end
+      if(@skip)
+        extraOpts[:skip] = @skip
+      end
+      extraOpts = nil if(extraOpts.empty?) # put to nil if we added no additional options (for safety and performance in called methods)
+
+      # * sort by docID as default or use the prop
+      if(@matchOrderBy and @matchOrderByDocPath)
+        # Note is an array. Property order is important
+        sortInfo = []
+        @matchOrderBy.each{|matchorder| sortInfo << {@matchOrderByDocPath[matchorder][:docPath] => :asc } }
+      else
+        sortInfo = { idValuePath => :asc }
+      end
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "@matchValue: #{@matchValue.inspect}\t@matchValues: #{@matchValues.inspect}")
       # Are we doing some sort of filter/match/search?
       if(@matchValue or @matchValues)
         # We need the model (need the domains of the various @matchProps)
         modelDoc = modelsHelper.modelForCollection(@collName)
         model = modelDoc.getPropVal('name.model')
-        idValuePath = modelsHelper.modelPath2DocPath(@idPropName, @collName)
         if(@matchProps.nil? and @matchProp.nil?) # then no property specified to look in ; assume doc identifier
           docPath = idValuePath
           propDef = modelsHelper.findPropDef(@idPropName, model)
@@ -780,32 +880,6 @@ module BRL ; module REST ; module Resources                # <- resource classes
           matchProps = convertPropPaths( (@matchProps or @matchProp), modelsHelper, model, (@matchProps and @matchValues) )
         end
 
-        # Collect info needed for doing mongo query
-        # * use projection if just getting list of docIds
-        if(@detailed)
-          outputProps = nil
-        else # just names/ids
-          outputProps = [ idValuePath ]
-        end
-
-
-        # * sort by docID as default or use the prop
-        if(@matchOrderBy and @matchOrderByDocPath)
-          # Note is an array. Property order is important
-          sortInfo = [] 
-          @matchOrderBy.each{|matchorder| sortInfo << {@matchOrderByDocPath[matchorder][:docPath] => :asc } }
-        else
-          sortInfo = { idValuePath => :asc }
-        end
-        # * extraOpts, like :limit?
-        extraOpts = {}
-        if(@limit)
-          extraOpts[:limit] = @limit
-        end
-        if(@skip)
-          extraOpts[:skip] = @skip
-        end
-        extraOpts = nil if(extraOpts.empty?) # put to nil if we added no additional options (for safety and performance in called methods)
         # * criteria info depends on senario
         # * do query and get cursor here too
         if(@matchValue)
@@ -866,8 +940,11 @@ module BRL ; module REST ; module Resources                # <- resource classes
         #end
         # ------------------------------------------------------------------
       else # get them all; ugh
+        # @todo skip/limit support?
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "About to get ALL docs. Ugh. Is this correct?")
-        docCursor = dataHelper.allDocs(:cursor)
+        tt = Time.now
+        docCursor = dataHelper.allDocs(:cursor, outputProps, sortInfo, extraOpts)
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Got cursor for all docs: #{Time.now - tt} secs")
       end
       return docCursor
     end
@@ -1161,6 +1238,8 @@ module BRL ; module REST ; module Resources                # <- resource classes
               @resp.status = HTTP_STATUS_NAMES[:OK]
               @resp['Content-Type'] = 'text/plain'
               unless(@repFormat == :TABBED_MULTI_PROP_NESTING)
+                # Need to defer @mongoKbDb clear into future after deferred work is done. Can't do immediate like normal.
+                @mongoKbDb.doClear = false
                 # These opts are also available as accessors if you prefer
                 deferrableBody = BRL::Genboree::REST::EM::DeferrableBodies::DeferrableKbDocsBody.new(
                   :docsCursor => qrAggCursor,
@@ -1241,9 +1320,21 @@ module BRL ; module REST ; module Resources                # <- resource classes
        apiCacheRec = nil
        apiCacheContent = nil
        st = BRL::Genboree::KB::Stats::CollStats.new(@mongoKbDb, @collName)
-       srcCollLastEditTime = st.lastEditTime().nil? ? st.timeOfKbFirstEdit() : st.lastEditTime() 
+       srcCollLastEditTime = st.lastEditTime().nil? ? st.timeOfKbFirstEdit() : st.lastEditTime()
+       additionalAttValPairs = {} 
           begin
-            apiCacheRec = apiCacheHelper.getapiCache(srcCollLastEditTime, {"transformVersion" => transformDocAndVersion["versionNum"]})
+            # get the last edit time of all the associated collection in the transformation doc
+            # for that need to get the transformation class instance.
+            # Note: not doing the actual transformation here, just getting some background information
+            collTransformer = BRL::Genboree::KB::Transformers::CollToDocTransformWithkbDocLinks.new(transformDocAndVersion["doc"], @mongoKbDb)
+            associatedColls = collTransformer.associatedColls rescue []
+            associatedColls.each {|aColl|
+              next if(aColl ==  @collName)
+              st = BRL::Genboree::KB::Stats::CollStats.new(@mongoKbDb, aColl)
+              additionalAttValPairs[aColl] = st.lastEditTime().nil? ? st.timeOfKbFirstEdit() : st.lastEditTime()
+            }
+            additionalAttValPairs["transformVersion"] = transformDocAndVersion["versionNum"]
+            apiCacheRec = apiCacheHelper.getapiCache(srcCollLastEditTime, additionalAttValPairs)
           rescue => err
             $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_GET_ERROR - #{err.message} \n #{err.backtrace}")
           end
@@ -1285,7 +1376,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                # put cache
                if(apiCon.size < @genbConf.apiCacheMaxBytes.to_i)
                  begin
-                   apiCacheHelper.putapiCache(apiCon, srcCollLastEditTime, {"transformVersion" => transformDocAndVersion["versionNum"]})
+                   apiCacheHelper.putapiCache( apiCon, srcCollLastEditTime, additionalAttValPairs )
                  rescue =>  err
                    $stderr.debugPuts(__FILE__, __method__, "DEBUG", "API_CACHE_PUT_ERROR - #{err.message}\n#{err.backtrace}")
                  end

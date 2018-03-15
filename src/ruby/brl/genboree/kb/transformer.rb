@@ -76,28 +76,35 @@ module BRL ; module Genboree ; module KB ; module Transformers
         @subject = @kbDocument.getPropVal('Transformation.Type.Subject')
         @transformationType = @kbDocument.getPropVal('Transformation.Type')
         if(SUPPORTED_SCOPES[scope] == subject)
-	  mongokbDbChecked = true
-	  #3. Validate the transformation rules (property selector paths) that point to the source document
-	  if(@scope == 'coll')
-	    mongokbDbChecked = false unless(@mongoKbDb.instance_of?(BRL::Genboree::KB::MongoKbDatabase))
-	  end
-	  if(mongokbDbChecked)
-	    trRulesValid = trRulesValidate()
-	    unless(trRulesValid)
-	      isValid = false
-	      @transformationErrors << "TR_RULES_ERROR: Encountered error in transformation rules validation.\n"
-	    end
-	  else
-	    @transformationErrors << "MONGO_KB_MISSING: Invalid mongoKb instance: #{@mongoKbDb.class} for the scope 'coll'. The transformer must be instantiated with a rules document and a mongoKbDatabase instance of the class BRL::Genboree::KB::MongoKbDatabase. "
-	    isValid = false
-	  end
-	else
-	  isValid = false
-	  @transformationErrors << "INVALID_SCOPE_SUBJECT: Scope (#{scope}) and subject (#{subject}) property values in the transformation do not match the supported scope for a transformation. Supported scope and subject domains are #{SUPPORTED_SCOPES.inspect}\n"
-	end
+          mongokbDbChecked = true
+          #3. Validate the transformation rules (property selector paths) that point to the source document
+          if(@scope == 'coll')
+            mongokbDbChecked = false unless(@mongoKbDb.instance_of?(BRL::Genboree::KB::MongoKbDatabase))
+          end
+          if(mongokbDbChecked)
+            trRulesValid = trRulesValidate()
+            unless(trRulesValid)
+              isValid = false
+              @transformationErrors << "TR_RULES_ERROR: Encountered error in transformation rules validation.\n"
+            end
+          else
+            @transformationErrors << "MONGO_KB_MISSING: Invalid mongoKb instance: #{@mongoKbDb.class} for the scope 'coll'. The transformer must be instantiated with a rules document and a mongoKbDatabase instance of the class BRL::Genboree::KB::MongoKbDatabase. "
+            isValid = false
+          end
+        else
+          isValid = false
+          @transformationErrors << "INVALID_SCOPE_SUBJECT: Scope (#{scope}) and subject (#{subject}) property values in the transformation do not match the supported scope for a transformation. Supported scope and subject domains are #{SUPPORTED_SCOPES.inspect}\n"
+        end
       else
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( trValidator.respond_to?(:buildErrorMsgs) )
+          validatorErrors = trValidator.buildErrorMsgs()
+        else
+          validatorErrors = modelValidator.validationErrors
+        end
+
         isValid = false
-        @transformationErrors << "INVALID_DOC: The input document failed vaildation against the transformation model.\n #{trValidator.validationErrors}\n"
+        @transformationErrors << "INVALID_DOC: The input document failed vaildation against the transformation model.\n #{validatorErrors.join("\n")}\n"
       end
       return isValid
     end

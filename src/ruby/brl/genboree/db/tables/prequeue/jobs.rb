@@ -43,6 +43,24 @@ class DBUtil
     return selectByFieldWithMultipleValues(:otherDB, 'jobs', 'id', ids, "ERROR: [#{File.basename($0)}] #{self.class}##{__method__}():")
   end
 
+  # Get jobs statuses for jobs using a list of job row ids.
+  # @param [Array<Fixnum>] ids Array of job row IDs.
+  # @return [Array<Hash{String,Object}>] The result set as an Array of rows as Hashes which map column names to values.
+  #   Each Hash (row) will have these keyes: "id", "name", "status".
+  def selectJobStatusesByIds(ids)
+    cols = [ 'id', 'name', 'status' ]
+    return selectFieldsByFieldWithMultipleValues( :otherDB, 'jobs', cols, true, 'id', ids, "ERROR: [#{File.basename($0)}] #{self.class}##{__method__}():")
+  end
+
+  # Get jobs statuses for jobs using a list of jobs names.
+  # @param [Array<Fixnum>] names Array of job names.
+  # @return [Array<Hash{String,Object}>] The result set as an Array of rows as Hashes which map column names to values.
+  #   Each Hash (row) will have these keyes: "id", "name", "status".
+  def selectJobStatusesByNames(names)
+    cols = [ 'id', 'name', 'status' ]
+    return selectFieldsByFieldWithMultipleValues( :otherDB, 'jobs', cols, true, 'name', names, "ERROR: [#{File.basename($0)}] #{self.class}##{__method__}():")
+  end
+
   # Insert a new Jobs record.
   # - Typically, this would be used as part of entering a new job.
   #   . Thus only name, user, and toolId are needed because the DEFAULTS for the rest are good FOR NEW JOBS.

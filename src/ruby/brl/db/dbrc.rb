@@ -157,11 +157,12 @@ class DBRC
 
   # Real object-instance variables:
   attr_accessor :key, :user, :password, :driver, :dsn, :dbName
-  attr_accessor :max_reconn, :timeout, :interval, :host
+  attr_accessor :max_reconn, :timeout, :interval, :host, :port, :socket, :driverType, :driverSubType
   attr_accessor :hostType # Internal or External ?
   attr_accessor :dbrcRecs # loaded hash-of-hashes from dbrc file
   alias_method :db, :key
   alias_method :db=, :key=
+  alias_method :database, :dbName
 
   # Because class-level variables are shared across ALL threads, this method
   # had to be written VERY carefully, assuming that at ANY point a different thread could interupt
@@ -169,6 +170,7 @@ class DBRC
   # are really there and really populated with non-default values. These tests are fast.
   def self.load(dbrcFile=nil, domainAliasFile=ENV['DOMAIN_ALIAS_FILE'])
     dbrcFile = (ENV['DBRC_FILE'] || ENV['DB_ACCESS_FILE'] || '~/.dbrc') unless(dbrcFile)
+    dbrcFile = "~/.dbrc" if(dbrcFile.to_s !~ /\S/)
     retVal = nil
     DBRC.cacheLock.synchronize {
       # Get cache record using dbrcFile path as key
@@ -209,27 +211,24 @@ class DBRC
             fields = line.split(/\s+/)
             rec = { :hostType => hostType }
             rec[:key] = fields[0]
+            # Host defaults to the host portion of the key field. This is really a FALLBACK since
+            # the DRIVER string should have the host in ALL the various formats of DRIVER.
+            # - Can be overridden via a host={actualHost} in the AVP.
+            keyParts = rec[:key].split(':').map { |part| part.strip }
+            rec[:host] = ( ( keyParts.size > 1 ) ? keyParts[1] : keyParts[0] ) # handle type:host keys and very old host only keys
             rec[:user] = fields[1]
             rec[:password]   = fields[2]
             rec[:driver]     = fields[3]
-            driverFields     = rec[:driver].split(':')
-            rec[:host]       = driverFields.last
+            driverFields     = parseDriver(rec[:driver])
+            rec[:host]       = driverFields[:host] if( driverFields[:host].to_s =~ /\S/ ) # override host mentioned in key IFF have host={actualHost} override
+            rec[:port]       = driverFields[:port]
+            rec[:socket]     = driverFields[:socket]
+            rec[:dbName]     = driverFields[:database]
             rec[:timeout]    = fields[4]
             rec[:max_reconn] = fields[5]
             rec[:interval]   = fields[6]
             rec[:dsn] = rec[:driver] + ":" + rec[:key]
             retVal[rec[:key]] = rec
-            # Try to determine database name
-            databaseDriverField = driverFields[2]
-            if(databaseDriverField)
-              if(databaseDriverField =~ /database=([^;]+)/) # then database=XX;host=YY or database=XX;socket=YY
-                rec[:dbName] = $1
-              elsif(databaseDriverField !~ /socket=/) # then probably non AVP style and just a database name
-                rec[:dbName] = databaseDriverField.strip
-              else # can't find the database name easily
-                rec[:dbName] = nil
-              end
-            end
           end
         end
       }
@@ -259,6 +258,7 @@ class DBRC
 
   def initialize(dbrcFile=nil, key=nil, user=nil, gbInstanceKey=nil)
     dbrcFile = (ENV['DBRC_FILE'] || ENV['DB_ACCESS_FILE'] || '~/.dbrc') unless(dbrcFile)
+    dbrcFile = "~/.dbrc" if(dbrcFile.to_s !~ /\S/)
     #
     @dbrc = File.expand_path(dbrcFile.strip)
     @key = key
@@ -271,6 +271,43 @@ class DBRC
     get_info(@key) if(key)
   end
 
+  # Override inspect to prevent printing of any user/password information if dbrc is used
+  # in a composite object
+  def inspect()
+    return self.to_s.gsub(">", " @dbrc=#{@dbrc}>")
+  end
+
+  # Make the info in the given record hash the "active" data. Most common info is available via instance methods.
+  def makeActive( dbrcRec )
+    @user       = dbrcRec[:user]
+    @password   = dbrcRec[:password]
+    @driver     = dbrcRec[:driver]
+    @timeout    = dbrcRec[:timeout]
+    @max_reconn = dbrcRec[:max_reconn]
+    @interval   = dbrcRec[:interval]
+    @dsn        = dbrcRec[:dsn]
+    @host       = dbrcRec[:host]
+    @port       = dbrcRec[:port]
+    @socket     = dbrcRec[:socket]
+    @dbName     = @database = dbrcRec[:dbName]
+    @dbName     = @database = dbrcRec[:database] if( dbrcRec[:database].to_s =~ /\S/ )
+    driverFields = parseDriver( dbrcRec )
+    @host       = driverFields[:host] if( driverFields[:host].to_s =~ /\S/ )
+    @port       = driverFields[:port] if( driverFields[:port].to_s =~ /\S/ )
+    @socket     = driverFields[:socket] if( driverFields[:socket].to_s =~ /\S/ )
+    @dbName     = @database = driverFields[:database] if( driverFields[:database].to_s =~ /\S/ )
+    @driverType = driverFields[:type]
+    @driverSubType = driverFields[:subType]
+
+    # Cast numerics
+    @port       = ( ( @port.to_s =~ /^\d+$/ ) ? @port.to_s.to_i : nil )
+    @timeout    = ( ( @timeout.to_s =~ /^\d+$/ ) ? @timeout.to_s.to_i : nil )
+    @max_reconn = ( ( @max_reconn.to_s  =~ /^\d+$/ ) ? @max_reconn.to_s.to_i : nil )
+    @interval   = ( ( @interval.to_s =~ /^\d+$/ ) ? @interval.to_s.to_i : nil )
+
+    return self
+  end
+
   #+++++++++++++++++++++++++++++++++++++++++++++++++++
   # Grab info out of the .dbrc file.  Ignore comments
   # - this method will set some instance variable based on "key" param
@@ -281,15 +318,7 @@ class DBRC
       @dbrcRecs = DBRC.load(@dbrc)
       if(@dbrcRecs.key?(key))
         retVal = dbrcRec = @dbrcRecs[key]
-        @user       = dbrcRec[:user]
-        @password   = dbrcRec[:password]
-        @driver     = dbrcRec[:driver]
-        @host       = dbrcRec[:host]
-        @timeout    = dbrcRec[:timeout]
-        @max_reconn = dbrcRec[:max_reconn]
-        @interval   = dbrcRec[:interval]
-        @dsn        = dbrcRec[:dsn]
-        @dbName     = dbrcRec[:dbName]
+        makeActive( dbrcRec )
       end
     else # no key configured or supplied
       raise(BRL::DB::DBRCError, "\nERROR: must provide the key (or set 'key' attribute) for the dbrc record you are interested in. Or use getRecordByHost() approach.")
@@ -320,14 +349,33 @@ class DBRC
       # If have non-nil rec at this point (via hostName or its domainAlias), see if we need to match user
       if(rec and user)
         if(rec[:user] == user.strip)
-          retVal = rec
+          retVal = rec.deep_clone # don't give back internal record, dev might make edits/changes and the internal record is CACHED
         end
       elsif(rec)
-        retVal = rec
+        retVal = rec.deep_clone  # don't give back internal record, dev might make edits/changes and the internal record is CACHED
       else
         retVal = nil
       end
     end
+    return retVal
+  end
+
+  def getRecordByHostForDb( hostName, recType, dbName )
+    retVal = nil
+    # First, get the standard type:host record, even if the "preferred" or typical database mentioned is NOT the one we want
+    dbrcRec = getRecordByHost( hostName, recType )
+    if( dbrcRec )
+      # getRecordByHost() should be returning a duplicate for safety but to be sure
+      #   we're not about to edit the internal cached copy:
+      dbrcRec = dbrcRec.deep_clone
+      # we replace mention of 'preferred/typical' db in various parts of the record
+      dbrcRec[:dbName] = dbrcRec[:database] = dbName
+      [ :driver, :dsn ].each { |field|
+        dbrcRec[field].gsub!( /database=(?:[^=;]+)/, "database=#{dbName}" )
+      }
+      retVal = dbrcRec
+    end
+
     return retVal
   end
 
@@ -363,6 +411,60 @@ class DBRC
       }
     end
     return retVal
+  end
+
+  # Parse the driver string obtained from a dbrc record Hash.
+  # @param [Hash] dbrcRec The DBRC record of interest, as a Hash (like returned by {#getRecordByHost} etc)
+  # @return [Hash] The extracted driver info. Some common options are (there may be more for more generic things):
+  #   @option [String] :host The host to connect to, if present.
+  #   @option [Fixnum] :port The port to connect to, if present.
+  #   @option [String] :socket The socket to connect to, if present.
+  #   @option [String] :db The database name to use.
+  #   @option [String] :type The general type of driver/connection.
+  #   @option [STring] :subType The general sub-type or implementation.
+  def parseDriver( dbrcRec )
+    driver = dbrcRec[:driver]
+    return self.class.parseDriver( driver )
+  end
+
+  def self.parseDriver( driver )
+    retVal = { :host => nil, :port => nil, :socket => nil, :db => nil, :type => nil, :subType => nil }
+    driverFields = driver.to_s.split(/:/)
+    if( driverFields.size >= 3 )
+      retVal[:type] = driverFields[0].strip
+      retVal[:subType] = driverFields[1].strip
+
+      # Extract various possible info, which depends on driver format
+      if(driverFields.size >= 4) # then old style driver string: type:subtype:database:host
+        retVal[:database] = driverFields[2].strip
+        retVal[:host] = driverFields[3].strip
+      else # better new NVP style
+        thirdField = driverFields[2].to_s.strip
+        if( thirdField =~ /=/ ) # then 3-col driver string with AVPs in 3rd col. Good.
+          nvpStrs = thirdField.split(/\;/).map { |ss| ss.strip }
+          nvpStrs.each { |nvpStr|
+            name, value = *nvpStr.split(/=/).map { |ss| ss.strip }
+            if(name and !name.empty?)
+              retVal[name.to_sym] = value
+            end
+          }
+        else # assume 3-col driver with just host in 3rd col. No AVPs.
+          retVal[:host] = thirdField.strip
+        end
+      end
+    else # bad record
+      raise IndexError, "BAD DBRC RECORD (driver string): The driver string provided is INVALID. It must have a MINIMUM of three (3) colon-delimited fields: TYPE:SUBTYPE:HOST_OR_AVPS. This driver string has #{driverFields.size} fields, and needs to be fixed:\n\n    #{driver.inspect}\n\n"
+    end
+    return retVal
+  end
+
+  # Extract the desired info from the driver string present in the DBRC record.
+  # @param [Symbol] The driver info desired, as a Symbol. See {#parseDriver} for some common options.
+  # @param [Hash] dbrcRec The DBRC record of interest, as a Hash (like returned by {#getRecordByHost} etc)
+  # @return [String, Fixnum, nil] The value of the driver information.
+  def driverField( driverInfo, dbrcRec )
+    driverFields = parseDriver( dbrcRec )
+    return driverFields[driverInfo]
   end
 
   ###############

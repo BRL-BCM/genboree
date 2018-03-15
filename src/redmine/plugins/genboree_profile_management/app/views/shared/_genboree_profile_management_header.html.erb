@@ -1,0 +1,28 @@
+<%= stylesheet_link_tag 'header.css', :plugin => 'genboree_profile_management', :media => 'all' %>
+<nav class="top navbar navbar-default profile-management-navbar" id="gbProfileManagementNavbar" >
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#gbNavbarCollapsible" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="<%=@kbMount%>/projects/<%=@projectId%>/genboree_profile_management">Genboree Profile Management</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="gbNavbarCollapsible">
+      <ul class="nav navbar-nav">
+        <li><a href="<%=@kbMount%>" class="fa fa-home home-link"></a></li>
+      </ul>
+      <% if(@currRmUser.type != "AnonymousUser") %>
+        <ul class="nav navbar-nav navbar-right" data-toggle="tooltip" title="Logout">
+          <li><a href="javascript:logout();" class="fa fa-power-off "></a></li>
+        </ul>
+      <% end %>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+

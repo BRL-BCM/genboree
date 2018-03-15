@@ -1,7 +1,7 @@
 {
   "info": {
     "idStr": "exogenousTaxoTree",
-    "releaseStatus": "beta",
+    "releaseStatus": "release",
     "version": "4.6.2"
   },
   "cluster": {
@@ -15,5 +15,8 @@
     "label": "Exogenous Taxonomy Tree Generation for exceRpt (One Sample)",
     "shortLabel": "Exogenous Taxonomy Tree Generation for exceRpt (One Sample)",
     "groupAccessUri": null
+  },
+  "settings": {
+    "virusIDToSpeciesTable": "/cluster.shared/local/conf/smallRNAseqPipeline/virusGIToSpecies.txt"
   }
 }

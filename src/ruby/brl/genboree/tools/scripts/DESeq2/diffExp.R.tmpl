@@ -9,7 +9,9 @@ setwd("<%= @outputDirectory %>")
 # the header row is sample ID
 # rows are <miRNA name> <read count in sample 1> <read count in sample 2> ...
 countdata <- read.delim("<%= @miRNAReadCountFile %>",row.names=1, header=TRUE,sep="\t",check.names=FALSE)
-# DESeq2 doesn't seem to like non-integers, so let's round our read count values
+# DESeq2 doesn't like non-integers, so let's round our read count values
+# Note that this rounding has the side effect of ELIMINATING very low expression (<0.5).
+# If a given ncRNA only has expression of <0.5 (nothing higher) when considering all relevant samples, then, below, that ncRNA will actually be REMOVED from consideration entirely.
 countdata <- apply(countdata, c(1,2), function(i) round(i,0))
 
 ## read the sample descriptors (factors / factor levels) into an R matrix
@@ -26,6 +28,12 @@ countdata.nonelimcols <- countdata[,which(colnames(countdata) %in% rownames(cold
 # Let's sort our rows / columns so that we're sure the rows / columns match between documents
 countdata.nonelimcols <- countdata.nonelimcols[order(rownames(countdata.nonelimcols)),order(colnames(countdata.nonelimcols)),drop=FALSE]
 coldata.nonelimrows <- coldata.nonelimrows[order(rownames(coldata.nonelimrows)),order(colnames(coldata.nonelimrows)),drop=FALSE]
+
+# Also, let's remove any completely zero rows from countdata
+# In other words, we're removing any ncRNAs that didn't map ANY reads to any of the remaining samples
+# These ncRNAs are only present because they DID map to some of the eliminated samples (not associated with factor / factor levels of interest)
+# They could also be present because they had very low expression (<0.5) that was rounded down to 0 (see above).
+countdata.nonelimcols <- countdata.nonelimcols[which(rowSums(countdata.nonelimcols) > 0),] 
 
 # DESeqDataSetFromMatrix accepts as input
 # countData -- the matrix of read counts

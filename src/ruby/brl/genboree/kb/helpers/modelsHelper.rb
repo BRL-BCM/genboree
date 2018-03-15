@@ -1,5 +1,5 @@
 #!/bin/env ruby
-
+require 'memoist'
 require 'brl/genboree/kb/helpers/abstractHelper'
 
 module BRL ; module Genboree ; module KB ; module Helpers
@@ -8,8 +8,16 @@ module BRL ; module Genboree ; module KB ; module Helpers
   #   document in the @kbModels@ collection. That model describes the kinds of documents
   #   that are allowed in the collection.
   class ModelsHelper < AbstractHelper
+    extend Memoist
+
+    MEMOIZED_INSTANCE_METHODS = [
+      :idPropNameForCollection,
+      :getRootProp,               # alias for idPropNameForCollection (nicer name)
+      :getModelMemoized          # we need to support forceRefresh, so we don't memoize getModel() itself
+    ]
+
     # @return [String] the name of the core GenboreeKB collection the helper assists with.
-    KB_CORE_COLLECTION_NAME = "kbModels"
+    KB_CORE_COLLECTION_NAME = 'kbModels'
     # @return [Array<Hash>] An array of MongoDB index config hashes; each has has key @:spec@ and @:opts@
     #   the indices for the model documents in the models collection.
     KB_CORE_INDICES =
@@ -90,7 +98,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   interest from cache (it was cached when previously asked for), get it fresh from the database.
     # @return [KbDoc] the model document for the collection of interest.
     def modelForCollection(collName, forceRefresh=true)
-      return self.docForCollection(collName, "name.value", forceRefresh)
+      return self.docForCollection(collName, 'name.value', forceRefresh)
     end
 
     # Get the root identifier property for a collection; if collName is provided, query database,
@@ -103,17 +111,15 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @todo make collName optional (it is not used if opts[:modelDoc] is provided)
     def idPropNameForCollection(collNameOrModel, opts={})
       retVal = nil
-      forceRefresh = ( opts.key?(:forceRefresh) ? opts[:forceRefresh] : false)
       # Get the model first
       model = getModel(collNameOrModel, opts)
       if(model)
-        retVal = model["name"]
+        retVal = model['name']
       else
         raise KbError, "ERROR: there is no model for collection #{collNameOrModel.inspect}. Check that the collection is spelled correctly and was created via the GenboreeKB infrastructure."
       end
       return retVal
     end
-
     alias_method( :getRootProp, :idPropNameForCollection )
 
     # Insert a model doc for a collection. Generally
@@ -153,13 +159,59 @@ module BRL ; module Genboree ; module KB ; module Helpers
       if(valid?(doc))
         retVal = super(doc, author)
       else # not valid
-        if(@lastValidatorErrors.is_a?(Array))
-          validationErrStr = "  - #{@lastValidatorErrors.join("\n  - ")}"
-        else
-          validationErrStr = "  - [[ No detailed error messages available ; likely a code bug or crash ]]"
-        end
-        retVal = KbError.new("ERROR: the model document is not a valid model schema and thus cannot be used! Specifically:\n#{validationErrStr}")
+       if(@lastValidatorErrors.is_a?(Array)) # old approach -- array of errors, generally only 1 error in it!
+          validationErrStr = @lastValidatorErrors.join("\n")
+       else
+         validationErrStr = "  - [[ No detailed error messages available ; likely a code bug or crash ]]"
+       end
+       retVal = KbError.new("ERROR: the model document is not a valid model schema and thus cannot be used! Specifically:\n\n#{validationErrStr}")
       end
+      return retVal
+    end
+
+    # Delete the model document for a collection.
+    # @param [String] docCollName The name of the collection of interest.
+    # @param [String] author The Genboree user name who is deleting the model
+    # @param [Hash<Symbol,Object>] opts Optional. Hash with additional parameters.
+    # @return [Boolean] Indicating success or not.
+    def deleteForCollection(docCollName, author, opts={})
+      #$stderr.debugPuts(__FILE__, __method__, 'STATUS', "About to delete doc for collection #{docCollName.inspect} from this collection: #{@coll.name.inspect}")
+      # Create selector
+      selector = { 'name.value' => docCollName }
+      # Collection metadata helper
+      collMetadataHelper = @kbDatabase.collMetadataHelper()
+      # Get coll metadata document
+      collMetadataDoc = collMetadataHelper.metadataForCollection(docCollName, true)
+      if(collMetadataDoc)
+        raise "ERROR: You cannot delete the model for internal collections like #{docCollName.inspect} !" if(collMetadataDoc.getPropVal('name.internal'))
+
+        # Retrieve doc first (need the _id)
+        modelRec = self.coll.find_one( selector )
+        raise "ERROR: Unexpectedly could not find model for collection #{docCollName.inspect} (using selector #{selector.inspect} )" unless(modelRec)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG - DEL MODEL', "Got model doc. Has name #{modelRec['name']['value'].inspect} and _id #{modelRec['_id'].inspect}")
+        docRef = BSON::DBRef.new(self.class::KB_CORE_COLLECTION_NAME, modelRec["_id"])
+        # Do delete
+        result = self.coll.remove( selector )
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Remove doc result:\n\n#{result.inspect}\n\n")
+        if(result.is_a?(Hash) and result["ok"] == 1.0)
+          if(result['n'] == 1)
+            retVal = true
+            @docForCollectionCache.delete(docCollName)
+            # Record deletion in history for kbModels
+            versionsHelper = @kbDatabase.versionsHelper(@coll.name)
+            revisionsHelper = @kbDatabase.revisionsHelper(@coll.name)
+            versionsHelper.createDeletionHistory(@coll.name, docRef, author)
+            revisionsHelper.createDeletionHistory(@coll.name, docRef, "/", author)
+          else
+            $stderr.debugPuts(__FILE__, __method__, '!! FATAL !!', "The remove reports it succeeded but remove MORE THAN ONE (1) metadata document. This is bad, since only the document for collection #{docCollName.inspect} should have been deleted! Rather, #{result['n'].inspect} documents were deleted! More info:\n\n#{result.inspect}\n\n")
+            retVal = false
+          end
+        else
+          $stderr.debugPuts(__FILE__, __method__, 'ERROR', "Failed to remove the metadata document for collection #{docCollName.inspect}. Result code was #{result['ok'].inspect} rather than 1.0 and the number of affected docs was #{result['n'].inspect} rather than 1. More info:\n\n#{result.inspect}\n\n")
+          retVal = false
+        end
+      end
+
       return retVal
     end
 
@@ -169,7 +221,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
       if(modelOK)
         retVal = true
       else
-        @lastValidatorErrors = modelValidator.validationErrors.dup
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( modelValidator.respond_to?(:buildErrorMsgs) )
+          @lastValidatorErrors = modelValidator.buildErrorMsgs()
+        else
+          @lastValidatorErrors = modelValidator.validationErrors.dup
+        end
         retVal = false
       end
       return retVal
@@ -291,23 +348,146 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return retVal
     end
 
+    # Get the hints array for the propert at @propPath@
+    # @param [String] propPath The model or propDef within which to find the property for which to get hints array
+    # @param [Hash] propDef A full model definition or a piece of one (i.e. a propDef)
+    # @param [Hash{Symbol, Object}] opts OPTIONAL. Any special options that influence how propDef is found or returned.
+    # @return [Array<String>] The list of hints for the property at @propPath@
+    def hints(propPath, model, opts={})
+      self.class.hints(propPath, model, opts)
+    end
+
+    # @see #hints
+    def self.hints(propPath, model, opts={})
+      retVal = []
+      # Get specific propDef object for propPath
+      opts = opts.deep_clone
+      opts[:nonRecursive] = true
+      propDef = self.findPropDef(propPath, model, opts)
+      # Get 'Hints' array
+      hints = BRL::Genboree::KB::Validators::ModelValidator::FIELDS['Hints'][:extractVal].call(propDef, nil)
+      retVal = hints if(hints.acts_as?(Array))
+      return retVal
+    end
+
+    # Does the property in the model have ALL the indicated hints?
+    # @param [Array<String>] hints The Array of hint strings, all of which must be present for the property at propPath
+    # @param [String] propPath The model or propDef within which to find the property for which to test the hints
+    # @param [Hash] propDef A full model or a piece of one
+    # @param [Hash{Symbol, Object}] opts OPTIONAL. Any special options that influence how propDef is found or returned.
+    # @return [Boolean] If the property at @propPath@ has all the listed hints.
+    def hasHints?(hints, propPath, propDef, opts={})
+      self.class.hasHints?(hints, propPath, propDef, opts)
+    end
+
+    # @see #hasHints?
+    def self.hasHints?(hints, propPath, propDef, opts={})
+      retVal = false
+      # Get all the hints
+      propHints = self.hints(propPath, propDef, opts)
+      if(hints.acts_as?(Array) and propHints.acts_as?(Array))
+        retVal = hints.all? { |hint|
+          propHints.include?( hint.to_s.strip )
+        }
+      end
+      return retVal
+    end
+
+    # Does the property in the model have the specific hint keyword?
+    # @param [String] hint The hint String, which must be present for the property at propPath
+    # @param [String] propPath The model or propDef within which to find the property for which to test for the hint
+    # @param [Hash] propDef A full model or a piece of one
+    # @param [Hash{Symbol, Object}] opts OPTIONAL. Any special options that influence how propDef is found or returned.
+    # @return [Boolean] If the property at @propPath@ has all the listed hints.
+    def hasHint?(hint, propPath, propDef, opts={})
+      self.class.hasHint?(hint, propPath, propDef, opts)
+    end
+
+    # @see #hasHint?
+    def self.hasHint?(hint, propPath, propDef, opts={})
+      self.hasHints?( [ hint ], propPath, propDef, opts )
+    end
+
+    DOC_LINK_DOMAINS = [ /^url$/, /^labelUrl.*$/, /^selfUrl$/]
+    GETDOCLINKPROPS_DEFAULT_OPTS = { :return => :paths, :validateTgtCollNames => false }
+    # Get the properties that appear to be doc links.
+    # @param [Hash] model The model or propDef within which to find properties that appear to be doc links.
+    # @param [Hash{Symbol,Object}] opts Optional. Options hash which can influence what is returned or behavior.
+    #   @option opts [Symbol] :return Default :paths. What to return, indicated as a Symbol. Supported: :paths, :propDefs, :prunedPropDefs
+    #   @option opts [Boolean] :validateTgtCollNames Defalut false. Whether to validate the target collection name found in Object Type.
+    #     Requires valid @kbDatabase (i.e. not in offline mode)
+    # @return [Array<String>, Array<Hash>] The doc links properties either as prop paths or full/pruned propDefs
+    def getDocLinkProps(model, opts=GETDOCLINKPROPS_DEFAULT_OPTS)
+      retVal = []
+      opts = GETDOCLINKPROPS_DEFAULT_OPTS.merge(opts)
+      rootProp = getRootProp(model)
+      # Scan the propdefs to find ones that have appropriate metadata
+      eachPropDef(model, rootProp) { |propInfo|
+        propDef = propInfo[:propDef]
+        # Domain must be one of the link-appropriate ones.
+        if(DOC_LINK_DOMAINS.any?() { |re| propDef['domain'] =~ re })
+          propInfo[:propPath]
+          # Can't be a link to self.
+          if(propDef['Subject Relation to Object'].to_s.strip !~ /^isSelf$/i)
+            # Must have a {ns}:{collName} Object Type
+            if(propDef['Object Type'] =~ /^([^:]+):(.+)$/)
+              namespace = $1
+              tgtCollName = $2
+              # Are we supposed to check KB to see if collName is valid? Better have a valid @kbDatabase
+              if(opts[:validateTgtCollNames])
+                tgtColls = @kbDatabase.collections(:data, :names)
+                tgtCollOk = ( tgtColls.index(tgtCollName) ? true : false )
+              else
+                tgtCollOk = true
+              end
+
+              # Looks like this is doc link
+              if(tgtCollOk)
+                returnType = opts[:return]
+                if(returnType == :paths)
+                  retVal << propInfo[:propPath]
+                elsif(returnType == :prunePropDefs)
+                  prunedDef = propDef.deep_clone
+                  prunedDef.delete('properties')
+                  prunedDef.delete('items')
+                  retVal << prunedDef
+                else # full propDef
+                  retVal << propDef
+                end
+              end
+            end
+          end
+        end
+      }
+      return retVal
+    end
+
     def getPropPathsForDomain(model, domainStr, opts={})
       return getPropPathsForFieldAndValue(model, 'domain', domainStr, opts)
     end
 
+    PATHS_FOR_FIELD_AND_VALUE_DEFAULT_OPTS = { :operation => :equals }
     # Returns an array of property paths that matched the provided value for the given field
     # @param [Hash] model The actual user model (the rootProp definition)
     # @param [String] field The name of the field
     # @param [String] value The value to match
-    # @param [Hash] opts Options hash to enable less common behaviors.
+    # @param [Hash{Symbol,Object}] opts Options hash to enable less common behaviors.
+    # @option opts [Symbol] :operation The operation to use when testing the @value@
+    #   The default is :equals (i.e. ==). But :contains is also useful for testing
+    #   fields with string values.
     # @return [Array] An array of property paths
     def getPropPathsForFieldAndValue(model, field, value, opts={})
+      allOpts = PATHS_FOR_FIELD_AND_VALUE_DEFAULT_OPTS.merge( opts )
+      op = allOpts[:operation]
       @propPaths = []
-      if(model.key?(field) and model[field] == value)
-        @propPaths << model['name']
+      if( model.key?(field) )
+        if( ( op == :equals and model[field] == value ) or
+            ( op == :contains and model[field] =~ /#{Regexp.escape(value)}/ ) )
+          @propPaths << model['name']
+        end
       end
 
-      model['properties'].each {|prop|
+      model['properties'].each { |prop|
         addPropPathsForFieldAndValue(prop, field, value,  model['name'], opts)
       }
       return @propPaths
@@ -322,8 +502,14 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # @param [String] parent A '.' delimited string indicating the ancestory of the property being examined
     # @param [Hash] opts Options hash to enable less common behaviors.
     def addPropPathsForFieldAndValue(prop, field, value, parent, opts={})
-      if(prop.key?(field) and prop[field] == value)
-        @propPaths << "#{parent}.#{prop['name']}"
+      allOpts = PATHS_FOR_FIELD_AND_VALUE_DEFAULT_OPTS.merge( opts )
+      op = allOpts[:operation]
+      if( prop.key?(field) )
+        if( ( op == :equals and prop[field] == value ) or
+            ( op == :contains and prop[field] =~ /#{Regexp.escape(value)}/ ) )
+          @propPaths << "#{parent}.#{prop['name']}"
+        end
+
       end
       if(prop['properties'])
         prop['properties'].each {|pp|
@@ -385,14 +571,14 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return retVal
     end
 
-
     # @note the "DocPath" referred to here is not the same as a document property path that
     #   is mentioned in other areas of the kb code base. This "DocPath" is intended for use with
     #   MongoDB (note the use of ".properties." and ".items." below to see this)
-    # @param [String, Mongo::Collection, KbDoc, Hash] collOrModel The collection name, wrapped-model KbDoc, or
-    #   even raw model. Will get you the actual model for this arg in the most efficient way. If
-    #   you happen to pass in a KbDoc path (with .[idx] and such), it will be converted to model path form.
-    def modelPath2DocPath(modelPath, collOrModel=@coll.name, opts={})
+    # @param [String] modelPath Model path for property of interest. This won't have .[0]. or even .[].
+    #   type path elements indicating a specific item.
+    # @param [Hash] model The model Hash. Not model docuemnt that gets stored in the kbModels collection
+    #   but rather the model component specifically (not a KbDoc). NOT collection name either. Actual model.
+    def self.modelPath2DocPath(modelPath, model, opts={})
       valueField = opts[:valueField]
       forceRefresh = ( opts.key?(:forceRefresh) ? opts[:forceRefresh] : false)
       unless(valueField)
@@ -404,9 +590,6 @@ module BRL ; module Genboree ; module KB ; module Helpers
       modelPath = KbDoc.docPath2ModelPath(modelPath)
 
       mpathParts = BRL::Genboree::KB::KbDoc.parsePath(modelPath)
-
-      #mpathParts = modelPath.gsub(/\\\./, "\v").split(/\./).map { |xx| xx.gsub(/\v/, '.') }
-      model = getModel(collOrModel, opts)
 
       if(model and !model.empty?)
         docPath = ''
@@ -444,11 +627,11 @@ module BRL ; module Genboree ; module KB ; module Helpers
               # else visit next sibling property in currProp...may it matches 'part'
               end
             else # this property has no name? what?
-              raise KbError, "ERROR: the model for #{collOrModel.inspect} is invalid. The property 'name' field is missing for #{part.inspect} or one of its sibling properties."
+              raise KbError, "ERROR: the model shown below is invalid. The property 'name' field is missing for #{part.inspect} or one of its sibling properties. Model:\n\n#{JSON.pretty_generate(model) rescue model.inspect}\n\n"
             end
           }
           unless(foundPropForPart)
-            raise KbError, "ERROR: the model path provided (#{modelPath.inspect}) does not fit the actual model for collection #{collOrModel.inspect}. There are some property names that are unknown in the model, are missing, or are not in the correct location in the path."
+            raise KbError, "ERROR: the model path provided (#{modelPath.inspect}) does not fit the actual model shown below. There are some property names that are unknown in the model, are missing, or are not in the correct location in the path. Model:\n\n#{JSON.pretty_generate(model) rescue model.inspect}\n\n"
           end
         }
         if(foundPropForPart)
@@ -457,16 +640,27 @@ module BRL ; module Genboree ; module KB ; module Helpers
           docPath = nil
         end
       else
-        raise KbError, "ERROR: could not find a model for collection named #{collOrModel.inspect}. Has that collection been properly added using GenboreeKB functionality, is it spelled corretly, etc."
+        raise KbError, "ERROR: the model provided is nil, empty, or otherwise invalid. If retrieved from a specific collection, has that collection been properly added using GenboreeKB functionality, is it spelled corretly, etc. Model argument:\n\n#{model.inspect}\n\n"
       end
 
       return docPath
     end
 
+    # @see {ModelsHelper.modelPath2DocPath}
+    def modelPath2DocPath(modelPath, collOrModel=@coll.name, opts={})
+      model = getModel(collOrModel, opts)
+      if( model and !model.empty? )
+        retVal =  self.class.modelPath2DocPath( modelPath, model, opts )
+      else
+        retVal = nil
+        raise KbError, "ERROR: the model retrieved is nil, empty, or otherwise invalid. If collOrModel argument is a model or model-doc (KbDoc containing the model + some metadata), the model content is invalid. If collOrModel is a collection name, then the model dynamically retrieved for it is invalid and need to check that its been properly added using GenboreeKB functionality, is it spelled corretly, etc. collOrModel argument:\n\n#{collOrModel.inspect}\n\n"
+      end
+      return retVal
+    end
     alias_method :modelPath2MongoPath, :modelPath2DocPath
 
-    def modelPathToPropSelPath(modelPath, model)
-      mongoPath = modelPath2MongoPath(modelPath, model)
+    def self.modelPathToPropSelPath(modelPath, model)
+      mongoPath = self.modelPath2DocPath(modelPath, model)
       elems = mongoPath.gsub(/\\./, "\v").split('.')
       newElems = [ ]
       elems.each_index { |ii|
@@ -479,6 +673,10 @@ module BRL ; module Genboree ; module KB ; module Helpers
         end
       }
       return newElems.join('.')
+    end
+
+    def modelPathToPropSelPath(modelPath, model)
+      return self.class.modelPathToPropSelPath(modelPath, model)
     end
 
     # Flatten a model by mapping propPath to its propDef (and removing tree edges like properties and items)
@@ -627,34 +825,85 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   which in some cases is used to save time within the code of this class.
     # @return [Hash,nil] A model object or nil if none found.
     def getModel(collOrModel, opts={})
-      model = nil
       forceRefresh = ( opts.key?(:forceRefresh) ? opts[:forceRefresh] : false)
-      modelDoc = opts[:modelDoc]
-      # Have we been handed in some modelDoc along with collName or are we reloading the model from the database?
-      unless(modelDoc or forceRefresh)
-        # If collNameOrModel is a Hash (not coll name string) then IT has priority over whatever we found in opts
-        if(collOrModel.is_a?(Hash))
-          modelDoc = collOrModel
-        end
-        # Either still don't have the modelDoc or we're supposed to refressh regardless of what was passed in, are we supposed to refresh?
-        if(!modelDoc or forceRefresh)
-          collName = ( collOrModel.is_a?(Mongo::Collection) ? collOrModel.name : collOrModel )
-          modelDoc = modelForCollection(collName, forceRefresh)
-        end
+      #forceRefresh = true
+      gmOpts = opts.merge( { :forceRefresh => forceRefresh } )
+      if( forceRefresh ) # then call memoized version but with the special terminal "true" arg to "bypass memoized value and rememoize"
+        model = getModelMemoized( collOrModel, gmOpts, true)
+      else # call memoized version, using any cached values
+        model = getModelMemoized( collOrModel, gmOpts )
       end
-
-      # Try to get the actual model out. We may have been handed the actual model in collNameOrModel
-      #   or in opts[:modelDoc] as part of some uniform processing or something. If so, we'll return that;
-      #   else we should have a wrapped-model KbDoc and we'll dig the actual model out of that.
-      if(modelDoc)
-        model = modelDoc.getPropVal('name.model') rescue nil
-        unless(model) # then modelDoc is ALREADY the actual model, not the model wrapped in a KbDoc
-          model = modelDoc
-        end
-      end
-
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "collOrModel is a: #{collOrModel.class} ; gmOpts: #{opts.inspect} ; model: #{model.class} with keys #{model.keys.inspect rescue '[NONE!]'}")
       return model
     end
+
+    def getModelMemoized( collOrModel, opts ) # implicit/special "true" argument can be supplied to "bypass memoized value and rememoize"
+      model = nil
+      # If collOrModel is a hash, it's a model or model doc and takes priority over opts[:modelDoc]
+      modelDoc = ( collOrModel.is_a?(Hash) ? collOrModel : opts[:modelDoc] )
+      forceRefresh = ( opts[:forceRefresh] or false )
+      raise ArgumentError, "ERROR: when calling getModel() you can't only provide the model or model record AND specify you want to 'forceRefresh'. Refresh from what? You gave the model or model record document without info about what collection it came from! Refresh only makes sense when providing the collection as a Mongo::Collection object or a String that is the collection name." if(forceRefresh and !collOrModel.is_a?(String) and !collOrModel.is_a?(Mongo::Collection))
+
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "forceRefresh: #{forceRefresh.inspect} ; collOrModel is a: #{collOrModel.class} ; opts: #{opts.inspect} ; modelDoc: #{modelDoc.class} w/keys #{modelDoc.keys.inspect rescue '[NONE!]'}")
+
+      if( collOrModel.is_a?( String ) )
+        coll = collOrModel
+        modelDoc = nil if( forceRefresh ) # wipe any given modelDoc if refreshing
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "collOrModel was String (coll name #{coll.inspect})")
+      elsif( collOrModel.is_a?(Mongo::Collection) )
+        coll = collOrModel.name
+        modelDoc = nil if( forceRefresh ) # wipe any given modelDoc if refreshing
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "collOrModel was a Mongo::Collection ; got the coll name from it: #{coll.inspect}")
+      else # collOrModel is a Hash of some kind...we have no collection to work from, just this model or model record
+        coll = nil
+        # wrap in KbDoc interface unless it's already one, see if it's actually a model record rather than model itself
+        if( collOrModel.respond_to?( :getPropVal ) )
+          collOrModelKbDoc = collOrModel
+        else # wrap in KbDoc so can test it sensibly
+          collOrModelKbDoc = BRL::Genboree::KB::KbDoc.new( collOrModel )
+        end
+
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "collOrModelKbDoc:\n\n#{JSON.pretty_generate( collOrModelKbDoc )}\n\n")
+
+        tryAsModelRec = collOrModelKbDoc.getPropVal( 'name.model' )
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "looking at collOrModelKbDoc (a #{collOrModelKbDoc.class}) as a model record, we attempted to get the actual model out of the record: #{tryAsModelRec.class} w/keys #{tryAsModelRec.keys.inspect rescue '[NONE!]'}")
+        if( tryAsModelRec and tryAsModelRec.respond_to?(:'key?') and tryAsModelRec.key?('identifier') ) # we did indeed extract the actual model
+          modelDoc = collOrModelKbDoc
+          model = tryAsModelRec
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "YES, tryAsModelRec was a MODEL RECORD ; modelDoc is now #{modelDoc.class} w/keys #{modelDoc.keys.inspect} and model is now #{model.class} w/keys #{model.keys.inspect}")
+        else # we have the model itself and can't do forceRefresh because not enough info
+          model = collOrModel
+          modelDoc = nil
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "looks like collOrModel arg was the model itself: #{model.class} w/keys #{model.keys.inspect rescue '[NONE]'}")
+        end
+      end
+
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "at this point => model: #{model.class} w/keys #{model.keys.inspect rescue '[NONE!]'} ; modelDoc: #{modelDoc.class} w/keys: #{modelDoc.keys.inspect rescue '[NONE!]'} and coll is #{coll.inspect}")
+
+      # At this point we either have:
+      # * A model, passed in as arg that is model record or model itself. In this case, don't need to do more.
+      # * A model record from the options and a collection name to help deal with refresh. We'll get out the model itself unless refresh.
+      # * A nil modelDoc but collection info so we can do a retrieve
+      unless( model )
+        if( modelDoc ) # try to get model from model record we now have [or were given]
+          modelDoc = BRL::Genboree::KB::KbDoc.new( modelDoc ) unless( modelDoc.respond_to?(:getPropVal) )
+          model = modelDoc.getPropVal( 'name.model' )
+        end
+        unless( model ) # still no model available or refreshing, must retrieve using coll
+          #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "collName: #{coll.inspect}")
+          modelDoc = modelForCollection(coll, forceRefresh)
+          model = ( modelDoc ? modelDoc.getPropVal('name.model') : nil )
+        end
+      end
+
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Returning model which is a #{model.inspect}.")
+      return model
+    end
+
+    # ----------------------------------------------------------------
+    # MEMOIZE now-defined methods
+    # ----------------------------------------------------------------
+    MEMOIZED_INSTANCE_METHODS.each { |meth| memoize meth }
 
   end # class ModelsHelper
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Helpers

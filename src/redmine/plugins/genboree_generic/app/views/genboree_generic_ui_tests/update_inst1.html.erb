@@ -1,0 +1,12 @@
+<%# For convenience, how about building the correct link to show_test1 action for the controller? %>
+<a href="<%= u1 = url_for( { :action => 'show_test1' }) %>">Show profile</a>
+
+<h2>Edit your institution:</h2>
+<br>
+<%# Get Rails to start a <form> whose action will be a correct relative url to this project, controller, and action %>
+<%= form_tag( {}, { :url => { :action => 'update_inst1' }, :id => 'update_inst1_form' } ) { %>
+  <div class="box tabular">
+    <%= text_field_tag( 'inst', @gbUser.institution, { :size => 50 } ) %>
+  </div>
+  <%= submit_tag "Submit" %>
+<% } %>

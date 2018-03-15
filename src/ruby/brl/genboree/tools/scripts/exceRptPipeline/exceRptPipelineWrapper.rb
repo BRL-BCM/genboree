@@ -111,6 +111,10 @@ module BRL; module Genboree; module Tools; module Scripts
           @settings['postProcDir'] = @postProcDir
           runsDir = "#{@postProcDir}/runs"
           `mkdir -p #{runsDir}`
+          # Create and save in settings importantJobIdsDir (will store all important job IDs - IDs reported to user in final email, IDs used to determine which samples passed/failed)
+          importantJobIdsDir = "#{@jobSpecificSharedScratch}/importantJobIds"
+          `mkdir -p #{importantJobIdsDir}`
+          @settings['importantJobIdsDir'] = importantJobIdsDir
         else
           @errUserMsg = "ERROR: Shared scratch dir #{@clusterSharedScratchDir} is not available."
           raise @errUserMsg
@@ -148,8 +152,8 @@ module BRL; module Genboree; module Tools; module Scripts
         # Exogenous mapping options - cut off first two chars (those are just used for organizing options in the UI)
         @settings['exogenousMapping'] = @settings['exogenousMapping'][2..-1]
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Exogenous mapping setting: #{@settings['exogenousMapping']}")
-        # We will always use 30 GB of Java RAM and 8 threads (current version of exceRpt is more memory intensive than the older versions)
-        @settings['javaRam'] = "30G"
+        # We will always use 36 GB of Java RAM and 8 threads (current version of exceRpt is more memory intensive than the older versions)
+        @settings['javaRam'] = "36G"
         @settings['numThreads'] = 8
         # If exogenous mapping is set to 'on' (full exogenous mapping to all exogenous genomes), then we will set up exogenous mapping options
         if(@settings['exogenousMapping'] =~ /on/)
@@ -179,8 +183,10 @@ module BRL; module Genboree; module Tools; module Scripts
           `mkdir -p #{@exogenousMappingInputDir}`
           exogenousTaxoTreeJobIDDir = "#{@jobSpecificSharedScratch}/subJobsScratch/exogenousTaxoTreeIDsDir"
           `mkdir -p #{exogenousTaxoTreeJobIDDir}`
+          exogenousRerunDir = "#{@jobSpecificSharedScratch}/exogenousRerunDir"
           @settings['exogenousMappingInputDir'] = @exogenousMappingInputDir
           @settings['exogenousTaxoTreeJobIDDir'] = exogenousTaxoTreeJobIDDir
+          @settings['exogenousRerunDir'] = exogenousRerunDir
         end
         # Order of alignment for endogenous libraries
         # We need to convert format from the easier-to-read format in the UI to the format that exceRpt expects
@@ -196,6 +202,22 @@ module BRL; module Genboree; module Tools; module Scripts
         # Number of permitted exogenous mismatches - default is 0
         if(!@settings['exogenousMismatch'] or @settings['exogenousMismatch'].empty? or @settings['exogenousMismatch'].nil?)
           @settings['exogenousMismatch'] = 0
+        end
+        if(@settings['fullExogenousMapping'])
+          # This setting will keep track of which claves we map to (if user chooses to map to exogenous genomes)
+          @settings['exogenousClaves'] = ["Bacteria", "FPV", "Metazoa", "Plants", "Vertebrates"]
+          # We will delete entries from this default if user unchecked the associated checkbox in the Workbench UI
+          @settings['exogenousClaves'].delete("Bacteria") unless(@settings['mapToBacteria'])
+          @settings['exogenousClaves'].delete("FPV") unless(@settings['mapToFPV'])
+          @settings['exogenousClaves'].delete("Metazoa") unless(@settings['mapToMetazoa'])
+          @settings['exogenousClaves'].delete("Plants") unless(@settings['mapToPlants'])
+          @settings['exogenousClaves'].delete("Vertebrates") unless(@settings['mapToVertebrates'])
+        else
+          @settings.delete('mapToBacteria')
+          @settings.delete('mapToFPV')
+          @settings.delete('mapToMetazoa')
+          @settings.delete('mapToPlants')
+          @settings.delete('mapToVertebrates')
         end
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Permitted number of exogenous mismatches: #{@settings['exogenousMismatch']}")
         # There are certain settings that only apply to 4th gen. exceRpt, and certain settings that only apply to 3rd gen. exceRpt.
@@ -286,7 +308,7 @@ module BRL; module Genboree; module Tools; module Scripts
           gbSmallRNASeqPipelineGenomesInfo = JSON.parse(File.read(@genbConf.gbSmallRNASeqPipelineGenomesInfo))
           indexBaseName = gbSmallRNASeqPipelineGenomesInfo[@settings['genomeVersion']]['indexBaseName']
           if(indexBaseName.nil?)
-            @errUserMsg = "Your genome verson #{@settings['genomeVersion']} is not currently supported by exceRpt."
+            @errUserMsg = "Your genome version #{@settings['genomeVersion']} is not currently supported by exceRpt."
             raise @errUserMsg
           else
             # @genomeBuild is used in runExceRpt job confs, so we save it as an instance variable
@@ -433,9 +455,15 @@ module BRL; module Genboree; module Tools; module Scripts
             @failedJobs[currentInput] = err.message.inspect
           end
         }
-        # Write @listOfJobIds to a text file, saving path to text file in @settings
-        @settings['filePathToListOfJobIds'] = "#{@jobSpecificSharedScratch}/listOfJobIds.txt"
-        File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
+        # If fullExogenousMapping is enabled, then we want to save the list of exogenous jobs in its own file (used for re-running jobs due to memory issues)
+        if(@settings['fullExogenousMapping'])
+          @exogenousJobIdsHash = {}
+          @exogenousJobIds.each { |currentId|
+            @exogenousJobIdsHash[currentId] = "Exogenous STAR Mapping Job"
+          }
+          @settings['filePathToListOfExogenousJobIds'] = "#{@jobSpecificSharedScratch}/listOfExogenousJobIds.txt"
+          File.open(@settings['filePathToListOfExogenousJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@exogenousJobIdsHash)) }
+        end
         # If any runExceRpt jobs were launched above, we'll launch a conditional job based on those jobs 
         if(conditionalJob)
           # If fullExogenousMapping=false, then we'll submit a processPipelineRuns conditional job
@@ -450,6 +478,9 @@ module BRL; module Genboree; module Tools; module Scripts
             @exoJobIdToRunExceRptConds.each_key { |currentId|
               exogenousSTARMapping(host, user, pass, currentId, @exoJobIdToRunExceRptConds[currentId])
             }
+            # We will also submit an exogenousPPRLauncher job.
+            # It will be launched after all exogenousSTARMapping jobs finish.
+            # The exogenousPPRLauncher job submits a PPR job to be launched after all exogenousTaxoTree jobs connected with the exogenousSTARMapping jobs finish.
             exogenousPPRLauncherConds = []
             @exogenousJobIds.each { |currentId|
               condition = {
@@ -539,11 +570,19 @@ module BRL; module Genboree; module Tools; module Scripts
               @errInputs[:badArchives] << File.basename(inputFile)     
             end
             unless(expError)
-              oldInputFile = inputFile.clone()
-              inputFile = exp.uncompressedFileName
-              # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
-              `rm -f #{oldInputFile}` unless(exp.compressedFileName == oldInputFile)
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
+              expanderErrors = exp.stderrStr
+              # If there is any content in stderrStr, then the archive is still bad and we need to report that
+              unless(expanderErrors.empty?)
+                expError = true
+                @errInputs[:badArchives] << File.basename(inputFile)                     
+              end
+              unless(expError)
+                oldInputFile = inputFile.clone()
+                inputFile = exp.uncompressedFileName
+                # Delete old archive if there was indeed an archive (it's uncompressed now so we don't need to keep it around)
+                `rm -f #{oldInputFile}` unless(exp.compressedFileName == exp.uncompressedFileName)
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Uncompressed file name: #{inputFile}")
+              end
             end
           end
         end
@@ -578,26 +617,35 @@ module BRL; module Genboree; module Tools; module Scripts
                 @errInputs[:badFormat] << "#{File.basename(inputFile)}\n(with original source archive #{File.basename(originalSource)})"
               else
                 $stderr.debugPuts(__FILE__, __method__, "STATUS", "Input file #{fixedInputFile} is in correct format, FASTQ or SRA (or an archived format that we support)")
-                if(@settings['uploadFullResults'])
+                if(@settings['uploadFullResults'] or (@settings['uploadExogenousAlignments'] and @settings['fullExogenousMapping']))
                   dataFileSize = File.size(fixedInputFile)
-                  if(@settings['exogenousMapping'] == "off")
-                    if(fileType == "fastq" or fileType == "sra")
-                      dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoOff').to_f
-                    else
-                      dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoOff').to_f
+                  $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Size of #{fixedInputFile} is #{dataFileSize}")
+                  if(@settings['uploadFullResults'])
+                    if(@settings['exogenousMapping'] == "off")
+                      if(fileType == "fastq" or fileType == "sra")
+                        dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoOff').to_f
+                      else
+                        dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoOff').to_f
+                      end
+                    elsif(@settings['exogenousMapping'] == "miRNA")
+                      if(fileType == "fastq" or fileType == "sra")
+                        dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoMiRNA').to_f
+                      else
+                        dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoMiRNA').to_f                
+                      end
+                    elsif(@settings['fullExogenousMapping'])
+                      if(fileType == "fastq" or fileType == "sra")
+                        dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoOn').to_f
+                      else
+                        dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoOn').to_f
+                      end
                     end
-                  elsif(@settings['exogenousMapping'] == "miRNA")
+                  elsif(@settings['uploadExogenousAlignments'] and @settings['fullExogenousMapping'])
                     if(fileType == "fastq" or fileType == "sra")
-                      dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoMiRNA').to_f
+                      dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoOnExoOnly').to_f
                     else
-                      dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoMiRNA').to_f                
-                    end
-                  elsif(@settings['exogenousMapping'] == "on")
-                    if(fileType == "fastq" or fileType == "sra")
-                      dataFileSize *= @toolConf.getSetting('settings', 'uncompressedMultiplierExoOn').to_f
-                    else
-                      dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoOn').to_f                
-                    end
+                      dataFileSize *= @toolConf.getSetting('settings', 'compressedMultiplierExoOnExoOnly').to_f   
+                    end                    
                   end
                   dataFileSize = dataFileSize.round
                   @predictedOutputFileSizes["file://#{fixedInputFile}"] = dataFileSize
@@ -695,8 +743,10 @@ module BRL; module Genboree; module Tools; module Scripts
       runExceRptJobConf['context']['toolIdStr'] = @runExceRptToolId
       runExceRptJobConf['context']['warningsConfirmed'] = true
       # Define settings
-      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Total output file size will be #{@predictedOutputFileSizes[inputFile]}")
-      runExceRptJobConf['settings']['totalOutputFileSize'] = @predictedOutputFileSizes[inputFile] if(@settings['uploadFullResults'])
+      if(@settings['uploadFullResults'] or (@settings['uploadExogenousAlignments'] and @settings['fullExogenousMapping']))
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Total output file size will be #{@predictedOutputFileSizes[inputFile]}")
+        runExceRptJobConf['settings']['totalOutputFileSize'] = @predictedOutputFileSizes[inputFile]
+      end
       runExceRptJobConf['settings']['exoJobId'] = @currentExoIndex if(@settings['fullExogenousMapping'])
       return runExceRptJobConf
     end
@@ -1047,7 +1097,11 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('priorityList')
       # Delete misc. settings associated with calibrator, depending on which options the user has chosen
       @settings.delete('indexBaseName') unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
-      @settings.delete('newSpikeInLibrary') unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+      unless(@settings['useLibrary'] =~ /uploadNewLibrary/)
+        @settings.delete('newSpikeInLibrary') 
+      else
+        @settings['newSpikeInLibrary'].gsub!("gbmainprod1.brl.bcmd.bcm.edu", "genboree.org")
+      end
       @settings.delete('existingLibraryName') unless(@settings['useLibrary'] =~ /useExistingLibrary/)
       # Delete misc. advanced settings
       @settings.delete('remoteStorageArea') if(@settings['remoteStorageArea'] == nil)
@@ -1082,8 +1136,8 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('postProcDir')
       # Delete local path to exogenous mapping inputs (only present if fullExogenousMapping=true)
       @settings.delete('exogenousMappingInputDir')
-      # Delete local path to list of job IDs text file
-      @settings.delete('filePathToListOfJobIds')
+      # Delete local path to important job IDs dir
+      @settings.delete('importantJobIdsDir')
       # Delete information about number of threads / tasks for exogenous mapping (used in exogenousSTARMapping wrapper)
       @settings.delete('numThreadsExo')
       @settings.delete('numTasksExo')
@@ -1099,6 +1153,10 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('localExecution')
       @settings.delete('numThreads')
       @settings.delete('exogenousTaxoTreeJobIDDir')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete('exogenousClaves')
+      @settings.delete('databaseGenomeVersion')
     end
   end
 

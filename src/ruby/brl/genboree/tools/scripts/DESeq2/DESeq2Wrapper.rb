@@ -22,7 +22,7 @@ module BRL; module Genboree; module Tools; module Scripts
     COMMAND_LINE_ARGS = {}
     DESC_AND_EXAMPLES = {
       :description  => "This is the wrapper for running the 'DESeq2' tool.
-                        This tool is intended to be called via the Genboree Workbench",
+                        This tool is intended to be called via the Genboree Workbench or the exRNA Atlas",
       :authors      => [ "William Thistlethwaite (thistlew@bcm.edu)" ],
       :examples     => [
         "#{File.basename(__FILE__)} --inputFile=filePath",
@@ -133,12 +133,16 @@ module BRL; module Genboree; module Tools; module Scripts
         end
         # Set up format options coming from the UI - "Settings" variables
         @analysisName = @settings['analysisName']
-        @firstFactorLevel = @settings['factorLevel1']
-        @secondFactorLevel = @settings['factorLevel2']
-        @factorName = @settings['factorName1']
+        @firstFactorLevel = @settings['factorLevel1'].strip
+        @secondFactorLevel = @settings['factorLevel2'].strip
+        @factorName = @settings['factorName1'].strip
         @remoteStorageArea = @settings['remoteStorageArea']
         # Set up other options
         @localJob = @settings['localJob']
+        if(@settings['atlasJob'])
+          @atlasJob = @settings['atlasJob']
+          @dynamicJobsPage = @settings['dynamicJobsPage']
+        end
         @runPostProcessingTool = @settings['runPostProcessingTool']
         # If we're going to be running PPR, then we'll need to create directories for those files (base dir, input dir, and output dir)
         if(@runPostProcessingTool) 
@@ -228,6 +232,18 @@ module BRL; module Genboree; module Tools; module Scripts
           convObj = BRL::Util::ConvertText.new(newNameForReadCountsFile, true)
           convObj.convertText()
         end
+        # Strip white space from inputs
+        @inputFiles.each { |currentInputFile|
+          input = File.open(currentInputFile, 'r')
+          output = ""
+          input.each_line { |currentLine|
+            currentLine = currentLine.split("\t")
+            currentLine.map! { |currentToken| currentToken.strip }
+            output << "#{currentLine.join("\t")}\n"
+          }
+          input.close()
+          File.open(currentInputFile, 'w') { |file| file.write(output) }
+        }
         # Check that inputs are in correct format and set up @readCountsFile / @factorsFile variables
         preprocessInputs(@inputFiles)
         raise @errUserMsg unless(@exitCode == 0)
@@ -290,6 +306,15 @@ module BRL; module Genboree; module Tools; module Scripts
           # If the file is a CORE_RESULTS archive, then we'll move it to a special directory for processing. Otherwise, we'll do our normal checks on that file.
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "File's base name is: #{File.basename(tmpFile)}.")
           if(File.basename(tmpFile) =~ /_CORE_RESULTS_v(\d\.\d\.\d)(?:.tgz)/)
+            # If this is our first CORE_RESULTS archive, then let's make sure we flag this job as being one that needs the post-processing tool (and we'll do all the necessary setup for that part)
+            unless(@runPostProcessingTool)
+              @runPostProcessingTool = true
+              @postProcDir = "#{@scratchDir}/postProcDir" 
+              @inputDirForPostProc = "#{@postProcDir}/runs"
+              @outputDirForPostProc = "#{@postProcDir}/outputFiles"
+              `mkdir -p #{@inputDirForPostProc}`
+              `mkdir -p #{@outputDirForPostProc}`
+            end
             $stderr.debugPuts(__FILE__, __method__, "STATUS", "File DOES match the CORE_RESULTS regular expression. Moving #{tmpFile} to #{@inputDirForPostProc}/#{File.basename(tmpFile)}")
             `mv #{tmpFile} #{@inputDirForPostProc}/#{File.basename(tmpFile)}`
           else
@@ -348,7 +373,6 @@ module BRL; module Genboree; module Tools; module Scripts
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Sniffing #{fixedInputFile}")
         @sniffer.filePath = fixedInputFile
         # We only want ASCII so we reject the file if it's not ASCII
-        # ?? Should we accept other ASCII-based formats ??
         unless(@sniffer.detect?('ascii'))
           @errInputArray.push("#{File.basename(fixedInputFile)} is not in ASCII format.")
         else
@@ -404,16 +428,16 @@ module BRL; module Genboree; module Tools; module Scripts
         firstFileColumnHeaders.shift()
         secondFileColumnHeaders.shift()
         # Our main check is that the column headers for the read counts file must be the same as the row headers for the factor levels file.
-        if(firstFileColumnHeaders.sort == secondFileRowHeaders.sort)
+        if(firstFileColumnHeaders.sort() == secondFileRowHeaders.sort())
           @readCountsFile = inputFiles[0]
           @factorsFile = inputFiles[1]
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "First file (#{@readCountsFile}) column headers match second file (#{@factorsFile}) row headers, so files are compatible.")
-        elsif(secondFileColumnHeaders.sort == firstFileRowHeaders.sort)    
+        elsif(secondFileColumnHeaders.sort() == firstFileRowHeaders.sort())
           @readCountsFile = inputFiles[1]
           @factorsFile = inputFiles[0]
           $stderr.debugPuts(__FILE__, __method__, "STATUS", "First file (#{@factorsFile}) row headers match second file (#{@readCountsFile}) column headers, so files are compatible.")
         else
-          @errUserMsg = "Your two input files are not in the correct format. The column headers in your file containing read counts\nmust match the row headers in your file containing sample descriptors.\nAlso, your documents should not contain any header lines (lines that begin with #).\nThe one exception to this rule is the first line of your file\n(which contains the column names).\nPlease contact a Genboree admin (sailakss@bcm.edu) for further help."
+          @errUserMsg = "Your two input files are not in the correct format. The column headers in your file containing read counts\nmust match the row headers in your file containing sample descriptors.\nAlso, your documents should not contain any header lines (lines that begin with #).\nThe one exception to this rule is the first line of your file\n(which contains the column names)."
           raise @errUserMsg
         end
         # Let's also check to make sure that the factor name / factor levels given by the user actually exist in the factors file
@@ -441,7 +465,7 @@ module BRL; module Genboree; module Tools; module Scripts
             if(currentLine[indexOfFactorName] == @firstFactorLevel)
               firstFactorPresent = true
             elsif(currentLine[indexOfFactorName] == @secondFactorLevel)
-              secondFactorPresent = true 
+              secondFactorPresent = true
             end
           }
           # Set error message according to which factor levels are present - if both are present, then everything is OK
@@ -459,7 +483,7 @@ module BRL; module Genboree; module Tools; module Scripts
         end
       rescue => err
         # Generic error message if somehow an error pops up that wasn't handled effectively by the above checks (hopefully won't happen)
-        @errUserMsg = "ERROR: Your two input files are not in the correct format.\nThe column headers in your file containing read counts must match\nthe row headers in your file containing sample descriptors.\nAlso, your documents should not contain any header lines (lines that begin with #).\nThe one exception to this rule is the first line of your file\n(which contains the column names).\nPlease contact a Genboree admin (sailakss@bcm.edu) for further help." if(@errUserMsg.nil?)
+        @errUserMsg = "ERROR: Your two input files are not in the correct format.\nThe column headers in your file containing read counts must match\nthe row headers in your file containing sample descriptors.\nAlso, your documents should not contain any header lines (lines that begin with #).\nThe one exception to this rule is the first line of your file\n(which contains the column names)." if(@errUserMsg.nil?)
         @errInternalMsg = err
         @errBacktrace = err.backtrace.join("\n")
         $stderr.debugPuts(__FILE__, __method__, "STATUS", @errBacktrace)
@@ -479,9 +503,10 @@ module BRL; module Genboree; module Tools; module Scripts
     # @param [String] errFile file path to .err file associated with tool run
     # @return [nil]
     def runDESeq2(readCountsFile, factorsFile, outputDir, factorName, firstFactorLevel, secondFactorLevel, outFile, errFile)
-      # Create command for actually launching the shell script that will run the tool
+      # Do some necessary R-related updates to text provided by user so that DESeq2 script works properly
       factorName.gsub!(" ", ".")
-      command = "computeFoldChange.rb -i #{readCountsFile} -s #{factorsFile} -o #{outputDir} -f \"#{factorName}\" -d \"#{firstFactorLevel}\" -t \"#{secondFactorLevel}\" >> #{outFile} 2>> #{errFile}"
+      # Create command for actually launching the shell script that will run the tool
+      command = "module unload R ; module load R/3.1 ; computeFoldChange.rb -i #{readCountsFile} -s #{factorsFile} -o #{outputDir} -f \"#{factorName}\" -d \"#{firstFactorLevel}\" -t \"#{secondFactorLevel}\" >> #{outFile} 2>> #{errFile}"
       # Launch command
       $stderr.debugPuts(__FILE__, __method__, "STATUS", "Launching command: #{command}")
       exitStatus = system(command)
@@ -512,6 +537,25 @@ module BRL; module Genboree; module Tools; module Scripts
       allOutputFiles = Dir.entries(outputDir)
       allOutputFiles.each { |outputFile|
         next if(outputFile == "." or outputFile == "..")
+        if(outputFile.include?("foldChange.txt"))
+          oldOutput = File.read("#{outputDir}/#{outputFile}")
+          newOutput = "\t#{oldOutput}"
+          File.open("#{outputDir}/#{outputFile}", 'w') { |file| file.write(newOutput) }
+          @topmiRNAs = []
+          lineCount = 0
+          newOutput.each_line { |currentLine|
+            if(lineCount == 0)
+              lineCount += 1
+              next
+            else
+              lineCount += 1
+              currentLine = currentLine.split("\t")[0][1..-2]
+              @topmiRNAs << currentLine
+              break if(@topmiRNAs.length >= 10)
+            end 
+          }
+          @wikiPathwaysLink = "http://www.wikipathways.org/pathway-finder?database=mirtarbase&identifiers=#{@topmiRNAs.join(",")}"
+        end
         uploadFile(targetUri.host, rsrcPath, @userId, "#{outputDir}/#{outputFile}", { :analysisName => analysisName, :outputFile => outputFile })
       }
       @successfulRun = true
@@ -598,7 +642,8 @@ module BRL; module Genboree; module Tools; module Scripts
         @failedRun = true
         @errUserMsg = "DESeq2 run failed.\nReason(s) for failure:\n\n"
         errorMessages = nil if(errorMessages.empty?)
-        @errUserMsg << (errorMessages.join("\n\n") || "[No error info available from DESeq2 tool]")
+        @errUserMsg << (errorMessages.join("\n\n") || "[No error info available from DESeq2 tool]\n")
+        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
       end
       return retVal
     end
@@ -678,7 +723,7 @@ module BRL; module Genboree; module Tools; module Scripts
           cmd = "grep -i \"NumberOfCompatibleSamples > 0 is not TRUE\" #{@errFile}"
           errorMessagesForCmd = `#{cmd}`
           unless(errorMessagesForCmd.strip().empty?())
-            errorMessages = "It looks like none of your submitted CORE_RESULTS archives were valid inputs\nfor the post-processing tool (used to generate your miRNA read counts file).\nPlease try re-running exceRpt on those samples, or contact a Genboree admin (sailakss@bcm.edu) for assistance.\n"
+            errorMessages = "It looks like none of your submitted CORE_RESULTS archives were valid inputs\nfor the post-processing tool (used to generate your miRNA read counts file).\nPlease try re-running exceRpt on those samples.\n"
           end
         end
         # Print error message in error log for debugging purposes
@@ -687,7 +732,8 @@ module BRL; module Genboree; module Tools; module Scripts
       # Did we find anything?
       if(retVal)
         @errUserMsg = "exceRpt small RNA-seq Post-processing tool failed. Message from exceRpt small RNA-seq Post-processing tool:\n\n"
-        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]")
+        @errUserMsg << (errorMessages || "[No error info available from exceRpt small RNA-seq Post-processing tool]\n")
+        @errUserMsg << "\nThis tool is currently in beta status and may not work with every combination of samples.\nIf you receive an error email after launching your job,\nplease use the Contact Us button at the top of the Atlas\nto report your error." if(@settings['atlasVersion'] == "v4")
         @errInternalMsg = @errUserMsg
         @exitCode = 29
       end
@@ -763,28 +809,40 @@ module BRL; module Genboree; module Tools; module Scripts
       emailObject.inputsText    = inputsText
       outputsText               = buildSectionEmailSummary(@outputs)
       emailObject.outputsText   = outputsText
+      # Delete dynamicJobsPage from @settings - we don't want to display it for the user in Settings section of email
+      @settings.delete('dynamicJobsPage')
       emailObject.settings      = @settings
       emailObject.exitStatusCode = @exitCode
       additionalInfo = ""
-      additionalInfo << "Your result files can be found on the Genboree Workbench.\n"
-      additionalInfo << "The Genboree Workbench is a repository of bioinformatics tools\n"
-      additionalInfo << "that will store your result files for you.\n"
-      additionalInfo << "You can find the Genboree Workbench here:\nhttp://#{@outputHost}/java-bin/workbench.jsp\n"
-      additionalInfo << "Once you're on the Workbench, follow the ASCII drawing below\nto find your result files.\n" +
-                          "|-Group: '#{@groupName}'\n" +
-                            "|--Database: '#{@dbName}'\n" +
-                              "|---Files\n" 
-      if(@remoteStorageArea)
-        additionalInfo << "|----#{@remoteStorageArea}\n" + 
-                            "|-----DESeq2_v#{@toolVersion}\n" +
-                              "|------#{@analysisName}\n\n"
-      else 
-        additionalInfo << "|----DESeq2_v#{@toolVersion}\n" +
-                            "|-----#{@analysisName}\n\n" 
-      end 
-      additionalInfo << "NOTE 1:\nThe file that ends in '_foldChange.txt' contains the results from your DESeq2 analysis.\n" +
-                        "NOTE 2:\nThe file that ends in 'diffExp.R' is the R script that was used to generate your results.\n" +
-                        "\n==================================================================\n"
+      if(@atlasJob)
+        additionalInfo << "You can view the results of your analysis job on the \"My Analyses\" page on the exRNA Atlas.\n"
+        additionalInfo << "You can find the \"My Analyses\" page by first clicking \"Analysis Results\" and then clicking \"My Analysis Results\" in the Atlas navigation bar.\n"
+        additionalInfo << "You can also access the \"My Analyses\" page here: #{@dynamicJobsPage}.\n"
+        additionalInfo << "Your results will be found under the \"DESeq2\" tab and will be identified by the name of your analysis and the date of submission.\n"
+        additionalInfo << "Click the \"Click to View\" link to see the list of differentially expressed miRNAs associated with your factor levels (ordered by adjusted p-value, by default).\n"
+        additionalInfo << "You can also select miRNAs of interest for pathway analysis (via WikiPathways).\n"
+        additionalInfo << "Please note that it may take some time for your results to become available. If you receive an error message when trying to view your results, wait a few minutes and try again."
+      else
+        additionalInfo << "Your result files can be found on the Genboree Workbench.\n"
+        additionalInfo << "The Genboree Workbench is a repository of bioinformatics tools\n"
+        additionalInfo << "that will store your result files for you.\n"
+        additionalInfo << "You can find the Genboree Workbench here:\nhttp://#{@outputHost}/java-bin/workbench.jsp\n"
+        additionalInfo << "Once you're on the Workbench, follow the ASCII drawing below\nto find your result files.\n" +
+                            "|-Group: '#{@groupName}'\n" +
+                              "|--Database: '#{@dbName}'\n" +
+                                "|---Files\n" 
+        if(@remoteStorageArea)
+          additionalInfo << "|----#{@remoteStorageArea}\n" + 
+                              "|-----DESeq2_v#{@toolVersion}\n" +
+                                "|------#{@analysisName}\n\n"
+        else 
+          additionalInfo << "|----DESeq2_v#{@toolVersion}\n" +
+                              "|-----#{@analysisName}\n\n" 
+        end 
+        additionalInfo << "NOTE 1:\nThe file that ends in '_foldChange.txt' contains the results from your DESeq2 analysis.\n" +
+                          "NOTE 2:\nThe file that ends in 'diffExp.R' is the R script that was used to generate your results."
+                    #      "NOTE 3:\nYou may directly view pathways\nassociated with your top 10 differentially expressed miRNAs\nvia this WikiPathways link:\n\n#{@wikiPathwaysLink}\n\nPlease note that interactive highlighting of pathway nodes\nvia the miRNA selection buttons is currently under development.\nYou may contact Alexander Pico (alex.pico@gladstone.ucsf.edu)\nfor assistance with the highlighting of pathway nodes\nor any follow-up pathway visualizations."
+      end
       emailObject.resultFileLocations = nil
       emailObject.additionalInfo = additionalInfo
       if(@suppressEmail)

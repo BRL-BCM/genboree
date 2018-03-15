@@ -1,0 +1,33 @@
+<%= render :partial => "status" %>
+<%= render :partial => "notices" %>
+
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <%= form_tag ("resetp" , "method" => :post) do %>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+      <div class="col-sm-12">
+        <%= label_tag 'user_id', 'Login/User Name:' %>
+      </div>
+      <div class="col-sm-12">
+        <%= text_field_tag 'user_id', @user_info["user_id"] , { "class" => "form-control", "required" => true }%>
+      </div>
+      <div class="col-sm-12">
+        <%= label_tag 'email', 'Email:' %>
+      </div>
+      <div class="col-sm-12">
+        <%= email_field_tag 'e-mail', @user_info["e-mail"], { "class" => "form-control", "required" => true } %>
+      </div>
+      <div class="col-sm-12 submit-button">
+        <%= submit_tag "Reset Password", "class" => "btn btn-primary" %>
+      </div>
+    </div>
+    <% end %>
+    <div class="col-lg-3">
+    </div>
+  </div>
+  <style>
+    .submit-button {
+      padding-top: 30px;
+    }
+  </style>

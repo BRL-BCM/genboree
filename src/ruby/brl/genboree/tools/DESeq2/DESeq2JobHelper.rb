@@ -4,8 +4,8 @@ require 'brl/genboree/genboreeUtil'
 require 'uri'
 require 'brl/genboree/rest/helpers/databaseApiUriHelper'
 require 'brl/genboree/rest/helpers/sampleSetApiUriHelper'
-require "brl/genboree/rest/helpers/fileApiUriHelper"
-require "brl/genboree/tools/workbenchJobHelper"
+require 'brl/genboree/rest/helpers/fileApiUriHelper'
+require 'brl/genboree/tools/workbenchJobHelper'
 require 'brl/genboree/rest/wrapperApiCaller'
 include BRL::Genboree::REST
 
@@ -76,10 +76,22 @@ module BRL ; module Genboree ; module Tools
     #     "module swap jdk/1.6"
     #   ]
     def preCmds()
+      currentModule = ""
+      # If we're launching this job from the exRNA Atlas, we'll use the atlasVersion variable
+      # to figure out whether we want to use the 3rd or 4th gen module.
+      # If we aren't launching the job from the atlas, we'll just use the 4th gen module.
+      if(@workbenchJobObj.settings["atlasVersion"])
+        if(@workbenchJobObj.settings["atlasVersion"] == "v4")
+          currentModule = "exceRptPipeline/4_prod"
+        elsif(@workbenchJobObj.settings["atlasVersion"] == "v3")
+          currentModule = "exceRptPipeline/3_prod_alt"
+        end
+      else
+        currentModule = "exceRptPipeline/4_prod"
+      end
       return [
-        "module load R/3.1",
         "module load gcc/4.9.2",
-        "module load exceRptPipeline/3_prod_alt"
+        "module load #{currentModule}"
       ]
     end
 

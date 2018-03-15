@@ -143,8 +143,15 @@ module BRL ; module Genboree ; module KB ; module Queries
           @queryErrors << "INVALID_DOC: The input document must contain at least one query configuration item. The path '<>.Query Configurations' is either empty or invalid."
         end
       else
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( queryValidator.respond_to?(:buildErrorMsgs) )
+          validatorErrors = queryValidator.buildErrorMsgs
+        else
+          validatorErrors = queryValidator.validationErrors
+        end
         @queryStatus = false
-        @queryErrors << "INVALID_DOC: The input document failed vaildation against the query model. #{queryValidator.validationErrors}"
+
+        @queryErrors << "INVALID_DOC: The input document failed vaildation against the query model. #{validatorErrors.join("\n")}"
       end
       return @queryStatus
     end

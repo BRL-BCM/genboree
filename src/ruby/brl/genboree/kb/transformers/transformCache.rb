@@ -137,8 +137,11 @@ module BRL ; module Genboree ; module KB ; module Transformers
           associatedColls.each{|col|
             st = BRL::Genboree::KB::Stats::CollStats.new(@mongoKbDb, col)
             editTime = st.lastEditTime
-            obj =   {"Coll" =>  {"properties" => { "EditTime"=> {"value"=> editTime }},"value"=> col }}
-            updatedDoc['TransformCache']['properties']['CollEditTimes']['items'] << obj
+            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Edittime for #{col.inspect} :: #{editTime.inspect}")
+            if(editTime) # nil when the coll is empty
+              obj =   {"Coll" =>  {"properties" => { "EditTime"=> {"value"=> editTime }},"value"=> col }}
+              updatedDoc['TransformCache']['properties']['CollEditTimes']['items'] << obj
+            end
           }
         end
         # sourceDoc Version
@@ -167,7 +170,12 @@ module BRL ; module Genboree ; module KB ; module Transformers
             $stderr.debugPuts(__FILE__, __method__, "DEBUG", "SAved!!!!i")
           end
         else
-          raise "INVALID_CACHE_DOC: Cached doc failed validation against the model: #{@trChValidator.validationErrors}"
+          if( @trChValidator.respond_to?(:buildErrorMsgs) )
+            errors = @trChValidator.buildErrorMsgs()
+          else
+            errors = @trChValidator.validationErrors
+          end
+          raise "INVALID_CACHE_DOC: Cached doc failed validation against the model:\n#{errors.join("\n")}"
         end
       return updatedDoc
     end

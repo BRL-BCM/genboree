@@ -2,6 +2,7 @@ require 'time'
 require 'date'
 require 'uri'
 require 'json'
+require 'memoist'
 require 'brl/util/util'
 require 'brl/genboree/genboreeUtil'
 require 'brl/genboree/dbUtil'
@@ -56,6 +57,9 @@ module BRL ; module Genboree ; module KB ; module Validators
     },
     'items'       => { :classes => { Array => 'array' },  :default  => nil, :required => false,
       :extractVal => Proc.new { |pp, dflt| xx = pp['items'] ; ( xx.acts_as?(Array) ? xx : dflt ) }
+    },
+    'Hints'       => { :classes => { Array => 'array', String => 'string' }, :default => nil, :required => false,
+      :extractVal => Proc.new { |pp, dflt| xx = pp['Hints'] ; xx = xx.to_s.split(',') unless(xx.acts_as?(Array)) ; xx.map{|hint| hint.to_s.strip } }
     }
   }
 
@@ -110,14 +114,22 @@ module BRL ; module Genboree ; module KB ; module Validators
     },
     /^bioportalTerm\(/ => {
       :type => 'bioportalTerm', :rootDomain => true, :internal => false, :defaultVal => nil, :autoContent => false, :searchCategory => "string",
-      :parseDomain  => Proc.new { |vv, *xx| genbConf = BRL::Genboree::GenboreeConfig.load(); vv.to_s.strip =~ /^bioportalTerm\((http:\/\/data\.bioontology\.org\/search\?.*)\)/ ; ($& ? BRL::Sites::BioOntology.fromUrl($1, :proxyHost => genbConf.cachingProxyHost, :proxyPort => genbConf.cachingProxyPort) : nil) },
-      :parseVal     => Proc.new { |vv, dflt, pdom, *xx| ( pdom.is_a?(BRL::Sites::BioOntology) ? ( pdom.termInOntology?(vv.to_s) ? pdom.prefLabelForTerm.to_s : dflt ) : dflt ) },
+      :parseDomain  => Proc.new { |vv, *xx|
+        doMemo = (xx.first.is_a?(Hash) ? xx.first[:doingMemoization] : false)
+        factoryHelper = ( xx.first.is_a?(Hash) ? xx.first[:factoryHelper] : nil )
+        pdom = ( factoryHelper ? factoryHelper.makeBioOntologyFromDomain( :bioportalTerm, vv, doMemo ) : makeBioOntologyFromDomain( :bioportalTerm, vv, false ) )
+        ; $stderr.puts "  PDOM (#{pdom.object_id rescue 'na'}) ; memo? #{pdom.doingMemoization rescue 'na'}" ; pdom  },
+      :parseVal     => Proc.new { |vv, dflt, pdom, *xx|  $stderr.puts "  USING PDOM (#{pdom.object_id rescue 'na'}) ; memo? #{pdom.doingMemoization rescue 'na'}" ; ( pdom.is_a?(BRL::Sites::BioOntology) ? ( pdom.termInOntology?(vv.to_s) ? pdom.getPrefLabelForTerm(vv.to_s).to_s : dflt ) : dflt ) },
       :needsCasting => Proc.new { |vv, *xx| false }
     },
     /^bioportalTerms\(/ => {
       :type => 'bioportalTerms', :rootDomain => true, :internal => false, :defaultVal => nil, :autoContent => false, :searchCategory => "string",
-      :parseDomain  => Proc.new { |vv, *xx| genbConf = BRL::Genboree::GenboreeConfig.load() ; ontologies = [] ; subtrees = [] ; vv = vv.to_s.gsub(/^bioportalTerms\(/, '') ; vv.to_s.strip.scan(/\(\s*([^\),]+?)\s*,\s*(http(?:(?::\/\/)|(?:%3A%2F%2F)).*?)\s*\)/) { |pairArray| ontologies.push(pairArray.first) ; subtrees.push(pairArray.last) ; } ; ontologies.compact! ; subtrees.compact! ; ( (!ontologies.empty? and !subtrees.empty? and ontologies.size == subtrees.size) ? BRL::Sites::BioOntology.new(ontologies, subtrees, nil, :proxyHost => genbConf.cachingProxyHost, :proxyPort => genbConf.cachingProxyPort) : nil ) },
-      :parseVal     => Proc.new { |vv, dflt, pdom, *xx| ( pdom.is_a?(BRL::Sites::BioOntology) ? ( pdom.termInOntology?(vv.to_s) ? pdom.prefLabelForTerm.to_s : dflt ) : dflt ) },
+      :parseDomain  => Proc.new { |vv, *xx|
+        doMemo = (xx.first.is_a?(Hash) ? xx.first[:doingMemoization] : false)
+        factoryHelper = ( xx.first.is_a?(Hash) ? xx.first[:factoryHelper] : nil )
+        pdom = ( factoryHelper ? factoryHelper.makeBioOntologyFromDomain( :bioportalTerms, vv, doMemo ) : makeBioOntologyFromDomain( :bioportalTerms, vv, false ) )
+        ; $stderr.puts "  PDOM (#{pdom.object_id rescue 'na'}) ; memo? #{pdom.doingMemoization rescue 'na'}" ; pdom  },
+      :parseVal     => Proc.new { |vv, dflt, pdom, *xx| $stderr.puts "  USING PDOM (#{pdom.object_id rescue 'na'}) ; memo? #{pdom.doingMemoization rescue 'na'}" ; ( pdom.is_a?(BRL::Sites::BioOntology) ? ( pdom.termInOntology?(vv.to_s) ? pdom.getPrefLabelForTerm(vv.to_s).to_s : dflt ) : dflt ) },
       :needsCasting => Proc.new { |vv, *xx| false }
     },
     /^boolean$/ => {
@@ -183,7 +195,8 @@ module BRL ; module Genboree ; module KB ; module Validators
       :parseDomain  => Proc.new { |vv, *xx| vv.to_s.strip =~ /^gbAccount$/ ; ($& ? 'gbAccount' : nil) },
       :parseVal     => Proc.new { |vv, dflt, pdom, *xx| genbConf = BRL::Genboree::GenboreeConfig.load(); dbu = BRL::Genboree::DBUtil.new(genbConf.dbrcKey, nil, nil); recs = dbu.selectUserByName(vv.to_s.strip); recs.first['name'] ? :CONTENT_NEEDED : dflt rescue dflt },
       :inCast       => Proc.new { |pv, vv, *xx| vv.to_s },
-      :needsCasting => Proc.new { |vv, *xx| !(vv.is_a?(String) and vv != 'CONTENT_NEEDED') }
+      :needsCasting => Proc.new { |vv, *xx| !(vv.is_a?(String) and vv != 'CONTENT_NEEDED') },
+      :standaloneParseVal => Proc.new { |vv, dflt, pdom, *xx| if(vv.is_a?(String) and vv =~ /\S/) then vv.strip ; elsif(vv.nil?) then vv = "" ;else dflt end }
     },
     /^int$/ => {
       :type => 'int', :rootDomain => true, :internal => false, :defaultVal => 0, :autoContent => false, :searchCategory => "int",
@@ -215,7 +228,7 @@ module BRL ; module Genboree ; module KB ; module Validators
       :needsCasting => Proc.new { |vv, *xx| !vv.is_a?(String) }
     },
     /^measurement\(/ => {
-      :type => 'measurement', :rootDomain => false, :internal => false, :defaultVal => nil, :autoContent => false, :searchCategory => "",
+      :type => 'measurement', :rootDomain => false, :internal => false, :defaultVal => nil, :autoContent => false, :searchCategory => "float",
       :parseDomain  => Proc.new { |vv, *xx| vv.to_s.strip =~ /^measurement\(([^\)\t\n]+)\)/i ; ($& ? (Unit($1.strip) rescue :UNIT_UNKNOWN) : nil) },
       :parseVal     => Proc.new { |vv, dflt, pdom, *xx| ( pdom.is_a?(Unit) ? ( valUnit = Unit(vv) rescue dflt ; (valUnit and valUnit.compatible?(pdom) ) ? ( valUnit.convert_to(pdom) * 1.0) : dflt ) : dflt ) },
       :inCast       => Proc.new { |vv, *xx| (vv * 1.0).to_s },
@@ -324,6 +337,24 @@ module BRL ; module Genboree ; module KB ; module Validators
     }
   }
 
+  MEMOIZED_INSTANCE_METHODS = [
+    :parseDomain,
+    :makeBioOntologyFromDomain
+  ]
+  # @todo Can't use memoization in web server as long as dependent on the class to factory the bioOntology. Could possibly
+  #   do it if it were only memoized on the singlton_class for a specific ModelValidator instance. But key that it be
+  #   restricted ONLY to the instance and its singleton_class because if the regular class, it's basically a long-lived
+  #   global cache which is bad. Unfortunately, the Proc's above are in CLASS scope and any methods they call are NOT
+  #   INSTANCE METHODS but rather class methods. Thus to reuse a memoizing BioOntology in subsequence doc validations,
+  #   must cache/memoize a factory method that creates said BioOntology objects (else new Bioontology object each call
+  #   and no memoization effectively becase discarded when done checking a given prop-val). Possibly could pass in a helper
+  #   INSTANCE method that is a memoized factory method into the parseDomains.
+  MEMOIZED_CLASS_METHODS = [
+  ]
+
+  POSSIBLE_DOMAINS = DOMAINS.keys
+
+  attr_reader :doingMemoization
   attr_accessor :validationErrors
   attr_accessor :validationWarnings
   attr_accessor :validationMessages
@@ -339,13 +370,11 @@ module BRL ; module Genboree ; module KB ; module Validators
   alias_method :indexedDocLevelProps=, :indexedProps=
 
   def initialize()
-    @validationErrors = []
     @relaxedRootValidation = false
+    @doingMemoization = false
   end
 
-  def validateModel(modelDoc)
-
-    #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "modelDoc is a #{modelDoc.class.inspect}")
+  def clear()
     @validationErrors = []
     @validationWarnings =  []
     @validationMessages = []
@@ -358,6 +387,84 @@ module BRL ; module Genboree ; module KB ; module Validators
     # - the doc identifier is the id amongst the set of documents and properties within an items
     #   list can have an identifier for id'ing an item amongst the set of items
     @haveIdentifier = false
+  end
+
+  # Memoization is NOT on by default because we may be in a web server process and possibly
+  #   this validator instance could be used for a long time, cross request. But if at all possible,
+  #   memoization should be ENABLED, ESPECIALLY when processing a set of related docs...The parseDomain Procs
+  #   above can create new helper objects given the same domain, over and over and over as each prop-value pair
+  #   is validated. Why create new object for same domain string?
+  # @note Once memoization is initialized, it can't be undone. The misleading @unmemoize_all@ method
+  #   only clears the cache, leaving memoization happening on the very next call. Can't disable once enabled.
+  # @note This initialized memoization for THIS INSTANCE. Other instance should be unaffected. This is good/safe
+  #   given that memoization CANNOT BE DISABLED. This is why we didn't do it on the class in general be rather
+  #   this instance's specific singleton_class. This is good though because it GENERALLY MEANS IT'S SAFE to enable
+  #   for a validator instance because the life of that validator instance is restricted to the life of the request
+  #   (or shorter), so we won't have out-of-date cached objects because we memoized at the global level via the class.
+  #   Rather we just did it for this instance's singleton_class not the class in general.
+  def initMemoization()
+    @doingMemoization = true
+    class << self
+      extend Memoist
+      # Memoize instance methods
+      MEMOIZED_INSTANCE_METHODS.each { |meth| memoize meth }
+    end
+    class << self.class
+      extend Memoist
+      MEMOIZED_CLASS_METHODS.each { |meth| memoize meth }
+    end
+  end
+
+  #def self.makeBioOntologyFromDomain( domainType, domainStr, doingMemoization )
+  def self.makeBioOntologyFromDomain( domainType, domainStr, doingMemoization=false )
+    $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "domainType : #{domainType.inspect} ; doingMemoization => #{doingMemoization.inspect}")
+    retVal = nil
+    genbConf = BRL::Genboree::GenboreeConfig.load()
+    if( domainType == :bioportalTerm )
+      domainStr.to_s.strip =~ /^bioportalTerm\((http:\/\/data\.bioontology\.org\/search\?.*)\)/
+      if( $& )
+        retVal = BRL::Sites::BioOntology.fromUrl($1, :proxyHost => genbConf.cachingProxyHost, :proxyPort => genbConf.cachingProxyPort)
+        $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "BO fromURL? #{retVal.class.inspect}")
+        if( doingMemoization )
+          # We are memoizing in this validator instance. We should also ask the BioOntology object to memoize its key methods
+          # (the ones we call hopefully!)
+          retVal.initMemoization()
+        end
+      else
+        retVal = nil
+      end
+    else # domainType == :bioportalTerms
+      ontologies = []
+      subtrees = []
+      domainStr = domainStr.to_s.gsub(/^bioportalTerms\(/, '')
+      domainStr.to_s.strip.scan( /\(\s*([^\),]+?)\s*,\s*(http(?:(?::\/\/)|(?:%3A%2F%2F)).*?)\s*\)/ ) { |pairArray|
+        ontologies.push(pairArray.first)
+        subtrees.push(pairArray.last)
+      }
+      ontologies.compact!
+      subtrees.compact!
+      if( !ontologies.empty? and !subtrees.empty? and (ontologies.size == subtrees.size) )
+        retVal = BRL::Sites::BioOntology.new(ontologies, subtrees, nil, :proxyHost => genbConf.cachingProxyHost, :proxyPort => genbConf.cachingProxyPort)
+        $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "BO via new? #{retVal.class.inspect}")
+        if( doingMemoization )
+          # We are memoizing in this validator instance. We should also ask the BioOntology object to memoize its key methods
+          # (the ones we call hopefully!)
+          retVal.initMemoization()
+        end
+      else
+        retVal = nil
+      end
+    end
+
+    return retVal
+  end
+
+  def makeBioOntologyFromDomain( domainType, domainStr, doingMemoization=@doingMemoization )
+    return self.class.makeBioOntologyFromDomain( domainType, domainStr, doingMemoization )
+  end
+
+  def validateModel(modelDoc)
+    self.clear()
     # Is this a property-based modelDoc or the actual model data?
     if(modelDoc.is_a?(BRL::Genboree::KB::KbDoc))
       # Assume we can dig out the actual non-prop-oriented model data structure stored at name.model:
@@ -389,9 +496,9 @@ module BRL ; module Genboree ; module KB ; module Validators
       # First quick check for unknown fields
       prop.each_key { |field|
         unless(FIELDS.key?(field)) # not a known field ; allow & save if not similar to known field
-          fieldDowncase = field.downcase
+          fieldDowncase = field.to_s.downcase
           # Just look for 1 similar field via find()
-          similarField = FIELDS.find { |fieldName, fieldRec| (fieldName.downcase == fieldDowncase) }
+          similarField = FIELDS.find { |fieldName, fieldRec| (fieldName.to_s.downcase == fieldDowncase) }
           if(similarField and !similarField.empty?)
             @validationErrors << "ERROR: You have an unknown property field #{field.inspect} for the root property in your model. This is not an officially-supported field, and may be a typo. It appears to be similar to #{similarField.first.inspect}. Please note that field names are case sensitive."
           else # Not similar. Unlikely to be a typo. Allow and save!
@@ -743,7 +850,7 @@ module BRL ; module Genboree ; module KB ; module Validators
                     end
                   end
                 else # not a known field ; allow & save if not similar to known field
-                  fieldDowncase = field.downcase
+                  fieldDowncase = field.to_s.downcase
                   # Just look for 1 similar field via find()
                   similarField = self.class::FIELDS.find { |fieldName, fieldRec| (fieldName.downcase == fieldDowncase) }
                   if(similarField and !similarField.empty?)
@@ -830,11 +937,13 @@ module BRL ; module Genboree ; module KB ; module Validators
   #     @:domainRec the value of DOMAINS associated with the key from propDef['domain']
   #     @:parsedDomain the result of calling the proc at domainRec[:parseDomain] which sometimes
   #       sets up objects that can be used for content generation
-  def validVsDomain(value, propDef, pathElems, opts={ :castValue => false, :needsCastCheck => false })
+  def validVsDomain(value, propDef, pathElems, opts={ :castValue => false, :needsCastCheck => false, :standaloneMode => false })
     # Default: not determined as valid and no casting:
     retVal = { :result => :INVALID, :castValue => value }
+    opts = { :castValue => false, :needsCastCheck => false, :standaloneMode => false }.merge(opts)
     needsCastCheck = opts[:needsCastCheck]
     castValue = opts[:castValue]
+    standaloneMode = opts[:standaloneMode]
     # - get domain string
     if(propDef.key?('domain'))
       domainStr = FIELDS['domain'][:extractVal].call(propDef, nil)
@@ -846,11 +955,15 @@ module BRL ; module Genboree ; module KB ; module Validators
       domainRec = getDomainRec(domainStr)
       if(domainRec)
         # - parse domain
-        parsedDomain = domainRec[:parseDomain].call(domainStr, nil)
+        parsedDomain = domainRec[:parseDomain].call(domainStr, { :doingMemoization => @doingMemoization, :factoryHelper => self } )
         if(parsedDomain and parsedDomain != :UNIT_UNKNOWN)
           # - parse value in context of the domain
           #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "value: #{value.inspect} ; parsedDomain:\n#{parsedDomain.inspect}")
-          parseVal = domainRec[:parseVal].call(value, nil, parsedDomain)
+          if( standaloneMode and domainRec[:standaloneParseVal] )
+            parseVal = domainRec[:standaloneParseVal].call( value, nil, parsedDomain )
+          else
+            parseVal = domainRec[:parseVal].call(value, nil, parsedDomain)
+          end
 
           # Are we asked to ADDITIONALLY/OPTIONALLY do the needs casting check on value??
           if(needsCastCheck)
@@ -893,7 +1006,8 @@ module BRL ; module Genboree ; module KB ; module Validators
     end
     return retVal
   end
-  def self.validVsDomain(value, propDef, pathElems, opts={ :castValue => false, :needsCastCheck => false })
+
+  def self.validVsDomain(value, propDef, pathElems, opts={ :castValue => false, :needsCastCheck => false, :standaloneMode => false } )
     obj = self.new()
     obj.validationErrors = []
     rv = obj.validVsDomain(value, propDef, pathElems, opts)
@@ -919,9 +1033,16 @@ module BRL ; module Genboree ; module KB ; module Validators
     return retVal
   end
 
+  def hasStandaloneParseVal?( domainStr )
+    retVal = getDomainField( domainStr, :standaloneParseVal )
+    return ( retVal ? true : false )
+  end
+
   def getDomainField(domainStrOrPropDef, field)
     if(domainStrOrPropDef.acts_as?(Hash))
       domainStr = getDomainStr(domainStrOrPropDef)
+    else
+      domainStr = domainStrOrPropDef
     end
     retVal = nil
     domainRec = getDomainRec(domainStr)
@@ -935,7 +1056,7 @@ module BRL ; module Genboree ; module KB ; module Validators
     retVal = nil
     domainRec = getDomainRec(domainStr)
     if(domainRec)
-      retVal = domainRec[:parseDomain].call(domainStr, nil)
+      retVal = domainRec[:parseDomain].call(domainStr, { :doingMemoization => @doingMemoization, :factoryHelper => self } )
     end
     # else # else domainRec is nil and @validationErrors already has messages about this
     return retVal
@@ -947,7 +1068,7 @@ module BRL ; module Genboree ; module KB ; module Validators
     domainStr = (propDef['domain'] or 'string')
     domainRec = getDomainRec(domainStr)
     if(domainRec)
-      if(propDef.key?('default'))
+      if( propDef.key?('default') )
         # If has explicit default, make sure matches domain and return it
         defaultFromPropDef = propDef['default']
         unless(defaultFromPropDef.nil?)
@@ -972,13 +1093,48 @@ module BRL ; module Genboree ; module KB ; module Validators
         defaultVal = domainRec[:defaultVal]
         unless(defaultVal.nil?)
           retVal = defaultVal
-        else
+        else # this kind of domain has no default (common) ; so default is nil...but no error
           retVal = nil
-          @validationErrors << "ERROR: there is no sensible automatic default for the #{domainStr.inspect} domain and the model is not providing one. Therefore, cannot provide a sensible default for the  #{pathElems.is_a?(Array) ? pathElems.join('.').inspect : '{UNKNOWN/BROKEN}'} property."
+          # @validationErrors << "ERROR: there is no sensible ZZZZautomatic default for the #{domainStr.inspect} domain and the model is not providing one. Therefore, cannot provide a sensible default for the  #{pathElems.is_a?(Array) ? pathElems.join('.').inspect : '{UNKNOWN/BROKEN}'} property."
         end
       end
     else
       @validationErrors << "ERROR: the property definition for the #{pathElems.is_a?(Array) ? pathElems.join('.').inspect : '{UNKNOWN/BROKEN}'} property specifies an unknown domain #{domainStr.inspect}. This is not allowed."
+    end
+    return retVal
+  end
+
+  # For each property name (not path, just the local property name), collect all POSSIBLE parent property paths (full paths)
+  #   for that property. i.e. All property paths which have a sub-prop of that name. i.e. Given a property name, only,
+  #   where might it be placed in the model?
+  # @note This is mainly to support {DocValidator#validateDoc} so it can give suggestions for properties that appear
+  #   like they may mere be misplaced. But possibly other uses as well
+  # @param [Hash] model The model data structure (not the KbDoc wrapper that contains the model schema...actual schema)
+  # @param [Hash{Symbol,Object}] opts Optional options hash to tweak the behavior etc.
+  #   @option opts [BRL::Genboree::KB::Helpers::ModelsHelper] :modelsHelper If already have a {ModelsHelper} instance available,
+  #     can provide it here to avoid overhead of making another. Probably limited benefit, {ModelsHelper} should be light to
+  #     instantiate and this method need only be called once on a given model anyway.
+  # @return [Hash{String,Array[String]}] A map of property names (not full paths, just name] to array of full property paths
+  #    for properties which have a sub-prop of that name.
+  def parentSuggestions( model, opts={ :modelsHelper => nil } )
+    modelsHelper = ( opts[:modelsHelper] or BRL::Genboree::KB::Helpers::ModelsHelper.new(nil) )
+    paths = modelsHelper.allPropPaths( model ) rescue nil
+    if( paths )
+      retVal = Hash.new { |hh, kk| hh[kk] = [] }
+      paths.each { |path|
+        path = path.gsub(/\\\./, "\v") # protect any \. 2-char escape sequences
+        elems = path.split(/\./)
+        elems.map! { |elem| elem.gsub(/\v/, '.') } # restore any \n with actual literal .
+        child = elems.last
+        parent = elems[0 .. -2].join('.')
+        retVal[child] << parent if(parent =~ /\S/) # mainly eliminates root prop from being present
+      }
+      # Sort the parents for consistent ordering (and making nicer user strings)
+      retVal.values.each { |parents|
+        parents.sort!{ |aa,bb| rv = (aa.downcase <=> bb.downcase) ; (aa <=> bb) if(rv == 0) ; rv }
+      }
+    else
+      retVal = nil
     end
     return retVal
   end

@@ -120,7 +120,7 @@
 <head>
 <title>Genboree - Forgot Password</title>
 <link rel="stylesheet" href="/styles/jsp.css<%=jsVersion%>" type="text/css">
-<meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
+<meta http-equiv="refresh" content="0; URL='/<%=GenboreeConfig.getConfigParam("gbKbMount")%>/projects/genboree_profile_management/genboree_profile_management/profile/forgot_pwd'">
 </head>
 <BODY>
 <%@ include file="include/header.incl" %>
@@ -140,13 +140,7 @@
   {
 %>
 <br>
-<div class="container">
- <div class="row">
-  <div class="col-sm-2">
-  </div>
-  <div class="col-sm-6">
-    <div class="text-danger">
-	Please enter BOTH your email address AND your Calculator User Name (login)
+	Please enter BOTH your email address AND your Genboree User Name (login)
 	in the box below, then press &quot;Send&quot;.
 <br>&nbsp;<br>
 	Your password will be sent to your email address in a very generic looking email.
@@ -154,41 +148,31 @@
   (Subject: &quot;The information you recently requested.&quot;)
 <br>
 
-    </div>
-    <br>
-    <form action="forgotten.jsp" method="post">
-      <table border="0" cellpadding="4" cellspacing="2">
-      <tr>
-      <td class=""><strong>&nbsp;Email:&nbsp;</strong></td>
-      <td class="">
-          <input type="text" name="genboree_email" id="genboree_email"
-      	  size="60" maxlength="80" class="form-control"
-      	  value="<%=userEmail%>">
-      </td>
-      </tr>
-      
-      <tr>
-      <td class=""><strong>&nbsp;User&nbsp;Name:&nbsp;</strong></td>
-      <td class="">
-          <input type="text" name="genboree_user" id="genboree_user"
-      	  size="40" maxlength="40"
-      	  value="<%=userName%>" class="form-control">
-      </td>
-      </tr>
-      <tr>
-      <td>
-          <br>
-          <input name="cmdSend" id="cmdSend" type="submit" value='Send' class="btn btn-success" style="width:100">
-      </td>
-      </tr>
-      </table>
-    </form>
-  </div>
-  <div class="col-sm-2">
-  </div>
-</div>
-</div>
-</div>
+<form action="forgotten.jsp" method="post">
+<table border="0" cellpadding="4" cellspacing="2">
+
+<tr>
+<td class="form_body"><strong>&nbsp;Email:&nbsp;</strong></td>
+<td class="form_body">
+    <input type="text" name="genboree_email" id="genboree_email"
+	  size="60" maxlength="80"
+	  value="<%=userEmail%>">
+</td>
+</tr>
+
+<tr>
+<td class="form_body"><strong>&nbsp;User&nbsp;Name:&nbsp;</strong></td>
+<td class="form_body">
+    <input type="text" name="genboree_user" id="genboree_user"
+	  size="40" maxlength="40"
+	  value="<%=userName%>">
+    <input name="cmdSend" id="cmdSend" type="submit"
+	value='Send' class="btn" style="width:100">
+</td>
+</tr>
+
+</table>
+</form>
 
 <%
   }

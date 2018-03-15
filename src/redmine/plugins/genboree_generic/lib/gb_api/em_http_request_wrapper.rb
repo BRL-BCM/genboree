@@ -45,7 +45,7 @@ module GbApi
 
     # CONSTRUCTOR.
     # @param [String] url The full request url.
-    # @param [String,nil] payload The request payload, if any. 
+    # @param [String,nil] payload The request payload, if any.
     def initialize(url, payload=nil)
       @url = url
       @payload = payload
@@ -85,7 +85,7 @@ module GbApi
     #   is an important callback since it's the only way to properly do something AFTER
     #   you've each-ed over the body chunks (which is done via event loop remember, NOT
     #   like regular each() after which you do some other code!).
-    # @param [Proc, nil] OPTIONAL. Generally you provide a code block and do not supply an argument. If
+    # @param [Proc, nil] blk OPTIONAL. Generally you provide a code block and do not supply an argument. If
     #   you supply an argument it's assumed to be a {Proc} object (your callback). If you provide
     #   both, that's an error, but your code block will be used as the callback. If nil is given
     #   (and no code block obviously) then the default Rack callback is used directly.
@@ -115,8 +115,14 @@ module GbApi
       # - request headers
       @reqOptions[:head] = @reqOptions[:head].merge(@reqHeaders)
       # - request payload
-      @reqOptions[:body] = @payload if(@payload)
-      $stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] EM Http wrapper doing #{httpMethod.inspect} calkk using these httpOptions:    #{httpOptions.inspect}    and these request options:    #{@reqOptions.inspect[0,256]}#{'...' if(@reqOptions.inspect.size > 256)}\n\n")
+      if(@payload)
+        if(@payload.is_a?(File))
+          @reqOptions[:file] = @payload.path
+        else
+          @reqOptions[:body] = @payload 
+        end
+      end
+      #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] EM Http wrapper doing #{httpMethod.inspect} calkk using these httpOptions:    #{httpOptions.inspect}    and these request options:    #{@reqOptions.inspect[0,256]}#{'...' if(@reqOptions.inspect.size > 256)}\n\n")
 
       # MAKE REQUEST
       # * NOTE: *Cannot* use both EM:HttpRequest#callback AND EM::HttpRequest#headers + EM::HttpRequest#stream approach.
@@ -152,7 +158,7 @@ module GbApi
       #   NOT called when there is an HTTP "error" response (that's a regular callback)
       emHttp.errback {
         begin
-          $stderr.debugPuts(__FILE__, __method__, "GB API REQUEST FAILED", "[#{@railsRequestId.inspect}] EM::HttpRequest error message: #{emHttp.error.inspect rescue nil} ;  URL: #{@url.inspect}\n    - HTTP METHOD: #{httpMethod.inspect}\n    HTTP RESPONSE:\n\n#{@emHttp.response.inspect}\n\n" )
+          $stderr.debugPuts(__FILE__, __method__, "GB API REQUEST FAILED", "[#{@railsRequestId.inspect}] EM::HttpRequest error message: #{emHttp.error.inspect rescue nil} ;  URL: #{@url.inspect}\n    - HTTP METHOD: #{httpMethod.inspect}\n    HTTP RESPONSE:\n\n#{emHttp.response.inspect}\n\n" )
           @respCallback.call( [ 500, { 'x-gb-api-fatal' => 'Bad Genboree domain or could not connect to Genboree API server.'}, ''] )
         rescue Exception => err
           $stderr.debugPuts(__FILE__, __method__, 'EXCEPTION - NEXT_TICK', "[#{@railsRequestId.inspect}] Exception raised and caught (to protect web server) when each-ing over response body. CASE 1: Most likely the chunk callback handed to each() threw an error. Details:\n    - Error Class: #{err.class}\n    - Error Message: #{err.message.inspect}\n    - Error Trace:\n#{err.backtrace.join("\n")}")

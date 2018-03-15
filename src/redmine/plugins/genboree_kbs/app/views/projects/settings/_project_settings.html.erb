@@ -1,6 +1,9 @@
 <%### The controller for this view is projects_controller#settings ###%>
 
 <%
+  @genboreeKb = GenboreeKb.find_by_project_id(@project)
+  #$stderr.puts "Got @genboreeKb for @project '#{@project.inspect}}' ?\n\n#{@genboreeKb.inspect}\n\n"
+  @genboreeKb ||= nil
   if(@genboreeKb.nil?)
 %>
   <h3><%= l(:gbkb_label_create_new_kb) %></h3>

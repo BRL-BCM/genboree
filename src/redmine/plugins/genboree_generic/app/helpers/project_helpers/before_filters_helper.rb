@@ -16,16 +16,16 @@ module ProjectHelpers
     # @return [Project] The matching project object.
     def find_project(opts={ :no404 => false})
       @projectId = params[:id]
-      $stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - found proj info from #{@projectId.inspect} in path")
+      #$stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - found proj info from #{@projectId.inspect} in path")
       @project = Project.find(@projectId)
     rescue ActiveRecord::RecordNotFound
       # If missing, try 'project_id' in params (for things like settings that may not have :id in path?)
       begin
         @projectId = params[:project_id]
-        $stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - found proj info from #{@projectId.inspect} in query string (BAD)")
+        #$stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - found proj info from #{@projectId.inspect} in query string (BAD)")
         @project = Project.find(@projectId)
       rescue ActiveRecord::RecordNotFound
-        $stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - NO PROJECT ID FOUND???")
+        #$stderr.debugPuts(__FILE__, __method__, 'CONFIRM', "*Generic* find_project - NO PROJECT ID FOUND???")
         if(opts[:no404])
           nil
         else

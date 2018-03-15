@@ -57,6 +57,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
         @kbName     = Rack::Utils.unescape(@uriMatchData[2]).to_s.strip
         @viewName   = Rack::Utils.unescape(@uriMatchData[3]).to_s.strip
         @aspect     = (@uriMatchData[4].nil?) ? nil : Rack::Utils.unescape(@uriMatchData[4]).to_s.strip
+        @collName = "kbViews"
         initStatus = initGroupAndKb()
         if(initStatus == :OK)
           if(@aspect and !SUPPORTED_APSECTS.key?(@aspect))
@@ -87,7 +88,9 @@ module BRL ; module REST ; module Resources                # <- resource classes
               viewsCursor.rewind!
               viewsCursor.each { |doc|
                 doc = BRL::Genboree::KB::KbDoc.new( doc )
+                viewDocId = doc['_id']
                 entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)  
+                entity.metadata = viewsHelper.getMetadata(viewDocId, "kbViews")
               }
               @statusName = configResponse(entity) 
             else
@@ -156,10 +159,30 @@ module BRL ; module REST ; module Resources                # <- resource classes
                       if(!BRL::Genboree::KB::Helpers::ViewsHelper::IMPLICIT_VIEWS_DEFS.key?(@viewName)) 
                         cursor = viewsHelper.coll.find({ 'name.value' => @viewName })
                         exists = ( ( cursor and cursor.is_a?(Mongo::Cursor) and cursor.count > 0 ) ? true : false  )
-                        uploadStatus = viewsHelper.bulkUpsert('name', { @viewName => viewDoc }, @gbLogin) # This will work even for a single document
-                        raise uploadStatus if(uploadStatus != :OK)
-                        @statusName = ( exists ? :'Moved Permanently' : :'Created' )
-                        @statusMsg = "The view document was inserted/updated."
+                        if(exists)
+                          workingRevisionMatched = true
+                          qDoc = nil
+                          cursor.each {|dd|
+                            qDoc = dd
+                          }
+                          if(@workingRevision)
+                            workingRevisionMatched = viewsHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, qdoc["_id"], "kbViews")
+                          end
+                          if(workingRevisionMatched)
+                            uploadStatus = viewsHelper.bulkUpsert('name', { @viewName => viewDoc }, @gbLogin) # This will work even for a single document
+                            raise uploadStatus if(uploadStatus != :OK)
+                            @statusName = ( exists ? :'Moved Permanently' : :'Created' )
+                            @statusMsg = "The view document was inserted/updated."
+                          else
+                            @statusName = :"Conflict"
+                            @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                          end
+                        else
+                          uploadStatus = viewsHelper.bulkUpsert('name', { @viewName => viewDoc }, @gbLogin) # This will work even for a single document
+                          raise uploadStatus if(uploadStatus != :OK)
+                          @statusName = ( exists ? :'Moved Permanently' : :'Created' )
+                          @statusMsg = "The view document was inserted/updated."
+                        end
                       else
                         @statusName = :Forbidden
                         @statusMsg = "#{@viewName} is one of the 'implicit' views. You are not allowed to update it."
@@ -170,8 +193,13 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     @statusMsg = "BAD_VIEW: The view document does not follow the specification of the view model:\n\n#{errorStr}"
                   end
                 else
+                  if( validator.respond_to?(:buildErrorMsgs) )
+                    errors = validator.buildErrorMsgs()
+                  else
+                    errors = validator.validationErrors
+                  end
                   @statusName = :'Unsupported Media Type'
-                  @statusMsg = "BAD_VIEW: The view document does not follow the specification of the view model:\n\n#{validator.validationErrors}"
+                  @statusMsg = "BAD_VIEW: The view document does not follow the specification of the view model:\n\n#{errors.join("\n")}"
                 end
               else
                 if(@aspect == 'label' or @aspect == 'labels')
@@ -277,14 +305,25 @@ module BRL ; module REST ; module Resources                # <- resource classes
             viewsCursor = viewsHelper.coll.find({ "name.value" => @viewName})
             if(viewsCursor and viewsCursor.is_a?(Mongo::Cursor) and viewsCursor.count > 0) # Should be just one
               viewsCursor.rewind!
+              vDocId = nil
               viewsCursor.each { |doc|
                 doc = BRL::Genboree::KB::KbDoc.new( doc )
+                vDocId = doc['_id']
                 entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, doc)
               }
-              viewsHelper.coll.remove( { "name.value" => @viewName} )
-              @statusMsg = "DELETED: The view: #{@viewName} was deleted from the database."
-              @statusName = :OK
-              configResponse(entity) 
+              workingRevisionMatched = true
+              if(@workingRevision)
+                workingRevisionMatched = viewsHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, vDocId, "kbViews")
+              end
+              if(workingRevisionMatched)
+                viewsHelper.coll.remove( { "name.value" => @viewName} )
+                @statusMsg = "DELETED: The view: #{@viewName} was deleted from the database."
+                @statusName = :OK
+                configResponse(entity)
+              else
+                @statusName = :"Conflict"
+                @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+              end
             else
               # Check to see if view is one of the 'implicit' views
               if(BRL::Genboree::KB::Helpers::ViewsHelper::IMPLICIT_VIEWS_DEFS.key?(@viewName))           

@@ -3,7 +3,7 @@
     "text": "2nd Generation exceRpt small RNA-seq Pipeline (Stable)",
     "tooltip": "exceRpt small RNA-seq Pipeline for Extracellular RNA Profiling (v2, sRNAbench-based, stable)",
     "idStr": "smRNAPipeline",
-    "hidden": "true"
+    "hidden": true
   },
   {
     "text": "exceRpt small RNA-seq Pipeline",

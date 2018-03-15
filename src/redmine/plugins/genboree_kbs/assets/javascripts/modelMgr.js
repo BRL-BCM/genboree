@@ -16,7 +16,7 @@ function displayModelTree()
   {
     msg += "</br></br>We advise you to save the current document first before viewing the model." ;
   }
-  if(newdocObj || Ext.getCmp('viewGrid') || Ext.getCmp('docsVersionsGrid') || Ext.getCmp('modelVersionsGrid')) // Render a warning if a document is already loaded
+  if(newdocObj || Ext.getCmp('viewGrid') || Ext.getCmp('docsVersionsGrid') || Ext.getCmp('modelVersionsGrid') || Ext.getCmp('questionnaireGrid')) // Render a warning if a document is already loaded
   {
     Ext.Msg.show({
       title: "View Model",

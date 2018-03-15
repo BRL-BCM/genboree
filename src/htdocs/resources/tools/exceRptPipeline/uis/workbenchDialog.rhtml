@@ -88,11 +88,22 @@
 
     #$stderr.puts "apicall #{listOfIndexes.inspect} \n\n"
 
-    genomeVersion = @settings['genomeVersion'].decapitalize
-
     # Add options to choose existing index to useIndexOptions
     if(!listOfIndexes.empty?)   
       useIndexOptions[:useExistingLibrary] = { :label => 'Use existing oligo library' }
+    end
+    # Options for genome
+    databaseGenomeVersion = @settings['databaseGenomeVersion']
+    genomeVersions = {}
+    genomeVersions[:"hg19"] = { :label => 'hg19' }
+    genomeVersions[:"hg38"] = { :label => 'hg38' }
+    genomeVersions[:"mm10"] = { :label => 'mm10' }
+    if(databaseGenomeVersion == "hg38")
+      genomeVersions[:"hg38"][:selected] = true
+    elsif(databaseGenomeVersion == "mm10")
+      genomeVersions[:"mm10"][:selected] = true
+    else
+      genomeVersions[:"hg19"][:selected] = true
     end
     # Options for random barcode locations
     randomBarcodeLocs = {}
@@ -103,7 +114,7 @@
     exogenousMappingOptions = {}
     exogenousMappingOptions[:"a_off"] = { :label => 'Endogenous-only', :selected => true}
     exogenousMappingOptions[:"b_miRNA"] = { :label => 'Endogenous + Exogenous (miRNA)' }
-    exogenousMappingOptions[:"c_on"] = { :label => 'Endogenous + Exogenous (miRNA + Genome)' } 
+    exogenousMappingOptions[:"c_on"] = { :label => 'Endogenous + Exogenous (miRNA + Genome)' }
     # Options for endogenous mismatches
     endogenousMismatchOptions = {}
     endogenousMismatchOptions[:"0"] = { :label => '0'}
@@ -174,7 +185,7 @@
               [
                 { :id => 'exceRptGen', :label => 'exceRpt Version', :title => 'Choose the version of exceRpt that you want to use for your analysis. By default, we have selected the newest, 4th generation version. If you want to use 3rd generation exceRpt, that option is available as well. We are providing 3rd gen. exceRpt for your convenience and no longer actively support it!', :type => :select, :onChange => "show4thGenOptions(this.value)", :options => exceRptGenOptions }, 
                 { :id => 'analysisName', :label => 'Analysis Name', :type => :text , :size => "35", :value => "exceRpt Pipeline-#{Time.now.strftime('%Y-%m-%d-%H:%M:%S').gsub('-0', '-')}", :title => 'The top-level output folder (under \'exceRptPipeline_v4.6.2\') used to organize exceRpt Pipeline results.' },
-                { :id => 'genomeVersion', :label => 'Genome Version', :type => :text, :value => genomeVersion, :disabled => true, :size => '10', :title => "This is automatically chosen based on the genome version of the target database."},  
+                { :id => 'genomeVersion', :label => 'Genome Version', :type => :select, :options => genomeVersions, :title => "Choose the genome version associated with your input files. Please note that only one genome version is allowed per submission."},
                 { :id => 'erccSubmissionOptions', :toggleText => "ERCC Submission Options", :type => :advancedSection, :startWithExpanded => true, :text => "If you are not a member of the ERCC, ignore this section. If you are a member of the ERCC, choose the appropriate options for your submission with respect to your grant number and anticipated data repository. If your submission does not fall under an ERCC grant, then choose the 'Non-ERCC Funded Study' option. If you are an ERCC member and your PI / grant numbers are not showing up properly, please email Sai at sailakss@bcm.edu with your PI's name so you can be added to our database as a submitter.", :widgets =>
                   [
                     { :id => 'piName', :label => 'ERCC PI', :type => :text, :size => "30", :readOnly => true, :value => erccPI, :title => "This box contains the name of your PI."},
@@ -184,11 +195,11 @@
                     { :id => 'dataRepoSubmissionCategory', :label => 'Submission Category', :hidden => true, :title => 'Choose the appropriate option to indicate whether your samples are intended for the DCC or not.', :type => :select, :options => submissionCategoryOptions },
                     { :id => 'dbGaP', :label => 'Project Registered with dbGaP?', :hidden => true, :title => 'Choose the appropriate option to indicate whether this project has been registered with dbGaP by your PI.', :type => :select, :options => dbGaPOptions },
                   ]
-                },                
+                },
                 { :id => 'adapterSequenceOptions', :toggleText => "3\' Adapter Sequence Options", :type => :advancedSection, :startWithExpanded => true, :text => "Pick your 3' adapter sequence below. By default, we will attempt to auto-detect your 3' adapter sequence. If your 3' adapters have already been clipped from your input reads, then choose the NO ADAPTER option. If you want to manually put in your own 3' adapter sequence, then choose the MANUALLY SPECIFY option.", :widgets =>
                   [
                     { :id => 'adapterSequence', :label => '3\' Adapter Sequence', :title => 'Choose the appropriate 3\' adapter sequence option.', :onChange => "showManualAdapterBox(this.value)", :type => :select, :options => adapterOptions },
-                    { :id => 'manualAdapter', :label => 'Manual Input of 3\' Adapter Sequence', :type => :text, :size => "35", :maxlength => "50", :hidden => true, :title => "If you want to manually input your 3' adapter sequence, please enter it here."},
+                    { :id => 'manualAdapter', :label => 'Manual Input of 3\' Adapter Sequence', :type => :text, :size => "35", :maxlength => "5000", :hidden => true, :title => "If you want to manually input your 3' adapter sequence, please enter it here."},
                   ]
                 },
                 { :id => 'randomBarcodeOptions', :toggleText => "Random Barcode Options", :type => :advancedSection, :startWithExpanded => true, :text => "If your samples were prepped with adapters containing short random barcodes, click the checkbox below. These library preps typically contain distinct 4nt random sequences on both the 5' and 3’ sequencing adapters. You can change these defaults below if your sample was prepped in a different way. The exceRpt pipeline can also compute frequency and enrichment statistics for samples with random barcodes - such metrics can be useful in some circumstances for identifying ligation/amplification biases in smallRNA samples. To enable this option, click the 'Compute Barcode Stats' box. This option will make your job run more slowly.", :widgets =>
@@ -206,7 +217,7 @@
                     { :id => 'minAdapterBases3p', :label => 'Minimum Bases for 3p Adapter', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 3, :maxValue => 10, :allowBlank => false, :size => "10", :value => 7, :title => "This option will set the minimum number of bases for the 3' adapter. Note that any legitimate insert sequence with even a modest poly-A run will be mishandled if you choose a lower value. Minimum value allowed is 3, and maximum value allowed is 10. Default: 7."},
                     { :id => 'minReadLength', :label => 'Minimum Read Length', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 10, :allowBlank => false, :size => "10", :value => 18, :title => "Enter your minimum read length here. This value will be the minimum read length we will use after adapter (and random barcode) removal. Minimum value allowed is 10. Default: 18."},
                     { :id => 'minBaseCallQuality', :label => 'Minimum Base-call Quality of Reads', :type => :select, :options => minBaseCallQualityOptions, :title => "Choose your minimum base-call quality of reads here. Default: 20."},
-                    { :id => 'fractionForMinBaseCallQuality', :label => 'Percentage of Read That Must Meet Minimum Base-call Quality', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 0, :maxValue => 100, :allowBlank => false, :size => "10", :value => 80, :title => "This value is the percentage of the read that must meet the minimum base-call quality given above. Default: 80."},
+                    { :id => 'fractionForMinBaseCallQuality', :label => 'Percentage of Read That Must Meet Minimum Base-call Quality', :type => :extNumber, :allowNegative => false, :minValue => 1, :maxValue => 100, :allowBlank => false, :size => "10", :value => 80, :title => "This value is the percentage of the read that must meet the minimum base-call quality given above. Default: 80."},
                   ]
                 },
                 # Note: wbContext and newSpikeInLibrary are used in uploadDbFile.js (is subdirs necessary?)
@@ -246,20 +257,27 @@
                 },
                 { :id => 'exogenousAlignment', :toggleText => "Exogenous Alignment Options", :type => :advancedSection, :startWithExpanded => true, :text => 'Below, you can select your preference for exogenous library alignment. The first choice, endogenous-only, will disable mapping to exogenous miRNAs.  The second choice, endogenous + exogenous (miRNA), will make the pipeline map to exogenous miRNAs in miRBase (i.e., from plants and viruses). Finally, the third choice, endogenous + exogenous (miRNA + Genome), will make the pipeline map to exogenous miRNAs in miRBase AND the genomes of all sequenced species in Ensembl/NCBI. Note that if you choose either the second or third option, then you cannot turn off any of the endogenous mappings above. If you have already turned off any mappings above, then you cannot select either of these options. Please note that full exogenous alignment will require significantly more time (anywhere from 3 to 15 hours per sample, with some samples taking even longer) compared to the other options.', :widgets =>
                   [
-                    { :id => 'exogenousMapping', :label => 'Exogenous Alignment', :type => :select, :options => exogenousMappingOptions, :onChange => "checkEndogenousLibraries(this.value)", :previousValue => "a_off", :title => "Choose an exogenous alignment option." },    
+                    { :id => 'exogenousMapping', :label => 'Exogenous Alignment', :type => :select, :options => exogenousMappingOptions, :onChange => "updateExogenousOptions(this.value)", :previousValue => "a_off", :title => "Choose an exogenous alignment option." },    
                   ]
                 },
-                { :id => 'advancedExogenousOptions', :toggleText => "Advanced Exogenous Alignment Options", :type => :advancedSection, :text => "Below, you can change a variety of different advanced exogenous alignment options.", :widgets =>
+                { :id => 'advancedExogenousOptions', :toggleText => "Advanced Exogenous Alignment Options", :type => :advancedSection, :text => "Below, you can change a variety of different advanced exogenous alignment options. Please note that options are displayed appropriately depending on which exogenous mapping option is selected (for example, nothing will be displayed if you've selected endogenous-only mapping).", :widgets =>
                   [
-                    { :id => 'exogenousMismatch', :label => 'Maximum Number of Exogenous Mismatches Allowed', :type => :select, :options => exogenousMismatchOptions, :title => "This option allows you to select the maximum number of mismatches permitted during exogenous alignment. Default: 0."},
+                    { :id => 'exogenousMismatch', :label => 'Maximum Number of Exogenous Mismatches Allowed', :type => :select, :options => exogenousMismatchOptions, :hidden => true, :title => "This option allows you to select the maximum number of mismatches permitted during exogenous alignment. Default: 0."},
+                    { :id => 'exogenousmiRNAWithAllReads', :label => 'Use Same Input Reads for UniVec Contaminants and Exogenous miRNA', :type => :checkbox, :checked => false, :hidden => true,  :title => "Check the box if you want to use the same reads as input at both the UniVec contaminant and exogenous miRNA mapping stages."},
+                    { :id => 'uploadExogenousAlignments', :label => 'Upload Exogenous Genomic Alignments', :type => :checkbox, :checked => false, :hidden => true, :title => "Check the box if you want to upload the full exogenous genomic alignments for each sample. Note that the Upload Full Results option below will also upload these alignments (along with full alignments for the endogenous and exogenous miRNA/rRNA stages of the pipeline)."},
+                    { :id => 'mapToBacteria', :label => 'Map to Bacteria Genomes', :type => :checkbox, :checked => true, :hidden => true,  :title => "Check the box if you want to map to bacteria genomes."},
+                    { :id => 'mapToFPV', :label => 'Map to Fungi/Protist/Virus Genomes', :type => :checkbox, :checked => true, :hidden => true,  :title => "Check the box if you want to map to fungi/protist/virus genomes."},
+                    { :id => 'mapToMetazoa', :label => 'Map to Metazoa Genomes', :type => :checkbox, :checked => true, :hidden => true,  :title => "Check the box if you want to map to metazoa genomes."},
+                    { :id => 'mapToPlants', :label => 'Map to Plant Genomes', :type => :checkbox, :checked => true, :hidden => true,  :title => "Check the box if you want to map to plant genomes."},
+                    { :id => 'mapToVertebrates', :label => 'Map to Vertebrate Genomes', :type => :checkbox, :checked => true, :hidden => true,  :title => "Check the box if you want to map to vertebrate genomes."}
                   ]
                 },
-                { :id => 'advancedOptions', :toggleText => "Other Advanced Options", :type => :advancedSection, :text => 'Below, you can select your preference for advanced options that don\'t fit into the other categories above. The \'Remote Storage Area\' option will allow you to choose a remote storage (FTP) area where your result files will be uploaded. You can learn more by visiting the <a href=\'http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Using_Remote_%28FTP%29_Storage_for_exceRpt\' target=\'_blank\'>tutorial</a>. For 3rd gen exceRpt, The \'Bowtie Seed Length\' option will allow you to adjust the Bowtie seed length used during alignment.', :widgets =>
+                { :id => 'advancedOptions', :toggleText => "Other Advanced Options", :type => :advancedSection, :text => 'Below, you can select your preference for advanced options that don\'t fit into the other categories above. The \'Remote Storage Area\' option will allow you to choose a remote storage (FTP) area where your result files will be uploaded. You can learn more by visiting the <a href=\'http://genboree.org/theCommons/projects/exrna-tools-may2014/wiki/Using_Remote_%28FTP%29_Storage_for_exceRpt\' target=\'_blank\'>tutorial</a>.', :widgets =>
                   [
                     { :id => 'remoteStorageArea', :'label' => 'Remote Storage Area', :type => :select, :options => remoteStorageOptions, :title => "If you've used the 'Create Remote Storage Area' tool to create a remote storage (FTP) area, you can choose an area where your results will be uploaded. Default: 'None Selected'."},
                     { :id => 'bowtieSeedLength', :label => 'Bowtie Seed Length', :type => :extNumber, :allowDecimals => false, :allowNegative => false, :minValue => 15, :maxValue => 30, :hidden => true, :allowBlank => false, :size => "10", :value => 19, :title => "Enter your Bowtie seed length here. Value can range from 15 (most sensitive) to 30 (most conservative). Default: 19."},
                     { :id => 'suppressRunExceRptEmails', :label => 'Suppress Individual Sample Emails', :type => :checkbox, :checked => false, :title => "Check the box if you want to suppress success emails for each individual sample processed (useful to avoid email spam with large number of samples). If any of your samples fail processing, you will still receive an email even if you check this box."},
-                    { :id => 'uploadFullResults', :'label' => 'Upload Full Results', :type => :checkbox, :title => "If you need access to the full alignment files (.bam) for each sample processed by exceRpt, click the box."}
+                    { :id => 'uploadFullResults', :'label' => 'Upload Full Results', :type => :checkbox, :title => "Check the box if you need access to the full alignment files (.bam) for each sample processed by exceRpt.  Note that we do enforce disk space restrictions for this option (generally 200 GB per Genboree Group - 100 GB for local space and 100 GB for remote-backed FTP space)."}
                   ]
                 }
               ]
@@ -462,23 +480,101 @@
     }
  
     // Method to ensure that users cannot select any exogenous option if any endogenous libraries are disabled, and cannot select full exogenous option if 3rd gen exceRpt is selected.
-    function checkEndogenousLibraries(value) {
+    // Also, this method will hide certain options if exogenous genomic mapping isn't selected
+    function updateExogenousOptions(value) {
       // Grab priority list and split it up by '>' char. There should be 5 elements if all endogenous libraries are selected.
       var currentPriorityList = document.getElementById('priorityList');
       var newList = currentPriorityList.value.slice(0);
+      var newValue = value;
       newList = newList.split(" > ");
       // Grab current exceRpt version (4th gen or 3rd gen)
       var currentExceRptVersion = document.getElementById('exceRptGen').value;
       // If number of elements in endogenous library is not 5, then we won't allow any kind of exogenous mapping, so we'll reset user's choice to previous choice (endogenous only).
       if(((value == "c_on") || (value == "b_miRNA")) && newList.length != 5) {
         document.getElementById('exogenousMapping').value = document.getElementById('exogenousMapping').getAttribute('previousvalue');
+        newValue = document.getElementById('exogenousMapping').value;
       // If user has selected 3rd gen exceRpt, then we won't allow full exogenous mapping, so we'll reset user's choice to previous choice (endogenous only or endogenous + exogenous (miRNA))
       } else if(value == "c_on" && currentExceRptVersion == "thirdGen") {
-        document.getElementById('exogenousMapping').value = document.getElementById('exogenousMapping').getAttribute('previousvalue');              
+        document.getElementById('exogenousMapping').value = document.getElementById('exogenousMapping').getAttribute('previousvalue');
+        newValue = document.getElementById('exogenousMapping').value;
       } else {
         // If we don't hit one of the above conditions, then we'll just update the previousvalue field with the current value 
         // (so we can properly reset to previous value when user does hit one of the above conditions).
         document.getElementById('exogenousMapping').setAttribute('previousvalue', value);
+      }
+      var exogenousMismatch = Ext.get('exogenousMismatch');
+      var exogenousMismatchLabel = Ext.get('exogenousMismatchLabel');
+      var exogenousmiRNAWithAllReads = Ext.get('exogenousmiRNAWithAllReads');
+      var exogenousmiRNAWithAllReadsLabel = Ext.get('exogenousmiRNAWithAllReadsLabel');
+      var uploadExogenousAlignments = Ext.get('uploadExogenousAlignments');
+      var uploadExogenousAlignmentsLabel = Ext.get('uploadExogenousAlignmentsLabel');
+      var mapToBacteria = Ext.get('mapToBacteria');
+      var mapToBacteriaLabel = Ext.get('mapToBacteriaLabel');
+      var mapToFPV = Ext.get('mapToFPV');
+      var mapToFPVLabel = Ext.get('mapToFPVLabel');
+      var mapToMetazoa = Ext.get('mapToMetazoa');
+      var mapToMetazoaLabel = Ext.get('mapToMetazoaLabel');
+      var mapToPlants = Ext.get('mapToPlants');
+      var mapToPlantsLabel = Ext.get('mapToPlantsLabel');
+      var mapToVertebrates = Ext.get('mapToVertebrates');
+      var mapToVertebratesLabel = Ext.get('mapToVertebratesLabel');
+      var exceRptGen = document.getElementById('exceRptGen');
+      if(newValue == "c_on") {
+        exogenousMismatch.setStyle('display', '');
+        exogenousMismatchLabel.setStyle('display', '');
+        exogenousmiRNAWithAllReads.setStyle('display', '');
+        exogenousmiRNAWithAllReadsLabel.setStyle('display', '');
+        uploadExogenousAlignments.setStyle('display', '');
+        uploadExogenousAlignmentsLabel.setStyle('display', '');
+        mapToBacteria.setStyle('display', '');
+        mapToBacteriaLabel.setStyle('display', '');
+        mapToFPV.setStyle('display', '');
+        mapToFPVLabel.setStyle('display', '');
+        mapToMetazoa.setStyle('display', '');
+        mapToMetazoaLabel.setStyle('display', '');
+        mapToPlants.setStyle('display', '');
+        mapToPlantsLabel.setStyle('display', '');
+        mapToVertebrates.setStyle('display', '');
+        mapToVertebratesLabel.setStyle('display', '');
+      } else if(newValue == "b_miRNA") {
+        exogenousMismatch.setStyle('display', '');
+        exogenousMismatchLabel.setStyle('display', '');
+        if(exceRptGen.value == "fourthGen") {
+          exogenousmiRNAWithAllReads.setStyle('display', '');
+          exogenousmiRNAWithAllReadsLabel.setStyle('display', '');
+        } else {
+          exogenousmiRNAWithAllReads.setStyle('display', 'none');
+          exogenousmiRNAWithAllReadsLabel.setStyle('display', 'none');
+        }
+        uploadExogenousAlignments.setStyle('display', 'none');
+        uploadExogenousAlignmentsLabel.setStyle('display', 'none');
+        mapToBacteria.setStyle('display', 'none');
+        mapToBacteriaLabel.setStyle('display', 'none');
+        mapToFPV.setStyle('display', 'none');
+        mapToFPVLabel.setStyle('display', 'none');
+        mapToMetazoa.setStyle('display', 'none');
+        mapToMetazoaLabel.setStyle('display', 'none');
+        mapToPlants.setStyle('display', 'none');
+        mapToPlantsLabel.setStyle('display', 'none');
+        mapToVertebrates.setStyle('display', 'none');
+        mapToVertebratesLabel.setStyle('display', 'none');
+      } else {
+        exogenousMismatch.setStyle('display', 'none');
+        exogenousMismatchLabel.setStyle('display', 'none');
+        exogenousmiRNAWithAllReads.setStyle('display', 'none');
+        exogenousmiRNAWithAllReadsLabel.setStyle('display', 'none');
+        uploadExogenousAlignments.setStyle('display', 'none');
+        uploadExogenousAlignmentsLabel.setStyle('display', 'none');
+        mapToBacteria.setStyle('display', 'none');
+        mapToBacteriaLabel.setStyle('display', 'none');
+        mapToFPV.setStyle('display', 'none');
+        mapToFPVLabel.setStyle('display', 'none');
+        mapToMetazoa.setStyle('display', 'none');
+        mapToMetazoaLabel.setStyle('display', 'none');
+        mapToPlants.setStyle('display', 'none');
+        mapToPlantsLabel.setStyle('display', 'none');
+        mapToVertebrates.setStyle('display', 'none');
+        mapToVertebratesLabel.setStyle('display', 'none');    
       }
     }
 
@@ -504,6 +600,8 @@
     // Thus, this method will show certain options and hide other options depending on whether user wants to do 3rd gen or 4th gen analysis.
     function show4thGenOptions(value)
     {
+      var exogenousMismatch = Ext.get('exogenousMismatch');
+      var exogenousMismatchLabel = Ext.get('exogenousMismatchLabel');
       var bowtieSeedLength = Ext.get('bowtieSeedLength');
       var bowtieSeedLengthLabel = Ext.get('bowtieSeedLengthLabel');
       var trimBases5p = Ext.get('trimBases5p');
@@ -522,10 +620,27 @@
       var downsampleRNAReadsEnabledLabel = Ext.get('downsampleRNAReadsEnabledLabel');
       var downsampleRNAReads = Ext.get('downsampleRNAReads');
       var downsampleRNAReadsLabel = Ext.get('downsampleRNAReadsLabel');
+      var exogenousmiRNAWithAllReads = Ext.get('exogenousmiRNAWithAllReads');
+      var exogenousmiRNAWithAllReadsLabel = Ext.get('exogenousmiRNAWithAllReadsLabel');
+      var uploadExogenousAlignments = Ext.get('uploadExogenousAlignments');
+      var uploadExogenousAlignmentsLabel = Ext.get('uploadExogenousAlignmentsLabel');
+      var mapToBacteria = Ext.get('mapToBacteria');
+      var mapToBacteriaLabel = Ext.get('mapToBacteriaLabel');
+      var mapToFPV = Ext.get('mapToFPV');
+      var mapToFPVLabel = Ext.get('mapToFPVLabel');
+      var mapToMetazoa = Ext.get('mapToMetazoa');
+      var mapToMetazoaLabel = Ext.get('mapToMetazoaLabel');
+      var mapToPlants = Ext.get('mapToPlants');
+      var mapToPlantsLabel = Ext.get('mapToPlantsLabel');
+      var mapToVertebrates = Ext.get('mapToVertebrates');
+      var mapToVertebratesLabel = Ext.get('mapToVertebratesLabel');
+      var exogenousMapping = document.getElementById('exogenousMapping');
       if(value == "fourthGen")
       {
         bowtieSeedLength.setStyle('display', 'none');
         bowtieSeedLengthLabel.setStyle('display', 'none');
+        exogenousMismatch.setStyle('display', 'none');
+        exogenousMismatchLabel.setStyle('display', 'none');
         trimBases5p.setStyle('display', '');
         trimBases5pLabel.setStyle('display', '');
         trimBases3p.setStyle('display', '');
@@ -540,9 +655,13 @@
         readRemainingAfterSoftClippingLabel.setStyle('display', '');
         downsampleRNAReadsEnabled.setStyle('display', '');
         downsampleRNAReadsEnabledLabel.setStyle('display', '');
+        exogenousMapping.value = "a_off"
+        document.getElementById('exogenousMapping').setAttribute('previousvalue', exogenousMapping.value)
       } else {
         bowtieSeedLength.setStyle('display', '');
         bowtieSeedLengthLabel.setStyle('display', '');
+        exogenousMismatch.setStyle('display', 'none');
+        exogenousMismatchLabel.setStyle('display', 'none');
         trimBases5p.setStyle('display', 'none');
         trimBases5pLabel.setStyle('display', 'none');
         trimBases3p.setStyle('display', 'none');
@@ -560,6 +679,22 @@
         downsampleRNAReadsEnabledLabel.setStyle('display', 'none');
         downsampleRNAReads.setStyle('display', 'none');
         downsampleRNAReadsLabel.setStyle('display', 'none');  
+        exogenousmiRNAWithAllReads.setStyle('display', 'none');
+        exogenousmiRNAWithAllReadsLabel.setStyle('display', 'none');
+        uploadExogenousAlignments.setStyle('display', 'none');
+        uploadExogenousAlignmentsLabel.setStyle('display', 'none');
+        mapToBacteria.setStyle('display', 'none');
+        mapToBacteriaLabel.setStyle('display', 'none');
+        mapToFPV.setStyle('display', 'none');
+        mapToFPVLabel.setStyle('display', 'none');
+        mapToMetazoa.setStyle('display', 'none');
+        mapToMetazoaLabel.setStyle('display', 'none');
+        mapToPlants.setStyle('display', 'none');
+        mapToPlantsLabel.setStyle('display', 'none');
+        mapToVertebrates.setStyle('display', 'none');
+        mapToVertebratesLabel.setStyle('display', 'none');
+        exogenousMapping.value = "a_off"
+        document.getElementById('exogenousMapping').setAttribute('previousvalue', exogenousMapping.value)
       }
     }
 

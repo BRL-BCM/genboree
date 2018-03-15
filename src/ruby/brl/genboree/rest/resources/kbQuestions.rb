@@ -44,16 +44,20 @@ class KbQuestions < GenboreeResource
         if(READ_ALLOWED_ROLES[@groupAccessStr])
           dataHelper = @mongoKbDb.dataCollectionHelper(@collName) rescue nil
           if(dataHelper)
+            metadata = nil
             bodyData = BRL::Genboree::REST::Data::KbDocEntityList.new(@connect)
             mgCursor = @mongoQh.coll.find() #get all the documents in 'kbQuestionnaires' collection
             docs = []
             if(mgCursor.count > 0)
               mgCursor.rewind!
+              docIds = []
               mgCursor.each {|doc|
                 kbDoc = BRL::Genboree::KB::KbDoc.new(doc)
+                docIds << doc['_id']
                 next if(kbDoc.getPropVal('Questionnaire.Coll') != @collName)
                 docs << kbDoc
               }
+              metadata = @mongoQh.getMetadata(docIds, questCollName)
               docs.sort { |aa,bb|
                 xx = aa.getPropVal('Questionnaire')
                 yy = bb.getPropVal('Questionnaire')
@@ -72,6 +76,7 @@ class KbQuestions < GenboreeResource
               end
               bodyData << entity
             }
+            bodyData.metadata = metadata if(metadata)
             @statusName = configResponse(bodyData)
           else
             @statusName = :'Not Found'

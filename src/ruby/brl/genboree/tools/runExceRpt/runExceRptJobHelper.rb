@@ -105,7 +105,7 @@ module BRL; module Genboree; module Tools
       sampleForRsrcPath = "sample_#{sampleName}"
       output = workbenchJobObj.outputs[0]
       workbenchJobObj.outputs[0] = @dbApiHelper.extractPureUri(output)
-      dbVer = workbenchJobObj.settings['genomeVersion'] = @dbApiHelper.dbVersion(output, @hostAuthMap).downcase
+      #dbVer = workbenchJobObj.settings['genomeVersion'] = @dbApiHelper.dbVersion(output, @hostAuthMap).downcase
       group = @grpApiHelper.extractName(output)
       db = @dbApiHelper.extractName(output)
       analysisName = workbenchJobObj.settings['analysisName']

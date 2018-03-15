@@ -2,7 +2,7 @@
 var defaultNonLeafRecord = {name: 'attribute', value: 'value', editable: true } ;
 var defaultLeafRecord = {name: 'attribute', value: 'value', leaf: true, editable: true } ;
 var panelHeight = 662 ;
-var panelWidth = 900 ;
+var panelWidth = 930 ;
 var collectionSetStore ;
 var freshDocument = false ;
 var editModeValue = false ;

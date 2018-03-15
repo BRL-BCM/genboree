@@ -14,18 +14,18 @@ module BRL ; module Genboree ; module Tools
     
     def rulesSatisfied?(wbJobEntity, sectionsToSatisfy=[ :inputs, :outputs, :context, :settings ], toolIdStr=@toolIdStr)
       # Grab necessary variables for grabbing submitter's ERCC info (used for tool usage doc)
-      @exRNAInternalKBHost = @genbConf.exRNAInternalKBHost
-      wbJobEntity.settings['exRNAInternalKBHost'] = @exRNAInternalKBHost
-      @exRNAInternalKBGroup = @genbConf.exRNAInternalKBGroup
-      wbJobEntity.settings['exRNAInternalKBGroup'] = @exRNAInternalKBGroup
-      @exRNAInternalKBName = @genbConf.exRNAInternalKBName
-      wbJobEntity.settings['exRNAInternalKBName'] = @exRNAInternalKBName
-      @exRNAInternalKBPICodesColl = @genbConf.exRNAInternalKBPICodesColl
-      wbJobEntity.settings['exRNAInternalKBPICodesColl'] = @exRNAInternalKBPICodesColl
-      @submitterPropPath = "ERCC PI Code.Submitters.Submitter ID.Submitter Login"
+      exRNAInternalKBHost = genbConf.exRNAInternalKBHost
+      wbJobEntity.settings['exRNAInternalKBHost'] = exRNAInternalKBHost
+      exRNAInternalKBGroup = @genbConf.exRNAInternalKBGroup
+      wbJobEntity.settings['exRNAInternalKBGroup'] = exRNAInternalKBGroup
+      exRNAInternalKBName = @genbConf.exRNAInternalKBName
+      wbJobEntity.settings['exRNAInternalKBName'] = exRNAInternalKBName
+      exRNAInternalKBPICodesColl = @genbConf.exRNAInternalKBPICodesColl
+      wbJobEntity.settings['exRNAInternalKBPICodesColl'] = exRNAInternalKBPICodesColl
+      submitterPropPath = "ERCC PI Code.Submitters.Submitter ID.Submitter Login"
       # We also save tool usage collection name for filling out tool usage doc later on
-      @exRNAInternalKBToolUsageColl = @genbConf.exRNAInternalKBToolUsageColl
-      wbJobEntity.settings['exRNAInternalKBToolUsageColl'] = @exRNAInternalKBToolUsageColl
+      exRNAInternalKBToolUsageColl = @genbConf.exRNAInternalKBToolUsageColl
+      wbJobEntity.settings['exRNAInternalKBToolUsageColl'] = exRNAInternalKBToolUsageColl
       # Grab dbrc info for making API call to PI Codes collection
       user = @superuserApiDbrc.user
       pass = @superuserApiDbrc.password
@@ -65,30 +65,31 @@ module BRL ; module Genboree ; module Tools
         # If we're OK so far, we'll try to grab user's ERCC-related info and see whether the user has any remote storage areas in their database
         # Check to see what PI the user is associated with
         submitterLogin = wbJobEntity.context['userLogin']
-        apiCaller = ApiCaller.new(@exRNAInternalKBHost, "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProp={matchProp}&matchValues={matchVal}&matchMode=exact&detailed=true", user, pass)
+        apiCaller = ApiCaller.new(exRNAInternalKBHost, "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/docs?matchProp={matchProp}&matchValues={matchVal}&matchMode=exact&detailed=true", user, pass)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
-        apiCaller.get({:grp => @exRNAInternalKBGroup, :kb => @exRNAInternalKBName, :coll => @exRNAInternalKBPICodesColl, :matchProp => @submitterPropPath, :matchVal => submitterLogin})
-        if(!apiCaller.succeeded? and apiCaller.parseRespBody["status"]["statusCode"] != "Forbidden")
+        apiCaller.get({:grp => exRNAInternalKBGroup, :kb => exRNAInternalKBName, :coll => exRNAInternalKBPICodesColl, :matchProp => submitterPropPath, :matchVal => submitterLogin})
+        apiCaller.parseRespBody()
+        if(!apiCaller.succeeded? and apiCaller.apiStatusObj["statusCode"] != "Forbidden")
           $stderr.debugPuts(__FILE__, __method__, "ERROR", "API caller resp body for failed call to PI KB: #{apiCaller.respBody}")
-          wbJobEntity.context['wbErrorMsg'] = "API call failed when trying to grab PI associated with current user. Please try again. If you continue to experience issues, contact Sai (sailakss@bcm.edu)."
+          wbJobEntity.context['wbErrorMsg'] = "API call failed when trying to grab PI associated with current user. Please try again. If you continue to experience issues, contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu)."
           rulesSatisfied = false
         else
           # Set up arrays to store grant numbers and anticipated data repository options
           wbJobEntity.settings['grantNumbers'] = []
           wbJobEntity.settings['anticipatedDataRepos'] = []
           # If we can't find user (or we are unable to search the KB because we're not a member), then he/she is not registered as an ERCC user. We will prompt the user to contact Sai if he/she IS an ERCC user
-          if(apiCaller.parseRespBody["data"].size == 0 or apiCaller.parseRespBody["status"]["statusCode"] == "Forbidden")
+          if(apiCaller.apiDataObj.size == 0 or apiCaller.apiStatusObj["statusCode"] == "Forbidden")
             wbJobEntity.settings['piName'] = "Non-ERCC PI"
             wbJobEntity.settings['grantNumbers'] << "Non-ERCC Funded Study"
             # Currently, if user is not a member of ERCC, his/her anticipated data repository is "None". This might not make sense, though (what if user is submitting data to dbGaP but isn't ERCC?)
             wbJobEntity.settings['anticipatedDataRepos'] << "None"
           # If user is associated with more than 1 PI, a mistake has occurred and we need to fix it.
-          elsif(apiCaller.parseRespBody["data"].size > 1)
-            wbJobEntity.context['wbErrorMsg'] = "You are listed as being a submitter under two or more PIs. This is not allowed. Please contact Sai (sailakss@bcm.edu) to fix this issue."
+          elsif(apiCaller.apiDataObj.size > 1)
+            wbJobEntity.context['wbErrorMsg'] = "You are listed as being a submitter under two or more PIs. This is not allowed. Please contact Sai (sailakss@bcm.edu) or William (thistlew@bcm.edu) to fix this issue."
             rulesSatisfied = false
           else
             # If user is associated with only one PI, then we get that PI's information and save it (PI name, organization, grant numbers and associated grant tags)
-            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.parseRespBody["data"][0])
+            piDoc = BRL::Genboree::KB::KbDoc.new(apiCaller.apiDataObj[0])
             # PI ID 
             piID = piDoc.getPropVal("ERCC PI Code")
             wbJobEntity.settings['piID'] = piID
@@ -96,7 +97,7 @@ module BRL ; module Genboree ; module Tools
             firstName = piDoc.getPropVal("ERCC PI Code.PI First Name")
             middleName = piDoc.getPropVal("ERCC PI Code.PI Middle Name") if(piDoc.getPropVal("ERCC PI Code.PI Middle Name"))
             lastName = piDoc.getPropVal("ERCC PI Code.PI Last Name")
-            piName = "#{firstName}"
+            piName = firstName
             piName << " #{middleName}" if(middleName)
             piName << " #{lastName}"
             wbJobEntity.settings['piName'] = piName
@@ -125,7 +126,8 @@ module BRL ; module Genboree ; module Tools
         apiCaller = ApiCaller.new(host, rcscUri, @hostAuthMap)
         apiCaller.initInternalRequest(@rackEnv, genbConf.machineNameAlias) if(@rackEnv)
         apiCaller.get()
-        listOfFiles = apiCaller.parseRespBody()["data"]
+        apiCaller.parseRespBody()
+        listOfFiles = apiCaller.apiDataObj
         listOfFiles.each { |currentFile|
           nameOfFile = currentFile["name"].chomp("/")
           storageType = currentFile["storageType"]

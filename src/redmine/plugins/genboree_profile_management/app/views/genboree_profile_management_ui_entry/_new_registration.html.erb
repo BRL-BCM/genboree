@@ -1,0 +1,35 @@
+<%
+  @loginDisabled = false
+  @updatePassword = false
+%>
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+    <%= form_tag ({ :controller => :genboree_profile_management_ui_entry, :action => :create } , "method" => :post, "novalidate" => "true", "data-toggle" => "validator") do %>
+      <h2>New User Registration</h2>
+       <div class="well"> 
+        <!-- style="width:40em;margin:auto"> -->
+        <div class="row form-row">
+    
+          <%= render :partial => "login_id" %>
+          <%= render :partial => "basic_user_info" %>
+          <%= render :partial => "password" %>
+     
+          <div class="col-sm-12 submit-button">
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary" id="register_new_user" data-loading-text="<i class='fa fa-spinner fa-spin '></i> Please Wait">Register</button>
+            </div>
+            <div class="btn-group right-justified">
+              <%= link_to 'Forgot Login/Password?', { :controller => :genboree_profile_management_ui_entry, :action => :forgot_pwd }, { :class => "btn btn-primary forgot-pwd" } %>
+            </div>
+          </div>
+    
+        </div>
+       </div>
+    <% end %>
+  </div>
+  <div class="col-lg-3">
+  </div>
+</div>
+

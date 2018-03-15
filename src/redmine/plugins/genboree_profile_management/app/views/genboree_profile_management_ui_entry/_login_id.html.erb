@@ -1,0 +1,21 @@
+<div class="form-group">
+  <div class="col-sm-12">
+    <% if(@loginDisabled) %>
+      <%= label_tag 'user_id', 'User Name:' %>
+    <% else %>
+      <%= label_tag 'user_id', 'User Name (at least six numbers/characters, no spaces or hyphens):' %>
+    <% end %>
+  </div>
+  <div class="col-sm-12">
+    <%
+      user_id_opts = { "class" => "form-control", "required" => true, "type" => "text", "pattern" => "^[A-Za-z0-9_]{6,32}$", "data-pattern-error" => "Login does not match accepted pattern.",  "data-minlength" => "6", "data-required-error" => "Please fill out this field.", "data-minlength-error" => "Login requires minimum 6 chars.", "data-remote-error" => "This login has been taken." }
+      if(@loginDisabled)
+        user_id_opts["disabled"] = true
+      else
+        user_id_opts["data-remote"] = "#{@kbMount}/projects/#{@projectId}/genboree_profile_management/validate/user_id"
+      end
+    %>
+   <%= text_field_tag 'user_id', @user_info["user_id"] , user_id_opts %>
+   <div class="help-block with-errors"></div>
+  </div>
+</div>

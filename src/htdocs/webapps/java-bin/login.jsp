@@ -17,31 +17,23 @@ boolean allowPublicAccess = false ;
 
   <link rel="stylesheet" href="/styles/news.css<%=jsVersion%>" type="text/css">
   <link rel="stylesheet" href="/styles/help.css<%=jsVersion%>" type="text/css">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
   <meta HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=iso-8859-1'>
 </head>
 <body bgcolor="#DDE0FF">
-  <div class="container">
-  <div class="row" style="margin-top:20px">
-  <div class="col-sm-4">
-  </div>
-  <div class="col-sm-4" style="background:rgba(58, 158, 224, 0.16) none repeat scroll 0% 0%;border-radius:10px">
   <!-- Standard Genboree Header -->
   <%@ include file="include/header.incl" %>
 <%
-  if(logged_in) // Then display the navbar
+  if(logged_in)
   {
 %>
-    < %@ include file="include/navbar.incl" %> 
+    <script type="text/javascript">window.location = "/java-bin/workbench.jsp" ;</script>
+    <%@ include file="include/navbar.incl" %>
 <%
   }
   else // Not logged in yet, just draw a gif-line
   {
 %>
-    <!-- center><img src="/images/shade_1px.gif" width="500" height="1"></center -->
+    <center><img src="/images/shade_1px.gif" width="500" height="1"></center>
 <%
   }
 %>
@@ -49,51 +41,57 @@ boolean allowPublicAccess = false ;
     <tr>
       <td>
         <!-- Content Body -->
+
+        <!-- Downtime warning? -->
+        <div id="downtime" style="width: 100% ; text-align: center ; ">
+          <%@ include file="include/downtimeWarning.html" %>
+        </div>
 <%
         // Have we got an accessDenied situation?
         // If so, display a message and the login prompt ONLY.
-        //System.err.println("DEBUG -> accessDenied: " + accessDenied) ;
-        if(accessDenied)
+        if(accessDenied || err_login)
         {
           // Decide which text/html to use to allow some degree of custom login prompt.
           // - Default:
-          String promptMsgMain = "<br>The ClinGen Pathogenicity Calculator page you are trying to access requires you to be logged in." ;
+          String promptMsgMain = "The Genboree page you are trying to access requires you to be logged in." ;
           String promptMsgNotes =
-            "<ul class=\"compact4\" style=\"margin-top: 10px; margin-bottom: 10px; margin-right: auto;\" >" + 
+            "<ul class=\"compact4\" style=\"margin-top: 10px; margin-bottom: 10px; margin-right: auto;\" >" +
+              "<li>- If you have access permission, you will be redirected to the page after login.</li>" +
+              "<li>- Otherwise, there will be an opportunity to ask the group administrators for access to their group.</li>" +
             "</ul>" ;
           // - Target-page specific text/html, if applicable:
           if(tgt != null || tgtParam != null)
           {
             // Extract just the file name itself from the possibly complex target URL string:
             String tgtFileName = ( (tgt != null) ? FilenameUtils.getName(tgt) : FilenameUtils.getName(tgtParam) ) ;
-            System.err.println("tgtFilename: '" + tgtFileName) ;
             // Check for each target-page for which we have specific login message text/html
-            if(tgtFileName.equals("workbench.jsp") || tgtFileName.equals("clingenV2.5.jsp"))
+            if(tgtFileName.equals("workbench.jsp"))
             {
-              promptMsgMain = "<br>Login required for accessing pathogenicity calculator" ;
+              promptMsgMain = "Login required to access the Genboree Workbench" ;
               promptMsgNotes =
                 "<ul class=\"compact4\" style=\"margin-top: 10px; margin-bottom: 10px; margin-right: auto;\" >" +
-                  "<li>Please provide a valid login and password</li>" +
+                  "<li>- If you forgot your password or wish to create a new Genboree account, you can utilize the links included in the login box (below).</li>" +
+                  "<li>- If you have additional questions, please email us at <a href=\"mailto:genboree_admin@genboree.org\">genboree_admin@genboree.org</a></li>" +
                 "</ul>" ;
             }
           }
 %>
           <!-- Access Error Message -->
-          <div id="loginAndProject" class="col-sm-12">
+          <div id="loginAndProject" style="text-align: center; margin-left: auto; margin-right: auto; width: 72% ; vertical-align: top; ">
             <%
               if(!isPublicDb)
               {
             %>
                 <div id="accessMsg" name="accessMsg" style="width: 100%; margin-left: auto; margin-right: auto; ">
-                  <!-- center --> 
-                    <P class="text-danger">
+                  <center>
+                    <P style="color: red; font-weight: bold;">
                     <%= promptMsgMain %>
-                  <!-- /center -->
+                  </center>
                 </div>
             <%
               }
             %>
-            <div id="loginPrompt" class="text-muted" >
+            <div id="loginPrompt" style="text-align: left; font-size: 92%; margin-left: auto; margin-right: auto; width: 72%; ">
               <%= promptMsgNotes %>
             </div>
 
@@ -110,6 +108,7 @@ boolean allowPublicAccess = false ;
 <%
               } // if( !logged_in )
 %>
+
             </div>
           </div>
 <%
@@ -136,11 +135,6 @@ boolean allowPublicAccess = false ;
 <%
             }
 %>
-          </div>
-
-          <!-- Downtime warning? -->
-          <div id="downtime" style="width: 100% ; text-align: center ; ">
-            <%@ include file="include/downtimeWarning.html" %>
           </div>
 
           <!-- Genboree Updates, Left -->
@@ -217,13 +211,8 @@ boolean allowPublicAccess = false ;
     </tr>
     </table>
 
-  </div>
-  <div class="col-sm-4">
-  </div>
   <!-- Standard Footer -->
   <%@ include file="include/footer.incl" %>
-  </div>
-  </div>
 
 </body>
 </html>

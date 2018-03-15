@@ -96,7 +96,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
    def doTransform(sourceColl)
      @docsTobeTransformed = []
      dataHelper = @mongoKbDb.dataCollectionHelper(sourceColl.strip) rescue nil
-     unless(dataHelper or modelsHelper)
+     unless(dataHelper)
        @transformationErrors << "COLL_NOT_FOUND: It appears to be no data collection #{sourceColl.inspect} in the GenboreeKB - #{@mongoKbDb.name}, (check spelling/case, etc)."
        @transformationStatus = false
      else
@@ -257,7 +257,7 @@ module BRL ; module Genboree ; module KB ; module Transformers
          # To do handle exceptions
          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "cur:docLinks.values.flatten #{docLinks.values.flatten}\n lastCollName: #{lastCollName.inspect}")
          cur = @crossHelper.getDocCursor(dataHelper, modelsHelper, docLinks.values.flatten, nil, "exact", lastCollName)
-         $stderr.debugPuts(__FILE__, __method__, "DEBUG", "cur: #{cur.count}")
+         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "cur: #{cur.count}")
          cur.rewind!
          cur.each {|cdoc|
            psdoc = BRL::Genboree::KB::PropSelector.new(cdoc)

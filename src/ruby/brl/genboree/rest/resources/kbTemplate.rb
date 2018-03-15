@@ -93,10 +93,12 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 templateDoc = BRL::Genboree::KB::KbDoc.new(dd)
               }
               if(templateDoc and !templateDoc.empty?)
+                templateDocId = templateDoc['_id'].deep_clone
                 templateDoc.delete("_id")
                 bodyData = nil
                 if(!@aspect)
                   bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, templateDoc)
+                  bodyData.metadata = templatesHelper.getMetadata(templateDocId, "kbTemplates")
                 else
                   if(@aspect == 'propPathsValue')
                     payload = parseRequestBodyForEntity('TextEntityList')
@@ -115,6 +117,7 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     else
                       propPathToValueHash = send(@aspect.to_sym, templateDoc, propPaths)
                       bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, propPathToValueHash)
+                      bodyData.metadata = templatesHelper.getMetadata(templateDocId, "kbTemplates")
                     end
                   else
                     bodyData = send(@aspect.to_sym, templateDoc)  
@@ -175,8 +178,13 @@ module BRL ; module REST ; module Resources                # <- resource classes
             if(coll and !coll.empty?)
               validator = BRL::Genboree::KB::Validators::TemplateValidator.new(@mongoKbDb)
               if(!validator.validate(payloadTemplateDoc))
+                if( validator.respond_to?(:buildErrorMsgs) )
+                  errors = validator.buildErrorMsgs()
+                else
+                  errors = validator.validationErrors
+                end
                 @statusName = :"Unsupported Media Type"
-                @statusMsg = "BAD_DOC: The template document you provided does not match the GenboreeKB specifications:\n\n#{validator.validationErrors.join("\n  - ")}"
+                @statusMsg = "BAD_DOC: The template document you provided does not match the GenboreeKB specifications:\n\n#{errors.join("\n")}"
               else
                 if(@templateId != payloadTemplateDoc.getPropVal('id'))
                   @statusName = :"Unsupported Media Type"
@@ -192,11 +200,20 @@ module BRL ; module REST ; module Resources                # <- resource classes
                     # There is a template with this id already. Update it with the new payload.
                     if(templateDoc and !templateDoc.empty?)
                       payloadTemplateDoc['_id'] = templateDoc["_id"]
-                      templatesHelper.save(payloadTemplateDoc, @gbLogin)
-                      bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadTemplateDoc)
-                      configResponse(bodyData)
-                      @statusName = :'Moved Permanently'
-                      @statusMsg = "UPDATED_TEMPLATE_DOC: The template document with the id: #{@templateId.inspect} for the collection: #{@collName} was updated."
+                      workingRevisionMatched = true
+                      if(@workingRevision)
+                        workingRevisionMatched = templatesHelper.matchWorkingRevisionWithCurrentRevision(@workingRevision, templateDoc["_id"], "kbTemplates")
+                      end
+                      if(workingRevisionMatched)
+                        templatesHelper.save(payloadTemplateDoc, @gbLogin)
+                        bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadTemplateDoc)
+                        configResponse(bodyData)
+                        @statusName = :'Moved Permanently'
+                        @statusMsg = "UPDATED_TEMPLATE_DOC: The template document with the id: #{@templateId.inspect} for the collection: #{@collName} was updated."
+                      else
+                        @statusName = :"Conflict"
+                        @statusMsg = " WORKING_COPY_OUT_OF_DATE: Your working copy of the document is out-of-date. The document has been changed since you last retrieved it. To prevent loss of new content or the saving of deleted content, your document change has been rejected."
+                      end
                     else # No such template
                       templatesHelper.save(payloadTemplateDoc, @gbLogin)
                       bodyData = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadTemplateDoc)

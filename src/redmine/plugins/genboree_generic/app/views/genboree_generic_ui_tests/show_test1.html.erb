@@ -1,0 +1,21 @@
+<%# Use standard Rails method to build appropriate link to the "update_inst1" action for this contoller %>
+<a href="<%= u1 = url_for( { :action => 'update_inst1' }) %>">Update Institution</a>
+
+<%# Show profile summary, assuming everything went as epxected %>
+<% if( @gbUser ) %><%# Then have a GbUser object and can display some stuff. %>
+  <h3>Here is some info about you:</h3>
+  <br>
+  <ul>
+    <li><b>User ID:</b> <%= @gbUser.userId.inspect %></li>
+    <li><b>Login:</b> <%= @gbUser.login.inspect %></li>
+    <li><b>Password:</b> <%= '*' * @gbUser.login.to_s.size %></li>
+    <li><b>Email:</b> <%= @gbUser.email.inspect %>"</li>
+    <li><b>Full Name:</b> <%= @gbUser.firstName %> <% @gbUser.lastName %></li>
+    <li><b>Institution:</b> <%= @gbUser.institution.to_s =~ /\S/ ? @gbUser.institution.inspect : "None? Didn't you go to school?" %></li>
+    <li><b>Phone:</b> <%= @gbUser.phone.blank? ? "Yeah, I wouldn't provide that either." : @gbUser.phone.inspect %></li>
+  </ul>
+  <br>
+<%# Something DIDN'T go right. Show that here. %>
+<% else %><%# No GbUser...but WTH, errors should be handled by a DIFFERENT VIEW (see controller action method) %>
+  <i>Oh oh. <code>@gbUser@</code> is <%= @gbUser.inspect %>. Errors supposed to be handled by a different view! (<code>:gb_user_err</code>)</i>
+<% end %>

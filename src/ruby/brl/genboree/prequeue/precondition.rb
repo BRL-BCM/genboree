@@ -91,6 +91,11 @@ module BRL ; module Genboree ; module Prequeue
     # @return [Boolean] indicating whether a method (probably a subclass method) has added some appropriate feedback
     #   for this condition
     attr_accessor :feedbackSet
+    # @return [Hash{Symbol,Object}] pre-check data generally prepared and provided by the PreconditionSet. Where suitable, the
+    #   PreconditionSet containing this Precondition may perform some batch-queries and/or validation/context checks and provide the results here.
+    #   These can be used to greatly shortcut the cost of evaluate() for each job, if the Precondition subclass
+    #   knows to look and take advantage of this info.
+    attr_accessor :preCheckInfo
 
     # ------------------------------------------------------------------
     # INTANCE METHODS

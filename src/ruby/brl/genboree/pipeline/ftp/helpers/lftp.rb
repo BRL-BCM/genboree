@@ -114,7 +114,7 @@ class Lftp
         retVal = @ftpObj.send(methodSym, *args, &block)
         retVal = (retVal.nil? ? true : retVal) # @todo TODO some ftp methods return nil on success, distinguish between this method failure (nil) with response nil
       rescue *RECONNECT_ERRORS => err
-        dbrcRec = @dbrc.getRecordByHost(@originalHost, :ftp)
+        dbrcRec = @dbrc.getRecordByHost(@originalHost, @prefix)
         @ftpObj = connectToFtp(@host, dbrcRec[:user], dbrcRec[:password], 1)
       rescue *errorClasses => err
         # if errorClasses=[], behaves as if no rescue clause
@@ -196,13 +196,15 @@ class Lftp
     fullFilePath = firstPartOfFile
     # If we don't have a file at this point, something went wrong above 
     unless(File.exist?(fullFilePath))
-      raise "Error occurred when trying to retrieve file. It is likely that file is empty or does not exist."
+      $stderr.debugPuts(__FILE__, __method__, "ERROR", "Error occurred when trying to retrieve file. It is likely that file is empty or does not exist. Will return application/x-empty") unless(@muted)
+      fileType = "application/x-empty"
+    else
+      # Check file type using sniffer
+      @sniffer.filePath = fullFilePath
+      fileType = @sniffer.mimeType()
+      # Remove temp file grabbed for sniffing and then report file type in response
     end
-    # Check file type using sniffer
-    @sniffer.filePath = fullFilePath
-    fileType = @sniffer.mimeType()
-    # Remove temp file grabbed for sniffing and then report file type in response
-    `rm #{firstPartOfFile}`
+    `rm -f #{firstPartOfFile}`
     return fileType
   end
 

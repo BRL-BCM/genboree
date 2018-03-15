@@ -119,6 +119,7 @@ module Resources
 
   class GenboreeResource < BRL::REST::Resource
     TRY_SCHEMES = [ "http", "https" ]
+
     # ------------------------------------------------------------------
     # MIX-INS
     # ------------------------------------------------------------------
@@ -265,6 +266,8 @@ module Resources
     attr_accessor :gbEnvelope
     # @return [String] The original request scheme, at least from the immediate downstream proxy
     attr_accessor :origReqScheme
+    # Exlucude metadata from the response (For KB resources only) [Default: false]
+    attr_accessor :excludeMetadata
 
     # ------------------------------------------------------------------
     # CONSTANTS
@@ -324,6 +327,7 @@ module Resources
       # - Passed forward for internal requests (via @rackEnv) to avoid unnecessary re-auth.
       # - login => Hash with key user-state info, normally determined by initUserInfo().
       @rackEnv['genboree.authenticatedUserInfo'] = Hash.new { |hh,kk| hh[kk] = {} } unless(@rackEnv['genboree.authenticatedUserInfo'].is_a?(Hash))
+
       @debug = false
       @layout = nil
       @gbLogin, @reqURI, @rsrcURI, @rsrcQuery, @genbConf, @dbu, @apiError = nil
@@ -351,7 +355,13 @@ module Resources
     def cleanup()
       super()
       @nvPairs.clear() if(@nvPairs and @nvPairs.respond_to?(:clear))
-      @dbu.clearCaches() if(@dbu)
+      # Ask our standard @dbu to release its connections/handles, but carefully do NOT
+      #   use DBUtil.clear() to wipe database name INFO...this will allow deferred code to
+      #   [re]connect to the databases while ensuring we don't keep connections and handles
+      #   hanging around consuming resources unnecessarily
+      @dbu.release()
+      #@dbu.clearCaches() if(@dbu)
+      #@dbu.clear(true) rescue nil
       @dbu = @nvParis = @genbConf = @reqURI = @rsrcURI = @rsrcQuery = @repFormat = nil
       @remoteAddr = @statusName = @statusMsg = @detailed = @connect = @debug = nil
       @gbLogin = @userId = @userEmail = @rsrcPath = @rsrcHost = @reqHost = nil
@@ -395,7 +405,7 @@ module Resources
       @genbConf = BRL::Genboree::GenboreeConfig.load()
       # Get some info about request, etc
       @reqURI = URI::parse(@req.url) # Get full incoming URI, including query string, etc
-
+      
       @rsrcHost = @reqHost = @reqURI.host if(!@reqURI.nil?)
       @reqURI.query = '' if(@reqURI.query.nil?)
       @remoteAddr = @req.env['REMOTE_ADDR']
@@ -404,7 +414,6 @@ module Resources
       # Did nginx leave the body in a file for us, stripping it out of actual request paylaod
       @xBodyFile = @req.env['HTTP_X_BODY_FILE'].to_s
       @xBodyFile = nil if(@xBodyFile.empty?)
-      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "@req.env:\n\n#{@req.env.inspect}\n\n")
 
       # Parse url into component pieces
       url = @reqURI.to_s
@@ -437,6 +446,10 @@ module Resources
       @dbIds = false unless(rDbIds and rDbIds.to_s =~ /^(?:true|yes)$/i)
       rDetailed = @nvPairs['detailed']
       @detailed = rDetailed.nil? ? false : rDetailed.to_s.to_bool(false)
+      @workingRevision = ( @nvPairs.key?('workingRevision') ? @nvPairs['workingRevision'].to_i : nil )
+      excludeMetadata = @nvPairs['excludeMetadata']
+      @excludeMetadata = false unless(excludeMetadata and excludeMetadata.to_s =~ /^(?:true|yes)$/i)
+      @collName = nil
       @layout = @nvPairs['layout'] # May be nil (often)
       # Init DBRC info
       # - Official host name for local Genboree instance
@@ -552,6 +565,7 @@ module Resources
     end
 
     # HELPERS
+
     # Validate client token using info available to server. Try original request scheme first to
     #   avoid unnecessarily checking all schemes (since always get http from nginx, we don't know if user
     #   used http or https in their URL when making token...unless nginx accurately tells us).
@@ -579,6 +593,7 @@ module Resources
       }
       return false
     end
+
     # Checks if the incoming request is valid and if the authentication information
     # provided is correct. Plus it sets up a number of useful instance variables.
     # - this will also fill in @hostAuthMap if we have a authenticated gbLogin (but not in the case of gbKey...
@@ -594,6 +609,7 @@ module Resources
       loginAuthenticated = nil
       gbToken = @nvPairs['gbToken']
       @gbLogin = @nvPairs['gbLogin']
+      @gbLogin = @gbLogin.to_s unless(@gbLogin.nil?)
       # Need a dbu instance from here on.
       @dbu = BRL::Genboree::DBUtil.new(@genbConf.dbrcKey, nil, nil)
       # Try to get gbKey, if available from (a) request or (b) if publically available
@@ -728,6 +744,7 @@ module Resources
           end
         end
       end
+
       return @statusName
     end # def valid?()
 
@@ -925,6 +942,7 @@ module Resources
       else
         userName = query["gbLogin"]
       end
+
       # APIRECORD SMEAR: Don't insert apiRecord calls for INTERNAL "api" calls
       # * In fact, we'll try to skip as much of the apiRecord-related stuff as we can,
       #   although it's kind of smeared throughout this method.
@@ -947,6 +965,7 @@ module Resources
         insertId = dbu.insertApiRecord(apiRecord)
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Initial insert apiRecordId #{insertId}")
       end # unless(@rackEnv['genboree.internalReq'])
+
       begin
         @resp = super()  # Call an instance method matching the reqMethod
       rescue => err
@@ -963,6 +982,7 @@ module Resources
         @statusName = :'Internal Server Error'
         @resp = representError()
       end
+
       # APIRECORD SMEAR: Don't insert apiRecord calls for INTERNAL "api" calls
       # * In fact, we'll try to skip as much of the apiRecord-related stuff as we can,
       #   although it's kind of smeared throughout this method.
@@ -972,31 +992,47 @@ module Resources
         apiRecord["queryString"] = @rsrcQuery
 
         # fill in parts from request
-        if(@resp.body.respond_to?(:size))
-          apiRecord["contentLength"] = (@resp.body.size.to_i / 1024 ) # in KiB
+        if(@resp.body)
+          if(@resp.body.respond_to?(:size))
+            apiRecord["contentLength"] = (@resp.body.size.to_i / 1024 ) # in KiB
+          end
         end
         apiRecord["respCode"] = @resp.status
 
         # fill in final processing info
         apiRecord["memUsageEnd"] = (BRL::Util::MemoryInfo::getMemUsagekB / 1024).to_i
         apiRecord["reqEndTime"] = Time.now
-        nUpdated = dbu.updateApiRecord(insertId, apiRecord)
 
         # setup deferrable to fill in content length when it is done (streammer stuff is obsolete
         #   and body.callback shows poorer planning/design)
+        #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "@dbu.object_id: #{@dbu.object_id.inspect}  ;   dbu.object_id: #{dbu.object_id.inspect}")
         if(@resp.body.is_a?(BRL::Genboree::REST::EM::DeferrableBodies::AbstractDeferrableBody))
           @resp.body.addListener(:finish, Proc.new { |event, body|
-            rs = dbu.updateApiRecord(insertId, {"contentLength" => body.totalBytesSent / 1024} )
+            nUpdated = dbu.updateApiRecord(insertId, {"contentLength" => body.totalBytesSent / 1024} )
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final update apiRecordId #{insertId} for a DeferrableBody")
+            activeDbDisconnect(dbu, @dbu)
           })
         elsif(@resp.body.is_a?(BRL::Genboree::Abstract::Resources::AbstractStreamer) and !insertId.nil?)
-          @resp.body.callback = apiRecordProc(@dbu, insertId)
+          @resp.body.callback = apiRecordProc(dbu, insertId)
         elsif(@resp.body.is_a?(BRL::Genboree::Abstract::Resources::StreamerDelegator) and !insertId.nil?)
-          @resp.body.callback = apiRecordProc(@dbu, insertId)
+          @resp.body.callback = apiRecordProc(dbu, insertId)
+        else # was some non-streams thing and we're all done with it at this point
+          nUpdated = dbu.updateApiRecord(insertId, apiRecord)
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final update apiRecordId #{insertId} for a non-deferrable/non-streamer resp")
+          activeDbDisconnect(dbu, @dbu)
         end
-        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final insert apiRecordId #{insertId}")
       end # unless(@rackEnv['genboree.internalReq'])
 
       return @resp
+    end
+
+    def activeDbDisconnect(*dbus)
+      $stderr.debugPuts(__FILE__, __method__, "STATUS", "Active disconnect of all db handles in DBUtil instances provided\n    - Generally: everything in @dbu setup for this instance\n    - And any local method/proc dbu created for specific purposes like apiRecord logging etc")
+      if(dbus.is_a?(Array))
+        dbus.each { |dbu|
+          dbu.clear(true) if(dbu.is_a?(BRL::Genboree::DBUtil))
+        }
+      end
     end
 
     # Prepare a callback function for the apiRecord once a streaming request is finished
@@ -1010,6 +1046,8 @@ module Resources
       Proc.new { |size|
         args = [id, {"contentLength" => size / 1024}]
         dbu.send(method, *args)
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final update apiRecordId #{id.inspect} for an old-style Streamer response")
+        activeDbDisconnect(dbu, @dbu)
       }
     end
 

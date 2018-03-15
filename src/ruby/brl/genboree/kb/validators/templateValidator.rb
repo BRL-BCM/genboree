@@ -17,9 +17,7 @@ module BRL ; module Genboree ; module KB ; module Validators
       super(kbDatabase, dataCollName)
       @templateModelObj = BRL::Genboree::KB::KbDoc.new(BRL::Genboree::KB::Helpers::TemplatesHelper::KB_MODEL)
     end
-    
-    
-  
+
     # Validates the user's template document against the collection's model document.
     # @param [Hash] doc A hash object representing the template document. 
     # @return [Boolean] retVal true for successful validation, false otherwise

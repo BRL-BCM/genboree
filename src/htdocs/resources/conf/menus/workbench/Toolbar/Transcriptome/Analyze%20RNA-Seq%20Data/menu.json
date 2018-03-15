@@ -2,17 +2,21 @@
   {
     "text": "Map Reads and Splice Junctions by TopHat",
     "tooltip": "A fast splice junction mapper that aligns RNA-Seq reads to mammalian-sized genomes using Bowtie, and then analyzes the mapping results to identify splice junctions between exons.",
-    "idStr": "tophat"
+    "idStr": "tophat",
+    "hidden": true
   },
   {
     "text": "Assemble and Measure Transcripts by Cufflinks",
     "tooltip": "Cufflinks assembles transcripts, estimates their abundances, and tests for differential expression and regulation in RNA-Seq samples.",
-    "idStr": "cufflinks"
+    "idStr": "cufflinks",
+    "hidden": true
+
   },
   {
     "text": "Detect Transcription Changes by Cuffdiff",
     "tooltip": "To find significant changes in transcript expression, splicing, and promoter use.",
-    "idStr": "cuffdiff"
+    "idStr": "cuffdiff",
+    "hidden": true
   },
   {
     "text": "Analyze RNA-Seq data by RSEQtools",

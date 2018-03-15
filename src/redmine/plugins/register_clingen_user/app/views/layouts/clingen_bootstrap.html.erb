@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="<%= current_language %>">
+<head>
+  <meta charset="utf-8" />
+  <title>Custom Genboree registration for ClinGen Users</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="/site/css/font-awesome.min.css">
+  <link rel="stylesheet" type="text/css" href="/site/fonts/fontello/css/fontello.css">
+  <script async="" src="//www.google-analytics.com/analytics.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+ <div class="container">
+  <div class="row header-menu todisappear">
+    <div class="col-sm-4 col-xs-12">
+     <img src="http://actionability.clinicalgenome.org/redmine/attachments/download/242/clingen_logo_180x138.png" alt="Clinical Genome Resource" class="logo img-responsive">
+    </div>
+    <div class="col-sm-8 hidden-xs">
+      <div class="row">
+       <div class="col-sm-12">
+        <div id="reg-title" class="right-nav pull-right">
+          <a id="nav-link" href="../cg_users/show">
+             ClinGen User Management
+          </a>
+        </div>
+       </div>
+      </div>
+    </div>  <!-- end column-8 -->
+   </div> <!-- end row -->
+   <%= yield %>
+ </div>
+ <footer>
+  <div class="container">
+    <div class="row">
+       <div class="col-lg-9 col-md-8 col-sm-7 powered text-right">
+       </div>
+       <div class="col-lg-3 col-md-4 col-sm-5 col-xs-12 powered text-right">
+         <a href="http://www.genboree.org" class="xnavbar-brand">
+           <i class="fa fa-plug"></i>Powered By Genboree</a>
+       </div>
+    </div>
+ </footer>
+</body>
+
+<style>
+html {
+  margin: 0px;
+}
+.header-menu {
+  height: 136px;
+  background: #5fa2dd;
+}
+
+.logo {
+  max-width: 225px;
+  height: auto;
+  vertical-align: middle;
+  margin-left: 120px;
+  float: left;
+}
+.right-nav {
+  color: #ffffff;
+  font-family: 'Roboto Condensed', "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  font-size: 25px;
+  padding: 2em;
+}
+.gray-font {
+    color: #666666;
+}
+#nav-link {
+ color: #fff
+}
+</style>

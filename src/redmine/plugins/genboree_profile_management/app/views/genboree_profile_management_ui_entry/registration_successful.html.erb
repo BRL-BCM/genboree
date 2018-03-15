@@ -1,0 +1,19 @@
+<%= stylesheet_link_tag 'profile_management.css', :plugin => 'genboree_profile_management', :media => 'all' %>
+<%= javascript_include_tag 'form.js', :plugin => 'genboree_profile_management', :media => 'all' %>
+<div class="form_container container-fluid">
+  <div class="success-notification">
+    Your login: <strong><%=@user_info["user_id"]%></strong> has been registered with Genboree.
+  </div>
+  <div>
+    You can now log into any of the following Genboree services:
+  </div>
+  <div>
+    <a href="/java-bin/workbench.jsp">Genboree Workbench</a>
+  </div>
+  <div>
+    <a href="<%=@kbMount%>">GenboreeKB</a>
+  </div>
+  <div>
+    <a href="/theCommons">Genboree Commons</a>
+  </div>
+</div>

@@ -1,0 +1,131 @@
+ Scenario 1. Ideal/standard: The external CA gave you both the public cert for their CA *and* the
+           signed CSR you asked for.
+           . Oh yay, a useful, helpful, knowledgeable, productive person signed the CSR and knows what's needed!
+           . Save their CA public key (public cert) to a systematic/consistent name:
+
+              SSL_BASE_DIR=/usr/local/brl/local/var/ssl/
+              EXT_CA_NAME=clingen
+              mv {external_ca_crt_file} $SSL_BASE_DIR/ca/pub/$EXT_CA_NAME.crt
+
+        Scenario 2. They gave you ONLY the signed CSR file. They may not know that you need more, because
+           for them, this is all that's needed [because they *already* set things up to trust their
+           own CA just like we have, and are blissfully unaware external clients need more info from them]
+           . Fine, should be ok. We will get their CA public cert by connecting to their service using
+             the openssl s_client tool.
+             - Note: on the face, this is not really good. Them doing scenario #1 or #3 is way better. Why?
+               Because you're going to connect to their service [you THINK] and extract out what you THINK is
+               their root CA cert using openssl and skillz.
+             - But how do you KNOW you're connecting to their service for this? Maybe you're connecting
+               to a middleman who's doing a MitM attack? And thus you're grabbing the attacker root CA
+               cert and of course verifying the attacker's server cert vs the attacker's root CA cert
+               is going to succeed...
+             - But I deal with that too, below. That is why these instructions get you to verify the
+               signed CSR they gave you using the root CA cert you obtained on your own.
+               * Only the REAL CA cert can be used to verify the signature on your signed CA. So you won't
+                 be accepting an attacker's bad root CA cert due to blind acceptance. Your signed CSR is
+                 signed via the CA private key and can only be verified by the matching public key. This way
+                 we use the signed CSR to be sure our manual grab of the external CA cert is all correct.
+           . Determine their host:port that they told you to connect to using SSL. For example, their
+             kafka server host + port.
+           . Use openssl s_client to connect to that host:port and to dump the certificate chain info the
+             server provided to a file.
+             - Illustratively we will use the WAG Kafka host:port to do this:
+
+               umask 0027
+               SSL_BASE_DIR=/usr/local/brl/local/var/ssl/
+               mkdir -p $SSL_BASE_DIR/tmp
+               EXT_CA_NAME=clingen
+               EXT_SSL_SERVICE=exchange.clinicalgenome.org:9093
+               # Dump server's certs. Ignore the :error: message at the end, it's just handshake
+               #  failure because we didn't send expected content from our side.
+               openssl s_client -showcerts -verify 10 -connect $EXT_SSL_SERVICE \
+                 > $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.showcerts.txt
+
+           . Examine the $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.showcerts.txt and manually extract the
+             CA public cert.
+             - Typically the chain goes from: server cert => intermediate signer cert => root CA cert.
+               The certs will have index 0, 1, ... with server cert at index 0.
+             - Hopefully you only see 2 certs: server cert => root CA cert
+               . If you have any intermediate certs, you'll need to import them as well after the root
+                 CA cert, BEFORE importing the signed client CSR you received from the external CA. Ugh.
+             - The root CA cert will have Subject ("s:") and Issuer ("i:") THE SAME. For other certs
+               listed, the Subject and Issuer will be different; typically for those, Subject at index
+               N has Issuer whose cert is at index N+1. You know, chain of certs. Only for the root
+               CA cert at index N has Issuer *also* at index N. So typically the root CA cert is the last
+               one, but check the Subject & Issuer for it to make sure.
+             - Cert content is surrounded with "-----BEGIN CERTIFICATE-----" and
+               "-----END CERTIFICATE-----" inclusive.
+             - Once you've located the external CA root cert, copy everything between
+               "-----BEGIN CERTIFICATE-----" and "-----END CERTIFICATE-----" INCLUDING those two lines
+               and save to:
+
+                 $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.ca.crt
+
+             - For verification/testing, ALSO save the cert at the index prior to the CA root cert index.
+
+                  # If the chain is only 2 certs long, then the prior cert is the server's cert. (Assumed
+                  # below). Else it's an Intermediate Cert and you can name the file appropriately.
+                  $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.server.crt
+
+             - Now you can try to verify the server cert using their public CA cert, which signed it. Obviously,
+               if everything is ok and as-expected this will trivially succeed. So check that it does.
+               . This should give something of the form: "$SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.server.crt: OK"
+               . If you DON'T get that, you did something WRONG. Maybe you saved the CA cert as server cert?
+
+                 # If your openssl is new enough, include -show_chain in this. Very nice.
+                 openssl verify -verbose -CAfile $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.ca.crt \
+                    $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.server.crt
+
+             - So you confirmed that the external CA cert you extracted can be used to verify a machine certificate
+               which that CA signed. Great.
+               . WAIT!! That CA also signed your *client CSR!* So if you have the right CA public cert, you
+                 should be able to verify the signed CSR file as well!!
+               . We already saved the signed CSR to a known, standardized location & name. So check if
+                 can use this public CA cert to verify that CSR!
+
+                  KEYPAIR_NAME=dev-client-brl-bcm
+                  EXT_CA_NAME=clingen
+                  # If your openssl is new enough, include -show_chain in this. Very nice.
+                  openssl verify -verbose -CAfile $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.ca.crt \
+                    $SSL_BASE_DIR/csrs/$KEYPAIR_NAME.$EXT_CA_NAME-signed.csr
+
+               . OMG! Ponies! You must get the message that (else you did something wrong, skipped step, etc):
+                   $SSL_BASE_DIR/csrs/$KEYPAIR_NAME.$EXT_CA_NAME-signed.csr: OK
+                 Just like you did when verifying their server cert. Great!
+
+             - Congrats, you have obtained their public CA root cert *and* verified that you have
+               the correct cert content! It can verify the signature on their server cert AND on the
+               signed CSR they gave you for your client. Happy dance.
+               . Move the external CA cert file you saved into place under ca/pub/ and clean up tmp/
+
+                   mv $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE.ca.crt $SSL_BASE_DIR/ca/pub/$EXT_CA_NAME.crt
+                   rm $SSL_BASE_DIR/tmp/$EXT_SSL_SERVICE*
+                   chmod 644 $SSL_BASE_DIR/ca/pub/$EXT_CA_NAME.crt
+
+             - But what if you have intermediate certs between the root and the server cert. i.e. more
+               that 2 certs from the s_client dump?
+               . Then you need to save EACH cert to a file.
+               . You need to identify the root CA cert (see above I tell you how) and it needs to
+                 be imported FIRST as a trusted CA cert.
+               . After that, import that other intermediate certs in order, starting with the
+                 one closest to the trusted CA cert. They will be accepted because you *just* imported
+                 the cert that signed them.
+               . Do each intermediate cert until you hit the server cert. Don't import the server cert.
+               . Thus, if CA cert is at index N (likely highest index) any you imported it as a trusted
+                 cert, then you import the intermediates:
+                   (N-1) => (N-2) => ... => 1   # not index 0 that's the server cert.
+               . This importing is described further below in these instructions.
+
+        Scenario 3. They gave you a signed CSR in PKCS7 format *and* ensured it contained the FULL certificate
+           chain. Ok, wow, they are competant and knowledgeable.
+           . This is somewhat common. Lots of commerical CA use this approach and then directions to
+             use Windows tools to examine (and extract) the certs in the chain using Windows UI.
+           . You can use openssl to view/extract certs from this format.
+           . As above in scenario 2, identify the root CA cert and the server cert.
+           . Also save any intermediate certs between the two.
+           . Goal is still to obtain the external CA cert into $SSL_BASE_DIR/ca/pub/$EXT_CA_NAME.crt
+           . You don't import the server cert, we only save it temporarily to use for checks.
+           . If there are intermediate certs, you'll import those in order starting closest to
+             root cert, as also mentioned above in scenario 2.
+           . The specific commands for working with full-chain PKCS7 signed CSR files is not documented
+             here. If they're needed, give me an example file and let me know.

@@ -52,6 +52,7 @@ module BRL ; module REST ; module Resources
           versionDoc = nil
           collName = BRL::Genboree::KB::Helpers::TransformsHelper::KB_CORE_COLLECTION_NAME
           transformsHelper = @mongoKbDb.transformsHelper()
+          $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "mongo database name: #{@mongoKbDb.db.name.inspect} ")
           if(transformsHelper and transformsHelper.coll)
             if(READ_ALLOWED_ROLES[@groupAccessStr])
               # check if the transformation doc exist
@@ -100,7 +101,7 @@ module BRL ; module REST ; module Resources
             @statusMsg = err.message
           else
             $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.message)
-            $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace)
+            $stderr.debugPuts(__FILE__, __method__, "API_ERROR", err.backtrace.join("\n"))
             @statusName = :"Internal Server Error"
             @statusMsg = err.message
           end
@@ -109,8 +110,5 @@ module BRL ; module REST ; module Resources
       @resp = representError() unless((200..299).include?(HTTP_STATUS_NAMES[@statusName]))
       return @resp
     end
-
-
-   
   end
 end ; end ; end

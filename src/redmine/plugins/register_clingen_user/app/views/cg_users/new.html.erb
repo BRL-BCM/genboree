@@ -1,0 +1,44 @@
+<%= render :partial => "status" %>
+<%= render :partial => "notices" %>
+
+<div class="row">
+  <div class="col-lg-3">
+  </div>
+  <div class="col-lg-6 col-sm-12 col-xs-12">
+    <%= form_tag ("." , "method" => :post, "novalidate" => "true") do %>
+       <div class="well"> 
+        <!-- style="width:40em;margin:auto"> -->
+        <div class="row form-row">
+    
+         <%= render :partial => "login_id" %>
+         <%= render :partial => "otherthan_pwd" %>
+         <%= render :partial => "password" %>
+    
+         <div class="col-sm-12 submit-button">
+           <%#= submit_tag "Create Login", { "class" => "btn btn-primary", "data-loading-text" => "Please wait" }  %>
+             <br>
+             <button type="submit" class="btn btn-primary" id="load" data-loading-text="<i class='fa fa-spinner fa-spin '></i> Please Wait">Create Login</button>
+         </div>
+    
+        </div>
+       </div>
+    <% end %>
+  </div>
+  <div class="col-lg-3">
+  </div>
+</div>
+<style>
+.submit-button, .form-row {
+  padding-top: 30px;
+}
+</style>
+<script>
+      // everything looks good!
+      $('.btn').on('click', function() {
+        var $this = $('.btn');
+        $this.button('loading');
+        setTimeout(function() {
+          $this.button('reset');
+        }, 30000);
+      });
+</script>

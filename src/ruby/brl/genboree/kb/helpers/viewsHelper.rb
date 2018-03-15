@@ -7,6 +7,8 @@ module BRL ; module Genboree ; module KB ; module Helpers
   # @note Views are subsets of the model for a collection.
   # @note Flat views are suitable for table display & output formats.
   class ViewsHelper < AbstractHelper
+    MEMOIZED_INSTANCE_METHODS = [ ] # In addition to those from parent class, which we'll rememoize, especially since we override 1+ of the parent methods!!
+
     # @return [String] The name of the core GenboreeKB collection the helper assists with.
     KB_CORE_COLLECTION_NAME = "kbViews"
     # @return [Array<Hash>] An array of MongoDB index config hashes; each has has key @:spec@ and @:opts@
@@ -81,7 +83,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
     # Create new instance of this helper.
     # @param [MongoKbDatabase] kbDatabase The KB database object this helper is assisting.
     # @param [String] collName The name of the document collection this helper uses.
-    def initialize(kbDatabase, collName="kbViews")
+    def initialize(kbDatabase, collName=self.class::KB_CORE_COLLECTION_NAME)
       super(kbDatabase, collName)
       unless(collName.is_a?(Mongo::Collection))
         @coll = @kbDatabase.viewsCollection() rescue nil
@@ -98,6 +100,25 @@ module BRL ; module Genboree ; module KB ; module Helpers
     def self.getModelTemplate(*params)
       return self::KB_MODEL
     end
+
+    # OVERRIDE because .versions & .revisions collections have no explicit model doc. But we can get a model
+    #   from this class via self.class.getModelTemplate.
+    def getIdentifierName( collName=@coll.name )
+      modelsHelper = getModelsHelper()
+      if( collName == @coll.name )
+        if( !@idPropName.is_a?(String) or @idPropName.empty? )
+          # Ask modelsHelper for the name of the identifier (root) property for this object's collection
+          #   (kept in @idPropName but won't be valid for other collections we might need the name from [for example
+          #   the root prop of the DATA collection which working in a version/revision helper class]).
+          @idPropName = modelsHelper.getRootProp( self.class.getModelTemplate(nil) )
+        end
+        idPropName = @idPropName
+      else # some other collection than ours ; must be a real collection that has actual model doc, not .versions or .revisions
+        idPropName = super( collName )
+      end
+      return idPropName
+    end
+    alias_method( :getRootProp, :getIdentifierName )
 
     # Get a document template suitable for the collection this helper asists with.
     # @note The template should be filled in with sensible and convenient default
@@ -217,42 +238,24 @@ module BRL ; module Genboree ; module KB ; module Helpers
 
 
     # Get the version of a document from version collection this helper class assists with
-    # @param [String] docID document identifier 
+    # @param [String] docID document identifier (from root property; aka unique doc name)
     # @param [String] ver version of interest - HEAD|CURR|PREV. 
     # @return [Fixnum] version of the document
     # @raise [ArgumentError] if @docID@ is not found in the collection
-    # @todo add support for specific version
-    def getDocVersion(docID, ver="HEAD")
-      version = nil
-      dbRef = nil
-      versionList  = []
-      versionDoc = nil
-      identProp = KB_MODEL['name']['properties']['model']['value']['name']
+    def getDocVersion(docID, ver=:head)
+      dbRef = dbRefFromRootPropVal( docID ) # various AbstractHelpers have this ; for VersionHelper and RevisionHelper is is focused on the DbRef of the DATA DOCUMENT not the version record ; fast
+      # @note: MUST use a proper BSON::DBRef with VersionsHelper for versioning of UNMODELED collections
+      #   (such as internal collections like kbTransforms etc)
       vh = @kbDatabase.versionsHelper(KB_CORE_COLLECTION_NAME)
-      doc = vh.exists?(identProp, docID, KB_CORE_COLLECTION_NAME)
-      unless(doc)
-        raise ArgumentError, "DOC_NOT_FOUND: No document with the identifier #{docID} in the collection #{KB_CORE_COLLECTION_NAME}"
-      end
-      docIdObj = doc.getPropVal('versionNum.content')['_id']
-      dbRef = BSON::DBRef.new(KB_CORE_COLLECTION_NAME, docIdObj)
-      versionList = vh.allVersions(dbRef)
-      if(ver == "HEAD" or ver == "CURR")
-        versionDoc = versionList.last
-      elsif (ver == "PREV")
-        if(versionList.size > 1)
-          versionDoc = versionList[versionList.size-2]
-        else
-          raise "No previous record found for the document - #{docID}"
-        end
-      else
-        ver = ver.to_f
-        versionDoc = vh.getVersion(ver, dbRef)
-      end
+      versionDoc = vh.getVersionDoc( ver, dbRef, fields=nil )
       return versionDoc
     end
 
-
-
-    
+    # ----------------------------------------------------------------
+    # MEMOIZE now-defined methods
+    # . We override some of the parent methods here, so seems like have to re-memoize.
+    # . We do this by adding our memoized methods to the list from AbstractHelper
+    # ----------------------------------------------------------------
+    (self::MEMOIZED_INSTANCE_METHODS + BRL::Genboree::KB::Helpers::AbstractHelper::MEMOIZED_INSTANCE_METHODS).each { |meth| memoize meth }
   end # class ViewsHelper
 end ; end ; end ; end # module BRL ; module Genboree ; module KB ; module Helpers

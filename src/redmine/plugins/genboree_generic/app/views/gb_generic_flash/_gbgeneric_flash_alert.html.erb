@@ -1,0 +1,25 @@
+<%
+  flash_types = {
+    :notice   => :info,
+    :error    => :danger,
+    :ok       => :success,
+    :success  => :success,
+    :info     => :info,
+    :warning  => :warning,
+    :danger   => :danger
+  }
+%>
+<%#
+  $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Flash ------------------------------------------------- to be rendered") 
+%>
+<% flash.each do |category, displayInfo| %>
+  <div class="alert alert-<%=flash_types[category]%> alert-dismissable">
+    <% if(@closeableFlashes) %> 
+      <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <% end %>
+    <%= displayInfo.html_safe() %>
+    <%#
+      $stderr.debugPuts(__FILE__, __method__, 'DEBUG', "Flash type #{category.inspect} DISPLAYED AS #{flash_types[category].inspect} --------------------NOW ??????????????????????????????????????")
+    %> 
+  </div>
+<% end %>

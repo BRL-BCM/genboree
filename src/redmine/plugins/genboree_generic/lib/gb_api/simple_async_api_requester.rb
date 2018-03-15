@@ -2,7 +2,6 @@ require 'brl/rest/apiCaller'
 require 'brl/dataStructure/cache' # for BRL::DataStructure::LimitedCache
 
 module GbApi
-
   # Use this class to make GB API requests. Register your own callback code via
   #   {#respCallback} to get at the response.
   # @note By default, when you first use get(), put(), etc, EventMachine/Rack/Thin will be AUTOMATICALLY
@@ -14,6 +13,7 @@ module GbApi
   #   another, etc. For ones after the first, you DON'T want to "throw :async" obviously, right? Eventmachine
   #   already knows the incoming request is async...so disable via: notifyWebServer = false
   class SimpleAsyncApiRequester
+    include GbMixin::AsyncRenderHelper
 
     # Set up size-limited global cache of request_id => serverNotified, to avoid notifying web server
     #   more than once that the request is being handled async (double throw :async can crash thin worker).
@@ -77,10 +77,6 @@ module GbApi
     #   like regular each() after which you do some other code!). In some sense, this
     #   is ~required. This is just handed off to the body streaming class.
     attr_reader :bodyFinish
-    # @return [String] The Rails 'action_dispatch.request_id' uniq request id value. This is the same
-    #   as the {ActionDispatch::Request#uuid} value available from the @request@ variable in your controller
-    #   and acts as a unique id for the incoming request rails is trying to handle.
-    attr_reader :railsRequestId
 
     # CONSTRUCTOR.
     # @param [Hash] rackEnv The Rack env hash.
@@ -89,13 +85,13 @@ module GbApi
     #   context the iss being done; or nil if there is no relevant Project context. Used to do the
     #   right thing for Projects which are flagged as 'public'.
     # @param [User] rmUser The Redmine User model instance for the Redmine User who is making the
-    #   API request. Generally the default of @User.current@ is always used, unless some special
+    #   API request. Generally the @@currRmUser@ from the Controller is always used, unless some special
     #   shim user is being employed for certain situations.
-    def initialize(rackEnv, targetHost, rmProject, rmUser=User.current)
-      @rackEnv          = rackEnv
-      @rackCallback     = @rackEnv['async.callback']
-      @rackClose        = @rackEnv['async.close']
-      @railsRequestId   = @rackEnv['action_dispatch.request_id']
+    def initialize(rackEnv, targetHost, rmProject, rmUser=rackEnv[:currRmUser])
+      #$stderr.puts "env key check in #{__method__}:\n\n#{rackEnv.keys.join("\n")}\n\n"
+      #$stderr.puts "rmUser is:\n\n#{rmUser.inspect}\n\n"
+      # Save key Rack callbacks, info, etc
+      initRackEnv( rackEnv )
       @scheme = DEFAULT_SCHEME
       @gbHost = targetHost
       @rmProject = rmProject
@@ -103,10 +99,10 @@ module GbApi
       @notifyWebServer = true
       @nonGbApiTargetHost = false
       @fullApiUrl = nil
-      @respCallback = @rackEnv['async.callback']
       @reqHeaders = {}
-      @gbAuthHelper = GbApi::GbAuthHelper.new()
-      $stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] #{self.class} initialized. Auth helper says GB auth host is #{@gbAuthHelper.gbAuthHost.inspect} ;\n\nREQUEST ID: #{@rackEnv['action_dispatch.request_id'].inspect}\n\n")
+      @respCallback     = @rackEnv['async.callback']
+      @gbAuthHelper = GbApi::GbAuthHelper.new( rackEnv )
+      #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] #{self.class} initialized. Auth helper says GB auth host is #{@gbAuthHelper.gbAuthHost.inspect} ;\n\nREQUEST ID: #{@rackEnv['action_dispatch.request_id'].inspect}\n\n")
     end
 
     # Register your callback code in order to process the API response. If no respCallback
@@ -198,57 +194,6 @@ module GbApi
       doRequest(:post, rsrcPath, fieldMap, payload)
     end
 
-    # When ready to send to client, probably from within one of your bodyFinish callbacks,
-    #   can use this to send body back to the client. As long as you passed the rackEnv forward,
-    #   it will work
-    # @param [Fixnum] status The HTTP response status code to send to the client.
-    # @param [Hash] headers The HTTP response headers. Often same as ones your {#respCallback}
-    #   code received in the Rack-type triple, or adapted from that (note your content length and that one may not be same!)
-    # @param [String,Object] body A String or Object supporting @each()@ which contains chunk strings that will be sent to client.
-    def sendToClient(status, headers, body)
-      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "#{'-'*80}\n\nself: #{self.object_id} [#{@railsRequestId.inspect}] sendToClient called with status: #{status.inspect} ; body (a #{body.class.inspect}) is:\n\n#{body.inspect.size > 1024 ? "#{body.inspect[0,1024]}" : body.inspect}")
-      # @todo Only actually send to client if connection is not closed.
-      @rackCallback.call( [ status, headers, body ] )
-    end
-
-    # Render the view and send results to client via the async.callback.
-    #   Generally called with just the controller (@render(self)@) to have the default
-    #   template found and used by Rails, or called with just the controller plus
-    #   the template/View as a {Symbol} which is useful when want to render using non-default
-    #   template (@render(self, :alt_show)@). More complex scenarios are possible, such as
-    #   provding render configs that indicate partials or XML or whatever, as well as tweaking
-    #   the status and headers appropriately.
-    # @param [ApplicationController] controller The specific {ApplicationController} instance which is
-    #   calling this method. The @render@ method will be called in the context of this object, so
-    #   all instance variables etc are available to the View template as usual.
-    # @param [nil,Symbol,Hash] templateOrConf OPTIONAL. Either (1) not-provided or @nil@ in order to have the default View
-    #   template used as normal ; (2) the {Symbol} of a View template to render (or String, including
-    #   the various namespaced/organized View template strings that employ paths etc ; (3) a render
-    #   config {Hash} for special rendering scenarios. See Rails' @render@ docs. Generally option (1) or
-    #   (2) are employed.
-    # @param [Fixnum] status OPTIONAL. Override the default response status of 200.
-    # @param [Hash] headers OPTIONAL. Provide additional headers. By default the 'Content-Type' header
-    #   will be set to 'text/html' and 'Content-Length' will be set to the length of the render output
-    #   unless you override these.
-    def renderToClient(controller, templateOrConf=nil, status=200, headers= {'Content-Type' => 'text/html'})
-      # Make render config no matter how called
-      if(templateOrConf.is_a?(Symbol) or templateOrConf.is_a?(String))
-        renderConf = { :action => templateOrConf }
-      else # templateOrConf must be a render config Hash or nil
-        renderConf = templateOrConf
-      end
-
-      # Render (returns "lines" array...although generally just 1 big String in it)
-      htmlLines = controller.instance_eval { (renderConf ? render(renderConf) : render()) }
-      unless(headers['Content-Length'])
-        contentLength = htmlLines.reduce(0) { |sum, line| sum += line.size ; sum }
-        headers['Content-Length'] = contentLength.to_s
-      end
-
-      # Send to client
-      sendToClient(status, headers, htmlLines)
-    end
-
     # ----------------------------------------------------------------
     # PRIVATE
     # ----------------------------------------------------------------
@@ -275,7 +220,7 @@ module GbApi
         else # project context (check for anonymous access to public project as a fallback etc)
           authPair = @gbAuthHelper.authPairForUserAndHostInProjContext(@rmProject, @gbHost, @rmUser)
         end
-        $stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Have auth info for user: #{authPair[0].inspect} with a password? #{ (authPair[1].nil? ? 'nil' : (authPair[1] == :anon ? :anon : true)) }")
+        #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Have auth info for user: #{authPair[0].inspect} with a password? #{ (authPair[1].nil? ? 'nil' : (authPair[1] == :anon ? :anon : true)) }")
         login, pass = authPair
       end
 
@@ -295,7 +240,7 @@ module GbApi
           @fullApiUrl = apiCaller.makeFullApiUri(fieldMap)
         end
       end
-      $stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Constructed full api url: #{@fullApiUrl.inspect}")
+      #$stderr.debugPuts(__FILE__, __method__, '>>>>>> DEBUG', "[#{@railsRequestId.inspect}] Constructed full api url: #{@fullApiUrl.inspect}")
 
       # Set up request
       initRequest(payload)
@@ -318,9 +263,9 @@ module GbApi
         #   And to automate notify decision completely.
         reqStatus = self.class.reqStatus(@railsRequestId)
         if( reqStatus != :notified ) # @todo shouldn't do this if connection is :closed either, when that is added
-          $stderr.debugPuts(__FILE__, __method__, '>>>>> DEBUG', "[#{@railsRequestId.inspect}]  !!!!!! NOTIFY WEB SERVER via throw :async !!!!!!")
+          #$stderr.debugPuts(__FILE__, __method__, '>>>>> DEBUG', "[#{@railsRequestId.inspect}]  !!!!!! NOTIFY WEB SERVER via throw :async !!!!!!")
           self.class.setReqStatus(@railsRequestId, :notified)
-          $stderr.debugPuts(__FILE__, __method__, '>>>>> DEBUG', "[#{@railsRequestId.inspect}] (recorded notify)")
+          #$stderr.debugPuts(__FILE__, __method__, '>>>>> DEBUG', "[#{@railsRequestId.inspect}] (recorded notify)")
           # To add in some more safety: this instance will only notify once by default. So if reused and forget to set notifyWebServer, it's ok.
           @notifyWebServer = false
           throw :async

@@ -61,7 +61,90 @@ module BRL; module Genboree; module Tools; module Scripts
         @subUserId = @settings['subUserId']
         @subUserId = @userId unless(@subUserId)
         @sampleID = @settings['sampleID']
+        @exogenousMappingInputDir = @settings['exogenousMappingInputDir']
         @exogenousTaxoTreeJobIDDir = @settings['exogenousTaxoTreeJobIDDir']
+        @exogenousRerunDir = @settings['exogenousRerunDir']
+        @exogenousJobIds = JSON.parse(File.read(@settings['filePathToListOfExogenousJobIds']))
+        listOfRerunFiles = Dir.entries(@exogenousRerunDir) rescue nil
+        if(@dbrcKey)
+          dbrc = BRL::DB::DBRC.new(@dbrcFile, @dbrcKey)
+          # get super user, pass and hostname
+          user = dbrc.user
+          pass = dbrc.password
+          host = dbrc.driver.split(/:/).last
+        else
+          suDbDbrc = BRL::Genboree::GenboreeUtil.getSuperuserDbrc(@genbConf, @dbrcFile)
+          user = suDbDbrc.user
+          pass = suDbDbrc.password
+          host = suDbDbrc.driver.split(/:/).last
+        end
+        # Then some exogenousSTARMapping jobs were cancelled, so we need to relaunch this job with those new IDs
+        if(listOfRerunFiles and listOfRerunFiles.length() > 2)
+          listOfRerunFiles.delete(".")
+          listOfRerunFiles.delete("..")
+          # preconditionJobsForRerunningJob will hold all of the job IDs that need to finish in order for this tool (exogenousPPRLauncher) to re-run.
+          # Some of these jobs may already be finished (because they ran earlier successfully)
+          preconditionJobsForRerunningJob = []
+          @exogenousSTARMappingId = "exogenousSTARMapping"
+          @eplToolId = @toolConf.getSetting('info', 'idStr')
+          # Create a reusable ApiCaller instance for launching each runExceRpt job
+          apiCaller = BRL::Genboree::REST::ApiCaller.new(host, "/REST/v1/genboree/tool/{toolId}/job", user, pass)
+          # Traverse all of the jobs that already finished and add a condition hash for each to our preconditionJobs array.
+          # Note that met has been set to be true for all of these jobs (they won't be re-run)
+          @exogenousJobIds.each_key { |jobId|
+            condition = {
+              "type" => "job",
+             "expires" => (Time.now + Time::WEEK_SECS * 4).to_s,
+              "met" => true,
+              "condition"=> {
+                "dependencyJobUrl" => "http://#{host}/REST/v1/job/#{jobId}",
+                "acceptableStatuses" =>
+                {
+                  "killed"=>true,
+                  "failed"=>true,
+                  "completed"=>true,
+                  "partialSuccess"=>true,
+                  "canceled"=>true
+                }
+              }
+            }
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Condition connected with exogenousSTARMapping job #{jobId} (job type: #{@exogenousJobIds[jobId]}): #{condition.inspect}")
+            preconditionJobsForRerunningJob << condition
+          }
+          # Next, we'll add a condition for each exogenous STAR Mapping job that we have to re-run.
+          # Note that met will be set to false for all of these jobs (they won't be re-run)
+          listOfRerunFiles.each { |currentRerunId|
+            currentRerunId.chomp!(".txt")
+            condition = {
+              "type" => "job",
+             "expires" => (Time.now + Time::WEEK_SECS * 4).to_s,
+              "met" => false,
+              "condition"=> {
+                "dependencyJobUrl" => "http://#{host}/REST/v1/job/#{currentRerunId}",
+                "acceptableStatuses" =>
+                {
+                  "killed"=>true,
+                  "failed"=>true,
+                  "completed"=>true,
+                  "partialSuccess"=>true,
+                  "canceled"=>true
+                }
+              }
+            }
+            @exogenousJobIds[currentRerunId] = "Exogenous STAR Mapping Job"
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Condition connected with exogenousSTARMapping job #{currentRerunId} (job type: #{@exogenousJobIds[currentRerunId]}): #{condition.inspect}")
+            preconditionJobsForRerunningJob << condition
+            # We will delete the rerun file since we've submitted the associated job
+            File.delete("#{@exogenousRerunDir}/#{currentRerunId}.txt")
+          }
+          File.open(@settings['filePathToListOfExogenousJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@exogenousJobIds)) }
+          # Finally, we relaunch our exogenousPPRLauncher job with the new list of conditions
+          exogenousPPRLauncher(host, user, pass, preconditionJobsForRerunningJob)
+          # Then, we will cancel this job by raising an error with exit code 15 (reserved for cancellation)
+          @errUserMsg = "At least some of your samples failed processing through exceRpt,\nlikely due to insufficient memory.\nWe will re-run those failed samples with more memory.\nAfter those samples are re-run, we will run this job again.\n"
+          @exitCode = 15
+          raise @errUserMsg
+        end
       rescue => err
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Error with processJobConf: #{err}")
         @errUserMsg = "ERROR: Could not set up required variables for running job." if(@errUserMsg.nil?)
@@ -141,6 +224,64 @@ module BRL; module Genboree; module Tools; module Scripts
 ###### *****************************
 ###### Methods used in this workflow
 ###### *****************************
+
+    # Produce a valid job conf for exogenousSTARMapping tool and then submit ESM job. ESM job will be conditional on all successfully launched runExceRpt jobs finishing (success or failure).
+    # @param [String] host host name
+    # @param [String] user user name
+    # @param [String] pass password
+    # @param [Array] conditions array of different job conditions required for exogenousPPRLauncher job to launch
+    # @return [nil]
+    def exogenousPPRLauncher(host, user, pass, conditions)
+      # Produce exogenousPPRLauncher job file
+      eplJobConf = createEPLJobConf(conditions)
+      # Launch exogenousPPRLauncher job
+      submitEPLJob(host, user, pass, eplJobConf)
+      return
+    end
+   
+    # Method to create exogenousPPRLauncher jobFile.json used in submitEPLJob()
+    # @settings [Array] conditions array of job conditions used as preconditions for exogenousPPRLauncher job
+    # @return [JSON] job conf for exogenousPPRLauncher tool
+    def createEPLJobConf(conditions)
+      eplJobConf = @jobConf.deep_clone()
+      ## Define context
+      eplJobConf['context']['toolIdStr'] = @eplToolId
+      ## Define settings
+      eplJobConf['settings']['exogenousMapping'] = "on"
+      # We will submit a conditional job. Its preconditions will be the exogenousSTARMapping jobs grabbed before. 
+      eplJobConf['preconditionSet'] =  {
+        "willNeverMatch"=> false,
+        "numMet"=> 0,
+        "someExpired"=> false,
+        "count"=> 0,
+        "preconditions"=> conditions
+      }
+      # Write jobConf hash to tool specific jobFile.json
+      eplJobFile = "#{@exogenousMappingInputDir}/eplJobFile.json"
+      File.open(eplJobFile,"w") do |eplJob|
+        eplJob.write(JSON.pretty_generate(eplJobConf))
+      end
+      return eplJobConf
+    end
+    
+    # Method to call exogenousPPRLauncher job for successful samples
+    # @param [String] host host name
+    # @param [String] user user name 
+    # @param [String] pass password 
+    # @param [JSON] eplJobConf job conf for current exogenousPPRLauncher job
+    # @return [nil]
+    def submitEPLJob(host, user, pass, eplJobConf)
+      apiCaller = BRL::Genboree::REST::ApiCaller.new(host, "/REST/v1/genboree/tool/exogenousPPRLauncher/job", user, pass)
+      apiCaller.put({}, eplJobConf.to_json)
+      unless(apiCaller.succeeded?)
+        $stderr.debugPuts(__FILE__, __method__, "EXOGENOUS PPR LAUNCHER JOB SUBMISSION FAILURE", apiCaller.respBody.inspect)
+        @errUserMsg = "We could not submit your exogenousPPRLauncher job as a conditional job."
+        raise @errUserMsg
+      else
+        $stderr.debugPuts(__FILE__, __method__, "EXOGENOUS PPR LAUNCHER JOB SUBMISSION SUCCESS", apiCaller.respBody.inspect)
+      end
+      return
+    end
 
     # Produce a valid job conf for processPipelineRuns tool and then submit PPR job. PPR job will be conditional on all successfully launched exogenousTaxoTree jobs finishing (success or failure).
     # @param [String] host host name
@@ -325,7 +466,11 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete("uploadReadCountsDocs")
       @settings.delete('listOfExogenousTaxoTreeJobIds')
       @settings.delete('exogenousTaxoTreeJobIDDir')
-      @settings.delete('filePathToListOfJobIds')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
+      @settings.delete('exogenousClaves')
+      @settings.delete('backupFtpDir')
+      @settings.delete('importantJobIdsDir')
     end
 
     def customBuildSectionEmailSummary(section)

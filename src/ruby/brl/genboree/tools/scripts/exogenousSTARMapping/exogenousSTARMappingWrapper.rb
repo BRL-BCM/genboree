@@ -61,9 +61,18 @@ module BRL; module Genboree; module Tools; module Scripts
         @outFile = "#{@scratchDir}/exogenousSTARMapping.out"
         @errFile = "#{@scratchDir}/exogenousSTARMapping.err"
         # Add exogenousSTARMapping job ID to list of job IDs to display in final processing email
-        @listOfJobIds = JSON.parse(File.read(@settings['filePathToListOfJobIds']))
-        @listOfJobIds[@jobId] = "Exogenous STAR Mapping Job"
-        File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
+        importantJobIdsDir = @settings['importantJobIdsDir']
+        newExoEntry = {@jobId => "Exogenous STAR Mapping Job"}
+        File.open("#{importantJobIdsDir}/#{@jobId}.txt", 'w') { |file| file.write(JSON.pretty_generate(newExoEntry)) }
+        # Grab job IDs and put them in @listOfJobIds
+        @listOfJobIds = {}
+        jobIdFiles = Dir.entries(importantJobIdsDir)
+        jobIdFiles.delete(".")
+        jobIdFiles.delete("..")
+        jobIdFiles.each { |currentFile|
+          jobId = JSON.parse(File.read("#{importantJobIdsDir}/#{currentFile}"))
+          @listOfJobIds.merge!(jobId)
+        }
         # Grab group name and database name
         @groupName = @grpApiHelper.extractName(@outputs[0])
         @dbName = @dbApiHelper.extractName(@outputs[0])
@@ -94,6 +103,13 @@ module BRL; module Genboree; module Tools; module Scripts
         # TODO: Make this setting more dynamic (put it in tool .conf file, maybe?)
         @STAR_outFilterMismatchNoverLmax = 0.3
         @starExogenousParams = "--outSAMtype BAM Unsorted --outSAMattributes Standard --alignEndsType EndToEnd --outFilterMatchNmin #{@settings['minReadLength']} --outFilterMatchNminOverLread 1.0 --outFilterMismatchNmax #{@settings['exogenousMismatch']} --outFilterMismatchNoverLmax #{@STAR_outFilterMismatchNoverLmax}"
+        # Grab exogenous claves
+        # If, for some reason, @settings['exogenousClaves'] wasn't set, then we will just set it to be the default value (and map to everything)
+        if(@settings['exogenousClaves'])
+          @exogenousClaves = @settings['exogenousClaves']
+        else
+          @exogenousClaves = ["Bacteria", "FPV", "Metazoa", "Plants", "Vertebrates"] unless(@exogenousClaves)
+        end
         # Post-processing directory
         @postProcDir = @settings['postProcDir']
         # FTP-related variables
@@ -114,7 +130,7 @@ module BRL; module Genboree; module Tools; module Scripts
         # Create exogenous taxonomy tree dir (for that part of the exogenous mapping process)
         # We create each taxonomy tree in its own exogenousTaxoTree job, thus parallelizing the processing of samples (as opposed to serially going through each sample in this wrapper)
         `mkdir -p #{@settings['jobSpecificSharedScratch']}/exogenousTaxoTrees`
-        # We'll save our list of exogenousTaxoTree job IDs on disk as a text file - we'll use that list for our exogenousPPRLauncher job===
+        # We'll save our list of exogenousTaxoTree job IDs on disk as a text file - we'll use that list for our exogenousPPRLauncher job
         @listOfExogenousTaxoTreeJobIds = {}
         @exogenousTaxoTreeJobIDDir = @settings['exogenousTaxoTreeJobIDDir']
         # @preConditionJobs will be used in the conditions for our processPipelineRuns job
@@ -122,7 +138,20 @@ module BRL; module Genboree; module Tools; module Scripts
         # @failedJobs is a hash that will keep track of which files are NOT submitted properly to exogenousTaxoTree
         # This hash will store the respective error messages for each failed sample
         @failedJobs = {}
-        potentialRerunFiles = Dir.entries(@inputDir)
+        # Save info about viruses (Genbank ID -> Species Name) in @virusIDToSpeciesHash
+        toolConfExogenousTaxoTree = BRL::Genboree::Tools::ToolConf.new('exogenousTaxoTree', @genbConf)
+        @virusIDToSpeciesTable = File.read(toolConfExogenousTaxoTree.getSetting('settings', 'virusIDToSpeciesTable'))
+        @virusIDToSpeciesHash = {}
+        @virusIDToSpeciesTable.each_line { |currentLine|
+          virusID = currentLine.split("\t")[0]
+          species = currentLine.split("\t")[1]
+          @virusIDToSpeciesHash[virusID] = species
+        }
+        potentialRerunFiles = Dir.entries(@inputDir) rescue nil
+        unless(potentialRerunFiles)
+          @errUserMsg = "There are no valid inputs.\nMost likely, a batch exceRpt pipeline job was run, but there were no successful result files generated."
+          raise @errUserMsg
+        end
         potentialRerunFiles.delete(".") 
         potentialRerunFiles.delete("..")
         sniffer = BRL::Genboree::Helpers::Sniffer.new()
@@ -136,8 +165,7 @@ module BRL; module Genboree; module Tools; module Scripts
         }
         # We will re-launch runExceRpt jobs for samples that failed (using more memory), and we will launch a new conditional exogenousSTARMapping job with those job IDs included.
         unless(@rerunFiles.empty?)
-          # preconditionJobsForRerunningJob will hold all of the job IDs that need to finish in order for this tool (processPipelineRuns) to re-run.
-          # Many of these jobs will already be finished (because they ran earlier successfully)
+          # preconditionJobsForRerunningJob will hold all of the job IDs that need to finish in order for this tool (exogenousSTARMapping) to re-run.
           preconditionJobsForRerunningJob = []
           @runExceRptToolId = "runExceRpt"
           @esmToolId = @toolConf.getSetting('info', 'idStr')
@@ -145,28 +173,6 @@ module BRL; module Genboree; module Tools; module Scripts
           conditionalJob = false
           # Create a reusable ApiCaller instance for launching each runExceRpt job
           apiCaller = BRL::Genboree::REST::ApiCaller.new(host, "/REST/v1/genboree/tool/{toolId}/job", user, pass)
-          # Traverse all of the jobs that already finished and add a condition hash for each to our preconditionJobs array.
-          # Note that met has been set to be true for all of these jobs (they won't be re-run)
-          @listOfJobIds.each_key { |jobId|
-            condition = {
-              "type" => "job",
-             "expires" => (Time.now + Time::WEEK_SECS * 4).to_s,
-              "met" => true,
-              "condition"=> {
-                "dependencyJobUrl" => "http://#{host}/REST/v1/job/#{jobId}",
-                "acceptableStatuses" =>
-                {
-                  "killed"=>true,
-                  "failed"=>true,
-                  "completed"=>true,
-                  "partialSuccess"=>true,
-                  "canceled"=>true
-                }
-              }
-            }
-            $stderr.debugPuts(__FILE__, __method__, "STATUS", "Condition connected with runExceRpt job #{jobId} (sample name: #{@listOfJobIds[jobId]}): #{condition.inspect}")
-            preconditionJobsForRerunningJob << condition
-          }
           # Now, we will submit a job for each of the files that needs to be re-run.
           # We will also add a condition for each job into our preconditionJobsForRerunningJob array. Note that met will be set to false for these conditions (since the jobs haven't run yet!)
           @rerunFiles.each { |currentInput|
@@ -180,10 +186,8 @@ module BRL; module Genboree; module Tools; module Scripts
                 # We succeeded in launching at least one runExceRpt job, so we set conditionalJob to be true (so that PPR will run below)
                 conditionalJob = true
                 $stderr.debugPuts(__FILE__, __method__, "Response to submitting runExceRpt job conf for #{currentInput}", JSON.pretty_generate(apiCaller.parseRespBody))
-                # We'll grab its job ID and save it in @listOfJobIds
+                # We'll grab its job ID
                 runExceRptJobId = apiCaller.parseRespBody['data']['text']
-                @listOfJobIds[runExceRptJobId] = File.basename(runExceRptJobObj['inputs'])
-                File.open(@settings['filePathToListOfJobIds'], 'w') { |file| file.write(JSON.pretty_generate(@listOfJobIds)) }
                 $stderr.debugPuts(__FILE__, __method__, "Job ID associated with #{currentInput}", runExceRptJobId)
                 # We'll make a hash for the condition associated with the current job
                 condition = {
@@ -277,6 +281,11 @@ module BRL; module Genboree; module Tools; module Scripts
           allSTARindices.each { |starIndexDir|
             # Skip "." and ".." (not real index directories)
             next if(starIndexDir == "." or starIndexDir == "..")
+            next if(starIndexDir.include?("BACTERIA") and !@exogenousClaves.include?("Bacteria"))
+            next if(starIndexDir.include?("FUNGI_PROTIST_VIRUS") and !@exogenousClaves.include?("FPV"))
+            next if(starIndexDir.include?("METAZOA") and !@exogenousClaves.include?("Metazoa"))
+            next if(starIndexDir.include?("PLANTS") and !@exogenousClaves.include?("Plants"))
+            next if(starIndexDir.include?("VERTEBRATE") and !@exogenousClaves.include?("Vertebrates"))
             # Grab full directory path for current STAR index
             fullIndexDirPath = "#{@indexDir}/#{starIndexDir}"
             # As a safety precaution, let's make doubly sure that we're looking at a STAR index dir.
@@ -429,118 +438,159 @@ module BRL; module Genboree; module Tools; module Scripts
               @inputFile = "#{inputFileDir}/EXOGENOUS_rRNA/unaligned.fq.gz"
               # Grab full path of output directory (used by STAR mapping) - we need to read the output files in order to generate our alignment summaries
               @outputDir = "#{@scratchDir}/#{sampleID}/EXOGENOUS_genomes"
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Current contents of output directory: #{Dir.entries(@outputDir)}")       
-              # BACTERIA
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Bacteria for sample #{sampleID}")
-              # Grab list of all bacteria-related .bam files
-              allBacteria = Dir["#{@outputDir}/BACTERIA*.bam"]
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Current contents of output directory: #{Dir.entries(@outputDir)}")
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Current bacteria BAM files: #{allBacteria}")
-              # Use the parallel gem to convert bacteria .bam files to .sam files
-              Parallel.map(allBacteria, :in_threads => @numTasks) { |alignmentBam|
-                tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")   
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}; Writing to output file #{tmpSamSummaryFile}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^\\$]+)\\$\\S+\\$[^:]+:[^:]+:([^:]+)\\S+\\s+(.+)/ ; print "$1\tBacteria\t$2\t$3\t$4\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-              }
-              # We can go ahead and delete all the bacteria .bam files since we're done with them
-              allBacteria.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
-              # Sort all bacteria .sam files by time and then combine them into one summary file)
-              `sort -m #{@outputDir}/BACTERIA*.sam.summary.tmp > #{@outputDir}/Bacteria_Aligned.out.sam.summary`
-              # We can go ahead and delete all the bacteria .sam.summary.tmp files since we're done with them
-              allBacteria = Dir["#{@outputDir}/BACTERIA*.sam.summary.tmp"]
-              allBacteria.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
+              # BACTERIA
+              if(@exogenousClaves.include?("Bacteria"))
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Bacteria for sample #{sampleID}")
+                # Grab list of all bacteria-related .bam files
+                allBacteria = Dir["#{@outputDir}/BACTERIA*.bam"]
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Current contents of output directory: #{Dir.entries(@outputDir)}")
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Current bacteria BAM files: #{allBacteria}")
+                # Use the parallel gem to convert bacteria .bam files to .sam files
+                Parallel.map(allBacteria, :in_threads => @numTasks) { |alignmentBam|
+                  tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}; Writing to output file #{tmpSamSummaryFile}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^\\$]+)\\$\\S+\\$[^:]+:[^:]+:([^:]+)\\S+\\s+(.+)/ ; print "$1\tBacteria\t$2\t$3\t$4\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                }
+                # We can go ahead and delete all the bacteria .bam files since we're done with them
+                allBacteria.each { |currentBamFile|
+                  `rm -f #{currentBamFile}`
+                }
+                # Sort all bacteria .sam files by time and then combine them into one summary file)
+                `sort -m #{@outputDir}/BACTERIA*.sam.summary.tmp > #{@outputDir}/Bacteria_Aligned.out.sam.summary`
+                # We can go ahead and delete all the bacteria .sam.summary.tmp files since we're done with them
+                allBacteria = Dir["#{@outputDir}/BACTERIA*.sam.summary.tmp"]
+                allBacteria.each { |currentTmpFile|
+                  `rm -f #{currentTmpFile}`
+                }
+              end
               # PLANTS
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Plants for sample #{sampleID}")
-              # Grab list of all plant-related .bam files 
-              allPlants = Dir["#{@outputDir}/PLANTS*.bam"]
-              # Use the parallel gem to convert plant .bam files to .sam files
-              Parallel.map(allPlants, :in_threads => @numTasks) { |alignmentBam|
-                tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-              }
-              # We can go ahead and delete all the plant .bam files since we're done with them
-              allPlants.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
-              # Sort all plant .sam files by time and then combine them into one summary file
-              `sort -m #{@outputDir}/PLANTS*.sam.summary.tmp > #{@outputDir}/Plants_Aligned.out.sam.summary`
-              # We can go ahead and delete all the plant .sam.summary.tmp files since we're done with them
-              allPlants = Dir["#{@outputDir}/PLANTS*.sam.summary.tmp"]
-              allPlants.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
+              if(@exogenousClaves.include?("Plants"))
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Plants for sample #{sampleID}")
+                # Grab list of all plant-related .bam files 
+                allPlants = Dir["#{@outputDir}/PLANTS*.bam"]
+                # Use the parallel gem to convert plant .bam files to .sam files
+                Parallel.map(allPlants, :in_threads => @numTasks) { |alignmentBam|
+                  tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                }
+                # We can go ahead and delete all the plant .bam files since we're done with them
+                allPlants.each { |currentBamFile|
+                  `rm -f #{currentBamFile}`
+                }
+                # Sort all plant .sam files by time and then combine them into one summary file
+                `sort -m #{@outputDir}/PLANTS*.sam.summary.tmp > #{@outputDir}/Plants_Aligned.out.sam.summary`
+                # We can go ahead and delete all the plant .sam.summary.tmp files since we're done with them
+                allPlants = Dir["#{@outputDir}/PLANTS*.sam.summary.tmp"]
+                allPlants.each { |currentTmpFile|
+                  `rm -f #{currentTmpFile}`
+                }
+              end
               # FUNGI / PROTISTS / VIRUSES
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Fungi, Protists, Viruses for sample #{sampleID}")
-              # Grab list of all fungus/protist/virus .bam files
-              allFPV = Dir["#{@outputDir}/FUNGI_PROTIST_VIRUS*.bam"]
-              # Use the parallel gem to convert fungus/protist/virus .bam files to .sam files - only one of each kind of file, so don't need to create a summary file
-              Parallel.map(allFPV, :in_threads => @numTasks) { |alignmentBam|
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Virus:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s+([^:]+):\\S+\\|([^\\|]+)\\|\\S+\\|([^\\|]+)\\|\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Virus_Aligned.out.sam.summary`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Fungi:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Fungi_Aligned.out.sam.summary`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Protist:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Protist_Aligned.out.sam.summary`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-              }
-              # We can go ahead and delete all the FPV .bam files since we're done with them
-              allFPV.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
+              if(@exogenousClaves.include?("FPV"))
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Fungi, Protists, Viruses for sample #{sampleID}")
+                # Grab list of all fungus/protist/virus .bam files
+                allFPV = Dir["#{@outputDir}/FUNGI_PROTIST_VIRUS*.bam"]
+                # Use the parallel gem to convert fungus/protist/virus .bam files to .sam files - only one of each kind of file, so don't need to create a summary file
+                Parallel.map(allFPV, :in_threads => @numTasks) { |alignmentBam|
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Virus:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s+([^:]+):\\S+\\|([^\\|]+)\\|\\S+\\|([^\\|]+)\\|\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Virus_Aligned.out.sam.summary`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Fungi:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Fungi_Aligned.out.sam.summary`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | grep "Protist:" | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{@outputDir}/Protist_Aligned.out.sam.summary`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                }
+                # We can go ahead and delete all the FPV .bam files since we're done with them
+                allFPV.each { |currentBamFile|
+                  `rm -f #{currentBamFile}`
+                }
+                # There's currently a bug in our virus indices (or in how exceRpt handles them?), so we need to add species names manually.
+                virusInputs = File.open("#{@outputDir}/Virus_Aligned.out.sam.summary", 'r')
+                outputFile = File.open("#{@outputDir}/Virus_Aligned.out.sam.summary.FIXED", 'w')
+                virusInputs.each_line { |currentLine|
+                  currentLineSplit = currentLine.split("\t")
+                  virusID = currentLineSplit[2]
+                  species = @virusIDToSpeciesHash[virusID]
+                  unless(species.nil?)
+                    currentLineSplit[2] = species.chomp()
+                  else
+                    currentLineSplit[2] = "#{virusID} (not used in taxonomy tree because GenBank ID is deprecated or associated with removed record)"
+                  end
+                  currentLine = currentLineSplit.join("\t")
+                  outputFile.write(currentLine)
+                }
+                virusInputs.close()
+                outputFile.close()
+                `mv #{@outputDir}/Virus_Aligned.out.sam.summary.FIXED #{@outputDir}/Virus_Aligned.out.sam.summary`
+              end
               # VERTEBRATES
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Vertebrates for sample #{sampleID}")
-              # Grab list of all vertebrate .bam files
-              allVertebrates = Dir["#{@outputDir}/VERTEBRATE*.bam"]
-              # Use the parallel gem to convert vertebrate .bam files to .sam files
-              Parallel.map(allVertebrates, :in_threads => @numTasks) { |alignmentBam|
-                tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | sed 's/:/\t/g' | sort -k1,1 >> #{tmpSamSummaryFile}`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-              }
-              # We can go ahead and delete all the vertebrate .bam files since we're done with them
-              allVertebrates.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
-              # Sort all vertebrate .sam files by time and then combine them into one summary file
-              `sort -m #{@outputDir}/VERTEBRATE*.sam.summary.tmp > #{@outputDir}/Vertebrate_Aligned.out.sam.summary`
-              # We can go ahead and delete all the vertebrate .sam.summary.tmp files since we're done with them
-              allVertebrates = Dir["#{@outputDir}/VERTEBRATE*.sam.summary.tmp"]
-              allVertebrates.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
+              if(@exogenousClaves.include?("Vertebrates"))
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Vertebrates for sample #{sampleID}")
+                # Grab list of all vertebrate .bam files
+                allVertebrates = Dir["#{@outputDir}/VERTEBRATE*.bam"]
+                # Use the parallel gem to convert vertebrate .bam files to .sam files
+                Parallel.map(allVertebrates, :in_threads => @numTasks) { |alignmentBam|
+                  tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                }
+                # We can go ahead and delete all the vertebrate .bam files since we're done with them
+                allVertebrates.each { |currentBamFile|
+                  `rm -f #{currentBamFile}`
+                }
+                # Sort all vertebrate .sam files by time and then combine them into one summary file
+                `sort -m #{@outputDir}/VERTEBRATE*.sam.summary.tmp > #{@outputDir}/Vertebrate_Aligned.out.sam.summary`
+                # We can go ahead and delete all the vertebrate .sam.summary.tmp files since we're done with them
+                allVertebrates = Dir["#{@outputDir}/VERTEBRATE*.sam.summary.tmp"]
+                allVertebrates.each { |currentTmpFile|
+                  `rm -f #{currentTmpFile}`
+                }
+              end
               # METAZOA
-              $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Metazoa for sample #{sampleID}")
-              # Grab list of all metazoa .bam files
-              allMetazoa = Dir["#{@outputDir}/METAZOA*.bam"]
-              # Use the parallel gem to convert metazoa .bam files to .sam files
-              Parallel.map(allMetazoa, :in_threads => @numTasks) { |alignmentBam|
-                tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
-                `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | sed 's/:/\t/g' | sort -k1,1 >> #{tmpSamSummaryFile}`
-                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
-              }
-              # We can go ahead and delete all the metazoa .bam files since we're done with them
-              allMetazoa.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
-              # Sort all metazoa .sam files by time and then combine them into one summary file
-              `sort -m #{@outputDir}/METAZOA*.sam.summary.tmp > #{@outputDir}/Metazoa_Aligned.out.sam.summary`
-              # We can go ahead and delete all the metazoa .sam.summary.tmp files since we're done with them
-              allMetazoa = Dir["#{@outputDir}/METAZOA*.sam.summary.tmp"]
-              allMetazoa.each { |currentBamFile|
-                `rm -f #{currentBamFile}`
-              }
+              if(@exogenousClaves.include?("Metazoa"))
+                $stderr.debugPuts(__FILE__, __method__, "STATUS", "Combine alignments from Metazoa for sample #{sampleID}")
+                # Grab list of all metazoa .bam files
+                allMetazoa = Dir["#{@outputDir}/METAZOA*.bam"]
+                # Use the parallel gem to convert metazoa .bam files to .sam files
+                Parallel.map(allMetazoa, :in_threads => @numTasks) { |alignmentBam|
+                  tmpSamSummaryFile = alignmentBam.clone().gsub(/bam/,"sam.summary.tmp")
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Working with file #{alignmentBam}")
+                  `samtools view -@ #{@numThreads} #{alignmentBam} | cut -d $'\t' -f 1,3,4,6,10 | uniq | perl -ne '$_ =~ /^(\\S+)\\s([^:]+):([^:]+):([^:]+)\\s+(.+)/ ; print "$1\t$2\t$3\t$4\t$5\n" ' | sort -k1,1 >> #{tmpSamSummaryFile}`
+                  $stderr.debugPuts(__FILE__, __method__, "STATUS", "Command completed with exit code: #{$?.exitstatus}")
+                }
+                # We can go ahead and delete all the metazoa .bam files since we're done with them
+                allMetazoa.each { |currentBamFile|
+                  `rm -f #{currentBamFile}`
+                }
+                # Sort all metazoa .sam files by time and then combine them into one summary file
+                `sort -m #{@outputDir}/METAZOA*.sam.summary.tmp > #{@outputDir}/Metazoa_Aligned.out.sam.summary`
+                # We can go ahead and delete all the metazoa .sam.summary.tmp files since we're done with them
+                allMetazoa = Dir["#{@outputDir}/METAZOA*.sam.summary.tmp"]
+                allMetazoa.each { |currentTmpFile|
+                  `rm -f #{currentTmpFile}`
+                }
+              end
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Collate and sort all summaries to produce a single exogenous alignment result file for sample #{sampleID}")
-              # Collate all summaries to produce a single exogenous alignment result file
-              `sort -m #{@outputDir}/Bacteria_Aligned.out.sam.summary #{@outputDir}/Plants_Aligned.out.sam.summary #{@outputDir}/Virus_Aligned.out.sam.summary #{@outputDir}/Fungi_Aligned.out.sam.summary #{@outputDir}/Protist_Aligned.out.sam.summary #{@outputDir}/Vertebrate_Aligned.out.sam.summary #{@outputDir}/Metazoa_Aligned.out.sam.summary > #{@outputDir}/ExogenousGenomicAlignments.txt`
+              sortString = ""
+              sortString << " #{@outputDir}/Bacteria_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Bacteria_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Plants_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Plants_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Virus_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Virus_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Fungi_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Fungi_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Protist_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Protist_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Vertebrate_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Vertebrate_Aligned.out.sam.summary"))
+              sortString << " #{@outputDir}/Metazoa_Aligned.out.sam.summary" if(File.exist?("#{@outputDir}/Metazoa_Aligned.out.sam.summary"))
+              `sort -m#{sortString} > #{@outputDir}/ExogenousGenomicAlignments.txt`
+              # Delete all individual summaries (we don't need them anymore since we have the overall summary)
+              allSummaries = Dir["#{@outputDir}/*.sam.summary"]
+              allSummaries.each { |currentSummary|
+                  `rm -f #{currentSummary}`
+              }
+              remainingFiles = `ls -art #{@outputDir}`
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Finished combining the results of all exogenous GENOMES for input #{sampleID}")
               # Now, we're going to write the exogenous alignment read counts to the sample's .stats file
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "Write to stats file for sample #{sampleID}")
@@ -552,7 +602,7 @@ module BRL; module Genboree; module Tools; module Scripts
               # Rename ExogenousGenomicAlignments.txt to have sample ID and analysis name in it
               `cd #{@outputDir} ; mv ExogenousGenomicAlignments.txt #{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.txt`
               # Compress renamed ExogenousGenomicAlignments.txt so we can upload it (if user chose to upload full results) - it can be gigantic so we want to do this as soon as possible!
-              `cd #{@outputDir} ; tar -zcvf #{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.tgz #{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.txt` if(@settings['uploadFullResults'])
+              `cd #{@outputDir} ; tar -zcvf #{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.tgz #{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.txt` if(@settings['uploadFullResults'] or @settings['uploadExogenousAlignments'])
               # Move uncompressed renamed ExogenousGenomicAlignments.txt to shared cluster area (for processing through exogenous taxonomy tree wrapper)
               exogenousTaxoTreeInput = "#{@settings['jobSpecificSharedScratch']}/exogenousTaxoTrees/#{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.txt"
               `mv #{@outputDir}/#{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.txt #{exogenousTaxoTreeInput}`
@@ -599,7 +649,7 @@ module BRL; module Genboree; module Tools; module Scripts
               # CORE_RESULTS archive to CORE_RESULTS subdir
               transferFile(sampleID, coreResultsArchive, "/CORE_RESULTS")
               # Collated single exogenous alignment result file
-              transferFile(sampleID, "#{@outputDir}/#{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.tgz", "/EXOGENOUS_GENOME_OUTPUT") if(@settings['uploadFullResults'])
+              transferFile(sampleID, "#{@outputDir}/#{sampleID}_#{CGI.escape(@analysisName)}_ExogenousGenomicAlignments.tgz", "/EXOGENOUS_GENOME_OUTPUT") if(@settings['uploadFullResults'] or @settings['uploadExogenousAlignments'])
               # Now that we're totally done with the exogenous run for the current sample, let's clean up the sample's directory to make space for other runs
               cleanUp([/_CORE_RESULTS_/], [], inputFileDir)
               # Finally, we'll submit the exogenousTaxoTree job to process this job's taxonomy tree
@@ -626,6 +676,8 @@ module BRL; module Genboree; module Tools; module Scripts
                 $stderr.debugPuts(__FILE__, __method__, "ERROR (but continuing)", "Problem with submitting the exogenousTaxoTree job #{exogenousTaxoTreeJobObj.inspect}: #{err.message.inspect}.\n#{err.backtrace.join("\n")}")
                 @failedJobs[exogenousTaxoTreeInput] = err.message.inspect
               end
+              # Make sure that files are being properly cleaned up
+              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Remaining files in output dir: #{remainingFiles}.")
             else
               $stderr.debugPuts(__FILE__, __method__, "STATUS", "INPUT DIR #{inputFileDir} is not a directory.")
             end
@@ -633,7 +685,7 @@ module BRL; module Genboree; module Tools; module Scripts
         }
         # Let's save our exogenous taxonomy tree job IDs to a file
         listOfExogenousTaxoTreeJobIdsOnly = @listOfExogenousTaxoTreeJobIds.keys
-        File.open("#{@exogenousTaxoTreeJobIDDir}/#{@jobId}.txt", 'w') { |file| file.write(listOfExogenousTaxoTreeJobIdsOnly.join("\n")) }        
+        File.open("#{@exogenousTaxoTreeJobIDDir}/#{@jobId}.txt", 'w') { |file| file.write(listOfExogenousTaxoTreeJobIdsOnly.join("\n")) }
       # If an error occurs at any point in the above, we'll return an @exitCode of 30 (if exit code hasn't already been set) and give an informative message for the user.
       rescue => err
         @err = err
@@ -663,10 +715,10 @@ module BRL; module Genboree; module Tools; module Scripts
       runExceRptJobConf['context']['warningsConfirmed'] = true
       # Define settings - we flag that we're using more memory (so that we request 94 GB mem/vmem for our job), and we also set Java RAM to be higher (50 GB instead of 30 GB)
       runExceRptJobConf['settings']['useMoreMemory'] = true
-      runExceRptJobConf['settings']['javaRam'] = "50G"
+      runExceRptJobConf['settings']['javaRam'] = "64G"
       runExceRptJobConf['settings']['exogenousMapping'] = "miRNA"
       # If @settings['uploadFullResults'] is true, then we'll grab the estimated file size from the file name of the input file
-      if(@settings['uploadFullResults'])
+      if(@settings['uploadFullResults'] and !@isFTPJob)
         basename = File.basename(inputFile)
         basename = basename.split("_")
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "Total output file size is predicted to be #{basename[0]}")
@@ -737,6 +789,12 @@ module BRL; module Genboree; module Tools; module Scripts
         raise @errUserMsg
       else
         $stderr.debugPuts(__FILE__, __method__, "EXOGENOUS STAR MAPPING JOB SUBMISSION SUCCESS", apiCaller.respBody.inspect)
+        apiCaller.parseRespBody()
+        # Grab job ID for new exogenousSTARMapping job
+        newJobId = apiCaller.apiDataObj["text"]
+        # Write file containing this job ID to specific folder in shared job area (used by exogenousPPRLauncher to relaunch itself)
+        `mkdir -p #{@settings['exogenousRerunDir']}`
+        File.open("#{@settings['exogenousRerunDir']}/#{newJobId}.txt", 'w') { |file| file.write(newJobId) }
       end
       return
     end
@@ -1002,7 +1060,6 @@ module BRL; module Genboree; module Tools; module Scripts
       # Delete local path to post-processing input dir
       @settings.delete('postProcDir')
       # Delete local path to list of job IDs text file
-      @settings.delete('filePathToListOfJobIds')
       @settings.delete('filePathToListOfExogenousTaxoTreeJobIds')
       @settings.delete('exogenousMappingInputDir')
       # Delete information about number of threads / tasks for exogenous mapping (used in exogenousSTARMapping wrapper)
@@ -1024,7 +1081,12 @@ module BRL; module Genboree; module Tools; module Scripts
       @settings.delete('listOfExogenousTaxoTreeJobIds')
       @settings.delete('wbContext')
       @settings.delete('exogenousTaxoTreeJobIDDir')
+      @settings.delete('exogenousRerunDir')
+      @settings.delete('filePathToListOfExogenousJobIds')
       @settings.delete('exoJobId')
+      @settings.delete('exogenousClaves')
+      @settings.delete('backupFtpDir')
+      @settings.delete('importantJobIdsDir')
     end
 
     def customBuildSectionEmailSummary(section)

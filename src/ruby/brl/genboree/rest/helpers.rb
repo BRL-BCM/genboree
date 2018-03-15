@@ -11,6 +11,7 @@ require 'uri'
 require 'rack'
 require 'brl/util/util'
 require 'brl/rest/resource'
+require 'brl/genboree/kb/kbDoc'
 require 'brl/genboree/dbUtil'
 require 'brl/genboree/genboreeUtil'
 require 'brl/genboree/genboreeContext'
@@ -933,7 +934,7 @@ module Helpers
           # @todo Create a mongodb connection to this databaseName
           # - Get dbrc record for the mongo host backing @reqHost
           dbrc = BRL::DB::DBRC.new()
-          @mongoDbrcRec = dbrc.getRecordByHost(@reqHost, :nosql) unless(@mongoDbrcRec and @mongoDbrcRec.is_a?(Hash))
+          @mongoDbrcRec = dbrc.getRecordByHost(@genbConf.gbFQDN, :nosql) unless(@mongoDbrcRec and @mongoDbrcRec.is_a?(Hash))
           # - Create MongoKbDb object, which will establish a connection, auth against 'admin' and then auth against actual database
           begin
             #$stderr.debugPuts(__FILE__, __method__, "TIME", "__before__ new MongoKbDatabase" )
@@ -985,6 +986,23 @@ module Helpers
           end
         # else was a real user access and we have already checked they have sufficient access
         end
+        # If a PUT or a delete request is being done, check against the collmetadata document to see if a 'workingRevision' check should be done or not. This is false by default
+        if(@req and (@req.env["REQUEST_METHOD"] == "PUT" or @req.env["REQUEST_METHOD"] == "DELETE") and @collName)
+          collMdHelper = @mongoKbDb.collMetadataHelper()
+          mdDoc = collMdHelper.metadataForCollection(@collName)
+          mdKbDoc = BRL::Genboree::KB::KbDoc.new(mdDoc)
+          if(mdKbDoc and !mdKbDoc.empty? and !mdKbDoc.getSubDoc('name.workingRevisionRequiredForUpdate')['workingRevisionRequiredForUpdate'].nil?)
+            workingRevisionRequiredForUpdate = mdKbDoc.getPropVal('name.workingRevisionRequiredForUpdate')
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "workingRevisionRequiredForUpdate prop is present in coll #{@collName.inspect} and is set to #{workingRevisionRequiredForUpdate.inspect}")
+            if(workingRevisionRequiredForUpdate == true and @workingRevision.nil?)
+              @statusName = :"Bad Request"
+              @statusMsg = "WORKING_REVISION_MISSING: This collection is tagged with workingRevisionRequiredForUpdate=true. This means that for any PUT or DELETE request, workingRevision must be provided as a parameter."
+            end
+          else
+            $stderr.debugPuts(__FILE__, __method__, "STATUS", "workingRevisionRequiredForUpdate prop is missing in metadata document for coll #{@collName.inspect}")
+          end
+        end
+        
       end
     end
     #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "about to return ; statusName = #{@statusName.inspect} ; statusMsg = #{@statusMsg.inspect}")

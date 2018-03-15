@@ -65,8 +65,11 @@ class GenboreeKbVersionsController < ApplicationController
     identifier = params['identifier']
     coll = params['collectionSet']
     version = params['version']
-    rsrcPath = (type == 'doc' ? "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/doc/{doc}/ver/{ver}?" : "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model/ver/{ver}")
+    rsrcPath = (type == 'doc' ? "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/doc/{doc}/ver/{ver}?detailed=true&contentFields={cf}" : "/REST/v1/grp/{grp}/kb/{kb}/coll/{coll}/model/ver/{ver}")
     fieldMap =  { :coll => coll, :doc => identifier, :ver => version }
+    if(type == 'doc')
+      fieldMap[:cf] = ['.']
+    end
     apiResult = apiGet( rsrcPath, fieldMap )
     respond_with(apiResult[:respObj], :status => apiResult[:status])
   end

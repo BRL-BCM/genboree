@@ -552,8 +552,7 @@ function initViewGrid(props, formEls)
       colObj['renderer'] = function(value, md, rec, ri, ci, store, view){
         if (value.match(/\/REST\/v1\/grp/))
         {
-          fileUrlToDownload = value ;
-          value = "<a href=\"javascript:downloadFile()\">"+unescape(value)+"</a>" ;
+          value = "<a href=\"javascript:downloadFile('"+escape(value)+"')\">"+unescape(value)+"</a>" ;
         }
         else
         {

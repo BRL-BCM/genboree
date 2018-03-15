@@ -171,7 +171,12 @@ module BRL ; module Genboree ; module KB ; module Transformers
         end
       else
         @transformationStatus = false
-        @transformationErrors << "INVALID_DOC: Validation of the source document against the model failed. #{validator.validationErrors}"
+        if( validator.respond_to?(:buildErrorMsgs) )
+          errors = validator.buildErrorMsgs()
+        else
+          errors = validator.validationErrors
+        end
+        @transformationErrors << "INVALID_DOC: Validation of the source document against the model failed:\n#{errors.join("\n")}"
       end
       return @transformationStatus
     end
@@ -422,7 +427,9 @@ module BRL ; module Genboree ; module KB ; module Transformers
         @transformationStatus = false
         break
       end
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@transformedHash: #{@transformedHash.inspect}")
       return dataOutput
+
     end
     
     # Performs aggregation on the subject rule against the partition rules

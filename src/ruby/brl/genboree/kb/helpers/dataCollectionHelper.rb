@@ -17,6 +17,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
   class DataCollectionHelper < AbstractHelper
     ITEM_MATCH = /\.\[\s*(FIRST|LAST|\d+)\s*\](?:$|\.((?!\.).)*$)/
     attr_accessor :lastValidatorErrors
+    attr_accessor :docValidator
     # @return [ModelsValidator] If we already have a ModelsValidator object that's been run on the collection model.
     #   Provide our {DataCollectionHelper} object with that, in case it wants to ask questions about what
     #   the validator noticed about the model. This is NOT required and DataCollectionHelper can
@@ -27,7 +28,38 @@ module BRL ; module Genboree ; module KB ; module Helpers
     #   then can provide to our {DataCollectionHelper} with it, so it doesn't have to waste time calling {ModelsHelper#modelForCollection}
     #   when it needs the model. Keep in mind it's not the raw model data structre but rather the {KbDoc} that wraps & stores it.
     attr_writer :modelKbDoc
-    
+    # @return [String] When building per-property error messages, what text, if any, to put in front of each property path for which there
+    #   are errors? Do include any space separating prefix from property path. By default this is 'ERRORS FOR PROPERTY ' as part
+    #   of building a readable multi-line message string. Could set to '' to make more mininmalistic version output.
+    attr_accessor :propPrefix
+    # @return [String] When building per-property error messages, what text, if any, to put after each property path for which there are errors?
+    #   Do include any newline if you want the errors (or each error) to be on a subsequence line below the property path.
+    #   By default this is ":\n", i.e. propPath will be followed immediately by a colon and then a newline (since each error
+    #   for that property is also printed on its own line). Could use ' => ' or even "\t" if trying to build a
+    #   single-line string for the property and all its errors, perhaps as tab-delimited. Make sure to look at other options for help!
+    attr_accessor :propSuffix
+    # @return [String] When building per-property error messages, what text, if any, to put before each error that the property has? By default this
+    #   is '    - ' because each error is going to be on its own line, indented w.r.t. the property path. If you want
+    #   to have all errors on 1 line, could use '' (and see :errorSuffix).
+    attr_accessor :errorPrefix
+    # @return [String] When building per-property error messages, what text, if any, to put after each error that the property has? By default this is
+    #   "\n" because each error is on its only line. If you want to have all errors on 1 line, could use ' ' so they are
+    #   separated by single space, or '; ' for a semi-color separated list. Could even do "\t".
+    attr_accessor :errorSuffix
+    # @return [Symbol] When building per-property error messages, what field in the error object (Hash) to use for the error text? By default this is
+    #   :fullMsg, which is a pre-generated string of the form: "ERROR {code}: {msg}". But you could just do :msg for the text only.
+    #   or even just :code to dump the error codes without all the explanatory text.
+    attr_accessor :errorField
+    # @return [boolean] When building per-property error messages, should each error message (specifically) be wrapped, rather than leaving
+    #   it all one long line? If set to @true@, then it will be word-wrapped using a line width of 78 (including
+    #   {#errorPrefix}) ; otherwise the error message texts are left alone. The default is true.
+    attr_accessor :errorWrap
+    # @return [Array<String>] When building per-property error messages, and word wrapping is enabled (as is the default), what character or
+    #   characters should be used to identify word-boundaries suitable for wrap-point? By default, this is [' ', '.', '?', ',', ';', ':']
+    #   so that natural word wrapping is done via space and punctuation and so that long prop-paths (even ones where there are no/few spaces)
+    #   get wrapped at the '.' in the property path, rather than breaking arbitrarily. Can change to some other set.
+    attr_accessor :wordDelim
+
     # Create new instance of this helper.
     # @param [MongoKbDatabase] kbDatabase The KB database object this helper is assisting.
     # @param [String] collName The name of the document collection this helper uses.
@@ -41,7 +73,15 @@ module BRL ; module Genboree ; module KB ; module Helpers
       @lastValidatorErrors = nil
       @lastContentNeeded = nil
       @model = nil
-      @modelValidator = nil
+      @modelValidator = BRL::Genboree::KB::Validators::ModelValidator.new()
+      @docValidator = nil
+      @propPrefix   = 'ERRORS FOR PROPERTY '
+      @propSuffix   = ":\n"
+      @errorPrefix  = '    - '
+      @errorSuffix  = "\n"
+      @errorField   = :fullMsg
+      @errorWrap    = true
+      @wordDelim    = [ ' ', '.', '?', ',', ';', ':' ]
     end
 
     # Create the indices for this helper's collection. Takes an @Array@ of index config @Hash@es.
@@ -85,7 +125,14 @@ module BRL ; module Genboree ; module KB ; module Helpers
 
         # Is model valid?
         if(modelValidator.validationErrors and !modelValidator.validationErrors.empty?)
-          raise "ERROR: Model for user collection #{@coll.name} appears to be INVALID, even though it was retrieved from KB and [re]validated. How? Validation errors:\n\n#{modelValidator.validationErrors.join("\n")}\n\n"
+          # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+          if( modelValidator.respond_to?(:buildErrorMsgs) )
+            validatorErrors = modelValidator.buildErrorMsgs( buildErrOpts )
+          else
+            validatorErrors = modelValidator.validationErrors
+          end
+
+          raise "ERROR: Model for user collection #{@coll.name} appears to be INVALID, even though it was retrieved from KB and [re]validated. How? Validation errors:\n\n#{validatorErrors.join("\n")}\n\n"
         else
           # NOW: @modelValidator.indexedDocLevelProps is a Hash of doc-level prop paths needing indices
           # Make an index for each of these doc-level paths
@@ -101,7 +148,6 @@ module BRL ; module Genboree ; module KB ; module Helpers
               {
                 :spec => [ [ fullDocPath, Mongo::ASCENDING ] ],
                 :opts => { :name => idxName, :unique => unique, :background => true, :sparse => true }
-                
               }
             idxConfs << idxConf
           }
@@ -155,6 +201,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
           subDocPathEls = subDocPath.split(".")
           itemIdentifier = subDocPathEls[subDocPathEls.size-1]
         end
+        updateNumItems = numItemsUpdateRequired?(subDocPath)
         if(subDocPath =~ /\]$/)
           idx = 0
           subDocPath =~ ITEM_MATCH
@@ -201,6 +248,12 @@ module BRL ; module Genboree ; module KB ; module Helpers
           queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$pull" => { mongoPath =>  { "#{itemIdentifier}.value" => identValue }  } } }
           $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
           updatedDoc = @coll.find_and_modify(queryDoc)
+          if(updateNumItems)
+            numItemsValuePropPath = mongoPath.gsub(/\.items$/, ".value")
+            queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$inc" => { numItemsValuePropPath =>  -1 } } }
+            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+            updatedDoc = @coll.find_and_modify(queryDoc)
+          end
         end
       end
       # Handles both cases where property to delete is buried inside of an item list and also where it is not.
@@ -223,6 +276,24 @@ module BRL ; module Genboree ; module KB ; module Helpers
         revisionObjId = revisionsHelper.createDeletionHistory(@coll.name, docObjId, subDocPath, author)
       end
       return docObjId
+    end
+    
+    def numItemsUpdateRequired?(subDocPath)
+      mh = @kbDatabase.modelsHelper()
+      modelDoc = mh.modelForCollection(@coll.name)
+      updateNumItems = false
+      if(subDocPath =~ /\]$/)
+        propDef = mh.findPropDef(subDocPath.gsub(/\.\{([^\.])*\}/, ''), modelDoc)
+        updateNumItems = true if(propDef.key?("domain") and propDef["domain"] == "numItems")
+      elsif(subDocPath =~ /\}$/)
+        cleanedSubDocPath = subDocPath.gsub(/\.\{([^\.])*\}/, '')
+        cleanedSubDocPathEls = cleanedSubDocPath.split(".")
+        cleanedSubDocPathEls.pop
+        itemListPropPath = cleanedSubDocPathEls.join(".")
+        propDef = mh.findPropDef(itemListPropPath, modelDoc)
+        updateNumItems = true if(propDef.key?("domain") and propDef["domain"] == "numItems")
+      end
+      return updateNumItems
     end
     
     # Performs a targeted save of a sub document inside a document using the mongo find_and_replace method
@@ -267,12 +338,15 @@ module BRL ; module Genboree ; module KB ; module Helpers
           itemIdentifier = subDocPathEls[subDocPathEls.size-1]
         end
         newItem = false
+        updateNumItems = false
+        modelDoc = mh.modelForCollection(@coll.name)
+        updateNumItems = numItemsUpdateRequired?(subDocPath)
         if(subDocPath =~ /\]$/)
           idx = 0
           subDocPath =~ ITEM_MATCH
           extractedIdx = $1
           if(extractedIdx == 'LAST')
-            
+            # Will set later
           elsif(extractedIdx == "FIRST")
             idx = 0
           else
@@ -308,9 +382,19 @@ module BRL ; module Genboree ; module KB ; module Helpers
             queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$push" => { propPathToUpdate =>  valueDoc } } }
             $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
             updatedDoc = @coll.find_and_modify(queryDoc)
+            if(updateNumItems)
+              numItemsValuePropPath = propPathToUpdate.gsub(/\.items$/, ".value")
+              queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$inc" => { numItemsValuePropPath =>  1 } } }
+              $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
+              updatedDoc = @coll.find_and_modify(queryDoc)
+            end
           else
             if(nestedInsert) # Cannot use '$' operator for nested arrays :( We will have to rely on indices
               valueDoc = valueDoc[itemIdentifier] if(itemIdentifier)
+              if(mongoPath =~ /\.\d+$/ and mongoPath !~ /\.items\.\d+$/)
+                lastIdx = mongoPath.split(".").last
+                mongoPath.gsub!(/\.\d+$/, ".items.#{lastIdx}")
+              end
               queryDoc = { "query" => { "#{identProp}.value" => docId }, "update" => { "$set" => { mongoPath =>  valueDoc    }  }}
               $stderr.debugPuts(__FILE__, __method__, "DEBUG", "query doc:\n\n#{queryDoc.inspect}")
               updatedDoc = @coll.find_and_modify(queryDoc)
@@ -332,6 +416,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
               updatedDoc = @coll.find_and_modify(queryDoc)
             end
           end
+          
         end
       end
       # Handles both cases where property to update is buried inside of an item list and also where it is not.
@@ -357,6 +442,49 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return docObjId
     end
     
+    # Get specific items in an item list
+    # propPath must lead to a property with items
+    # @param [String] propPath dot delimted property path (must not contain <> or {}. Use propSelector to normalize )
+    # @param [String] docId document identfier of the doc
+    # @param [Hash] opts options hash with :skip and :limit or :count
+    # @return [Array] array subset of interest
+    def sliceSubDocItemList(propPath, docId, opts={})
+      mh = getModelsHelper()
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "propPath: #{propPath.inspect}\t@coll.name: #{@coll.name}")
+      ppWithoutIdx = mh.modelPath2DocPath(propPath, @coll.name)
+      ppWithIdx = BRL::Genboree::KB::KbDoc.propPath2MongoPath(propPath)
+      identProp = getIdentifierName()
+      skip = opts[:skip] || nil
+      limit = opts[:limit] || nil
+      count = opts[:count] || nil
+      projection = { :fields => {ppWithoutIdx => 1 } }
+      # CHeck to see if there are item lists in the path leading to the item list we want to slice
+      # If present, add those to :fields in order encountered
+      if(ppWithIdx =~ /\.\d+\./)
+        propEls = ppWithIdx.split(".")
+        els = []
+        propEls.each { |el|
+          if(el !~ /\d+/)
+            els << el
+          else
+            pp = els.join(".")
+            projection[:fields][pp] = { "$slice" => [el.to_i, 1 ] }
+          end
+        }
+      end
+      if(skip and limit)
+        projection[:fields][ppWithoutIdx.gsub(/\.value$/, ".items")] = { "$slice" => [skip, limit] }
+      else
+        projection[:fields][ppWithoutIdx.gsub(/\.value$/, ".items")] = { "$slice" => count }
+      end
+      cursor = @coll.find({"#{identProp}.value" => docId}, projection)
+      retVal = nil
+      cursor.each { |dd|
+        retVal = dd
+      }
+      return retVal
+    end
+    
     def normalizePayloadDocForItemInsert(payloadDoc, itemIdentifier)
       updatedPayloadDoc = nil
       if(payloadDoc.key?('properties') or payloadDoc.key?('value'))
@@ -379,6 +507,16 @@ module BRL ; module Genboree ; module KB ; module Helpers
     end
     
     
+    # @return [BSON::DBRef] docRef
+    def getDocRefFromDocName(docIdentifier, docId)
+      it = @coll.find("#{docIdentifier}.value" => docId)
+      docId = nil
+      it.each {|doc|
+        docId = doc['_id']
+      }
+      docRef = BSON::DBRef.new(@coll.name, docId)
+      return docRef
+    end
 
     # Save a doc to the collection this helper instance uses & assists with. Will also save
     #   history records as well, unless {#coll} for this helper is one of the core collections
@@ -400,7 +538,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
       # First, the doc MUST match the model for this collection
       # - do first pass validation, which will notice if we need to generate content
       # - if actually saving, this pass will cast/normalize values in the input doc
-      firstValidation = valid?(doc, true, true, { :castValues => true, :allowDupItems => true }) # do casting always, even if not saving
+      firstValidation = valid?(doc, true, true, { :castValues => true, :allowDupItems => true, :doingMemoization => opts[:doingMemoization] }) # do casting always, even if not saving
       if(firstValidation == :CONTENT_NEEDED) # this is advisory; may turn out that content generators fine nothing to add
         # - do content generation
         generator = BRL::Genboree::KB::ContentGenerators::Generator.new(@lastContentNeeded, doc, @coll.name, @kbDatabase)
@@ -408,7 +546,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
         if(contentStatus)
           # - do second pass validation, in which missing content is not allowed (and in which we ignore the advisory :CONTENT_NEEDED result)
           # - no cast/normalize is done in this pass ; done above and content generation by our code should not need cast/normalize at this point
-          secondValidation = valid?(doc, false, true)
+          secondValidation = valid?(doc, false, true, { :doingMemoization => opts[:doingMemoization] } )
           if(secondValidation)
             # Are we doing the actual save? Or just a no-op save run?
             if(doSave)
@@ -418,7 +556,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
             end
           else # not valid, even after adding content
             if(@lastValidatorErrors.is_a?(Array))
-              validationErrStr = "  - #{@lastValidatorErrors.join("\n  - ")}"
+              validationErrStr = "#{@lastValidatorErrors.join("\n")}"
             else
               validationErrStr = "  - [[ No detailed validation error messages available ; likely a code bug or crash in validation or content-generation code ]]"
             end
@@ -438,14 +576,14 @@ module BRL ; module Genboree ; module KB ; module Helpers
           end
         else # not valid, even after adding content
           if(@lastValidatorErrors.is_a?(Array))
-            validationErrStr = "  - #{@lastValidatorErrors.join("\n  - ")}"
+            validationErrStr = @lastValidatorErrors.join("\n  - ")
           else
             validationErrStr = "  - [[ No detailed validation error messages available ; likely a code bug or crash in validation or content-generation code ]]"
           end
         end
       else # not valid even before adding content
         if(@lastValidatorErrors.is_a?(Array))
-          validationErrStr = "  - #{@lastValidatorErrors.join("\n  - ")}"
+          validationErrStr = @lastValidatorErrors.join("\n  - ")
         else
           validationErrStr = "  - [[ No detailed validation error messages available ; likely a code bug or crash in validation or content-generation code ]]"
         end
@@ -554,25 +692,6 @@ module BRL ; module Genboree ; module KB ; module Helpers
         doc = transformIntoModelOrder(doc, opts)
       end
       return doc
-    end
-
-
-    def getIdentifierName()
-      # Ask modelsHelper for the name of the identifier (root) property for this collection
-      modelsHelper = getModelsHelper()
-      idPropName = modelsHelper.idPropNameForCollection(@coll.name)
-      return idPropName
-    end
-
-    # Get a modelsHelper() to help answer questions for this collection's (or any collection's) model.
-    # @return [BRL::Genboree::KB::Helpers::ModelsHelper, nil] A {ModelsHelper} object; most methods will need
-    #   to be provided @@coll@ in order to answer questions about this user collection's model.
-    def getModelsHelper()
-      retVal = nil
-      if(@kbDatabase)
-        retVal = @kbDatabase.modelsHelper()
-      end
-      return retVal
     end
 
     # Get a model {KbDoc} for the collection this {DataCollectionHelper} is helping with.
@@ -708,7 +827,7 @@ module BRL ; module Genboree ; module KB ; module Helpers
         end
       end
     end
-
+    
     # @todo Implement this once VID is automatically added
     def getByVID(vid)
       # Parse vid
@@ -1060,13 +1179,22 @@ module BRL ; module Genboree ; module KB ; module Helpers
       return retVal
     end
 
+    def getDocValidator( kbDatabase=@kbDatabase, collName=@coll.name )
+      unless( @docValidator.is_a?(BRL::Genboree::KB::Validators::DocValidator) )
+        @docValidator = BRL::Genboree::KB::Validators::DocValidator.new(@kbDatabase, @coll.name)
+      end
+      return @docValidator
+    end
+
     def valid?(doc, missingContentOk=false, restoreMongo_idKey=false, opts={ :castValues => false, :allowDupItems => false })
       # Should we cast/normalize values to the domain as we validate? Required for actual save to database!!
       castValues = opts[:castValues]
-      docValidator = BRL::Genboree::KB::Validators::DocValidator.new(@kbDatabase, @coll.name)
+      docValidator = getDocValidator(@kbDatabase, @coll.name) # reuse if we can (esp. for memoizing to have eny effect)
       docValidator.missingContentOk = missingContentOk
       docValidator.castValues = castValues # could also pass into validateDoc() below ; this is cleaner
       docValidator.allowDupItems = !!opts[:allowDupItems]
+      docValidator.initMemoization() if( opts[:doingMemoization] )
+
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@coll.name: #{@coll.name.inspect} ; @dataCollName: #{docValidator.dataCollName.inspect}")
       valid = docValidator.validateDoc(doc, @coll.name, restoreMongo_idKey)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "@model:\n\n#{JSON.pretty_generate(docValidator.model)}\n\n")
@@ -1076,7 +1204,13 @@ module BRL ; module Genboree ; module KB ; module Helpers
         @lastContentNeeded = docValidator.contentNeeded
         retVal = :CONTENT_NEEDED
       else
-        @lastValidatorErrors = docValidator.validationErrors.dup
+        # Ensure this is Array<String> even if newer hash-of-errors-keyed-by-propPath is available
+        if( docValidator.respond_to?(:buildErrorMsgs) )
+          buildErrOpts = { :propPrefix => @propPrefix, :propSuffix => @propSuffix, :errorPrefix => @errorPrefix, :errorSuffix => @errorSuffix, :errorField => @errorField, :errorWrap => @errorWrap, :wordDelim => @wordDelim }
+          @lastValidatorErrors = docValidator.buildErrorMsgs( buildErrOpts )
+        else
+          @lastValidatorErrors = docValidator.validationErrors.dup
+        end
         retVal = false
       end
       return retVal
@@ -1088,8 +1222,6 @@ module BRL ; module Genboree ; module KB ; module Helpers
       doc.delete('_id') rescue nil
       return doc
     end
-
-
 
     # @todo implement this (needs proper support in revisions)
     def updateByPath()

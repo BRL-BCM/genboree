@@ -1,6 +1,7 @@
 #!/bin/env ruby
 
 require 'brl/genboree/kb/helpers/abstractHelper'
+require 'brl/genboree/kb/propSelector'
 
 module BRL ; module Genboree ; module KB ; module Helpers
   # This class assists with managing the revisioning documents of any collection.
@@ -232,6 +233,168 @@ module BRL ; module Genboree ; module KB ; module Helpers
         historyDoc = @kbDatabase.db[historyCollName].find_one({ 'revisionNum.properties.docRef.value' => docRef }, { :sort => [ 'revisionNum.value', Mongo::DESCENDING ], :limit => 1 })
         retVal =   BRL::Genboree::KB::KbDoc.new(historyDoc)
       end
+      return retVal
+    end
+    
+    def getMaxRevisionForDocs(docRefs, docCollName=nil)
+      disabled = true # This blocks the worker on large downloads! Can't cursor through all 100,000, 1 million, 10+ million docs and interrogate each one! Can't even cursor through each one anyway.
+      if( disabled )
+        retVal = -1
+      else
+        queryDoc = { "revisionNum.properties.docRef.value" => { "$in" => docRefs } }
+        opts = { :sort => ['revisionNum.value', Mongo::DESCENDING], :limit => 1 }
+        retVal = nil
+        cursor = nil
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Running query: #{queryDoc.inspect}\nopts: #{opts.inspect}")
+        if(docCollName)
+          historyCollName = self.class::historyCollName(docCollName)
+          cursor = @kbDatabase.db[historyCollName].find(queryDoc, opts)
+        else
+          cursor = @coll.find(queryDoc, opts)
+        end
+        cursor.each { |doc|
+          kbDoc = BRL::Genboree::KB::KbDoc.new(doc)
+          retVal = kbDoc.getPropVal('revisionNum').to_i
+        }
+      end
+      return retVal
+    end
+    
+    # Checks existence of a user document by the identifier value of the actual document stored in the 'content' field
+    # @Param [String] identProp
+    # @param [String] docName
+    # @param [String] docCollName
+    # @return [KbDoc] the revision doc associated with versionNum for the document of interest.
+    def exists?(identProp, docName, docCollName)
+      historyCollName = self.class::historyCollName(docCollName)
+      queryDoc = {
+        "revisionNum.properties.content.value.#{identProp}.value" => docName,
+      }
+      retVal = nil
+      opts = { :sort => ['revisionNum.value', Mongo::DESCENDING], :limit => 1 }
+      docCount = @kbDatabase.db[historyCollName].find(queryDoc, opts).count(false)
+      if(docCount.to_i > 0)
+        historyDoc = @kbDatabase.db[historyCollName].find_one(queryDoc, opts)
+        retVal = BRL::Genboree::KB::KbDoc.new(historyDoc)
+      end
+      return retVal
+    end
+    
+    def getRevisionDocsForSubDoc(docRef, queryPropPaths, sortOpt, extraOpts={}, docCollName=nil)
+      orList = []
+      queryPropPaths.each {|qp|
+        orList.push({ "revisionNum.properties.subDocPath.value" => qp })  
+      }
+      opts = { :sort => ['revisionNum.value', sortOpt] }
+      if(extraOpts.key?(:limit))
+        opts[:limit] = extraOpts[:limit].to_i
+      end
+      qdoc = { 'revisionNum.properties.docRef.value' => docRef, "$or" => orList }
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Running query: #{qdoc.inspect}\nopts: #{opts.inspect}\n\n#{@coll}\n#{@coll.inspect}")
+      cursor = nil
+      if(docCollName)
+        historyCollName = self.class::historyCollName(docCollName)
+        cursor = @kbDatabase.db[historyCollName].find(qdoc, opts)
+      else
+        cursor = @coll.find(qdoc, opts)
+      end
+      return cursor
+    end
+    
+    # Gets the current revision number for a doc or subdoc
+    # @param [BSON::DBRef] docId The reference pointing to the data document.
+    # @param [String] propPath
+    # @return [Integer] revision number
+    def getRevisionNumForDocOrSubDoc(docRef, propPath=nil)
+      revNum = nil
+      if(propPath.nil?) # Get revision for the entire document
+        revDoc = currentRevision(docRef)
+        revKbDoc = BRL::Genboree::KB::KbDoc.new(revDoc)
+        #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "revKbDoc: #{JSON.pretty_generate(revKbDoc)}")
+        revNum = revKbDoc.getPropVal('revisionNum')
+      else # Get revision for the specific subdoc inside the document
+        propsPathsToSelectorMap = getPropPathsForRevQuery(propPath)
+        queryPropPaths = propsPathsToSelectorMap.keys
+        revDocs = getRevisionDocsForSubDoc(docRef, queryPropPaths, Mongo::DESCENDING)
+        # Loop over (DESC) revision docs and find the first one which has the sub doc of interest. That will be our revision number
+        # The revision docs here contain prop paths that include the prop path of interest AND any parent prop that might have the prop path of interest
+        revDocs.each {|doc|
+          doc.delete("_id") if(doc.key?("_id"))
+          kbDoc = BRL::Genboree::KB::KbDoc.new(doc)
+          if(kbDoc.getPropVal('revisionNum.deletion'))
+            revNum = kbDoc.getPropVal('revisionNum')
+            break
+          else
+            subDocPath = kbDoc.getPropVal('revisionNum.subDocPath')
+            if(subDocPath != "/#{propPath}")
+              contentDoc = getContentDocForPropPath(kbDoc, subDocPath, propsPathsToSelectorMap)
+              next if(contentDoc.nil?)
+              revNum = kbDoc.getPropVal('revisionNum')
+              break
+            else
+              revNum = kbDoc.getPropVal('revisionNum')
+              break
+            end
+          end
+        }
+      end
+      return revNum.to_i
+    end
+
+    
+    # Gets the content doc for the property of interest (@propPath)
+    def getContentDocForPropPath(kbDoc, subDocPath, propsPathsToSelectorMap)
+      contentDoc = nil
+      selectorPath = propsPathsToSelectorMap[subDocPath]
+      spCmps = selectorPath.split(".")
+      ps = nil
+      pathToProp = nil
+      if(subDocPath == "/")
+        ps = BRL::Genboree::KB::PropSelector.new(kbDoc.getPropVal('revisionNum.content'))
+        pathToProp = spCmps[0..spCmps.size-1].join(".")
+      else
+        ps = BRL::Genboree::KB::PropSelector.new({spCmps[0] => kbDoc.getPropVal('revisionNum.content')})
+        pathToProp = spCmps[1..spCmps.size-1].join(".")
+      end
+      begin
+        contentObj = ps.getMultiObj(pathToProp)[0]
+        if( pathToProp =~ /\}$/ )
+          itemIdentifier = spCmps[spCmps.size-2]
+          contentDoc = contentObj[itemIdentifier]  
+        else
+          propOfInterest = spCmps[spCmps.size-1]
+          contentDoc = contentObj[propOfInterest]  
+        end
+      rescue => err
+        # Nothing to do. Property of interest doesnt exist in the parent prop. Most likely the property of interest was added later on to the parent and we are seeing a revision of the parent prior to adding the property of interest
+      end
+      return contentDoc
+    end
+    
+    
+    # Constructs the object to be used in the query to extract all revision documents that can have the property indicated by @propPath
+    #   which includes all the parent properties leading to the property of interest
+    # The keys of the hash are the prop paths and the values will be used for extracting the prop of interest from the returning subdoc
+    # @param [String] propPath property path extracted from the request
+    # @return [Hash]
+    def getPropPathsForRevQuery(propPath)
+      retVal = {}
+      propPathCmps = propPath.split(".")
+      propPathLength = propPathCmps.size
+      processIdx = propPathLength - 1
+      propPathCmps.size.times { |ii|
+        cmp = propPathCmps[processIdx]
+        pp = "/#{propPathCmps[0..processIdx].join(".")}"
+        if(cmp =~ /\{/)
+          retVal[pp] = "#{propPathCmps[processIdx..propPathLength].join(".")}"
+          processIdx -= 3
+        else
+          retVal[pp] = "#{propPathCmps[processIdx..propPathLength].join(".")}"
+          processIdx -= 1
+        end
+        break if(processIdx == 0)
+      }
+      retVal['/'] = propPath
       return retVal
     end
     

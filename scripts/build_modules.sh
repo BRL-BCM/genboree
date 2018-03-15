@@ -520,7 +520,7 @@ rm -rf Reasoner-2.1*
 func_module_bin 'STAR' '2.4'
 func_get_package 'STAR-2.4.0k'
 mv STAR-STAR_2.4.0k/bin/Linux_x86_64_static/STAR ${MOD_DIR}/bin/
-rm -rf STAR-2.4.0k*
+rm -rf STAR-STAR-2.4.0k*
 ln -s  ${DIR_ADD}/STAR_indexes-2.4/ ${MOD_DIR}/indexes
 
 

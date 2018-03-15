@@ -23,7 +23,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
     KEYS_TO_CLEAN = ['_id', :_id]
     CACHE_MAX_BYTES = 200 * 1024 * 1024 # ~200MB
 
-    attr_accessor :docsCursor
+    attr_accessor :docsCursor, :revision
     attr_accessor :format, :model, :limit, :viewCursor, :viewType, :viewName, :viewsHelper, :dataHelper, :wrapInGenbEnvelope
 
     # @return [Array<Symbol>] Array of events fired. Add via addListener(event, listenerProc). Really just here to document:
@@ -52,6 +52,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
       @viewCursor = opts[:viewCursor]
       @viewType   = (opts[:viewType] or 'flat')
       @dataHelper   = opts[:dataHelper]
+      @revision = (opts.key?(:revision) ? opts[:revision] : nil)
       @wrapInGenbEnvelope = (opts.key?(:gbEnvelope) ? opts[:gbEnvelope] : true)
       @format     = (opts[:format] or :JSON)
 
@@ -74,6 +75,16 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
     def finish()
       super()
       @docsCursor.close rescue nil
+      # Try to make sure mongo connections etc get closed.
+      # - The Resource HTTP method disabled clean up at request time, so we have to
+      #   handle clean up at deferred time.
+      begin
+        @dataHelper.kbDatabase.clear()
+        @viewsHelper.kbDatabase.clear()
+      rescue => err
+        # no-op
+      end
+
       # Aid GC!
       @model = @producer = @viewsHelper = @dataHelper = @viewCursor = @viewPropObj = @viewProps = @cacheContent = nil
       return
@@ -89,6 +100,14 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
     #   * Don't just "raise" errors without calling scheduleFinish() first to clean up after yourself.
     # @return [String] Chunk of data. Typically some column header or wrapper-open text.
     def preData()
+      # Arrange for MongoKbDatabase#clear to actually release its resources since we prevented that when Resource#get() was called
+      tt = Time.now
+      begin
+        @dataHelper.kbDatabase.doClear = true
+        @viewsHelper.kbDatabase.doClear = true
+      rescue => err # mainly because @viewsHelper propabbly nil when no view used.
+        # no-op
+      end
       #$stderr.debugPuts(__FILE__, __method__, "STATUS", "<#{self.object_id}> Entering pre data spooling phase; to do set up and any initial bytes for format.")
       chunk = ''
       # Set up to send dat ain @format:
@@ -146,7 +165,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
 
       #$stderr.debugPuts(__FILE__, __method__, "STATUS", "<#{self.object_id}> Done pre data spooling phase. Moving to data spooling.")
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> @cacheContent: #{@cacheContent.inspect}")
-      
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Time to complete: #{Time.now - tt} secs")
       return chunk
     end # def preData()
 
@@ -162,6 +181,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
       chunk = ''
       docCount = 0
       mongoDoc = nil
+      tt = Time.now
       while( mongoDoc = @docsCursor.next() )
         doc = BRL::Genboree::KB::KbDoc.new( mongoDoc )
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Streaming doc with ID #{doc.getPropVal(@idPropName)}" )
@@ -213,6 +233,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
           # Yes, reached @limit number of docs to return.
           # Send this out and then move to post-spooling phase
           @state = :postData
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "limit (#{@limit}) reached. calling postData(); Next state: #{@state.inspect}: docs done so far: #{@currNum}")
           notify(:getData)
           break
         elsif(docCount >= @maxDocs or chunk.size >= @chunkSize)
@@ -220,6 +241,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
           # Yes, this chunk is now too big to accumulate more, time to send.
           # Send this out and then spool up another chunk.
           @state = :getData
+          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "limit (#{@limit}); doc count: ( #{docCount} ) >= @maxDocs (#{@maxDocs}) or chunk size (#{chunk.size}) exceeds threshold (#{@chunkSize}). Docs done so far: #{@currNum}. Next state: #{@state.inspect} Yielding...")
           #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- have sent total #{@currNum.inspect} docs, #{docCount.inspect} in this chunk of #{chunk.size} bytes")
           break
         # else keep accumulating more for this chunk
@@ -235,6 +257,7 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
       else # mongoDoc is nil or we're done for another reason
         # Send out current chunk.
         # Enter post spooling phase.
+        $stderr.debugPuts(__FILE__, __method__, "DEBUG", "cursor has reached end and we have sent out #{@currNum} docs")
         @state = :postData
         notify(:getData)
       end
@@ -249,8 +272,9 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
           @cacheContent = nil
         end
       end
-       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- have sent total #{@currNum.inspect} docs, #{docCount.inspect} in this chunk of #{chunk.size} bytes, MAX CACHE = #{@cache_max_bytes.inspect}")
-       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- cache str in TOTAL  #{@cacheContent.size} bytes") unless(@cacheContent.nil?)
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- have sent total #{@currNum.inspect} docs, #{docCount.inspect} in this chunk of #{chunk.size} bytes, MAX CACHE = #{@cache_max_bytes.inspect}")
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- cache str in TOTAL  #{@cacheContent.size} bytes") unless(@cacheContent.nil?)
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Time to complete: #{Time.now - tt } secs")
       return chunk
     end # def getData()
 
@@ -263,16 +287,25 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
     def postData()
       #$stderr.debugPuts(__FILE__, __method__, "STATUS", "<#{self.object_id}> Done data spooling. Entering post data spooling phase to send any final bytes for fomat.")
       chunk = ''
+      tt = Time.now
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "Done looping over docCursor." )
       if(@format == :JSON_PRETTY)
         if(@wrapInGenbEnvelope)
-          chunk << "\n   ],\n  \"status\":\n   {\n     \"msg\": \"OK\"\n   }\n}"
+          chunk << "\n   ],\n  \"status\":\n   {\n     \"msg\": \"OK\"\n   }\n"
+          if(@revision)
+            chunk << ", \n  \"metadata\":\n   {\n     \"revision\": \"#{@revision}\"\n   }\n"
+          end
+          chunk << " }"
         else
           chunk << "\n ]"
         end
       elsif(@format == :JSON)
         if(@wrapInGenbEnvelope)
-          chunk << "],\"status\":{\"msg\": \"OK\"}}"
+          chunk << "],\"status\":{\"msg\": \"OK\"}"
+          if(@revision)
+            chunk << ",\"metadata\":{\"revision\": \"#{@revision}\"}"
+          end
+          chunk << "}"
         else
           chunk << "]"
         end
@@ -285,7 +318,8 @@ module BRL ; module Genboree ; module REST ; module EM ; module DeferrableBodies
       @state = :finish # really only needed for older yield approach; scheduleSend knows to go directly to scheduleFinish after postData
       notify(:postData)
       #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- have sent total #{@currNum.inspect} docs,  chunk of #{chunk.size} bytes")
-      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- @cacheContent TOTAL,  chunk of #{@cacheContent.inspect} ") 
+      #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "<#{self.object_id}> --- @cacheContent TOTAL,  chunk of #{@cacheContent.inspect} ")
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Time to complete: #{Time.now - tt} secs") 
       return chunk
     end
   end

@@ -103,31 +103,42 @@ module BRL ; module Genboree ; module Prequeue ; module Scripts
         failedLockAttempts = 0
         while(  (iterNum < @conf['iteratedSubmission']['maxNum']) and
                 (Time.now() < (@startTime + @conf['iteratedSubmission']['window'])))
-          $stderr.debugPuts(__FILE__, __method__, "#{@myPid} STATUS", "BEGIN: Iteration #{iterNum+1} / max #{@conf['iteratedSubmission']['maxNum']}") if(@verbose)
+          $stderr.debugPuts(__FILE__, __method__, "#{@myPid} STATUS", "\n#{'='*80}\nBEGIN: Iteration #{iterNum+1} / max #{@conf['iteratedSubmission']['maxNum']}") if(@verbose)
           # Pause between submission iterations
           sleep(@conf['iteratedSubmission']['pause']) unless(iterNum == 0)
           # Lock file to prevent collision with other submitters (rarely, one run next minute by cron)
-          begin
-            fh = File.open(@prequeueLockFile, 'w+')
-            fh.flock(File::LOCK_EX | File::LOCK_NB) # raises Errno::EAGAIN if can't get lock immediately
-            haveLock = true
-            failedLockAttempts = 0
-          rescue Errno::EAGAIN => lockErr
-            haveLock = false
-            failedLockAttempts += 1
-            if(failedLockAttempts < @conf['iteratedSubmission']['maxFailedLocks'])
-              $stderr.puts "#{@myPid} WARNING: Could not get lock on file #{@genbConf.prequeueLockFile.inspect}. Another script probably running. Will try again next iteration." if(@verbose)
-            else # Too many failed lock attempts in a row ; too much lock contention.
-              raise lockErr # Re-raise this no-lock error to break out of iteration while-loop for a specific reason
+          unless(haveLock) # No need to try again for the lock, we have it.
+            begin
+              # We'll open for appending-and-reading rather than the truncating 'w' modes.
+              # - Conservatively help make sure we don't wipe the file inode or something that clears
+              #   open locks as a side effect of "efficient file truncation" optimizations by the OS.
+              # - So we use a+
+              # Don't re-open our file handle regardless of have/don't have
+              fh = File.open(@prequeueLockFile, 'a+') unless(fh)
+              #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) __OPENED__ #{@prequeueLockFile.inspect} for writing ; fh: #{fh.object_id} ; (fs: #{File::Stat.new(@prequeueLockFile).inspect})")
+              fh.flock(File::LOCK_EX | File::LOCK_NB) # raises Errno::EAGAIN if can't get lock immediately
+              #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) __HAVE__ lock on #{@prequeueLockFile.inspect} ; fh: #{fh.object_id} ; (fs: #{File::Stat.new(@prequeueLockFile).inspect})")
+              haveLock = true
+              failedLockAttempts = 0
+            rescue Errno::EAGAIN => lockErr
+              #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) __FAILED__ lock on #{@prequeueLockFile.inspect} ; fh: #{fh.object_id} ;")
+              haveLock = false
+              failedLockAttempts += 1
+              if(failedLockAttempts < @conf['iteratedSubmission']['maxFailedLocks'])
+                $stderr.puts "#{@myPid} WARNING: Could not get lock on file #{@genbConf.prequeueLockFile.inspect}. Another script probably running. Will try again next iteration." if(@verbose)
+              else # Too many failed lock attempts in a row ; too much lock contention.
+                raise lockErr # Re-raise this no-lock error to break out of iteration while-loop for a specific reason
+              end
             end
           end
 
           if(haveLock)
+            #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) __PROCEED__ to run since haveLock=#{haveLock.inspect}")
             @jobTypes.each { |jobType|
               @prevTime = Time.now()
               # Identify 'entered' jobType jobs headed to batch system type @systemType on @host
               jobNameRows = getJobNameRows(jobType)
-              $stderr.puts "\n#{@myPid} STATUS (#{getTimeDelta(true)}): Iteration #{iterNum+1}. Found #{jobNameRows.size} #{jobType.inspect} type candidate jobs in database." if(jobNameRows.size > 0 or @verbose)
+              $stderr.puts "\n#{'='*80}\n#{@myPid} STATUS (#{getTimeDelta(true)}): Iteration #{iterNum+1}. Found #{jobNameRows.size} #{jobType.inspect} type candidate jobs in database." if(jobNameRows.size > 0 or @verbose)
               if(jobNameRows and !jobNameRows.empty?)
                 jobNameRows.each { |row|
                   $stderr.puts('-'*50) if(@verbose)
@@ -186,11 +197,13 @@ module BRL ; module Genboree ; module Prequeue ; module Scripts
                 $stderr.puts('-'*50) if(@verbose)
               end
             }
+            #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) All Done stuff since we had the lock")
           end
 
           # Regardless of whether this iteration proceeded or collided:
           iterNum += 1
         end
+
         # Log record unless there were no jobs found
         unless(jobsSubmittedCount <= 0)
           $stderr.puts "#{'-'*50}"
@@ -210,9 +223,13 @@ module BRL ; module Genboree ; module Prequeue ; module Scripts
         if(@dbu)
           @dbu.clear(true) rescue nil
         end
+
         if(fh and haveLock) # Aggressively try to release lock (esp if Exception raised of some kind)
+          #$stderr.debugPuts(__FILE__, __method__, '>>>>>>>>>>>>>>>>DEBUG<<<<<<<<<<<<<', "(#{@myPid}) Release lock on #{@prequeueLockFile.inspect} ; fh: #{fh.object_id} ; (fs:  #{File::Stat.new(@prequeueLockFile).inspect})")
           fh.flock(File::LOCK_UN) rescue $stderr.puts("#{@myPid} ERROR: could not release lock on #{genbConf.prequeueLockFile.inspect}!! (possibly didn't have it due to unexpected exception)")
+          $stderr.debugPuts(__FILE__, __method__, "#{@myPid} STATUS (#{"%.3f" % (Time.now-@startTime)} secs", "(#{@myPid}) __RELEASED__ lock")
         end
+
         # Did we get an error for some jobs?
         unless(@exitCode == EXIT_OK)
           # Re-raise the @err that was saved within the job-loop above. We didn't re-raise before because then no subsequent jobs would be submitted!
@@ -291,6 +308,7 @@ module BRL ; module Genboree ; module Prequeue ; module Scripts
     def checkPreconditions(job, userInfo)
       retVal = :notMet
       precondSet = job.preconditionSet
+      #$stderr.debugPuts(__FILE__, __method__, 'DEBUG', "For job #{job.name.inspect rescue 'ERR<No job.name>'}job preconditionSet is:\n\n#{precondSet ? JSON.pretty_generate( precondSet.toStructuredData ) : 'EMPTY - N/A'}\n\n")
       # If no preconditionSet for jobs, it's good to go
       if(!precondSet.is_a?(PreconditionSet) or precondSet.count() <= 0)
         $stderr.puts "#{@myPid} STATUS (#{getTimeDelta(true)}): #{job.name} has no preconditions. CAN BE SUBMITTED." if(@verbose)

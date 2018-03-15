@@ -34,16 +34,18 @@
     "tooltip": "View a track hub in UCSC and/or WashU genome browsers.",
     "idStr": "viewHub"
   },
-  {
-    "hSpacer": "-"
-  },
+  /* {
+    "hSpacer": "-",
+    "hidden": true
+  }, */
   {
     "text": "<span style=\"color:red\">Genboree Browser (old)</span>",
     "href": "/java-bin/defaultGbrowser.jsp",
     "hrefTarget": "_blank",
     "cls": "wbBtnReady",
     "iconCls": "wbDeprecated",
-    "tooltip": "Browse annotations using the built-in Genboree browser, using the old Genboree functionality.<sup style=\"color:red\">(Scheduled for removal end of Oct 2016)</sup>"
+    "tooltip": "Browse annotations using the built-in Genboree browser, using the old Genboree functionality.<sup style=\"color:red\">(Scheduled for removal end of Oct 2016)</sup>",
+    "hidden": true
   },
   {
     "text": "VGPaint",

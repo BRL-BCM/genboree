@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+require 'brl/genboree/evb'
+require 'getoptlong'
+
+include BRL::Genboree::Evb::ScriptUtils
+
+EXT_FROM = :added
+EXT_TO = :added # dummy
+
+def validateDocs(templateTo, collMap, opts={})
+  outDir = (opts.key?(:outDir) ? opts[:outDir] : ".")
+  extFrom = (opts.key?(:extFrom) ? opts[:extFrom] : EXT_FROM)
+  extTo = (opts.key?(:extTo) ? opts[:extTo] : EXT_TO)
+
+  mah = BRL::Genboree::Evb::MigratorApiHelper.new()
+  mah.updateCache = true
+  dv = BRL::Genboree::KB::Validators::DocValidator.new()
+  dm = BRL::Genboree::Evb::DocMigrator.new()
+  collPairs = flattenCollMap(collMap)
+  collPairs.each { |collFrom, collTo|
+    templateTo[:coll] = collTo
+    modelTo = mah.getModel(templateTo)
+    failPath = getFailPath(collFrom, collTo, outDir)
+    failFh = File.open(failPath, "w")
+    nInvalid = 0
+    docs = collectDocs(collFrom, collTo, getPattern(extFrom))
+    docs.map! { |doc|
+      # @todo move
+      dm.pruneKbDoc(doc)
+    }
+    docs.each { |docTo|
+      docIdTo = docTo.getRootPropVal()
+      isValid = dv.validateDoc(docTo, modelTo)
+      unless(isValid)
+        nInvalid += 1
+        errors = dv.buildErrorMsgs( { :propPrefix => '', :propSuffix => ' ERROR LIST: ', :errorPrefix => '', :errorSuffix => ' ; '} )
+        failFh.puts([docIdTo, errors.join('')].map { |xx| xx.gsub(/[\n\t]/, ' ')}.join("\t"))
+        failFh.flush # write to the log with every validation
+      end
+    }
+    failFh.close
+  }
+  return nil
+end
+
+def main(fileName)
+  shortDesc = "validate documents that have been generated for each collection pair"
+  templateFrom, templateTo, collMap, opts = cli(fileName, shortDesc)
+  validateDocs(templateTo, collMap, opts)
+end
+
+if $0 == __FILE__
+  main(__FILE__)
+end

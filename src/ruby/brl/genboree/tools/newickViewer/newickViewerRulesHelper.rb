@@ -28,7 +28,7 @@ module BRL ; module Genboree ; module Tools
           numRecs = sniffer.getFormatConf('newick').nRecs
           apiCaller = ApiCaller.new(fileUriObj.host, "#{fileUriObj.path}/data?", @hostAuthMap)
           apiCaller.initInternalRequest(@rackEnv, @genbConf.machineNameAlias) if(@rackEnv)
-          tmpFileName = "#{Time.now.to_f}.#{rand(10_000)}.#{CGI.escape(File.basename(@fileApiHelper.extractName(fileName)))}"
+          tmpFileName = "#{Time.now.to_f}.#{rand(10_000)}.#{CGI.escape(File.basename(@fileApiHelper.extractName(inputs[0])))}"
           # Make Tempfile. Auto-cleaned up when we call close. Use untainted Dir::tmpdir as a best practice.
           tempNewickFileObj  = Tempfile.new(tmpFileName, Dir::tmpdir.untaint)
           numLines = 0
@@ -54,8 +54,6 @@ module BRL ; module Genboree ; module Tools
           # ------------------------------------------------------------------
           if(sectionsToSatisfy.include?(:settings))
           end
-        ensure
-          `rm -f #{fileName}`
         end
       end
 

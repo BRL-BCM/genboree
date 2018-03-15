@@ -62,7 +62,8 @@ module BRL; module Genboree; module Tools
             docValidator = BRL::Genboree::KB::Validators::DocValidator.new()
             valid = docValidator.validateDoc(rulesDoc, kbRulesModel)
             unless(valid) # true or :CONTENT_NEEDED
-              raise BRL::Genboree::GenboreeError.new(:"Bad Request", "The rules document #{rulesDocUrl.inspect} is not a valid rules document for this Reasoner:\n#{docValidator.validationErrors.join("\n")}\n")
+              errors = docValidator.buildErrorMsgs()
+              raise BRL::Genboree::GenboreeError.new(:"Bad Request", "The rules document #{rulesDocUrl.inspect} is not a valid rules document for this Reasoner:\n#{errors.join("\n")}\n")
             end
 
             # classify the inputs

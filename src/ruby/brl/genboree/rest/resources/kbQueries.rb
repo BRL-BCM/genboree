@@ -75,8 +75,6 @@ module BRL ; module REST ; module Resources                # <- resource classes
         queriesHelper = @mongoKbDb.queriesHelper()
         unless(queriesHelper.coll.nil?)
           if(READ_ALLOWED_ROLES[@groupAccessStr])
-            # @todo actually query mongodb to get saved queries
-            # @todo implement response for @detailed=true
             bodyData = BRL::Genboree::REST::Data::KbDocEntityList.new(@connect)
             BRL::Genboree::KB::Helpers::QueriesHelper::IMPLICIT_QUERIES_DEFS.keys.sort.each {|qq|
               doc = BRL::Genboree::KB::KbDoc.new( { "text" => { "value" => qq } } )
@@ -86,11 +84,15 @@ module BRL ; module REST ; module Resources                # <- resource classes
             # Get all the documents from the queries collection 
             mgCursor = queriesHelper.coll.find() #get all the documents in 'kbQueries' collection
             docs = []
+            metadata = nil
             if(mgCursor and mgCursor.is_a?(Mongo::Cursor) and mgCursor.count > 0)
               mgCursor.rewind!
+              docIds = []
               mgCursor.each {|doc|
                 docs << BRL::Genboree::KB::KbDoc.new(doc)
+                docIds << doc['_id']
               }
+              metadata = queriesHelper.getMetadata(docIds, collName)
               docs.sort { |aa,bb|
                 xx = aa.getPropVal('Query')
                 yy = bb.getPropVal('Query')
@@ -106,7 +108,10 @@ module BRL ; module REST ; module Resources                # <- resource classes
                 entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "text" => { "value" => doc.getPropVal('Query')} })
               end
               bodyData << entity
-            }          
+            }
+            if(metadata)
+              bodyData.metadata = metadata
+            end
             @statusName = configResponse(bodyData)
           else
             @statusName = :Forbidden

@@ -15,6 +15,7 @@ set -v  # print commands
 func_get_package "nginx-1.10.1"
 func_get_package "nginx-upload-module-2.2_5Dec2014"
 func_get_package "nginx-upload-progress-module-0.9.1"
+func_get_package "ngx_cache_purge-2.3"
 cd nginx-1.10.1
 func_run "CFLAGS=' -O3 ' ./configure
 --prefix=${DIR_TARGET}/nginx
@@ -35,12 +36,13 @@ func_run "CFLAGS=' -O3 ' ./configure
 --without-http_memcached_module
 --without-http_browser_module
 --add-module=../nginx-upload-module-2.2_5Dec2014
---add-module=../nginx-upload-progress-module-0.9.1"
+--add-module=../nginx-upload-progress-module-0.9.1
+--add-module=../ngx_cache_purge-2.3"
 func_run "make -j ${CORES_NUMBER}"
 mkdir -p ${DIR_TARGET}/nginx
 func_run "make install"
 cd ..
-rm -rf nginx-*
+rm -rf nginx-* ngx_cache_purge-*
 ln -s ../apache/htdocs ${DIR_TARGET}/nginx/htdocs
 
 #4) Configure Nginx for your server
@@ -69,6 +71,7 @@ ln -s ../apache/htdocs ${DIR_TARGET}/nginx/htdocs
 mkdir -p ${DIR_TARGET}/tmp/nginx/client_body_temp
 mkdir -p ${DIR_TARGET}/tmp/nginx/proxy_temp
 mkdir -p ${DIR_TARGET}/tmp/nginx/fastcgi_temp
+mkdir -p ${DIR_TARGET}/tmp/nginx/cache
 
 #7) Prep the Upload Module's temp Dir Tree
 #- Unlike for core nginx temp dirs, the Upload Module oddly does not auto-create the temp dir tree resulting from the multi-level hashing.
@@ -81,6 +84,9 @@ for xx in 1 2 3 4 5 6 7 8 9 0; do
   done
 done
 
+# nginx logs are moved to data
+ln -s ../../data/var/nginx_access.log  ${DIR_TARGET}/var/
+ln -s ../../data/var/nginx_error.log   ${DIR_TARGET}/var/
 
 #-------------------------------------------------------------------------- TODO - skip for now
 #E. Install MYSQL
@@ -123,9 +129,11 @@ func_run "cmake ..
 -DWITH_PERFSCHEMA_STORAGE_ENGINE=ON
 -DWITH_PIC=ON
 -DCURSES_NCURSES_INCLUDE_PATH=${DIR_TARGET}/include
+-DCURSES_INCLUDE_PATH=${DIR_TARGET}/include
 -DCURSES_NCURSES_LIBRARY=${DIR_TARGET}/lib/libncursesw.so
 -DSYSCONFDIR=${DIR_TARGET}/etc
 -DMYSQL_UNIX_ADDR=${DIR_TARGET}/var/mysql.sock
+-DCMAKE_POLICY_DEFAULT_CMP0026=\"OLD\"
 "
 # use -DMYSQL_TCP_PORT_DEFAULT and -DMYSQL_TCP_PORT to set TCP port
 # socket (MYSQL_UNIX_ADDR) must be set here, in other case mysql2 ruby module doesn't work properly

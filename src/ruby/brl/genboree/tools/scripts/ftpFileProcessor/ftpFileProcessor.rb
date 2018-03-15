@@ -74,6 +74,19 @@ module BRL; module Genboree; module Tools; module Scripts
         dbu.setNewDataDb(@dbName)
         # Create storage helper (should be FTP - if not, we'll raise an error)
         storageHelper = createStorageHelperFromTopRec(@remoteFilePath, @groupName, @refseqName, @userId, dbu)
+        # Do some checking to make sure that file size of source file is not still 0 (because of nginx bug).
+        # We do allow the job to finish eventually - in that case, the file size is probably actually 0!
+        maxIterations = 10
+        currentIteration = 0
+        fileSizeOfSource = File.size(@source)
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "File size of source file #{@source} is #{File.size(@source)} (before any sleeping is done).")   
+        while(currentIteration < maxIterations and fileSizeOfSource == 0)
+          fileSizeOfSource = File.size(@source)
+          $stderr.debugPuts(__FILE__, __method__, "STATUS", "File size of source file #{@source} is #{File.size(@source)} (on sleep iteration #{currentIteration+1}).")
+          sleep(2)
+          currentIteration += 1
+        end
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Final file size of source file #{@source} is #{File.size(@source)} (after any sleeping is done).")
         # Upload file to FTP server using storage helper
         storageHelper.uploadFile(@remoteFilePath, File.open(@source, 'r'), [@dbName, @fileId, @gbUploadId, @gbUploadFalseValId, @gbPartialEntityId, @rackEnv])
         $stderr.debugPuts(__FILE__, __method__, "STATUS", "All Done.")
@@ -84,7 +97,7 @@ module BRL; module Genboree; module Tools; module Scripts
         @exitCode = 30
       ensure
         # We want to make sure that we delete the source file after we're done uploading it (or if an error occurs, we still want to delete it!)
-        $stderr.debugPuts(__FILE__, __method__, "ERROR", "Our job finished (either success or failure), so let's delete the source file #{@source}.")     
+        $stderr.debugPuts(__FILE__, __method__, "STATUS", "Our job finished (either success or failure), so let's delete the source file #{@source}.")     
         `rm -f #{Shellwords.escape(@source)}`
       end
       return @exitCode
