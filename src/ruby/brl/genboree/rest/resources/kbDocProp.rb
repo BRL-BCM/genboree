@@ -38,6 +38,12 @@ module BRL; module REST; module Resources
       @docName    = Rack::Utils.unescape(@uriMatchData[4])
       @propPath   = Rack::Utils.unescape(@uriMatchData[5])
       raise BRL::Genboree::GenboreeError.new(:"Bad Request", "property path cannot be nil or empty. Please provide a valid property path") if(@propPath.nil? or @propPath == "")
+      # Look for limit/skip/count when retrieving items under item lists
+      @limit = @nvPairs.key?("limit") ? @nvPairs["limit"].to_i : nil
+      @skip = @nvPairs.key?("skip") ? @nvPairs["skip"].to_i : nil
+      @count = @nvPairs.key?("count") ? @nvPairs["count"].to_i : nil
+      raise BRL::Genboree::GenboreeError.new(:"Bad Request", "Please provide either skip and limit or only count") if(!@limit.nil? and !@skip.nil? and !@count.nil?)
+      
       # Optional Parameter for performing a no-op put/delete
       @save     = ( ( @nvPairs['save'] and @nvPairs['save'] == 'false' ) ? false : true  )
       # @todo: test and enable the save=false option
@@ -73,7 +79,26 @@ module BRL; module REST; module Resources
       if(docNameValidation and docNameValidation[:result] == :VALID) # looks compatible and has now been casted appropriately
         @docName = docNameValidation[:castValue] # use casted value
         #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "DOC NAME NOW: #{@docName.inspect}")
-        @doc = dataHelper.getByIdentifier(@docName, { :doOutCast => true, :castToStrOK => true })
+        @doc = nil
+        # If retrieving only specific items in a list, get everything but the list for setting up @doc
+        if(@count or (@skip and @limit))
+          modelPathEls = []
+          @propPathEls = @propPath.split(".")
+          @propPathEls.each { |el|
+            if(el !~ /\[/ and el !~ /\{/)
+              modelPathEls << el
+            end
+          }
+          mongoPath = @mh.modelPath2DocPath(modelPathEls.join("."), @collName)
+          mongoPath.gsub!(/value$/, "items")
+          cc = dataHelper.coll.find({"#{@identifierProp}.value" => @docName}, {:fields => { mongoPath => 0 } })
+          cc.each { |dd|
+            dd.delete("_id")
+            @doc = dd  
+          }
+        else
+          @doc = dataHelper.getByIdentifier(@docName, { :doOutCast => true, :castToStrOK => true })
+        end
         unless(@doc)
           raise BRL::Genboree::GenboreeError.new(:"Not Found", "The document #{@docName} was not found in the collection #{@collName}")
         end
@@ -91,28 +116,50 @@ module BRL; module REST; module Resources
         propSel = BRL::Genboree::KB::PropSelector.new(@doc)
         entity = nil
         begin
-          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "beginning get()")
-          propObj = propSel.getMultiObj(@propPath)
-          if(@propPath =~ /\]$/)
-            unless(@aspect)
-              entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, propObj[0])
-            else
-              if(@aspect == 'value')
-                itemRootProp = propObj[0].keys[0]
-                entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "value" => propObj[0][itemRootProp]['value'] })
-              end
-            end
+          #$stderr.debugPuts(__FILE__, __method__, "DEBUG", "beginning get()\n@doc: #{JSON.pretty_generate(@doc)}")
+          # For skip and limit or count, get specific items under a list
+          # Only works for properties that are an item list
+          if((@skip and @limit) or @count)
+            propPath = propSel.getMultiPropPaths(@propPath)[0]
+            
+            raise BRL::Genboree::GenboreeError.new(:"Bad Request", "Property path #{@propPath} could not be found in doc #{@docName}. Please check the property path you provided.") if(propPath.nil?)
+            opts = {
+              :count => @count,
+              :skip => @skip,
+              :limit => @limit
+            }
+            retVal = @dataHelper.sliceSubDocItemList(propPath, @docName, opts)
+            # Extract the 'items' from the returned object since this resource returns the value object pointed to by the property path
+            # To extract the items from the returned object, change the index of all item lists leading to the final list to be 0 since the query has sliced all the item lists preceeding the final one and kept only the one parent item
+            newPropPath = propPath.gsub(/\[\d+\]/, "[0]")
+            retVal.delete("_id")
+            propSel2 = BRL::Genboree::KB::PropSelector.new(retVal)
+            items = propSel2.getMultiPropItems(newPropPath)
+            payloadDoc = { "items" => items}
+            entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, payloadDoc)
           else
-            valueObj = propObj[0][propObj[0].keys[0]]
-            unless(@aspect)
-              entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, valueObj)
+            propObj = propSel.getMultiObj(@propPath)
+            if(@propPath =~ /\]$/)
+              unless(@aspect)
+                entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, propObj[0])
+              else
+                if(@aspect == 'value')
+                  itemRootProp = propObj[0].keys[0]
+                  entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "value" => propObj[0][itemRootProp]['value'] })
+                end
+              end
             else
-              if(@aspect == 'value')
-                entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "value" => valueObj['value'] })
+              valueObj = propObj[0][propObj[0].keys[0]]
+              unless(@aspect)
+                entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, valueObj)
+              else
+                if(@aspect == 'value')
+                  entity = BRL::Genboree::REST::Data::KbDocEntity.new(@connect, { "value" => valueObj['value'] })
+                end
               end
             end
+            $stderr.debugPuts(__FILE__, __method__, "DEBUG", "setting md")
           end
-          $stderr.debugPuts(__FILE__, __method__, "DEBUG", "setting md")
           docRef = @dataHelper.getDocRefFromDocName(@model['name'], @docName)
           metadata = @dataHelper.getMetadata(docRef, nil, @propPath)
           entity.setMetadata(metadata)

@@ -122,7 +122,8 @@ module BRL; module Genboree; module KB; module Stats
       :avgByteSize => "The average number of bytes used across all documents in a kb or across all documents in a collection",
       :lastEditTime => "The time the last edit was made to a kb or one of its collection",
       :lastEditAuthor => "The author of the last edit to the kb or one of its collections",
-      :allPointStats => "All of the following statistics as a property-oriented document: #{POINT_STATS.map{|xx| xx.to_s}.join(", ")}."
+      :allPointStats => "All of the following statistics as a property-oriented document: #{POINT_STATS.map{|xx| xx.to_s}.join(", ")}.",
+      :lastNEditedDocs => "The last N edited documents in a collection. Response will include doc identfier, version number and timestamp."
     }
     OPTION_DESCRIPTIONS = {
       :resolution => "For over-time statistics, a frequency for calculating the statistic: one of \"minute\", \"hour\", \"day\", \"month\", or \"year\", defaults to \"month\"",
@@ -162,6 +163,19 @@ module BRL; module Genboree; module KB; module Stats
       }
       opts = defaultOpts.merge(opts)
       return statWrapperOverTime(:docCountOverTime, opts)
+    end
+    
+    def lastNEditedDocs(opts={})
+      @warnings = []
+      @errors = []
+      defaultOpts = { 
+        :title => "Number of Documents",
+        :yAxis => "# Docs",
+        :units => "Documents",
+        :seriesNames => ["Documents"]
+      }
+      opts = defaultOpts.merge(opts)
+      return statWrapper(:lastNEditedDocs, opts)
     end
 
     # @todo rename versions to actions for public interfaces?
@@ -556,6 +570,50 @@ module BRL; module Genboree; module KB; module Stats
       count = numCollCreatesInRange(timeRange, coll) - numCollDeletesInRange(timeRange, coll)
     end
     alias :numCollDocsInRange :numCollDocsInRangeByRes
+    
+    def lastNEditedDocsInColl(coll=nil, ndocs=3)
+      setDch(coll)
+      setVh(coll)
+      gbIdName = @dch.getIdentifierName()
+      gbIdPath = "versionNum.properties.content.value.#{gbIdName}.value"
+      docRefName = "docRef"
+      docRefPath = "versionNum.properties.#{docRefName}.value"
+
+      # define aggregation pipeline
+      pipeline = []    
+      matchConfig = { "versionNum.properties.deletion.value" => false }
+      match = { "$match" => matchConfig }
+      pipeline << match
+
+      group = { 
+        "$group" => { 
+          GROUP_KEY => {
+            docRefName => "$#{docRefPath}"
+          },
+          "docId" => {
+            "$first" => "$#{gbIdPath}"
+          },
+          "version" => {
+            "$max" => "$versionNum.value"
+          },
+          "timestamp" => {
+            "$max" => "$versionNum.properties.timestamp.value"
+          }
+        }
+      }
+      pipeline << group
+      sort = {
+        "$sort" => {"version" => -1 }
+      }
+      pipeline << sort
+      limit = {
+        "$limit" => ndocs
+      }
+      pipeline << limit
+      $stderr.debugPuts(__FILE__, __method__, "DEBUG", "Making aggregate request on #{@vh.coll.name.inspect} defined by pipeline:\n#{JSON.pretty_generate(pipeline)}") 
+      resp = @vh.coll.aggregate(pipeline)
+      return resp
+    end
 
     # Count the number of data documents affected by edits for a time range
     # @see numCollVersionsInRange

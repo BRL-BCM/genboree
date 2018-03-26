@@ -18,7 +18,8 @@ module BRL; module Genboree; module KB; module Stats
       :versionCountOverTime => :mapKbVersionsInRange,
       :createCountOverTime => :mapKbCreatesInRange,
       :editCountOverTime => :mapKbEditsInRange,
-      :deleteCountOverTime => :mapKbDeletesInRange
+      :deleteCountOverTime => :mapKbDeletesInRange,
+      :lastNEditedDocs => :lastNEditedDocsInColl
     }
 
     ##################

@@ -19,7 +19,11 @@ module BRL; module Genboree; module KB; module Stats
       raiseAnyErrors()
       retVal = {}
       chart = /^hc/.match(opts[:format].to_s) ? true : false
-      retVal = self.send(STAT_TO_METHOD[stat])
+      if(stat != :lastNEditedDocs)
+        retVal = self.send(STAT_TO_METHOD[stat])
+      else
+        retVal = self.send(STAT_TO_METHOD[stat], nil, ( opts.key?(:ndocs) ? opts[:ndocs] : 3 ))
+      end
       retVal = cleanStatData(retVal)
       if(chart)
         retVal = chartData(retVal, opts)

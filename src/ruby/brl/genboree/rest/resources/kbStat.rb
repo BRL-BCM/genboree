@@ -100,6 +100,8 @@ class KbStat < BRL::REST::Resources::GenboreeResource
       opts[:yAxis] = "# Docs"
     elsif(@stat == 'docCount')
       opts[:title] = "# Docs Per Collection"
+    elsif(@stat == 'lastNEditedDocs' and @nvPairs.key?('ndocs'))
+      opts[:ndocs] = @nvPairs['ndocs'].to_i
     end
     return opts    
   end
